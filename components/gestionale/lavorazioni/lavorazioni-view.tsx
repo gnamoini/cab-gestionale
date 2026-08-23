@@ -77,13 +77,6 @@ const LavorazioniKanbanView = dynamic(
     ),
   },
 );
-const LavorazioniOperationalPanel = dynamic(
-  () =>
-    import("@/components/operational-analytics/lavorazioni-operational-panel").then((m) => ({
-      default: m.LavorazioniOperationalPanel,
-    })),
-  { ssr: false },
-);
 const LavorazioneCompletamentoEditModal = dynamic(
   () =>
     import("@/components/gestionale/lavorazioni/lavorazione-completamento-edit-modal").then((m) => ({
@@ -373,7 +366,7 @@ function IconCloseWork({ className = dsTableActionGlyph }: { className?: string 
   );
 }
 
-/** Ripristina lavorazione dall'archivio verso ┬½in corso┬╗. */
+/** Ripristina lavorazione dall'archivio verso «in corso». */
 function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -413,11 +406,11 @@ function legacyLavBase(row: LavorazioneListRow) {
   return {
     id: row.id,
     codice: row.codice ?? null,
-    macchina: mezzo ? `${mezzo.marca} ${mezzo.modello}`.trim() || "ÔÇö" : "ÔÇö",
+    macchina: mezzo ? `${mezzo.marca} ${mezzo.modello}`.trim() || "—" : "—",
     targa: mezzo?.targa?.trim() || "",
     matricola: mezzo?.matricola?.trim() || "",
     nScuderia: mezzo?.numero_scuderia?.trim() || "",
-    cliente: mezzo?.cliente?.trim() || "ÔÇö",
+    cliente: mezzo?.cliente?.trim() || "—",
     utilizzatore: mezzo?.utilizzatore?.trim() || "",
     cantiere: "",
     note: row.note?.trim() || "",
@@ -518,13 +511,13 @@ function cmpAtt(
   const t = (x: number) => x * dir;
   const ia = sortIndex[a.id];
   const ib = sortIndex[b.id];
-  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "ÔÇö", ib?.macchina ?? "ÔÇö"));
+  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
   if (k === "targa") return t(cmpStr(ia?.targa ?? "", ib?.targa ?? ""));
   if (k === "matricola") return t(cmpStr(ia?.matricola ?? "", ib?.matricola ?? ""));
   if (k === "nScuderia") return t(cmpStr(ia?.nScuderia ?? "", ib?.nScuderia ?? ""));
-  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "ÔÇö", ib?.cliente ?? "ÔÇö"));
+  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
   if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
-  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "ÔÇö", ib?.cantiere ?? "ÔÇö"));
+  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
   if (k === "note") return t(cmpStr((a.note ?? "").trim(), (b.note ?? "").trim()));
   if (k === "stato") {
     return t(
@@ -532,7 +525,7 @@ function cmpAtt(
     );
   }
   if (k === "priorita") return t(comparePrioritaLavorazione(a.priorita, b.priorita));
-  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "ÔÇö", ib?.addetto ?? "ÔÇö"));
+  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "—", ib?.addetto ?? "—"));
   const da = new Date(a.data_ingresso ?? a.created_at).getTime();
   const db = new Date(b.data_ingresso ?? b.created_at).getTime();
   return t(da === db ? 0 : da < db ? -1 : 1);
@@ -549,15 +542,15 @@ function cmpCh(
   const t = (x: number) => x * dir;
   const ia = sortIndex[a.id];
   const ib = sortIndex[b.id];
-  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "ÔÇö", ib?.macchina ?? "ÔÇö"));
+  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
   if (k === "targa") return t(cmpStr(ia?.targa ?? "", ib?.targa ?? ""));
   if (k === "matricola") return t(cmpStr(ia?.matricola ?? "", ib?.matricola ?? ""));
   if (k === "nScuderia") return t(cmpStr(ia?.nScuderia ?? "", ib?.nScuderia ?? ""));
-  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "ÔÇö", ib?.cliente ?? "ÔÇö"));
+  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
   if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
-  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "ÔÇö", ib?.cantiere ?? "ÔÇö"));
+  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
   if (k === "note") return t(cmpStr((a.note ?? "").trim(), (b.note ?? "").trim()));
-  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "ÔÇö", ib?.addetto ?? "ÔÇö"));
+  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "—", ib?.addetto ?? "—"));
   if (k === "ingresso") {
     const da = new Date(a.data_ingresso ?? a.created_at).getTime();
     const db = new Date(b.data_ingresso ?? b.created_at).getTime();
@@ -606,16 +599,16 @@ function archivioSortNeedsFullSchede(sortCol: SortKeyCh | null, sortPhase: SortP
   return ARCHIVIO_SORT_KEYS_NEED_SCHEde.has(sortCol);
 }
 
-/** Placeholder anagrafica quando il filtro arriva da URL ma il mezzo non ├¿ ancora nello snapshot locale. */
+/** Placeholder anagrafica quando il filtro arriva da URL ma il mezzo non è ancora nello snapshot locale. */
 function mezzoFilterStubFromId(id: string): MezzoGestito {
   return {
     id,
     cliente: "",
-    utilizzatore: "ÔÇö",
+    utilizzatore: "—",
     marca: "",
-    modello: "ÔÇö",
-    targa: "ÔÇö",
-    matricola: "ÔÇö",
+    modello: "—",
+    targa: "—",
+    matricola: "—",
     numeroScuderia: "",
     tipoAttrezzatura: "",
     anno: 0,
@@ -629,9 +622,9 @@ function mezzoFilterStubFromId(id: string): MezzoGestito {
 
 function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
   const t = m.targa?.trim();
-  if (t && t !== "ÔÇö") return t;
+  if (t && t !== "—") return t;
   const mat = m.matricola?.trim();
-  if (mat && mat !== "ÔÇö") return mat;
+  if (mat && mat !== "—") return mat;
   const sc = m.numeroScuderia?.trim();
   if (sc) return `Sc. ${sc}`;
   const mm = `${m.marca} ${m.modello}`.trim();
@@ -717,7 +710,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [prioritaOpts],
   );
   const addettoPillColStyle = useMemo(
-    () => lavTablePillColStyleFromLabels(["ÔÇö", ...globalOpts.lavorazioni.addetti]),
+    () => lavTablePillColStyleFromLabels(["—", ...globalOpts.lavorazioni.addetti]),
     [globalOpts.lavorazioni.addetti],
   );
 
@@ -998,7 +991,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const [sortColA, setSortColA] = useState<SortKeyAtt | null>(null);
   const [sortPhaseA, setSortPhaseA] = useState<SortPhase>("natural");
 
-  // Default archivio: completamento decrescente (pi├╣ recente in alto).
+  // Default archivio: completamento decrescente (piò recente in alto).
   const [sortColC, setSortColC] = useState<SortKeyCh | null>("completamento");
   const [sortPhaseC, setSortPhaseC] = useState<SortPhase>("desc");
 
@@ -1343,7 +1336,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const mutErr = removeLav.isError
     ? formatSupabaseError(removeLav.error, { module: "lavorazioni", action: "delete" })
     : null;
-  // Non bloccare l'UI inline per update ottimistici (stato/priorit├á).
+  // Non bloccare l'UI inline per update ottimistici (stato/priorità).
   const mutPendingBlocking =
     removeLav.isPending ||
     restoreLav.isPending ||
@@ -1404,9 +1397,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           tipo: "ingresso" as const,
           campi: {
             dataIngresso: isoToItalianDay(row.data_ingresso ?? row.created_at),
-            cliente: clienteLabel(row) === "ÔÇö" ? "" : clienteLabel(row),
+            cliente: clienteLabel(row) === "—" ? "" : clienteLabel(row),
             cantiere: "",
-            utilizzatore: utilizzatoreLabel(row, prev) === "ÔÇö" ? "" : utilizzatoreLabel(row, prev),
+            utilizzatore: utilizzatoreLabel(row, prev) === "—" ? "" : utilizzatoreLabel(row, prev),
             tipoAttrezzatura: "",
             marcaAttrezzatura: row.mezzo?.marca ?? "",
             modelloAttrezzatura: row.mezzo?.modello ?? "",
@@ -1646,7 +1639,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     if (!canEditWorkOrders) return;
     const ok = await confirm({
       title: "Ripristinare lavorazione?",
-      message: `┬½${macchinaLabel(row)}┬╗ torner├á tra le lavorazioni attive.`,
+      message: `«${macchinaLabel(row)}» tornerà tra le lavorazioni attive.`,
       confirmLabel: "Ripristina",
     });
     if (!ok) return;
@@ -1772,7 +1765,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         if (rel !== 0) return rel;
       }
       if (sortPhaseA === "natural" || sortColA === null) {
-        // Ordine naturale: pi├╣ vecchia in alto, nuova in fondo.
+        // Ordine naturale: piò vecchia in alto, nuova in fondo.
         const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
         const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
         if (ta !== tb) return ta - tb;
@@ -2137,7 +2130,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         : archivioPagedSchedePending && (schedeEnsureLoading || schedeEnsureFetching)));
   const archivioCardTitle =
     archivioFilteredCount === null
-      ? "Archivio lavorazioni (ÔÇª)"
+      ? "Archivio lavorazioni (…)"
       : `Archivio lavorazioni (${archivioFilteredCount})`;
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
   const loadErr = loadErrRaw
@@ -2333,7 +2326,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
               className={`${erpBtnNeutral} shrink-0 font-semibold`}
               aria-label="Rimuovi filtro mezzo"
             >
-              ├ù Rimuovi
+              × Rimuovi
             </button>
           </div>
         ) : null}
@@ -2392,8 +2385,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           listViewMode={listViewMode}
           onListViewModeChange={setListViewMode}
         />
-
-        <LavorazioniOperationalPanel />
 
         <SkeletonBoundary loading={initialListLoading}>
         <LavorazioniListBodySection mode="content">
@@ -2532,7 +2523,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
-                    label="Priorit├á"
+                    label="Priorità"
                     columnKey="priorita"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
@@ -2838,7 +2829,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         <div className={gestionaleLogDrawerPanelClass}>
               {lavModificheLogQuery.isError ? (
                 <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
-                  Impossibile caricare il log dal server. Riprova pi├╣ tardi.
+                  Impossibile caricare il log dal server. Riprova piò tardi.
                 </p>
               ) : null}
               <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>

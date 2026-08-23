@@ -896,7 +896,7 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     severity: "blocker",
     status: "active",
     owner: "platform",
-    sourceOfTruth: "components/report/bi-center/report-bi-center-mount.tsx",
+    sourceOfTruth: "components/report/report-hub-view.tsx",
     impact: ["compliance-audit", "developer-experience"],
     dependsOn: ["governance.report.p5.operational-context"],
   },

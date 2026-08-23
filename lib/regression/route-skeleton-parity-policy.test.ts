@@ -40,7 +40,8 @@ const reportSkeleton = read("components/report/report-v2-route-skeleton.tsx");
 assert.match(routeSkeletons, /ListPageRouteSkeleton/, "route-skeletons: liste ERP");
 assert.match(routeSkeletons, /DipendentiRouteSkeleton/, "route-skeletons: dipendenti timesheet");
 assert.match(routeSkeletons, /ImpostazioniRouteSkeleton/, "route-skeletons: impostazioni master-detail");
-assert.match(reportSkeleton, /title="Executive"/, "report V2 executive skeleton");
+assert.match(reportSkeleton, /report-area-content-skeleton/, "report area narrative skeleton");
+assert.match(reportSkeleton, /report-hub-route-skeleton/, "report hub skeleton");
 assert.match(structuralRouteSkeleton, /ROUTE_PAGE_STRUCTURE/, "StructuralRouteSkeleton delega a PageStructure");
 
 const violations: string[] = [];
@@ -75,6 +76,6 @@ for (const route of MIGRATED_STRUCTURAL_ROUTES) {
   assert.match(src, /scope/, `${file}: supporto scope full/content`);
 }
 
-assert.match(read("components/report/report-analytics-view.tsx"), /scope="content"/, "report data load: content scope");
+assert.match(read("components/report/report-area-data-shell.tsx"), /scope="content"/, "report data load: content scope");
 
 console.log("route-skeleton-parity-policy.test.ts: OK");

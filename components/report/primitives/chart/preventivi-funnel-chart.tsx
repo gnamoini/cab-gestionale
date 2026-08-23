@@ -6,7 +6,7 @@ import type { PreventiviFunnelRow } from "@/lib/report/economic-analytics-extend
 
 export function ReportPreventiviFunnelChart({
   rows,
-  title = "Funnel preventivi",
+  title = "Preventivi per esito",
 }: {
   rows: readonly PreventiviFunnelRow[];
   title?: string;
@@ -22,7 +22,7 @@ export function ReportPreventiviFunnelChart({
     <ReportVisualization title={title}>
       <ReportTemporalMonthlyBars rows={rows.map((r) => ({ label: r.label, count: r.count }))} />
       <p className="mt-2 text-[10px] text-[color:var(--cab-text-muted)]">
-        Valore pipeline:{" "}
+        Valore totale:{" "}
         {rows.reduce((s, r) => s + r.value, 0).toLocaleString("it-IT", {
           style: "currency",
           currency: "EUR",

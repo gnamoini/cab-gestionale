@@ -8,8 +8,11 @@ import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 import { pushGestionaleToast } from "@/context/toast-context";
 
 /** PDF da DB (lista, ordine già salvato). */
-export async function openOrdineFornitorePdfInNewTab(o: Pick<OrdineFornitoreRecord, "id">): Promise<void> {
-  await openPdfArtifact("ordine-fornitore", { id: o.id });
+export async function openOrdineFornitorePdfInNewTab(
+  o: Pick<OrdineFornitoreRecord, "id">,
+  deferredHandle?: DeferredPopupHandle | null,
+): Promise<void> {
+  await openPdfArtifact("ordine-fornitore", { id: o.id }, deferredHandle);
 }
 
 /** Anteprima WYSIWYG dall'editor — non richiede salvataggio su DB. */

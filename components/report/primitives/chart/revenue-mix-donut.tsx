@@ -3,7 +3,9 @@
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { RevenueMixSlice } from "@/lib/report/economic-analytics-extended";
 
-const COLORS = ["#0ea5e9", "#f97316", "#22c55e", "#a855f7", "#ef4444", "#71717a"] as const;
+import { reportChartSeriesColors } from "@/lib/report/ui/report-chart-theme";
+
+const COLORS = reportChartSeriesColors(6);
 
 export function ReportRevenueMixDonut({
   slices,

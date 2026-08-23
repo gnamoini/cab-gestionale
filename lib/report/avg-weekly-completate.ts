@@ -72,7 +72,7 @@ export function avgWeeklyCompletateInRange(
   if (manualByMonth && manualByMonth.size > 0) {
     for (const mk of monthKeysOverlappingRange(range)) {
       const manual = manualByMonth.get(mk);
-      if (manual == null) continue;
+      if (manual == null || manual === 0) continue;
       const y = Number(mk.slice(0, 4));
       const m0 = Number(mk.slice(5, 7)) - 1;
       const weeksInRange: number[] = [];

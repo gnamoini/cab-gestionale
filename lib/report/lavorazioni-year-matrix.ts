@@ -1,5 +1,11 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { countCompletedByMonth, type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
+import {
+  buildCompletateDbMaps,
+  isReportManualMonthOverride,
+  mergeManualMonthMap,
+  resolveReportMonthCompletedCount,
+} from "@/lib/report/report-completate-maps";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
@@ -20,15 +26,20 @@ export function buildLavorazioniYearMatrix(
   completate: LavorazioneArchiviata[],
   anchor: Date,
   manualByMonth?: ReportManualByMonth,
-  monthMap?: Map<string, number>,
+  monthMapDb?: Map<string, number>,
 ): {
   rows: LavorazioniYearRow[];
   monthLabels: readonly string[];
   hasAnyData: boolean;
   manualMonthKeys: Set<string>;
 } {
-  const sys = monthMap ?? countCompletedByMonth(completate, manualByMonth);
-  const manualMonthKeys = new Set(manualByMonth ? [...manualByMonth.keys()] : []);
+  const db = monthMapDb ?? buildCompletateDbMaps(completate).byMonth;
+  const sys = mergeManualMonthMap(db, manualByMonth);
+  const manualMonthKeys = new Set(
+    manualByMonth
+      ? [...manualByMonth.keys()].filter((k) => isReportManualMonthOverride(manualByMonth, k))
+      : [],
+  );
   const years = new Set<number>();
   for (const k of sys.keys()) years.add(Number(k.slice(0, 4)));
   if (manualByMonth) {
@@ -46,8 +57,7 @@ export function buildLavorazioniYearMatrix(
   for (const year of sortedYears) {
     const months = Array.from({ length: 12 }, (_, mi) => {
       const key = ym(year, String(mi + 1).padStart(2, "0"));
-      const manual = manualByMonth?.get(key);
-      const v = manual != null ? manual : (sys.get(key) ?? 0);
+      const v = resolveReportMonthCompletedCount(key, db, manualByMonth);
       if (v > 0) hasAny = true;
       return v;
     });

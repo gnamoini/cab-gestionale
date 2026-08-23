@@ -45,8 +45,8 @@ assert.doesNotMatch(appProviders, /PwaPushOpenBridge/);
 assert.doesNotMatch(appProviders, /PwaNotificationBadgeBridge/);
 
 const offlineBanner = read("src/components/pwa-offline-block-banner.tsx");
-assert.match(offlineBanner, /z-\[86\]/);
-assert.match(offlineBanner, /PWA_OFFLINE_WRITE_MESSAGE/);
+assert.match(offlineBanner, /SystemBannerLayout/);
+assert.match(offlineBanner, /PWA_OFFLINE_BANNER_TITLE/);
 
 const queryProvider = read("src/providers/query-provider.tsx");
 assert.match(queryProvider, /networkMode:\s*"online"/);

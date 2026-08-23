@@ -42,9 +42,9 @@ const TONE_CLASS: Record<SemanticColorContext, Record<string, string>> = {
   },
   chartSeries: {
     primary: "var(--cab-primary)",
-    secondary: "#0ea5e9",
-    muted: "#71717a",
-    accent: "#22c55e",
+    secondary: "var(--cab-success)",
+    muted: "var(--cab-text-muted)",
+    accent: "var(--cab-warning)",
   },
 };
 

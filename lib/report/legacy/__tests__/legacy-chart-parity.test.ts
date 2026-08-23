@@ -14,10 +14,10 @@ for (const entry of LEGACY_CHART_MIGRATION_MATRIX) {
   assert.notEqual(entry.status, "BLOCKED", `${entry.id} must not be BLOCKED after P9`);
 }
 
-const lavorazioniPanel = readFileSync(
-  join(process.cwd(), "components/operational-analytics/lavorazioni-operational-panel.tsx"),
+const lavorazioniArea = readFileSync(
+  join(process.cwd(), "components/report/areas/report-area-lavorazioni-view.tsx"),
   "utf8",
 );
-assert.match(lavorazioniPanel, /lavorazioni-operational-panel/);
+assert.match(lavorazioniArea, /report-area-lavorazioni/);
 
 console.log("legacy-chart-parity.test.ts OK");

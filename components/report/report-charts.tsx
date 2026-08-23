@@ -2,11 +2,12 @@
 
 import { memo } from "react";
 import type { YearForecastLinePoint } from "@/lib/report/lavorazioni-year-matrix";
+import { REPORT_CHART_FILL_SURFACE, reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
 
 const ORANGE = "var(--cab-primary)";
-const ZINC = "#71717a";
-const SKY = "#0ea5e9";
-const EMERALD = "#22c55e";
+const ZINC = reportChartSeriesColor("muted");
+const SKY = reportChartSeriesColor("secondary");
+const EMERALD = reportChartSeriesColor("accent");
 
 function ReportYearlyForecastLineChartInner({
   solid,
@@ -80,7 +81,7 @@ function ReportYearlyForecastLineChartInner({
         <polyline fill="none" stroke={ORANGE} strokeWidth={2.5} strokeDasharray="7 5" strokeLinejoin="round" strokeLinecap="round" points={dashedD} />
       ) : null}
       {solid.map((p) => dot(p, p.kind === "ytd" ? SKY : ZINC))}
-      {dashed.length >= 2 ? dot(dashed[dashed.length - 1]!, ORANGE, "#fff") : null}
+      {dashed.length >= 2 ? dot(dashed[dashed.length - 1]!, ORANGE, REPORT_CHART_FILL_SURFACE) : null}
       {solid.map((p) => {
         const { px } = xy(p);
         return (
@@ -222,7 +223,7 @@ function MagazzinoCapitalLineChartInner({ rows }: { rows: { label: string; capit
         const eur = p.value.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
         return (
           <g key={p.label}>
-            <circle cx={px} cy={py} r={last ? 6 : 3.5} fill={last ? ORANGE : "#fff"} stroke={ORANGE} strokeWidth={last ? 2 : 1.5} className={last ? "" : "fill-[var(--cab-card)]"}>
+            <circle cx={px} cy={py} r={last ? 6 : 3.5} fill={last ? ORANGE : REPORT_CHART_FILL_SURFACE} stroke={ORANGE} strokeWidth={last ? 2 : 1.5} className={last ? "" : "fill-[var(--cab-card)]"}>
               <title>{last ? `Capitale attuale (${p.label}): ${eur}` : `${p.label}: ${eur}`}</title>
             </circle>
             <text x={px} y={H - 8} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>

@@ -145,7 +145,7 @@ export const STRUCTURAL_ROUTE_SKELETON_CONTRACTS: Record<MigratedStructuralRoute
     kind: "stack",
     geometry: { height: "toolbar" },
     className: "flex min-w-0 flex-col gap-4",
-    sectionLabel: "Report V2 — delegato a ReportV2RouteSkeleton",
+    sectionLabel: "Report — hub grid o area narrativa (ReportV2RouteSkeleton)",
     children: [
       { kind: "toolbar", geometry: { height: "toolbar" } },
       { kind: "block", geometry: { height: "kpi-row" } },

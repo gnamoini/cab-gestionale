@@ -27,5 +27,8 @@ assert.doesNotMatch(banner, /usePathname/);
 assert.doesNotMatch(banner, /getActiveSyncContexts/);
 assert.doesNotMatch(banner, /document\.body\.style\.overflow/);
 assert.doesNotMatch(banner, /createPortal/);
+assert.match(banner, /GESTIONALE_DATA_STALE_BANNER_TITLE/);
+assert.doesNotMatch(banner, /domain ===/);
+assert.doesNotMatch(banner, /resolveBannerCopy/);
 
 console.log("data-stale-banner-mount-policy.test.ts OK");

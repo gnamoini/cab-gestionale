@@ -5,8 +5,10 @@ import type { AgingBacklogBucket } from "@/lib/report/lavorazioni-work-orders";
 import { agingBucketLabel } from "@/lib/report/lavorazioni-work-orders";
 import type { AgingStackedSeries } from "@/lib/report/lavorazioni-work-orders";
 
+import { reportChartSeriesColors } from "@/lib/report/ui/report-chart-theme";
+
 const BUCKETS: AgingBacklogBucket[] = ["0-7", "8-14", "15-30", "30+"];
-const FALLBACK_COLORS = ["#0ea5e9", "#22c55e", "#f97316", "#a855f7", "#ef4444", "#71717a"];
+const FALLBACK_COLORS = reportChartSeriesColors(6);
 
 export function ReportAgingBacklogStackedChart({
   series,

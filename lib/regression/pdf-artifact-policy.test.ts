@@ -77,10 +77,10 @@ for (const rel of pdfDataModules) {
 }
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
-assert.match(requestArtifact, /await fetch\(trimmed/);
-assert.match(requestArtifact, /cache:\s*"no-store"/);
+assert.match(requestArtifact, /deferred\.navigate\(trimmed\)/);
+assert.match(requestArtifact, /retryUrl:\s*options\.url/);
+assert.match(requestArtifact, /deferred\.close\(\)/);
 assert.match(requestArtifact, /Generazione PDF in corso/);
-assert.doesNotMatch(requestArtifact, /downloadFileName/);
 const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
 assert.match(responseHeaders, /X-Cache-Status/);
 assert.match(responseHeaders, /X-PDF-Generate-Ms/);

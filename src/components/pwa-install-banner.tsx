@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useState } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import {
@@ -8,11 +7,9 @@ import {
   SystemBannerShell,
 } from "@/components/design-system/system-banner";
 import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
-import { PWA_ICON_BASE_PATH } from "@/lib/pwa/pwa-icons";
 import { dsSystemBannerGhostBtn, dsSystemBannerPrimaryBtn } from "@/lib/ui/design-system";
+import { PwaBannerAppIcon } from "@/src/components/pwa-banner-app-icon";
 import { usePwaInstallPrompt } from "@/src/hooks/use-pwa-install-prompt";
-
-const INSTALL_BENEFITS = ["Accesso rapido", "Schermo intero", "Icona sul dispositivo"] as const;
 
 export function PwaInstallBanner() {
   const { variant, canPrompt, promptInstall, dismissInstall } = usePwaInstallPrompt();
@@ -39,23 +36,16 @@ export function PwaInstallBanner() {
   return (
     <SystemBannerShell ariaLabel="Installa applicazione">
       <SystemBannerLayout
-        media={
-          <Image
-            src={`${PWA_ICON_BASE_PATH}/icon-96x96.png`}
-            alt=""
-            width={44}
-            height={44}
-            className="rounded-[var(--ds-radius-lg)] ring-1 ring-[color:color-mix(in_srgb,#ffffff_12%,transparent)]"
-          />
-        }
-        title={`Installa ${CAB_APP_PRODUCT_NAME}`}
+        media={<PwaBannerAppIcon />}
+        title={`Installa l'app ${CAB_APP_PRODUCT_NAME}`}
         description="Apri il gestionale come app dedicata, senza barra del browser."
-        tags={INSTALL_BENEFITS}
-        tagsAriaLabel="Vantaggi installazione"
         onDismiss={handleDismiss}
         dismissLabel="Chiudi suggerimento installazione"
         actions={
           <>
+            <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>
+              Non ora
+            </button>
             <button
               type="button"
               disabled={!canPrompt || installing}
@@ -70,9 +60,6 @@ export function PwaInstallBanner() {
               ) : (
                 "Installa app"
               )}
-            </button>
-            <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>
-              Non ora
             </button>
           </>
         }

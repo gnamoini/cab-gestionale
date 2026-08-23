@@ -1,5 +1,9 @@
 import { cellString, findHeaderRow, parseNumberCell } from "@/lib/data-import/core/parse-spreadsheet";
-import { isPastReportMonth } from "@/lib/report/report-manual-entries-map";
+import {
+  canReportManualMonthOverride,
+  isPastReportMonth,
+  REPORT_LAVORAZIONI_LIVE_FROM_MONTH,
+} from "@/lib/report/report-manual-entries-map";
 
 export type ReportManualEntryImportRow = {
   periodMonth: string;
@@ -139,6 +143,14 @@ export function parseReportManualEntriesMatrix(
       errors.push({ row: rowNum, message: `Il periodo ${periodMonth.slice(0, 7)} non è un mese passato.` });
       continue;
     }
+    const periodKey = periodMonth.slice(0, 7);
+    if (!canReportManualMonthOverride(periodKey)) {
+      errors.push({
+        row: rowNum,
+        message: `Il periodo ${periodKey} è gestito live dal gestionale (da ${REPORT_LAVORAZIONI_LIVE_FROM_MONTH} in poi). Rimuovi la riga dall'Excel.`,
+      });
+      continue;
+    }
 
     const count = parseNumberCell(countRaw);
     if (count == null || count < 0 || !Number.isInteger(count)) {
@@ -149,7 +161,6 @@ export function parseReportManualEntriesMatrix(
       continue;
     }
 
-    const periodKey = periodMonth.slice(0, 7);
     if (seenPeriods.has(periodKey)) {
       warnings.push(`Riga ${rowNum}: periodo ${periodKey} duplicato nel file; verrà usata l'ultima occorrenza.`);
     }

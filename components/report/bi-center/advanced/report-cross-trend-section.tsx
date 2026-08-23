@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useReportPeriodContext } from "@/components/report/context/report-period-context";
 import { useReportDomainSnapshot } from "@/components/report/context/report-domain-snapshot-context";
 import { useRegisterAnalyticsSection } from "@/components/report/analytics/report-analytics-provider";
-import { ReportMultiSeriesLineChart, ReportVisualization } from "@/components/report/design-system";
+import { ReportMultiSeriesLineChart, ReportVisualization, ReportChartEmptyState } from "@/components/report/design-system";
 import { KPI_CHART_SERIES_COLORS } from "@/components/report/design-system/primitives/chart/multi-series-line-chart";
 import {
   buildCrossMonthlyTrend,
@@ -15,8 +15,7 @@ import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { useReportTimesheetKpi } from "@/src/hooks/use-report-timesheet-kpi";
 import { useRbac } from "@/src/hooks/use-rbac";
 
-/** Indexed cross-domain trend — builder SSOT; engine supportsSeries remains false until audit certifies buckets. */
-export function ReportCrossTrendSection() {
+export function ReportCrossComparativeTrendChart() {
   const { range } = useReportPeriodContext();
   const { completate, manualByMonth, magLog, magazzinoRows, schedeStore, costoOrario } =
     useReportDomainSnapshot();
@@ -75,9 +74,9 @@ export function ReportCrossTrendSection() {
     });
     const defs = [
       { key: "efficiency" as const, id: "eff", label: "Efficienza", color: KPI_CHART_SERIES_COLORS[0]!, auditKey: "efficiency" as const },
-      { key: "partsPerJob" as const, id: "parts", label: "Ricambi/int", color: KPI_CHART_SERIES_COLORS[1]!, auditKey: "partsPerJob" as const },
-      { key: "costPerJob" as const, id: "cost", label: "Costo medio", color: KPI_CHART_SERIES_COLORS[2]!, auditKey: "costPerJob" as const },
-      { key: "valuePerHour" as const, id: "value", label: "Valore/ora", color: KPI_CHART_SERIES_COLORS[3]!, auditKey: "valuePerHour" as const },
+      { key: "partsPerJob" as const, id: "parts", label: "Ricambi per intervento", color: KPI_CHART_SERIES_COLORS[1]!, auditKey: "partsPerJob" as const },
+      { key: "costPerJob" as const, id: "cost", label: "Costo medio per lavorazione", color: KPI_CHART_SERIES_COLORS[2]!, auditKey: "costPerJob" as const },
+      { key: "valuePerHour" as const, id: "value", label: "Valore per ora", color: KPI_CHART_SERIES_COLORS[3]!, auditKey: "valuePerHour" as const },
     ];
     return defs
       .filter((d) => seriesAudit[d.auditKey])
@@ -86,27 +85,29 @@ export function ReportCrossTrendSection() {
 
   const loading = rbacLoading || timesheet.isLoading || (canFatturazione && invoicesQ.isLoading);
 
-  if (!canFatturazione) {
-    return null;
-  }
-
+  if (!canFatturazione) return null;
   if (loading) {
     return <div className="h-48 animate-pulse rounded-lg bg-[color:var(--cab-surface-muted)]" />;
   }
-
   if (trendSeries.length === 0) {
     return (
-      <p className="text-sm text-[color:var(--cab-text-muted)]" data-testid="report-cross-trend-section-kpi-only">
-        Trend indicizzato non disponibile: serie mensili non certificate. I KPI incrociati restano nella griglia sopra.
-      </p>
+      <ReportChartEmptyState
+        reason="insufficient_points"
+        detail="Non ci sono serie mensili sufficienti per l'andamento comparato."
+      />
     );
   }
 
   return (
     <div data-testid="report-cross-trend-section">
-      <ReportVisualization title="Andamento mensile KPI trasversali (indice base 100)">
+      <ReportVisualization title="Variazione mensile rispetto al valore iniziale (base 100)">
         <ReportMultiSeriesLineChart series={trendSeries} displayMode="indexed" />
       </ReportVisualization>
     </div>
   );
+}
+
+/** @deprecated Use area view orchestration */
+export function ReportCrossTrendSection() {
+  return <ReportCrossComparativeTrendChart />;
 }

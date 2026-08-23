@@ -1221,11 +1221,25 @@ export function GlobalSelect(props: GlobalSelectProps) {
                     ? action.label(addCandidate)
                     : action.label("");
                 return (
-                  <Tooltip content={addOptionEnabled
+                  <Tooltip
+                    key={action.id}
+                    content={
+                      addOptionEnabled
                         ? undefined
                         : useSheet && sheetUsesSearch
                           ? "Scrivi nel campo Cerca in alto"
-                          : "Digita un valore da aggiungere"}><button key={action.id} id={optionDom} type="button" role="option" aria-selected={optionActive} className={addOptionBtnClass(optionActive)} disabled={!addOptionEnabled || addPending} aria-disabled={!addOptionEnabled || addPending} onMouseDown={(e) => {
+                          : "Digita un valore da aggiungere"
+                    }
+                  >
+                    <button
+                      id={optionDom}
+                      type="button"
+                      role="option"
+                      aria-selected={optionActive}
+                      className={addOptionBtnClass(optionActive)}
+                      disabled={!addOptionEnabled || addPending}
+                      aria-disabled={!addOptionEnabled || addPending}
+                      onMouseDown={(e) => {
         e.preventDefault();
         if (blurTimer.current)
             clearTimeout(blurTimer.current);

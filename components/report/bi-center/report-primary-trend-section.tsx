@@ -133,7 +133,7 @@ function ReportTrendMetricPicker({
   );
 }
 
-export function ReportPrimaryTrendSection() {
+export function ReportPrimaryTrendContent() {
   const periodCtx = useReportPeriodContext();
   const drill = useReportDrillDown();
   const [granularity, setGranularity] = useState<ReportAnalyticsGranularity>("week");
@@ -152,7 +152,6 @@ export function ReportPrimaryTrendSection() {
   const { result, envelopesById, isLoading } = useReportAnalyticsContext();
   const series = result?.series.find((s) => s.metricId === activeMetric);
   const envelope = envelopesById.get(activeMetric);
-  const primaryTrendCopy = getReportSectionCopy("primaryTrend");
   const businessLabel = getReportBusinessLabel(activeMetric);
   const registry = getRegistryEntry(activeMetric);
   const compareLabel = compareActive
@@ -174,12 +173,7 @@ export function ReportPrimaryTrendSection() {
   };
 
   return (
-    <ReportAnalysisSectionShell
-      title={primaryTrendCopy.title}
-      subtitle={primaryTrendCopy.subtitle}
-      persistKey="bi-primary-trend"
-    >
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-muted)_30%,var(--cab-card))] p-3 sm:flex-row sm:items-end">
           <ReportTrendMetricPicker metricId={activeMetric} options={eligible} onChange={setMetricId} />
 
@@ -263,7 +257,19 @@ export function ReportPrimaryTrendSection() {
         ) : null}
 
         <ReportTrustCompareFooter compareLabel={compareLabel} trust={envelope?.trust} />
-      </div>
+    </div>
+  );
+}
+
+export function ReportPrimaryTrendSection() {
+  const primaryTrendCopy = getReportSectionCopy("primaryTrend");
+  return (
+    <ReportAnalysisSectionShell
+      title={primaryTrendCopy.title}
+      subtitle={primaryTrendCopy.subtitle}
+      persistKey="bi-primary-trend"
+    >
+      <ReportPrimaryTrendContent />
     </ReportAnalysisSectionShell>
   );
 }

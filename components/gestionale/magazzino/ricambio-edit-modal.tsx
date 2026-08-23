@@ -262,7 +262,7 @@ export function RicambioEditModal({
           placeholderFlags.marcaPlaceholder ||
           placeholderFlags.descrizionePlaceholder ||
           placeholderFlags.categoriaPlaceholder
-            ? " Salvato con campi segnaposto ÔÇö completa l'anagrafica quando possibile."
+            ? " Salvato con campi segnaposto — completa l'anagrafica quando possibile."
             : "";
         onSaved(ui, `Modifiche salvate.${lenientHint}`);
       } catch (e) {
@@ -291,7 +291,7 @@ export function RicambioEditModal({
               type="submit"
               form={RICAMBIO_EDIT_FORM_ID}
               loading={saveBusy}
-              loadingLabel="SalvataggioÔÇª"
+              loadingLabel="Salvataggio…"
               className="col-span-2 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
             />
             <GestionaleModalFooterCancelButton
@@ -327,7 +327,7 @@ export function RicambioEditModal({
                 type="submit"
                 form={RICAMBIO_EDIT_FORM_ID}
                 loading={saveBusy}
-                loadingLabel="SalvataggioÔÇª"
+                loadingLabel="Salvataggio…"
                 className="shrink-0 justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
               />
             </div>

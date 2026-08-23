@@ -6,18 +6,21 @@ import { ReportAnalysisSectionShell } from "@/components/report/bi-center/report
 import { useReportPeriodContext } from "@/components/report/context/report-period-context";
 import { getReportSectionCopy } from "@/lib/report/ui/report-business-labels";
 
-export function ReportExecutiveOverview() {
+export function ReportExecutiveOverviewContent() {
   const { range, compareMode } = useReportPeriodContext();
-  const executiveCopy = getReportSectionCopy("executive");
   useRegisterAnalyticsSection("executive-enrichment", "executiveEnrichment");
+  return <ReportV2ExecutiveBoundary range={range} compareMode={compareMode} embedded />;
+}
 
+export function ReportExecutiveOverview() {
+  const executiveCopy = getReportSectionCopy("executive");
   return (
     <ReportAnalysisSectionShell
       title={executiveCopy.title}
       subtitle={executiveCopy.subtitle}
       persistKey="bi-executive"
     >
-      <ReportV2ExecutiveBoundary range={range} compareMode={compareMode} embedded />
+      <ReportExecutiveOverviewContent />
     </ReportAnalysisSectionShell>
   );
 }

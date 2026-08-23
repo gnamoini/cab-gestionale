@@ -37,7 +37,7 @@ import {
 
 const LavorazionePlanningPanel = dynamic(
   () => import("@/components/lavorazioni/lavorazione-planning-panel").then((m) => m.LavorazionePlanningPanel),
-  { loading: () => <p className="text-xs text-zinc-500">PianificazioneÔÇª</p> },
+  { loading: () => <p className="text-xs text-zinc-500">Pianificazione…</p> },
 );
 
 type TabId = "panoramica" | "schede" | "movimenti" | "preventivi" | "documenti" | "attivita";
@@ -57,7 +57,7 @@ function fmtDt(iso: string) {
 }
 
 function fmtDay(iso: string | null | undefined) {
-  if (!iso?.trim()) return "ÔÇö";
+  if (!iso?.trim()) return "—";
   try {
     return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
   } catch {
@@ -192,15 +192,15 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
 
   const titolo =
     hub != null
-      ? `Lavorazione ┬À ${hub.kpi.statoLabel}`
+      ? `Lavorazione · ${hub.kpi.statoLabel}`
       : hubQuery.lavorazioneBase
-        ? `Lavorazione ┬À ${hubQuery.lavorazioneBase.stato ?? "ÔÇö"}`
+        ? `Lavorazione · ${hubQuery.lavorazioneBase.stato ?? "—"}`
         : "Lavorazione";
   const sottotitolo =
     hub != null
-      ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} ┬À Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
+      ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} · Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
       : hubQuery.lavorazioneBase
-        ? `Ingresso ${fmtDay(hubQuery.lavorazioneBase.data_ingresso)} ┬À Uscita ${fmtDay(hubQuery.lavorazioneBase.data_uscita)}`
+        ? `Ingresso ${fmtDay(hubQuery.lavorazioneBase.data_ingresso)} · Uscita ${fmtDay(hubQuery.lavorazioneBase.data_uscita)}`
         : undefined;
 
   return (
@@ -223,12 +223,12 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tabBtn("movimenti", `Movimenti (${hub?.kpi.countMovimenti ?? 0})`)}
           {tabBtn("preventivi", `Preventivi (${hub?.kpi.countPreventivi ?? 0})`)}
           {tabBtn("documenti", `Documenti (${hub?.kpi.countDocumenti ?? 0})`)}
-          {tabBtn("attivita", `Attivit├á (${attivitaCount})`)}
+          {tabBtn("attivita", `Attività (${attivitaCount})`)}
         </div>
 
         <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
           {hubQuery.isLoading && !hub && !hubQuery.panoramaReady ? (
-            <p className="text-sm text-zinc-500">CaricamentoÔÇª</p>
+            <p className="text-sm text-zinc-500">Caricamento…</p>
           ) : null}
 
           {tab === "panoramica" && hub ? (
@@ -239,19 +239,19 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                   <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{hub.kpi.statoLabel}</p>
                 </div>
                 <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorit├á</p>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorità</p>
                   <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{prioritaLabel(hub.kpi.priorita)}</p>
                 </div>
                 <div>
                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Giorni apertura</p>
                   <p className="mt-0.5 font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                    {hub.kpi.giorniApertura ?? "ÔÇö"}
+                    {hub.kpi.giorniApertura ?? "—"}
                   </p>
                 </div>
                 <div>
                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Movimenti magazzino</p>
                   <p className="mt-0.5 text-zinc-800 dark:text-zinc-200">
-                    {hub.kpi.movimentiEntrataCount} in ┬À {hub.kpi.movimentiUscitaCount} out
+                    {hub.kpi.movimentiEntrataCount} in · {hub.kpi.movimentiUscitaCount} out
                   </p>
                 </div>
                 <div>
@@ -261,7 +261,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
               </div>
               <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
                 <p className="text-[10px] font-bold uppercase text-zinc-500">Note</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{(hub.lavorazione.note ?? "").trim() || "ÔÇö"}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{(hub.lavorazione.note ?? "").trim() || "—"}</p>
               </div>
               <LavorazionePlanningPanel lavorazioneId={lavorazioneId} />
               <div className="flex flex-wrap gap-2">
@@ -282,11 +282,11 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
 
           {tab === "panoramica" && !hub && hubQuery.lavorazioneBase ? (
             <div className="space-y-4 text-sm">
-              <p className="text-xs text-zinc-500">Dettagli KPI in caricamentoÔÇª</p>
+              <p className="text-xs text-zinc-500">Dettagli KPI in caricamento…</p>
               <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
                 <p className="text-[10px] font-bold uppercase text-zinc-500">Note</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
-                  {(hubQuery.lavorazioneBase.note ?? "").trim() || "ÔÇö"}
+                  {(hubQuery.lavorazioneBase.note ?? "").trim() || "—"}
                 </p>
               </div>
               <LavorazionePlanningPanel lavorazioneId={lavorazioneId} />
@@ -328,7 +328,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
               <table className={`${dsTable} min-w-[520px] text-xs`}>
                 <GlobalTableHead>
                     <GlobalTableHeadLabel label="Tipo" />
-                    <GlobalTableHeadLabel label="Quantit├á" />
+                    <GlobalTableHeadLabel label="Quantità" />
                     <GlobalTableHeadLabel label="Ricambio" />
                     <GlobalTableHeadLabel label="Quando" />
                 </GlobalTableHead>
@@ -368,7 +368,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                     >
                       <div className="min-w-0">
                         <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-                          {p.numero} ┬À {fmtDt(p.dataCreazione)}
+                          {p.numero} · {fmtDt(p.dataCreazione)}
                         </p>
                         <p className="text-xs text-zinc-500">{p.cliente}</p>
                       </div>
@@ -426,7 +426,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                             Apri
                           </button>
                         ) : (
-                          <span className="text-xs text-zinc-400">ÔÇö</span>
+                          <span className="text-xs text-zinc-400">—</span>
                         )}
                       </li>
                     );
@@ -439,7 +439,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
 
           {tab === "attivita" ? (
             hubQuery.isLoading && !hub ? (
-              <p className="text-sm text-zinc-500">Caricamento attivit├áÔÇª</p>
+              <p className="text-sm text-zinc-500">Caricamento attività…</p>
             ) : (
               <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
             )

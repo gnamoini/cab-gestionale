@@ -28,12 +28,11 @@ function historicalRange(anchor: Date, window: HistoricalWindow) {
 }
 
 /** Local historical view — does NOT mutate ReportPeriodContext. */
-export function ReportHistoricalTrendSection() {
+export function ReportHistoricalTrendContent() {
   const { anchor, compareMode, range: toolbarRange } = useReportPeriodContext();
   const [window, setWindow] = useState<HistoricalWindow>("12w");
   const [metricId, setMetricId] = useState<string>("lav-chiusi");
   const granularity: ReportAnalyticsGranularity = window === "12m" ? "month" : "week";
-  const historicalCopy = getReportSectionCopy("historical");
 
   const localRange = useMemo(() => historicalRange(anchor, window), [anchor, window]);
   const period = useMemo(
@@ -67,11 +66,7 @@ export function ReportHistoricalTrendSection() {
   const businessLabel = getReportBusinessLabel(activeMetric);
 
   return (
-    <ReportAnalysisSectionShell
-      title={historicalCopy.title}
-      subtitle={historicalCopy.subtitle}
-      persistKey="bi-historical"
-    >
+    <>
       <p className="mb-3 text-xs text-[color:var(--cab-text-muted)]">
         Periodo toolbar: {toolbarLabel} · Storico: {period.start} → {period.end}
       </p>
@@ -121,6 +116,19 @@ export function ReportHistoricalTrendSection() {
         />
         </>
       )}
+    </>
+  );
+}
+
+export function ReportHistoricalTrendSection() {
+  const historicalCopy = getReportSectionCopy("historical");
+  return (
+    <ReportAnalysisSectionShell
+      title={historicalCopy.title}
+      subtitle={historicalCopy.subtitle}
+      persistKey="bi-historical"
+    >
+      <ReportHistoricalTrendContent />
     </ReportAnalysisSectionShell>
   );
 }

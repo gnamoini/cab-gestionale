@@ -76,20 +76,25 @@ export const dsSystemBannerShellTop =
 /** Banner in-shell (main.gestionale-scroll-y) — sticky senza padding safe-area esterno. */
 export const dsSystemBannerShellInShell =
   "sticky top-0 z-[90] shrink-0 border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";
+/** Banner in pagina/modale — stesso shell scuro, senza sticky. */
+export const dsSystemBannerShellEmbedded =
+  "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";
 export const dsSystemBannerInner = "mx-auto max-w-4xl px-3 py-2.5 sm:px-4";
-export const dsSystemBannerLayout = "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4";
-export const dsSystemBannerLead = "flex min-w-0 flex-1 items-start gap-3 sm:items-center";
+export const dsSystemBannerLayout = "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4";
+export const dsSystemBannerLead = "flex min-w-0 flex-1 items-center gap-3";
 export const dsSystemBannerContent = "min-w-0 flex-1";
 export const dsSystemBannerTitle = "text-sm font-semibold leading-snug text-[color:#fafafa]";
 export const dsSystemBannerDescription = "mt-0.5 text-xs leading-relaxed text-[color:#a1a1aa]";
-export const dsSystemBannerAside = "flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:min-w-[9.5rem]";
-export const dsSystemBannerActions = "flex w-full flex-col gap-2";
+export const dsSystemBannerAside = "flex w-full shrink-0 flex-col gap-2 sm:w-auto";
+export const dsSystemBannerActions = "flex flex-wrap items-center justify-end gap-2";
 export const dsSystemBannerChip =
   "rounded-full border border-[color:color-mix(in_srgb,#ffffff_14%,transparent)] bg-[color:color-mix(in_srgb,#ffffff_6%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:#d4d4d8]";
 export const dsSystemBannerContextChip =
   "rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--cab-primary)_90%,#fafafa)]";
 export const dsSystemBannerIconWrap =
   "flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] text-[color:var(--cab-primary)] ring-1 ring-[color:color-mix(in_srgb,#ffffff_12%,transparent)]";
+export const dsSystemBannerIconWrapWarning =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,#f59e0b_12%,transparent)] text-amber-400 ring-1 ring-[color:color-mix(in_srgb,#f59e0b_28%,transparent)]";
 
 /** Stato attivo primario (tab hub, toggle, paginazione) — CTA arancione piena. */
 export const dsPrimaryActiveSurface =
@@ -188,10 +193,12 @@ export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 round
 
 export const dsSystemBannerDismissBtn =
   `inline-flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-[var(--ds-radius-lg)] text-[color:#a1a1aa] transition-colors hover:bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] hover:text-[color:#fafafa] ${dsFocus}`;
+const dsSystemBannerActionBtnBase =
+  `inline-flex h-9 min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--ds-radius-lg)] px-4 text-xs font-semibold ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 export const dsSystemBannerGhostBtn =
-  `inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,#ffffff_14%,transparent)] bg-transparent px-3 py-1.5 text-xs font-medium text-[color:#d4d4d8] hover:bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] hover:text-[color:#fafafa] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+  `${dsSystemBannerActionBtnBase} border border-[color:color-mix(in_srgb,#ffffff_18%,transparent)] bg-[color:color-mix(in_srgb,#ffffff_6%,transparent)] text-[color:#e4e4e7] hover:border-[color:color-mix(in_srgb,#ffffff_28%,transparent)] hover:bg-[color:color-mix(in_srgb,#ffffff_10%,transparent)] hover:text-[color:#fafafa]`;
 export const dsSystemBannerPrimaryBtn =
-  `${dsBtnPrimary} w-full text-xs py-2 px-4`;
+  `${dsSystemBannerActionBtnBase} border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] ${cabPrimaryBg} text-white shadow-[var(--cab-shadow-sm)] ${cabPrimaryBgHover} hover:shadow-[var(--cab-shadow-md)]`;
 
 /** A — CTA hero (stesso arancio piatto del primario) */
 export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] ${cabPrimaryBg} px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[box-shadow,background-color] duration-200 ease-out ${cabPrimaryBgHover} hover:shadow-lg ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;

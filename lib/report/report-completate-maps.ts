@@ -52,10 +52,8 @@ export function resolveReportMonthCompletedCount(
   db: Map<string, number>,
   manual?: Map<string, number>,
 ): number {
-  if (manual?.has(monthKey)) {
-    const v = manual.get(monthKey)!;
-    if (v !== 0) return v;
-  }
+  const manualVal = manual?.get(monthKey);
+  if (manualVal !== undefined && manualVal !== 0) return manualVal;
   return db.get(monthKey) ?? 0;
 }
 

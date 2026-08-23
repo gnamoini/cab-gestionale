@@ -67,7 +67,7 @@ export const UI_ROUTE_AUDIT_PREFIX = "[flex-system-audit]";
 export const UI_ROUTE_AUDIT_TARGETS: Record<RouteAuditKey, RouteAuditTarget> = {
   "/report": {
     route: "/report",
-    files: ["app/(gestionale)/report/page.tsx", "components/report/report-analytics-view.tsx"],
+    files: ["app/(gestionale)/report/page.tsx", "components/report/report-hub-view.tsx"],
     uiOsRoute: "/report",
   },
   "/magazzino": {

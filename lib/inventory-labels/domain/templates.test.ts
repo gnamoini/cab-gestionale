@@ -115,4 +115,9 @@ assert.equal(manualMarca.hAlign, "center");
 assert.equal(manualMarca.vAlign, "center");
 assert.equal(getLabelTemplate("a4-pagina-intera", "manual"), null);
 
+const preferred = getLabelTemplate("100x36-default");
+assert.ok(preferred);
+assert.equal(preferred!.widthMm, 100);
+assert.equal(preferred!.heightMm, 36);
+
 console.log("inventory-labels/domain/templates.test.ts OK");

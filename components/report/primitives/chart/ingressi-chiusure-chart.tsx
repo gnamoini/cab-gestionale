@@ -4,6 +4,8 @@ import { ReportMultiSeriesLineChart } from "@/components/report/design-system/pr
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { IngressiChiusurePoint } from "@/lib/report/lavorazioni-work-orders";
 
+import { reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
+
 export function ReportIngressiChiusureChart({
   points,
   title = "Ingressi vs chiusure e accumulo",
@@ -23,7 +25,7 @@ export function ReportIngressiChiusureChart({
     {
       id: "ingressi",
       label: "Ingressi",
-      color: "#0ea5e9",
+      color: reportChartSeriesColor("secondary"),
       unit: "count" as const,
       points: points.map((p) => ({
         date: p.monthKey,
@@ -34,7 +36,7 @@ export function ReportIngressiChiusureChart({
     {
       id: "chiusure",
       label: "Chiusure",
-      color: "#f97316",
+      color: reportChartSeriesColor("accent"),
       unit: "count" as const,
       points: points.map((p) => ({
         date: p.monthKey,
@@ -45,7 +47,7 @@ export function ReportIngressiChiusureChart({
     {
       id: "saldo",
       label: "Accumulo cumulativo",
-      color: "#22c55e",
+      color: reportChartSeriesColor("primary"),
       unit: "count" as const,
       axis: "right" as const,
       points: points.map((p) => ({

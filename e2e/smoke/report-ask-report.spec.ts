@@ -6,8 +6,8 @@ test.describe("Report Ask Report P8", () => {
   test("desktop: ask panel opens and accepts question", async ({ page }) => {
     attachConsoleGuards(page);
     await loginViaUi(page, adminCredentials());
-    await page.goto("/report");
-    await expect(page.getByTestId("report-bi-center")).toBeVisible({ timeout: 45_000 });
+    await page.goto("/report/ai");
+    await expect(page.getByTestId("report-area-ai")).toBeVisible({ timeout: 45_000 });
     await page.getByTestId("report-ask-toolbar-button").click();
     await expect(page.getByTestId("report-ask-panel")).toBeVisible();
     await page.getByTestId("report-ask-input").fill("Quanto fatturiamo?");
@@ -19,8 +19,7 @@ test.describe("Report Ask Report P8", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     attachConsoleGuards(page);
     await loginViaUi(page, adminCredentials());
-    await page.goto("/report");
-    await page.locator("#bi-ask").scrollIntoViewIfNeeded();
-    await expect(page.getByTestId("report-ask-section")).toBeVisible({ timeout: 45_000 });
+    await page.goto("/report/ai");
+    await expect(page.getByTestId("report-ask-open")).toBeVisible({ timeout: 45_000 });
   });
 });

@@ -42,8 +42,19 @@ export const reportContentPanelClass =
 export const reportExecutiveStripClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] px-3 py-2.5 text-sm leading-relaxed text-[color:var(--cab-text)] sm:px-4 sm:py-3";
 
+/** Riga meta dentro la command bar (stato dati, azioni rapide). */
+export const reportToolbarMetaRowClass =
+  "flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-[color:var(--cab-border)] px-3 py-2.5 sm:px-4";
+
+/** Gruppo azioni a sinistra nella meta row. */
+export const reportToolbarMetaStartClass = "flex min-w-0 flex-wrap items-center gap-2";
+
+/** Etichetta area corrente nella meta row. */
+export const reportToolbarAreaLabelClass =
+  "text-sm font-semibold tracking-tight text-[color:var(--cab-text)]";
+
 /** Command bar report: titolo, periodo, nav e filtri (flusso pagina, non sticky). */
-export const reportCommandBarClass = "min-w-0 space-y-2";
+export const reportCommandBarClass = "min-w-0";
 
 /** Pannello filtri dentro la command bar — stesso sfondo toolbar liste. */
 export const reportCommandFiltersShellClass =

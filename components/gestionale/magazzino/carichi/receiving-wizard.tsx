@@ -158,6 +158,10 @@ export function ReceivingWizard() {
 
           <InventoryReceivingStepIndicator current={flow.step} />
 
+          {flow.error && !flow.document ? (
+            <CaptureAnalyzeErrorPanel error={flow.error} />
+          ) : null}
+
           {flow.step === "analyze" && acquisition ? (
             <div className="space-y-3">
               <InventoryReceivingAcquisitionProgress state={acquisition} />

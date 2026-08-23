@@ -37,5 +37,5 @@ test("magazzino resume shows banner after simulated drift dirty", async ({ page 
     document.dispatchEvent(new Event("visibilitychange"));
   });
 
-  await expect(page.getByText("Magazzino aggiornato")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Nuovi dati disponibili")).toBeVisible({ timeout: 10_000 });
 });

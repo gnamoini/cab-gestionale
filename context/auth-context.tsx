@@ -86,7 +86,7 @@ const AuthUserIdStoreContext = createContext<AuthUserIdStore | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
 const AUTH_INIT_FAILSAFE_MS = 7_000;
-/** ponytail: anti refresh-storm ÔÇö visibility/onAuthChange/gate coalesce */
+/** ponytail: anti refresh-storm — visibility/onAuthChange/gate coalesce */
 export const AUTH_REFRESH_DEBOUNCE_MS = 500;
 
 type AuthInvalidSessionSource = ReconcileReason | "login" | "signed_out";
@@ -384,7 +384,7 @@ export function AuthProvider({
     const id = window.setTimeout(() => {
       if (authInitFailsafeFiredRef.current) return;
       authInitFailsafeFiredRef.current = true;
-      console.warn("[auth] init timeout ÔÇö reconcile forzata");
+      console.warn("[auth] init timeout — reconcile forzata");
       void runReconcile("failsafe", true);
     }, AUTH_INIT_FAILSAFE_MS);
 
@@ -667,7 +667,7 @@ export function useAuth(): AuthContextValue {
   return { ...useAuthState(), ...useAuthActions() };
 }
 
-/** Id utente per prefs UI locali ÔÇö null se fuori provider o non autenticato. */
+/** Id utente per prefs UI locali — null se fuori provider o non autenticato. */
 export function useAuthUserId(): string | null {
   const store = useContext(AuthUserIdStoreContext);
   return useSyncExternalStore(

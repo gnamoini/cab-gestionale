@@ -3,7 +3,9 @@
 import { memo } from "react";
 import type { MagazzinoParetoRow } from "@/lib/report/magazzino-analytics";
 
-const SKY = "#0ea5e9";
+import { reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
+
+const SKY = reportChartSeriesColor("secondary");
 const ORANGE = "var(--cab-primary)";
 
 function MagazzinoParetoChartInner({ rows }: { rows: MagazzinoParetoRow[] }) {

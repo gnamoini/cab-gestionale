@@ -2,9 +2,7 @@
 
 import { useMemo } from "react";
 import { useReportOperationalContextSummaryQuery } from "@/components/report/operational-context/use-report-operational-context-query";
-import { ReportAnalysisSectionShell } from "@/components/report/bi-center/report-analysis-section-shell";
 import { useOptionalReportDrillDown } from "@/components/report/bi-center/use-report-drill-down";
-import { getReportSectionCopy } from "@/lib/report/ui/report-business-labels";
 import type {
   ReportOperationalEvent,
   ReportOperationalEventSeverity,
@@ -96,10 +94,10 @@ function ContextItem({
   );
 }
 
-export function ReportOperationalContextPanel() {
+/** Eventi operativi — dumb content, no shell. */
+export function ReportOperationalContextEvents() {
   const { data, isLoading, isError } = useReportOperationalContextSummaryQuery(true);
   const drill = useOptionalReportDrillDown();
-  const sectionCopy = getReportSectionCopy("operationalContext");
   const items = data?.summaryEvents ?? [];
 
   const visibleItems = useMemo(() => {
@@ -113,52 +111,39 @@ export function ReportOperationalContextPanel() {
   }, [items]);
 
   return (
-    <ReportAnalysisSectionShell
-      title={sectionCopy.title}
-      subtitle={sectionCopy.subtitle}
-      persistKey="bi-operational-context"
-    >
-      <div data-testid="report-operational-context-panel" className="min-w-0">
-        {isLoading ? (
-          <div className="grid gap-2.5">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-lg bg-[color:var(--cab-surface-muted)]" />
-            ))}
-          </div>
-        ) : isError ? (
-          <p className="text-sm text-[color:var(--cab-danger)]">Contesto non disponibile</p>
-        ) : visibleItems.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-[color:var(--cab-border)] px-4 py-6 text-center text-sm text-[color:var(--cab-text-muted)]">
-            Nessun segnale operativo rilevante nel periodo
-          </p>
-        ) : (
-          <ul className="grid gap-2.5" aria-label="Contesto operativo">
-            {visibleItems.map((event) => (
-              <ContextItem
-                key={event.id}
-                event={event}
-                onOpen={
-                  event.drillDown && drill
-                    ? () => drill.openInsightDrillDown(event.drillDown!)
-                    : undefined
-                }
-              />
-            ))}
-          </ul>
-        )}
-        <div className="mt-4 border-t border-[color:var(--cab-border)] pt-3">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--cab-primary)] hover:underline"
-            onClick={() => {
-              document.getElementById("report-timeline-v2")?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            Apri timeline completa
-            <span aria-hidden>→</span>
-          </button>
+    <div data-testid="report-operational-context-panel" className="min-w-0">
+      {isLoading ? (
+        <div className="grid gap-2.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-[color:var(--cab-surface-muted)]" />
+          ))}
         </div>
-      </div>
-    </ReportAnalysisSectionShell>
+      ) : isError ? (
+        <p className="text-sm text-[color:var(--cab-danger)]">Contesto non disponibile</p>
+      ) : visibleItems.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-[color:var(--cab-border)] px-4 py-6 text-center text-sm text-[color:var(--cab-text-muted)]">
+          Nessun segnale operativo rilevante nel periodo
+        </p>
+      ) : (
+        <ul className="grid gap-2.5" aria-label="Contesto operativo">
+          {visibleItems.map((event) => (
+            <ContextItem
+              key={event.id}
+              event={event}
+              onOpen={
+                event.drillDown && drill
+                  ? () => drill.openInsightDrillDown(event.drillDown!)
+                  : undefined
+              }
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
+}
+
+/** @deprecated Use area view orchestration */
+export function ReportOperationalContextPanel() {
+  return <ReportOperationalContextEvents />;
 }

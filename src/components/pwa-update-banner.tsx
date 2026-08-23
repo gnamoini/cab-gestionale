@@ -13,6 +13,7 @@ import { getPwaUpdateBlockReason } from "@/lib/pwa/pwa-update-guard";
 import { getPwaServiceWorkerRegistration } from "@/lib/pwa/sw-client";
 import { dsSystemBannerGhostBtn, dsSystemBannerPrimaryBtn } from "@/lib/ui/design-system";
 import { PWA_UPDATE_EVENT } from "@/src/components/pwa-service-worker-bridge";
+import { SystemBannerRefreshIcon } from "@/components/design-system/system-banner-refresh-icon";
 
 export function PwaUpdateBanner() {
   const [visible, setVisible] = useState(false);
@@ -58,6 +59,7 @@ export function PwaUpdateBanner() {
   return (
     <SystemBannerShell ariaLabel="Aggiornamento applicazione">
       <SystemBannerLayout
+        media={<SystemBannerRefreshIcon />}
         title="Nuova versione disponibile"
         description={
           blockedReason ??
@@ -67,11 +69,11 @@ export function PwaUpdateBanner() {
         dismissLabel="Chiudi suggerimento aggiornamento"
         actions={
           <>
-            <button type="button" disabled={applying} className={dsSystemBannerPrimaryBtn} onClick={handleApply}>
-              {applying ? "Aggiornamento…" : "Aggiorna"}
-            </button>
             <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>
               Più tardi
+            </button>
+            <button type="button" disabled={applying} className={dsSystemBannerPrimaryBtn} onClick={handleApply}>
+              {applying ? "Aggiornamento…" : "Aggiorna"}
             </button>
           </>
         }

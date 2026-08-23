@@ -32,6 +32,9 @@ export {
   SystemBannerLayout,
   SystemBannerShell,
 } from "./system-banner";
+export { SystemBannerRefreshIcon } from "./system-banner-refresh-icon";
+export { SystemBannerOfflineIcon } from "./system-banner-offline-icon";
+export { SystemBannerAlertIcon } from "./system-banner-alert-icon";
 export {
   ShellNavBackButton,
   ShellNavBackLink,

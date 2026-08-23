@@ -67,3 +67,42 @@ export function ShellNavIconRefresh(props: ShellNavIconProps) {
     </svg>
   );
 }
+
+export function ShellNavIconFileText(props: ShellNavIconProps) {
+  const svg = shellNavIconProps({ dense: true, ...props });
+  return (
+    <svg {...svg}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </svg>
+  );
+}
+
+export function ShellNavIconAlertTriangle(props: ShellNavIconProps) {
+  const svg = shellNavIconProps({ dense: true, ...props });
+  return (
+    <svg {...svg}>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+export function ShellNavIconWifiOff(props: ShellNavIconProps) {
+  const svg = shellNavIconProps({ dense: true, ...props });
+  return (
+    <svg {...svg}>
+      <path d="M12 20h.01" />
+      <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+      <path d="M5 12.859a10 10 0 0 1 5.17-2.69" />
+      <path d="M19 12.859a10 10 0 0 0-2.007-1.523" />
+      <path d="M2 8.82a15 15 0 0 1 4.177-2.643" />
+      <path d="M22 8.82a15 15 0 0 0-11.853-3.36" />
+      <path d="m2 2 20 20" />
+    </svg>
+  );
+}

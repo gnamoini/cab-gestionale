@@ -43,6 +43,8 @@ import {
   ordiniFornitoriFiltersActive,
   type OrdiniFornitoriPageFilters,
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-ui-filters";
+import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
+import { buildPdfArtifactUrl } from "@/lib/pdf/request-pdf-artifact";
 import { openOrdineFornitorePdfInNewTab } from "@/lib/ordini-fornitori/ordine-fornitore-pdf";
 import type { OrdineFornitoreEditorImportMeta, OrdineFornitoreImportAnalyzeResult } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
 import type { OrdineFornitoreRecord, OrdineFornitoreSortKey, OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
@@ -556,6 +558,7 @@ export function OrdiniFornitoriView({
                       <div className={gestionaleListTableActionsGroup}>
                         <IconActionButton
                           label="Visualizza"
+                          tooltipForce
                           className={dsTableActionBtnPrimary}
                           onClick={() => void openView(o)}
                         >
@@ -566,6 +569,7 @@ export function OrdiniFornitoriView({
                         </IconActionButton>
                         <IconActionButton
                           label="Duplica"
+                          tooltipForce
                           tooltipContent={!canWrite ? READONLY_PERMISSION_HINT : undefined}
                           className={dsTableActionBtnSecondary}
                           disabled={!canWrite}
@@ -577,8 +581,18 @@ export function OrdiniFornitoriView({
                         </IconActionButton>
                         <IconActionButton
                           label="PDF"
+                          tooltipForce
                           className={dsTableActionBtnSecondary}
-                          onClick={() => void openOrdineFornitorePdfInNewTab(o)}
+                          onClick={() => {
+                            const artifactUrl = buildPdfArtifactUrl("ordine-fornitore", { id: o.id });
+                            const deferred = openDeferredPopup({
+                              context: "pdf",
+                              label: "PDF ordine fornitore",
+                              retryUrl: artifactUrl,
+                            });
+                            if (isDeferredPopupBlocked(deferred)) return;
+                            void openOrdineFornitorePdfInNewTab(o, deferred);
+                          }}
                         >
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -586,6 +600,7 @@ export function OrdiniFornitoriView({
                         </IconActionButton>
                         <IconActionButton
                           label="Elimina"
+                          tooltipForce
                           tooltipContent={!canWrite ? READONLY_PERMISSION_HINT : undefined}
                           className={dsTableActionBtnDanger}
                           disabled={!canWrite}

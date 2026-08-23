@@ -132,11 +132,11 @@ const SECTION_COPY: Readonly<Record<string, ReportSectionCopy>> = {
     subtitle: "Indicatori principali del periodo",
   },
   primaryTrend: {
-    title: "Andamento",
-    subtitle: "Trend principale — evoluzione nel tempo",
+    title: "Andamento principale",
+    subtitle: "Evoluzione della metrica selezionata nel periodo",
   },
   historical: {
-    title: "Trend storico",
+    title: "Andamento storico",
     subtitle: "Ultime 12 settimane o 12 mesi — periodo toolbar invariato",
   },
   economia: {
@@ -164,8 +164,8 @@ const SECTION_COPY: Readonly<Record<string, ReportSectionCopy>> = {
     subtitle: "Volume, valore e accettazione nel periodo",
   },
   cross: {
-    title: "Analisi incrociate",
-    subtitle: "Relazioni tra aree — senza inferenze causali",
+    title: "Confronti tra ambiti",
+    subtitle: "Relazioni tra aree operative nel periodo",
   },
   operationalContext: {
     title: "Cosa sta succedendo operativamente?",

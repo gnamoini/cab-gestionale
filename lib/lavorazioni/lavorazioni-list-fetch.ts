@@ -188,6 +188,10 @@ async function fetchLavorazioniListRowsQuery(
     mezziSelect: string;
     includeProfiles: boolean;
     includeUpdatedByProfile: boolean;
+    /** Paginazione PostgREST (max 1000 righe per pagina). */
+    page?: { from: number; to: number };
+    /** Ordinamento — default created_at desc. */
+    order?: ReadonlyArray<{ column: string; ascending: boolean }>;
   },
 ): Promise<{ data: LavorazioneListRawRow[] | null; error: { message: string } | null }> {
   const { clienteRefScope, fetchMode, includeMezzo, mezziSelect, includeProfiles, includeUpdatedByProfile } =
@@ -204,12 +208,18 @@ async function fetchLavorazioniListRowsQuery(
           includeProfiles,
           includeUpdatedByProfile,
         }),
-      )
-      .order("created_at", { ascending: false }),
+      ),
   );
+  const order = options.order ?? [{ column: "created_at", ascending: false }];
+  for (const o of order) {
+    q = q.order(o.column, { ascending: o.ascending, nullsFirst: false });
+  }
   q = applyLavorazioniListFilters(q, filters);
   if (clienteRefScope && includeMezzo && fetchMode !== "report") {
     q = q.eq("mezzi.cliente", clienteRefScope);
+  }
+  if (options.page) {
+    q = q.range(options.page.from, options.page.to);
   }
   const { data, error } = await q;
   return { data: (data ?? null) as LavorazioneListRawRow[] | null, error };
@@ -418,6 +428,67 @@ export async function fetchLavorazioniListRowsByIds(
   const stati = resolveStatiForSanitize(options?.sanitizeStati);
   const raw = (data ?? []) as LavorazioneListRawRow[];
   return success(mapRawRows(raw, includeMezzo, stati));
+}
+
+const REPORT_ARCHIVIO_PAGE_SIZE = 1000;
+
+/** Archivio completo per report — paginato, ordinato per chiusura. */
+async function fetchLavorazioniArchivioReportRows(
+  sb: SupabaseClient,
+  options?: LavorazioniListFetchOptions,
+): Promise<ServiceResult<LavorazioneListRow[]>> {
+  const filters: LavorazioneFilters = { fetchMode: "report", archived: true };
+  const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
+  const fetchMode = resolveFetchMode(filters);
+  const mezziCols = mezziEmbedColumnsForMode(fetchMode);
+  const mezziSelect = lavorazioniMezziEmbedSelect(mezziCols, { inner: false });
+  const baseOpts = {
+    clienteRefScope,
+    fetchMode,
+    includeMezzo: false,
+    mezziSelect,
+    includeProfiles: false,
+    includeUpdatedByProfile: false,
+    order: [
+      { column: "data_uscita", ascending: false },
+      { column: "archived_at", ascending: false },
+      { column: "created_at", ascending: false },
+    ],
+  };
+
+  const allRaw: LavorazioneListRawRow[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await fetchLavorazioniListRowsQuery(sb, filters, {
+      ...baseOpts,
+      page: { from, to: from + REPORT_ARCHIVIO_PAGE_SIZE - 1 },
+    });
+    if (error) return err(error.message);
+    const chunk = data ?? [];
+    allRaw.push(...chunk);
+    if (chunk.length < REPORT_ARCHIVIO_PAGE_SIZE) break;
+    from += REPORT_ARCHIVIO_PAGE_SIZE;
+  }
+
+  const stati = resolveStatiForSanitize(options?.sanitizeStati);
+  return success(mapRawRows(allRaw, false, stati));
+}
+
+export async function fetchLavorazioniArchivioReportAuthorized(
+  authOptions?: LavorazioniListAuthorizedOptions,
+): Promise<ServiceResult<LavorazioneListRow[]>> {
+  try {
+    const portal = await ensureClientLavorazioniAccess();
+    if (!portal.success) {
+      const gestionale = await ensurePageRead("lavorazioni");
+      if (!gestionale.success) return err(gestionale.error ?? portal.error ?? "Permesso richiesto.");
+    }
+    const sb = getBrowserSupabase();
+    const clienteRefScope = await resolveClienteRefScopeForAuthorizedList(authOptions);
+    return fetchLavorazioniArchivioReportRows(sb, { clienteRefScope });
+  } catch (e) {
+    return serviceFailFromError(e);
+  }
 }
 
 /** Unisce embed mezzo su righe già in cache (dashboard lite BFF). */

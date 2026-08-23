@@ -212,7 +212,7 @@ function fmtDataCreazioneTabella(iso: string): string {
 }
 
 function preventivoClienteSubline(p: { cantiere: string; utilizzatore: string }): string {
-  return [p.cantiere.trim(), p.utilizzatore.trim()].filter(Boolean).join(" ┬À ");
+  return [p.cantiere.trim(), p.utilizzatore.trim()].filter(Boolean).join(" · ");
 }
 
 function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: string }) {
@@ -743,11 +743,11 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             rows.find((r) => r.lavorazioneId === lavId);
           if (seed) {
             const nt = normMezzoKey(seed.targa);
-            if (nt && nt !== "ÔÇö") {
+            if (nt && nt !== "—") {
               list = list.filter((r) => normMezzoKey(r.targa) === nt);
             } else {
               const nm = normMezzoKey(seed.matricola);
-              if (nm && nm !== "ÔÇö") {
+              if (nm && nm !== "—") {
                 list = list.filter((r) => normMezzoKey(r.matricola) === nm);
               } else {
                 list = list.filter((r) => r.lavorazioneId === lavId);
@@ -1061,7 +1061,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
       const aut = autoreRef.current.trim() || "Operatore";
       const mezzo = resolveMezzoForPendingPreventivo(mezzi, pending);
       if (!mezzo) throw new Error("Mezzo non trovato per il cliente/lavorazione indicati.");
-      setHandoffDescProgress("Generazione descrizione tecnicaÔÇª");
+      setHandoffDescProgress("Generazione descrizione tecnica…");
       return buildNewPreventivoFromLavorazioneContext({
         lav: pending.lav,
         origine: pending.origine,
@@ -1190,7 +1190,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         module: "preventivi",
         requireWrite: true,
       },
-      pageActionLogItem(() => setLogOpen(true), "Log attivit├á"),
+      pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
   }, []);
 
@@ -1391,9 +1391,9 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                         <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
                       </div>
                       <p className="mt-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
-                        {p.cliente || "ÔÇö"}
+                        {p.cliente || "—"}
                       </p>
-                      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">{p.macchinaRiassunto || "ÔÇö"}</p>
+                      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">{p.macchinaRiassunto || "—"}</p>
                       {(() => {
                         const telaioSub = preventivoOggettoTelaioSubline(p);
                         return telaioSub ? (
@@ -1429,23 +1429,23 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                     </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Cantiere</dt>
-                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.cantiere || "ÔÇö"}</dd>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.cantiere || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Utilizzatore</dt>
-                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.utilizzatore || "ÔÇö"}</dd>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.utilizzatore || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Targa</dt>
-                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.targa || "ÔÇö"}</dd>
+                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.targa || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Matricola</dt>
-                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.matricola || "ÔÇö"}</dd>
+                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.matricola || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Scuderia</dt>
-                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.nScuderia || "ÔÇö"}</dd>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.nScuderia || "—"}</dd>
                     </div>
                   </dl>
                   <CardMobileActions>
@@ -1490,7 +1490,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             aria-live="polite"
             aria-busy="true"
           >
-            <LoadingSpinner size="md" label="Importazione dati dalle schedeÔÇª" />
+            <LoadingSpinner size="md" label="Importazione dati dalle schede…" />
             <p className="text-center text-sm text-[color:var(--cab-text-muted)]">
               {handoffDescProgress ?? "Attendere, preparazione in corso."}
             </p>

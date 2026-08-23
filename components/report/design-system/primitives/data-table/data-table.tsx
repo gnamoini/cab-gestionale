@@ -7,6 +7,8 @@ import { useReportDensity } from "@/components/report/design-system/internal/use
 import { formatReportMetricValue } from "@/lib/report/metrics/report-value-formatter";
 import { getReportTableConfig } from "@/lib/report/design-system/table-configs";
 import { gestionaleListTableRowClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
+import { reportTableEmptyClass } from "@/lib/report/ui/report-table-tokens";
+import { REPORT_EMPTY_STATE_COPY } from "@/lib/report/ui/report-copy";
 
 export function ReportDataTable({
   configId,
@@ -27,7 +29,7 @@ export function ReportDataTable({
   );
 
   if (rows.length === 0) {
-    return <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun dato nel periodo.</p>;
+    return <p className={reportTableEmptyClass}>{REPORT_EMPTY_STATE_COPY.noData}</p>;
   }
 
   return (

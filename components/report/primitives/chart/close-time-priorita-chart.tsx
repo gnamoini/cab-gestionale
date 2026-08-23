@@ -3,6 +3,8 @@
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { CloseTimeByPrioritaRow } from "@/lib/report/lavorazioni-work-orders";
 
+import { reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
+
 export function ReportCloseTimePrioritaChart({
   rows,
   title = "Tempo chiusura per priorità",
@@ -42,10 +44,10 @@ export function ReportCloseTimePrioritaChart({
           const w = Math.min(20, bw * 0.22);
           return (
             <g key={r.priorita}>
-              <rect x={cx - w - 2} y={base - hm} width={w} height={hm} fill="#0ea5e9" rx={2}>
+              <rect x={cx - w - 2} y={base - hm} width={w} height={hm} fill={reportChartSeriesColor("secondary")} rx={2}>
                 <title>{`${r.label} mediana: ${r.median} gg (n=${r.count})`}</title>
               </rect>
-              <rect x={cx + 2} y={base - hp} width={w} height={hp} fill="#f97316" rx={2}>
+              <rect x={cx + 2} y={base - hp} width={w} height={hp} fill={reportChartSeriesColor("accent")} rx={2}>
                 <title>{`${r.label} P90: ${r.p90} gg`}</title>
               </rect>
               <text x={cx} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>

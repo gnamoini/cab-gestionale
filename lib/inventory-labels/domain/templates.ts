@@ -420,7 +420,7 @@ function buildManualTemplate(base: LabelTemplateDefinition): LabelTemplateDefini
   };
 }
 
-/** Preset registry — 40×20 … 95×40 mm + A4 pagina intera. */
+/** Preset registry — 40×20 … 100×36 mm + A4 pagina intera. */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
   "50x30-default": buildTemplate("50x30-default", 50, 30),
@@ -429,6 +429,7 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
   "95x40-default": buildTemplate("95x40-default", 95, 40),
+  "100x36-default": buildTemplate("100x36-default", 100, 36),
   "a4-pagina-intera": (() => {
     const widthMm = 287;
     const heightMm = 200;
@@ -453,8 +454,8 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   })(),
 };
 
-/** Default 95×40 — formato etichetta magazzino preferito. */
-export const DEFAULT_LABEL_PRESET = "95x40-default";
+/** Default 100×36 — formato etichetta magazzino preferito. */
+export const DEFAULT_LABEL_PRESET = "100x36-default";
 
 export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
 

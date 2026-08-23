@@ -1,6 +1,7 @@
 import {
   LAVORAZIONI_ATTIVE_LIGHT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
+  LAVORAZIONI_REPORT_ARCHIVIO_FILTERS,
   lavorazioniAttiveListFilters,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
@@ -64,6 +65,8 @@ function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
       return lavorazioniListQueryKey({ archived: true, fetchMode: "light" }, false);
     case "lavorazioni.list.report":
       return lavorazioniListQueryKey(LAVORAZIONI_REPORT_FILTERS, false);
+    case "lavorazioni.list.reportArchivio":
+      return lavorazioniListQueryKey(LAVORAZIONI_REPORT_ARCHIVIO_FILTERS, false);
     case "mezzi.list":
       return mezziListQueryKey("list", null);
     case "mezzi.report":

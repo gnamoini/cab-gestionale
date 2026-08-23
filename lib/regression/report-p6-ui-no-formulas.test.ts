@@ -12,11 +12,8 @@ const INTERPRETIVE = [/cresciut.*più rapidamente/i, /causato/i, /interpretation
 for (const rel of [
   "report-domain-sections.tsx",
   "report-primary-trend-section.tsx",
-  "report-advanced-analysis-shell.tsx",
-  "report-bi-center-mount.tsx",
   "advanced/report-cross-domain-section.tsx",
   "advanced/report-multi-metric-chart.tsx",
-  "advanced/report-section-nav.tsx",
   "advanced/report-trust-compare-footer.tsx",
   "operational/report-operational-context-panel.tsx",
 ]) {

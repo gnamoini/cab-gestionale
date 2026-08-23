@@ -7,18 +7,17 @@ import {
 } from "@/components/report/analytics/report-analytics-provider";
 import { resolveSectionMetricIds } from "@/components/report/analytics/resolve-section-metric-ids";
 import { ReportAnalysisSectionShell } from "@/components/report/bi-center/report-analysis-section-shell";
-import { ReportMetricEnvelopeCard } from "@/components/report/bi-center/report-metric-envelope-card";
+import { ReportAnalyticsKpi } from "@/components/report/design-system/primitives/metric-card/report-analytics-kpi";
 import { ReportEconomiaChartsPanel } from "@/components/report/bi-center/report-economia-charts-panel";
 import { ReportLavorazioniChartsPanel } from "@/components/report/bi-center/report-lavorazioni-charts-panel";
 import { ReportMagazzinoChartsPanel } from "@/components/report/bi-center/report-magazzino-charts-panel";
-import { ReportModuleOwnerCta } from "@/components/report/bi-center/report-module-owner-cta";
 import { ReportPreventiviChartsPanel } from "@/components/report/bi-center/report-preventivi-charts-panel";
 import { ReportTrendChart } from "@/components/report/bi-center/report-trend-chart";
 import { LoadingErrorState } from "@/components/design-system";
 import type { ReportAnalyticsGranularity } from "@/lib/report/analytics-engine/types";
 import { getReportBusinessLabelCardCopy } from "@/lib/report/ui/report-business-labels";
 
-function SectionMetricGrid({ metricIds }: { metricIds: readonly string[] }) {
+export function SectionMetricGrid({ metricIds }: { metricIds: readonly string[] }) {
   const { envelopesById, result, isLoading, isError, error, refetch } = useReportAnalyticsContext();
   if (isLoading) {
     return (
@@ -44,13 +43,13 @@ function SectionMetricGrid({ metricIds }: { metricIds: readonly string[] }) {
         const env = envelopesById.get(id);
         if (!env) return null;
         const series = result?.series.find((s) => s.metricId === id);
-        return <ReportMetricEnvelopeCard key={id} envelope={env} series={series} compact />;
+        return <ReportAnalyticsKpi key={id} envelope={env} series={series} compact />;
       })}
     </div>
   );
 }
 
-function SectionTrend({
+export function SectionTrend({
   trendMetricId,
   granularity,
 }: {
@@ -63,7 +62,7 @@ function SectionTrend({
   if (isLoading) return null;
   return (
     <div className="mt-4 min-w-0">
-      <ReportTrendChart series={series} title={`Trend — ${label} (${granularity})`} />
+      <ReportTrendChart series={series} title={label} />
     </div>
   );
 }
@@ -76,7 +75,6 @@ function DomainSection({
   persistKey,
   trendMetricId,
   granularity = "month",
-  defaultCollapsed = true,
 }: {
   registrationKey: string;
   sectionId: Parameters<typeof resolveSectionMetricIds>[0];
@@ -85,7 +83,6 @@ function DomainSection({
   persistKey: string;
   trendMetricId?: string;
   granularity?: ReportAnalyticsGranularity;
-  defaultCollapsed?: boolean;
 }) {
   const metricIds = useMemo(() => resolveSectionMetricIds(sectionId), [sectionId]);
   const fetchIds = useMemo(() => {
@@ -100,7 +97,7 @@ function DomainSection({
   });
 
   return (
-    <ReportAnalysisSectionShell title={title} subtitle={subtitle} persistKey={persistKey} defaultCollapsed={defaultCollapsed}>
+    <ReportAnalysisSectionShell title={title} subtitle={subtitle} persistKey={persistKey}>
       <SectionMetricGrid metricIds={metricIds} />
       {trendMetricId ? <SectionTrend trendMetricId={trendMetricId} granularity={granularity} /> : null}
     </ReportAnalysisSectionShell>
@@ -122,10 +119,9 @@ export function ReportEconomiaSection() {
 
   return (
     <ReportAnalysisSectionShell
-      title="Economia"
-      subtitle="Incassi, margine e preventivi — senza duplicare KPI executive"
+      title="Com'è andata l'economia nel periodo?"
+      subtitle="Fatturato, incassi e margini"
       persistKey="bi-economia"
-      defaultCollapsed
     >
       <SectionMetricGrid metricIds={metricIds} />
       <SectionTrend trendMetricId="eco_fatturato" granularity="month" />
@@ -149,15 +145,13 @@ export function ReportLavorazioniBiSection() {
 
   return (
     <ReportAnalysisSectionShell
-      title="Lavorazioni"
-      subtitle="Throughput e tempi — ingressi vs chiusure"
+      title="Come stanno andando le lavorazioni?"
+      subtitle="Numeri principali e andamento nel periodo"
       persistKey="bi-lavorazioni"
-      defaultCollapsed
     >
       <SectionMetricGrid metricIds={metricIds} />
       <SectionTrend trendMetricId="lav-periodo" granularity="week" />
       <ReportLavorazioniChartsPanel />
-      <ReportModuleOwnerCta owner="lavorazioni" />
     </ReportAnalysisSectionShell>
   );
 }
@@ -177,10 +171,9 @@ export function ReportPreventiviSection() {
 
   return (
     <ReportAnalysisSectionShell
-      title="Preventivi & Commerciale"
+      title="Come vanno i preventivi?"
       subtitle="Volume, valore e accettazione nel periodo"
       persistKey="bi-preventivi"
-      defaultCollapsed
     >
       <SectionMetricGrid metricIds={metricIds} />
       <SectionTrend trendMetricId="eco_preventivi" granularity="month" />
@@ -204,15 +197,13 @@ export function ReportMagazzinoBiSection() {
 
   return (
     <ReportAnalysisSectionShell
-      title="Magazzino"
-      subtitle="Consumi e capitale immobilizzato"
+      title="Com'è la situazione del magazzino?"
+      subtitle="Consumi e valore immobilizzato"
       persistKey="bi-magazzino"
-      defaultCollapsed
     >
       <SectionMetricGrid metricIds={metricIds} />
       <SectionTrend trendMetricId="ric-usati" granularity="month" />
       <ReportMagazzinoChartsPanel />
-      <ReportModuleOwnerCta owner="magazzino" />
     </ReportAnalysisSectionShell>
   );
 }
@@ -232,14 +223,12 @@ export function ReportRisorseSection() {
 
   return (
     <ReportAnalysisSectionShell
-      title="Risorse / Officina"
-      subtitle="Capacità, carico e ore"
+      title="Come stanno le risorse dell'officina?"
+      subtitle="Capacità, carico e ore nel periodo"
       persistKey="bi-risorse"
-      defaultCollapsed
     >
       <SectionMetricGrid metricIds={metricIds} />
       <SectionTrend trendMetricId="presence_hours_total" granularity="month" />
-      <ReportModuleOwnerCta owner="dipendenti" />
     </ReportAnalysisSectionShell>
   );
 }

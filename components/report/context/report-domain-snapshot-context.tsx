@@ -2,6 +2,15 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
+import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type {
+  TopClienteReportRow,
+  TopMezzoReportRow,
+  TopRicambioReportRow,
+} from "@/lib/report/report-classifiche";
 
 export type ReportDomainSnapshot = Pick<
   DomainReportSectionProps,
@@ -20,7 +29,19 @@ export type ReportDomainSnapshot = Pick<
   | "semanticIndex"
   | "compareDetail"
   | "rangeKey"
->;
+> & {
+  derivedBundle: ReportDerivedBundle;
+  magazzino: RicambioMagazzino[];
+  mezzi: MezzoGestito[];
+  lavListRows: readonly LavorazioneListRow[];
+  histRev: number;
+  onHistRev: () => void;
+  tops: {
+    mezzi: TopMezzoReportRow[];
+    clienti: TopClienteReportRow[];
+    ricambi: TopRicambioReportRow[];
+  };
+};
 
 const ReportDomainSnapshotContext = createContext<ReportDomainSnapshot | null>(null);
 

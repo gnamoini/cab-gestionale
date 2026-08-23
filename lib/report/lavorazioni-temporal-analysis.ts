@@ -20,6 +20,8 @@ import {
 import {
   weekIndexInMonthFromIso,
   weekMapKey,
+  isReportManualMonthOverride,
+  resolveReportMonthCompletedCount,
 } from "@/lib/report/report-completate-maps";
 
 export { weekIndexInMonthFromIso } from "@/lib/report/report-completate-maps";
@@ -218,7 +220,11 @@ export function buildLavorazioniTemporalModel(
 ): LavorazioniTemporalModel {
   const effectiveRange = effectiveReportRangeForYear(filterRange, selYear);
 
-  const manualKeys = new Set(manualByMonth ? [...manualByMonth.keys()].filter((k) => k.startsWith(`${selYear}-`)) : []);
+  const manualKeys = new Set(
+    manualByMonth
+      ? [...manualByMonth.keys()].filter((k) => k.startsWith(`${selYear}-`) && isReportManualMonthOverride(manualByMonth, k))
+      : [],
+  );
   const fromMaps = precomputed ? tryAggregateFromPrecomputed(precomputed, selYear, effectiveRange) : null;
   const { byMonth, byWeek } = fromMaps ?? aggregateDbCounts(completate, selYear, effectiveRange);
 
@@ -232,11 +238,7 @@ export function buildLavorazioniTemporalModel(
 
     let count = 0;
     if (inRange) {
-      if (hasManual && manualByMonth?.has(mk)) {
-        count = manualByMonth.get(mk)!;
-      } else {
-        count = byMonth.get(mk) ?? 0;
-      }
+      count = resolveReportMonthCompletedCount(mk, byMonth, manualByMonth);
     }
 
     const trendVsPrevPct =

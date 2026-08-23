@@ -3,7 +3,9 @@
 import { memo, useMemo } from "react";
 import type { MagazzinoCategoryStockSlice } from "@/lib/report/magazzino-analytics";
 
-const PALETTE = ["#0ea5e9", "#22c55e", "#f97316", "#a855f7", "#eab308", "#64748b", "#ec4899", "#14b8a6"];
+import { reportChartSeriesColors } from "@/lib/report/ui/report-chart-theme";
+
+const PALETTE = reportChartSeriesColors(8);
 
 function MagazzinoCategoryDonutChartInner({ slices }: { slices: MagazzinoCategoryStockSlice[] }) {
   const top = useMemo(() => slices.slice(0, 8), [slices]);

@@ -18,6 +18,8 @@ function ReportV2InsightContent({
   return <InsightStrip insights={insights} loading={loading} error={error} />;
 }
 
+export { ReportV2InsightContent };
+
 export function ReportV2InsightBoundary({
   range,
   compareMode,

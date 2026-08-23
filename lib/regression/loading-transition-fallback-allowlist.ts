@@ -18,14 +18,14 @@ export const PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES = [
   "app/(gestionale)/sicurezza/production-readiness/page.tsx",
 ] as const;
 
-/** Route migrate L1 ÔÇö vietato PageTransitionLoader / Suspense skeleton in page.tsx. */
+/** Route migrate L1 — vietato PageTransitionLoader / Suspense skeleton in page.tsx. */
 export const MIGRATED_LOADING_OWNER_ROUTES = [
   ...PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES,
   "app/(gestionale)/lavorazioni-clienti/[id]/page.tsx",
   "app/(gestionale)/magazzino/carichi/nuovo/page.tsx",
 ] as const;
 
-/** @deprecated LEVEL 2 legacy ÔÇö non usare su route migrate. */
+/** @deprecated LEVEL 2 legacy — non usare su route migrate. */
 export const PAGE_TRANSITION_LOADER_ROUTES = [] as const;
 
 /** @deprecated */
@@ -37,5 +37,5 @@ export const ALLOW_NULL_SUSPENSE_ROUTES = [
   "app/(gestionale)/report/design-system-preview/page.tsx",
 ] as const;
 
-/** Route lazy+loading ancora su fallback=null ÔÇö candidature future. */
+/** Route lazy+loading ancora su fallback=null — candidature future. */
 export const FALLBACK_NULL_LEGACY_PENDING_ROUTES = [] as const;

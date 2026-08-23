@@ -5,6 +5,8 @@ import { ReportMultiSeriesLineChart } from "@/components/report/design-system/pr
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { RevenueMonthPoint } from "@/lib/report/economic-analytics-extended";
 
+import { reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
+
 export function ReportRevenueCollectionChart({
   current,
   compare,
@@ -19,7 +21,7 @@ export function ReportRevenueCollectionChart({
       {
         id: "fatturato",
         label: "Fatturato",
-        color: "#0ea5e9",
+        color: reportChartSeriesColor("secondary"),
         unit: "currency" as const,
         points: current.map((p) => ({
           date: p.monthKey,
@@ -30,7 +32,7 @@ export function ReportRevenueCollectionChart({
       {
         id: "incassato",
         label: "Incassato",
-        color: "#22c55e",
+        color: reportChartSeriesColor("accent"),
         unit: "currency" as const,
         points: current.map((p) => ({
           date: p.monthKey,
@@ -43,7 +45,7 @@ export function ReportRevenueCollectionChart({
       out.push({
         id: "fatturato_prev",
         label: "Fatturato (confronto)",
-        color: "#71717a",
+        color: reportChartSeriesColor("muted"),
         unit: "currency" as const,
         points: compare.map((p) => ({
           date: p.monthKey,

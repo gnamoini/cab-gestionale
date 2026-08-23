@@ -1,7 +1,5 @@
 export type NotificationOptInMode = "push" | "browser";
 
-export const NOTIFICATION_OPT_IN_BENEFITS = ["Lavorazioni", "Magazzino", "Promemoria"] as const;
-
 export function notificationOptInContextLabel(mode: NotificationOptInMode): string {
   return mode === "push" ? "App sul telefono" : "Su questo browser";
 }

@@ -6,7 +6,7 @@ import {
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import type { ReactNode } from "react";
 
-/** RSC: BFF ordini fornitori ÔÇö streamabile via Suspense. */
+/** RSC: BFF ordini fornitori — streamabile via Suspense. */
 export async function OrdiniFornitoriDeferredHydration({ children }: { children: ReactNode }) {
   const qc = createServerQueryClient();
   await prefetchDeferredPage(qc, "ordini_fornitori");

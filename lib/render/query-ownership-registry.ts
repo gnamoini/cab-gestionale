@@ -12,6 +12,7 @@ export type QueryScopeKey =
   | "lavorazioni.list.attive"
   | "lavorazioni.list.chiuse"
   | "lavorazioni.list.report"
+  | "lavorazioni.list.reportArchivio"
   | "mezzi.list"
   | "mezzi.report"
   | "magazzino.list"
@@ -38,6 +39,7 @@ const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "lavorazioni.list.attive": "SERVER_OWNER",
   "lavorazioni.list.chiuse": "CLIENT_OWNER",
   "lavorazioni.list.report": "SERVER_OWNER",
+  "lavorazioni.list.reportArchivio": "SERVER_OWNER",
   "mezzi.list": "SERVER_OWNER",
   "mezzi.report": "SERVER_OWNER",
   "magazzino.list": "SERVER_OWNER",
@@ -64,6 +66,7 @@ const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
 const PREFETCH_ROUTES_BY_SCOPE: Partial<Record<QueryScopeKey, readonly string[]>> = {
   "lavorazioni.list.attive": ["/lavorazioni"],
   "lavorazioni.list.report": ["/dashboard", "/report"],
+  "lavorazioni.list.reportArchivio": ["/report"],
   "mezzi.list": ["/mezzi"],
   "mezzi.report": ["/report"],
   "magazzino.list": ["/magazzino"],

@@ -7,7 +7,6 @@ import {
   SystemBannerShell,
 } from "@/components/design-system/system-banner";
 import {
-  NOTIFICATION_OPT_IN_BENEFITS,
   notificationOptInAcceptLabel,
   notificationOptInContextLabel,
   notificationOptInDeclineLabel,
@@ -43,12 +42,13 @@ function NotificationOptInBannerBody({
         title="Attiva le notifiche"
         titleExtra={<span className={dsSystemBannerContextChip}>{notificationOptInContextLabel(mode)}</span>}
         description={notificationOptInDescription(mode)}
-        tags={NOTIFICATION_OPT_IN_BENEFITS}
-        tagsAriaLabel="Tipi di avviso"
         onDismiss={onDecline}
         dismissLabel="Rifiuta notifiche"
         actions={
           <>
+            <button type="button" className={dsSystemBannerGhostBtn} onClick={onDecline}>
+              {notificationOptInDeclineLabel()}
+            </button>
             <button type="button" disabled={busy} className={dsSystemBannerPrimaryBtn} onClick={onEnable}>
               {busy ? (
                 <span className="inline-flex items-center gap-2">
@@ -58,9 +58,6 @@ function NotificationOptInBannerBody({
               ) : (
                 notificationOptInAcceptLabel()
               )}
-            </button>
-            <button type="button" className={dsSystemBannerGhostBtn} onClick={onDecline}>
-              {notificationOptInDeclineLabel()}
             </button>
           </>
         }

@@ -154,6 +154,27 @@ function detachOpener(popup: Window): void {
   }
 }
 
+function escapeHtmlAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+/** ponytail: embed blob in pre-opened tab — `location.replace(blob:)` resta bianco su alcuni browser */
+function tryEmbedPdfInDeferredPopup(popup: Window, blobUrl: string, title: string): boolean {
+  try {
+    const doc = popup.document;
+    doc.open();
+    doc.write(
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtmlAttr(title)}</title>` +
+        `<style>html,body{margin:0;height:100%;overflow:hidden;}embed{position:absolute;inset:0;width:100%;height:100%;border:0;}</style></head>` +
+        `<body><embed src="${escapeHtmlAttr(blobUrl)}" type="application/pdf" /></body></html>`,
+    );
+    doc.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * ponytail: no `noopener,noreferrer` as third arg — Chromium returns `null` even when the tab opens.
  * Detach opener after open instead; deferred flows need a live WindowProxy for `location.replace`.
@@ -243,7 +264,13 @@ function createDeferredHandle(
       }
 
       try {
-        popup.location.replace(trimmed);
+        if (trimmed.startsWith("blob:")) {
+          if (!tryEmbedPdfInDeferredPopup(popup, trimmed, label)) {
+            return blockNavigate(trimmed, options);
+          }
+        } else {
+          popup.location.replace(trimmed);
+        }
         navigated = true;
         scheduleBlobUrlRevoke(trimmed, options?.revokeBlobUrlAfterMs);
         trackRuntimeEvent(

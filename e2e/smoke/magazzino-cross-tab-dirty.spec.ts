@@ -21,6 +21,6 @@ test("magazzino shows stale banner after remote magazzino change", async ({ page
     });
   });
 
-  await expect(page.getByText("Magazzino aggiornato")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Nuovi dati disponibili")).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("button", { name: "Aggiorna pagina" })).toBeVisible();
 });

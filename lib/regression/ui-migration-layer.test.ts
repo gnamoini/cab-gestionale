@@ -33,7 +33,7 @@ assert.equal(lavSchema.toolbar, "standard");
 assert.equal(lavSchema.table, "global");
 assert.equal(lavSchema.modal, "gestionale-shell");
 
-const reportSchema = inferPageSchemaFromSource("components/report/report-analytics-view.tsx", reportFixture);
+const reportSchema = inferPageSchemaFromSource("components/report/report-hub-view.tsx", reportFixture);
 assert.equal(reportSchema.toolbar, "legacy");
 assert.equal(reportSchema.layout, "report-dashboard");
 

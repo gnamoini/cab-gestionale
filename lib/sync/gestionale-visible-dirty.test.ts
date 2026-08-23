@@ -63,7 +63,7 @@ assert.deepEqual(
 
 // route mismatch anche con scope attivo
 const reportScope: GestionaleSyncScopeRegistration = {
-  scopeId: "report-analytics-view",
+  scopeId: "report-area-panoramica",
   domain: "report",
   route: "/report",
   tables: ["lavorazioni"],

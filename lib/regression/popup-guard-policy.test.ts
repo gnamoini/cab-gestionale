@@ -53,7 +53,7 @@ assert.match(openPreview, /acquireDeferredHandle/);
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
 assert.match(requestArtifact, /openDeferredPopup/);
-assert.match(requestArtifact, /retryUrl:\s*trimmed/);
+assert.match(requestArtifact, /retryUrl:\s*options\.url/);
 assert.match(requestArtifact, /deferred\.close\(\)/);
 
 const providers = read("components/app-providers-core.tsx");

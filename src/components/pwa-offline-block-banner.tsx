@@ -1,13 +1,20 @@
 "use client";
 
 import { memo, useSyncExternalStore } from "react";
-import { SystemBannerShell } from "@/components/design-system/system-banner";
 import {
-  PWA_OFFLINE_WRITE_MESSAGE,
+  SystemBannerLayout,
+  SystemBannerShell,
+} from "@/components/design-system/system-banner";
+import { SystemBannerOfflineIcon } from "@/components/design-system/system-banner-offline-icon";
+import {
+  PWA_OFFLINE_BANNER_ARIA_LABEL,
+  PWA_OFFLINE_BANNER_DESCRIPTION,
+  PWA_OFFLINE_BANNER_TITLE,
+} from "@/lib/pwa/pwa-offline-banner-copy";
+import {
   readPwaConnectivityState,
   subscribePwaConnectivity,
 } from "@/lib/pwa/pwa-connectivity";
-import { dsSystemBannerTitle } from "@/lib/ui/design-system";
 
 export const PwaOfflineBlockBanner = memo(function PwaOfflineBlockBanner() {
   const online = useSyncExternalStore(
@@ -19,8 +26,12 @@ export const PwaOfflineBlockBanner = memo(function PwaOfflineBlockBanner() {
   if (online) return null;
 
   return (
-    <SystemBannerShell ariaLabel="Connessione assente" role="status">
-      <p className={`text-center ${dsSystemBannerTitle}`}>{PWA_OFFLINE_WRITE_MESSAGE}</p>
+    <SystemBannerShell ariaLabel={PWA_OFFLINE_BANNER_ARIA_LABEL} role="status">
+      <SystemBannerLayout
+        media={<SystemBannerOfflineIcon />}
+        title={PWA_OFFLINE_BANNER_TITLE}
+        description={PWA_OFFLINE_BANNER_DESCRIPTION}
+      />
     </SystemBannerShell>
   );
 });

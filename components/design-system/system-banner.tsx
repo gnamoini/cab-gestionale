@@ -13,6 +13,7 @@ import {
   dsSystemBannerShell,
   dsSystemBannerShellTop,
   dsSystemBannerShellInShell,
+  dsSystemBannerShellEmbedded,
   dsSystemBannerTitle,
   dsSystemBannerDismissBtn,
 } from "@/lib/ui/design-system";
@@ -29,22 +30,29 @@ export function SystemBannerShell({
   ariaLabel,
   role = "region",
   placement = "global",
+  className = "",
   children,
 }: {
   ariaLabel: string;
-  role?: "region" | "status";
-  /** global = fuori AppShell (PWA); inShell = dentro main.gestionale-scroll-y */
-  placement?: "global" | "inShell";
+  role?: "region" | "status" | "alert";
+  /** global = fuori AppShell (PWA); inShell = sticky in main; embedded = in pagina/modale */
+  placement?: "global" | "inShell" | "embedded";
+  className?: string;
   children: ReactNode;
 }) {
-  const positionClass = placement === "inShell" ? dsSystemBannerShellInShell : dsSystemBannerShellTop;
+  const positionClass =
+    placement === "inShell"
+      ? dsSystemBannerShellInShell
+      : placement === "embedded"
+        ? dsSystemBannerShellEmbedded
+        : dsSystemBannerShellTop;
 
   return (
     <div
       role={role}
       aria-label={ariaLabel}
-      aria-live={role === "status" ? "polite" : undefined}
-      className={`${dsSystemBannerShell} ${positionClass}`}
+      aria-live={role === "status" ? "polite" : role === "alert" ? "assertive" : undefined}
+      className={`${dsSystemBannerShell} ${positionClass} ${className}`.trim()}
     >
       <div className={dsSystemBannerInner}>{children}</div>
     </div>
@@ -103,11 +111,12 @@ export function SystemBannerLayout({
   dismissLabel?: string;
 }) {
   const hasAside = Boolean(actions || onDismiss);
+  const pinMediaTop = Boolean(children || (tags && tags.length > 0));
 
   return (
     <div className={dsSystemBannerLayout}>
       <div className={dsSystemBannerLead}>
-        {media ? <div className="shrink-0">{media}</div> : null}
+        {media ? <div className={`shrink-0${pinMediaTop ? " self-start" : ""}`}>{media}</div> : null}
 
         <div className={dsSystemBannerContent}>
           <div className="flex min-w-0 flex-wrap items-center gap-2">

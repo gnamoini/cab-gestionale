@@ -11,7 +11,7 @@ import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
 import { useReportLiveDataDerived } from "@/lib/report/use-report-live-data-derived";
 import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useMagazzinoListQuery, useMezziListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useReportLavorazioniQuery, useReportManualEntriesQuery } from "@/src/hooks/gestionale/use-report-queries";
+import { useReportLavorazioniQuery, useReportLavorazioniArchivioQuery, useReportManualEntriesQuery } from "@/src/hooks/gestionale/use-report-queries";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 import type { ReportSectionId } from "@/components/report/report-sections-config";
@@ -40,6 +40,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
   const enableManual = options?.enableManual !== false;
 
   const lavQuery = useReportLavorazioniQuery(viewOpts);
+  const lavArchivioQuery = useReportLavorazioniArchivioQuery(viewOpts);
   const magQuery = useMagazzinoListQuery(undefined, { ...viewOpts, variant: "report" });
   const mezziQuery = useMezziListQuery(undefined, { ...viewOpts, variant: "report", enabled: enableMezzi });
   const movimentiQuery = useMovimentiListQuery(undefined, { ...viewOpts, enabled: enableMovimenti });
@@ -56,6 +57,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
 
   const isLoading =
     lavQuery.isLoading ||
+    lavArchivioQuery.isLoading ||
     magQuery.isLoading ||
     (enableMezzi && mezziQuery.isLoading) ||
     (enableMovimenti && movimentiQuery.isLoading) ||
@@ -63,6 +65,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
 
   const queryFailed =
     lavQuery.isError ||
+    lavArchivioQuery.isError ||
     magQuery.isError ||
     (enableMezzi && mezziQuery.isError) ||
     (enableMovimenti && movimentiQuery.isError) ||
@@ -70,6 +73,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
 
   const isFetching =
     lavQuery.isFetching ||
+    lavArchivioQuery.isFetching ||
     magQuery.isFetching ||
     (enableMezzi && mezziQuery.isFetching) ||
     (enableMovimenti && movimentiQuery.isFetching) ||
@@ -78,6 +82,8 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
   const { lavListRows, integrityData, integrityView, snapshotFingerprint } = useReportLiveDataDerived({
     lavRows: coerceLavorazioniListRowsFromCache(lavQuery.data),
     lavQuery,
+    lavArchivioRows: coerceLavorazioniListRowsFromCache(lavArchivioQuery.data),
+    lavArchivioQuery,
     magRows: magQuery.data ?? [],
     magQuery,
     mezziRows: mezziQuery.data ?? [],

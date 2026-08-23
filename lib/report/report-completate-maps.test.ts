@@ -37,10 +37,9 @@ const db = new Map([
 ]);
 const manual = new Map([["2026-07", 99]]);
 
-assert.equal(resolveReportMonthCompletedCount("2026-07", db, manual), 99, "mese importato = solo manuale");
-assert.equal(resolveReportMonthCompletedCount("2026-08", db, manual), 9, "altri mesi = DB");
+assert.equal(resolveReportMonthCompletedCount("2026-07", db, manual), 99, "override Excel non-zero");
+assert.equal(resolveReportMonthCompletedCount("2026-06", db, manual), 2, "mese senza override usa DB");
 assert.equal(resolveReportMonthCompletedCount("2026-07", db, new Map([["2026-07", 0]])), 4, "zero manuale = DB");
-assert.equal(resolveReportMonthCompletedCount("2026-06", db, manual), 2);
 assert.equal(resolveReportMonthCompletedCount("2026-05", db, manual), 0);
 
 const legacyKey = reportMonthKeyFromArchiviata({

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useId, useMemo } from "react";
 import type { KpiChartDisplayMode } from "@/lib/report/metrics/report-metric-types";
 import type { ReportMetricUnit } from "@/lib/report/metrics/report-metric-types";
 import {
@@ -8,6 +8,11 @@ import {
   unitToReportFormatter,
   type ReportValueFormatter,
 } from "@/lib/report/metrics/report-value-formatter";
+import {
+  resolveSeriesAxisExtents,
+  seriesAxisSide,
+  valueToChartY,
+} from "@/lib/report/multi-series-chart-scale";
 
 export const KPI_CHART_SERIES_COLORS = [
   "#0ea5e9",
@@ -59,19 +64,16 @@ function ReportMultiSeriesLineChartInner({
     return [...set].sort();
   }, [series]);
 
-  const { leftMax, rightMax } = useMemo(() => {
-    let leftMax = 1;
-    let rightMax = 1;
-    for (const s of series) {
-      const target = s.axis === "right" ? "right" : "left";
-      for (const p of s.points) {
-        if (p.displayValue == null) continue;
-        if (target === "right") rightMax = Math.max(rightMax, p.displayValue);
-        else leftMax = Math.max(leftMax, p.displayValue);
-      }
-    }
-    return { leftMax, rightMax };
-  }, [series]);
+  const leftExtent = useMemo(
+    () => resolveSeriesAxisExtents(series, displayMode, "left"),
+    [series, displayMode],
+  );
+  const rightExtent = useMemo(
+    () => resolveSeriesAxisExtents(series, displayMode, "right"),
+    [series, displayMode],
+  );
+
+  const clipId = useId();
 
   if (dates.length === 0) {
     return (
@@ -81,14 +83,26 @@ function ReportMultiSeriesLineChartInner({
 
   const n = Math.max(dates.length - 1, 1);
   const xAt = (i: number) => padL + (i / n) * innerW;
-  const yLeft = (v: number) => padT + innerH - (v / leftMax) * innerH;
-  const yRight = (v: number) => padT + innerH - (v / rightMax) * innerH;
+  const yForSeries = (s: MultiSeriesLineChartSeries, v: number) => {
+    const extent = seriesAxisSide(s, displayMode) === "right" ? rightExtent : leftExtent;
+    return valueToChartY(v, extent, padT, innerH);
+  };
 
   const labelStep = Math.max(1, Math.ceil(dates.length / 8));
 
   return (
     <div className="min-w-0 space-y-3">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-64 w-full max-w-full" role="img" aria-label="Grafico KPI multi-serie">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-64 w-full max-w-full overflow-hidden"
+        role="img"
+        aria-label="Grafico KPI multi-serie"
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={padL} y={padT} width={innerW} height={innerH} />
+          </clipPath>
+        </defs>
         {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const gy = padT + innerH * (1 - t);
           return (
@@ -106,14 +120,14 @@ function ReportMultiSeriesLineChartInner({
         })}
         <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-[color:var(--cab-border)]" />
 
+        <g clipPath={`url(#${clipId})`}>
         {series.map((s) => {
           const formatter = unitToReportFormatter(s.unit);
-          const yFn = displayMode === "dual-axis" && s.axis === "right" ? yRight : yLeft;
           const pts = s.points
             .map((p) => {
               const idx = dates.indexOf(p.date);
               if (idx < 0 || p.displayValue == null) return null;
-              return { ...p, px: xAt(idx), py: yFn(p.displayValue) };
+              return { ...p, px: xAt(idx), py: yForSeries(s, p.displayValue) };
             })
             .filter(Boolean) as (MultiSeriesLineChartPoint & { px: number; py: number })[];
 
@@ -141,6 +155,7 @@ function ReportMultiSeriesLineChartInner({
             </g>
           );
         })}
+        </g>
 
         {dates.map((d, i) =>
           i % labelStep === 0 || i === dates.length - 1 ? (

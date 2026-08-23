@@ -16,7 +16,7 @@ const ROUTE_VIEW_PAIRS: Array<{ route: string; viewFile: string }> = [
   { route: "/lavorazioni", viewFile: "components/gestionale/lavorazioni/lavorazioni-view.tsx" },
   { route: "/magazzino", viewFile: "components/gestionale/magazzino/magazzino-view.tsx" },
   { route: "/magazzino/carichi", viewFile: "components/gestionale/magazzino/carichi/receiving-list-view.tsx" },
-  { route: "/report", viewFile: "components/report/report-analytics-view.tsx" },
+  { route: "/report", viewFile: "components/report/report-hub-view.tsx" },
   { route: "/mezzi", viewFile: "components/gestionale/mezzi/mezzi-view.tsx" },
   { route: "/preventivi", viewFile: "components/preventivi/preventivi-view.tsx" },
   { route: "/documenti", viewFile: "components/gestionale/documenti/documenti-view.tsx" },

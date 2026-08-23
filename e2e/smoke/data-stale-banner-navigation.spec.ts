@@ -21,10 +21,9 @@ test("dashboard stale banner disappears after navigation", async ({ page }) => {
     });
   });
 
-  await expect(page.getByText("Dashboard non aggiornata")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Nuovi dati disponibili")).toBeVisible({ timeout: 10_000 });
 
   await page.goto("/magazzino");
   await expect(page.getByRole("heading", { name: "Magazzino" })).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByText("Dashboard non aggiornata")).not.toBeVisible();
   await expect(page.getByText("Nuovi dati disponibili")).not.toBeVisible();
 });

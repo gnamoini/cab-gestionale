@@ -59,16 +59,15 @@ assert.match(reportQueries, /useSharedEntityQuery/);
 
 assert.match(liveData, /enableMezzi/);
 assert.match(liveData, /useReportLiveDataDerived/);
-assert.match(read("components/report/report-analytics-view.tsx"), /enableMezzi:\s*false/);
+assert.match(read("components/report/report-area-data-shell.tsx"), /enableMezzi:\s*true/);
 assert.match(liveData, /useReportLavorazioniQuery/);
 assert.doesNotMatch(liveData, /includeMezzo:\s*true/);
 
 assert.match(derived, /useReportLiveDataDerived/);
 assert.match(derived, /needsClientEnrich/);
 
-assert.match(view, /dynamic\s*\(/);
-assert.match(view, /ReportAnalyticsView/);
-assert.doesNotMatch(view, /ssr:\s*false/);
+assert.match(view, /ReportHubView/);
+assert.doesNotMatch(view, /ReportAnalyticsView/);
 
 assert.match(loaders, /loadReportSection/);
 

@@ -62,7 +62,7 @@ assert.match(agenda, /fetchAgendaPageDefaultRangeServer|workshop-schedule-fetch-
 const lav = read("lib/regression/lavorazioni-perf-policy.test.ts");
 assert.match(lav, /LavorazioneConcludiConfirmDialogLazy/);
 
-const reportView = read("components/report/report-analytics-view.tsx");
+const reportView = read("components/report/report-area-data-shell.tsx");
 assert.match(reportView, /enableMezzi:\s*false/);
 assert.match(reportView, /enableMovimenti:\s*false/);
 

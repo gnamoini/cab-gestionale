@@ -5,6 +5,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 
 const bannerFiles = [
+  "components/supabase-configuration-banner.tsx",
   "src/components/notification-opt-in-banner.tsx",
   "src/components/pwa-install-banner.tsx",
   "src/components/pwa-ios-install-hint.tsx",
@@ -15,7 +16,12 @@ const bannerFiles = [
 for (const rel of bannerFiles) {
   const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
   assert.match(src, /SystemBannerShell/, `${rel} must use SystemBannerShell`);
-  assert.match(src, /dsSystemBanner/, `${rel} must use dsSystemBanner tokens`);
+  assert.match(src, /SystemBannerLayout/, `${rel} must use SystemBannerLayout`);
+  assert.match(
+    src,
+    /dsSystemBanner|SystemBannerLayout/,
+    `${rel} must use dsSystemBanner tokens or SystemBannerLayout`,
+  );
   assert.doesNotMatch(src, /BANNER_SHELL|HINT_SHELL/, `${rel} must not keep local banner shell tokens`);
 }
 

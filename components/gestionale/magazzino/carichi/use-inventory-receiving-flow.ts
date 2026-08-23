@@ -107,8 +107,14 @@ export function useInventoryReceivingFlow() {
 
   const loadDocument = useCallback(
     async (id: string) => {
-      const body = await fetchInventoryReceivingDocument(id);
-      applyDocumentPayload(body.document, body.lines, body.candidatesByLineId);
+      setError(null);
+      try {
+        const body = await fetchInventoryReceivingDocument(id);
+        applyDocumentPayload(body.document, body.lines, body.candidatesByLineId);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Documento non trovato.");
+        setStep("hub");
+      }
     },
     [applyDocumentPayload],
   );

@@ -3,6 +3,8 @@
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { MarginWaterfallStep } from "@/lib/report/economic-analytics-extended";
 
+import { reportChartSeriesColor } from "@/lib/report/ui/report-chart-theme";
+
 function fmtEur(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(
     Math.abs(n),
@@ -53,12 +55,12 @@ export function ReportMarginWaterfallChart({
           const y = padT + innerH - h;
           const fill =
             step.kind === "total"
-              ? "#0ea5e9"
+              ? reportChartSeriesColor("secondary")
               : step.kind === "result"
                 ? step.value >= 0
-                  ? "#22c55e"
-                  : "#ef4444"
-                : "#f97316";
+                  ? reportChartSeriesColor("accent")
+                  : "var(--cab-danger)"
+                : reportChartSeriesColor("primary");
           return (
             <g key={step.id}>
               <rect x={cx - bw * 0.28} y={y} width={bw * 0.56} height={h} fill={fill} rx={4}>

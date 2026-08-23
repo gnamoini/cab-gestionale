@@ -62,6 +62,8 @@ function partialFetchFindings(queryMeta: readonly ReportIntegrityQueryMeta[]) {
 export type ReportLiveDataDerivedInput = {
   lavRows: readonly LavorazioneListRow[];
   lavQuery: QuerySlice;
+  lavArchivioRows: readonly LavorazioneListRow[];
+  lavArchivioQuery: QuerySlice;
   magRows: readonly MagazzinoRicambioRow[];
   magQuery: QuerySlice;
   mezziRows: readonly MezzoGestito[];
@@ -94,9 +96,8 @@ export function useReportLiveDataDerived(input: ReportLiveDataDerivedInput) {
       queryMetaForDataset("movimenti", input.movimentiQuery),
       queryMetaForDataset("manualEntries", input.manualQuery),
     ];
-    const lavorazioniArchivioRaw = input.lavQuery.isError
-      ? []
-      : lavListRows.filter((row) => row.archived === true);
+    const lavorazioniArchivioRaw =
+      input.lavArchivioQuery.isError ? [] : coerceLavorazioniListRowsFromCache(input.lavArchivioRows);
     return ReportDataIntegrityLayer.buildValidatedDataset({
       lavorazioniRaw: lavListRows,
       lavorazioniArchivioRaw,
@@ -110,6 +111,8 @@ export function useReportLiveDataDerived(input: ReportLiveDataDerivedInput) {
   }, [
     lavListRows,
     input.lavQuery,
+    input.lavArchivioRows,
+    input.lavArchivioQuery,
     input.magRows,
     input.magQuery,
     input.mezziRows,

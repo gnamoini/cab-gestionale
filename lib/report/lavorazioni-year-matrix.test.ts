@@ -79,4 +79,22 @@ assert.equal(forecast.dashed[1]?.year, 2026);
 assert.equal(forecast.dashed[1]?.kind, "forecast");
 assert.equal(forecast.dashed[1]?.x, forecast.dashed[0]!.x + 1, "forecast spans prev year → current year");
 
+assert.equal(
+  buildLavorazioniYearMatrix([mockArchived("2026-07-15T12:00:00.000Z")], new Date(2026, 7, 20), new Map([["2026-07", 99]]), undefined)
+    .rows.find((r) => r.year === 2026)?.months[6],
+  99,
+  "override Excel non-zero sul mese",
+);
+
+assert.equal(
+  buildLavorazioniYearMatrix(
+    [mockArchived("2026-08-12T12:00:00.000Z")],
+    new Date(2026, 7, 20),
+    new Map([["2026-08", 0]]),
+    undefined,
+  ).rows.find((r) => r.year === 2026)?.months[7],
+  1,
+  "ago senza override usa DB live",
+);
+
 console.log("lavorazioni-year-matrix.test.ts OK");

@@ -1,15 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ReportSubsection } from "@/components/report/sections/report-subsection";
-import { useReportDensity } from "@/components/report/design-system/internal/use-report-density";
+import { ReportStorySection } from "@/components/report/design-system/layout/story-section";
 
-/** Shell sezione report — wrapper su ReportSubsection esistente. */
+/** Flat section wrapper — no collapsible. */
 export function ReportSection({
   id,
   title,
   subtitle,
-  defaultCollapsed,
   children,
 }: {
   id: string;
@@ -18,12 +16,9 @@ export function ReportSection({
   defaultCollapsed?: boolean;
   children: ReactNode;
 }) {
-  const { sectionGap } = useReportDensity();
   return (
-    <div className={`min-w-0 flex flex-col ${sectionGap}`}>
-      <ReportSubsection id={id} title={title} subtitle={subtitle} defaultCollapsed={defaultCollapsed}>
-        {children}
-      </ReportSubsection>
-    </div>
+    <ReportStorySection title={title} subtitle={subtitle} testId={`report-story-${id}`}>
+      {children}
+    </ReportStorySection>
   );
 }

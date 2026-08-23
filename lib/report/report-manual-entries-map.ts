@@ -1,6 +1,19 @@
 import type { ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 
+/** Dal go-live gestionale: mesi >= chiave usano solo archivio DB (no override Excel). */
+export const REPORT_LAVORAZIONI_LIVE_FROM_MONTH = "2026-07";
+
+export function isReportLavorazioniLiveMonth(monthKey: string): boolean {
+  const mk = monthKey.trim().slice(0, 7);
+  return mk.length === 7 && mk >= REPORT_LAVORAZIONI_LIVE_FROM_MONTH;
+}
+
+/** Override manuale ammesso solo prima del cutover live. */
+export function canReportManualMonthOverride(monthKey: string): boolean {
+  return !isReportLavorazioniLiveMonth(monthKey);
+}
+
 /** `period_month` ISO date → chiave `YYYY-MM`. */
 export function periodMonthToKey(periodMonth: string): string {
   return periodMonth.trim().slice(0, 7);

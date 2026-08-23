@@ -143,7 +143,7 @@ export function buildReportSemanticIndex(source: ReportSemanticSource): ReportSe
     },
 
     buildYearMatrix(anchor, _filterRange?) {
-      const base = buildLavorazioniYearMatrix(completate, anchor, manualByMonth, completateByMonth);
+      const base = buildLavorazioniYearMatrix(completate, anchor, manualByMonth, completateByMonthDb);
       return {
         ...base,
         forecastRows: base.rows,

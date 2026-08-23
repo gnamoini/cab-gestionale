@@ -1,13 +1,20 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 
+import { ReportAskToolbarButton } from "@/components/report/ask-report/report-ask-toolbar-button";
 import { ReportControls } from "@/components/report/report-controls";
 
-import { reportCommandBarClass, reportCommandFiltersShellClass } from "@/components/report/report-ui-tokens";
+import {
+  reportCommandBarClass,
+  reportCommandFiltersBodyClass,
+  reportCommandFiltersShellClass,
+  reportToolbarAreaLabelClass,
+  reportToolbarMetaRowClass,
+  reportToolbarMetaStartClass,
+} from "@/components/report/report-ui-tokens";
 
 import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
 
@@ -15,96 +22,58 @@ import type { DateRange } from "@/lib/report/date-ranges";
 
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 
-import { dsPageToolbarBtn } from "@/lib/ui/design-system";
-
-
-
-function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
-
-  return (
-
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-
-      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-
-      <rect x="6" y="14" width="12" height="8" />
-
-    </svg>
-
-  );
-
-}
-
-
+import { getReportHubArea, type ReportHubAreaId } from "@/lib/report/report-hub-areas-config";
 
 export function ReportToolbar({
-
+  areaId,
+  integrityBadge,
+  showAskButton = false,
   titleAddon,
-
   preset,
-
   onPreset,
-
   customFrom,
-
   customTo,
-
   onCustomFrom,
-
   onCustomTo,
-
   compareMode,
-
   onCompareMode,
-
   compareCustomFrom,
-
   compareCustomTo,
-
   onCompareCustomFrom,
-
   onCompareCustomTo,
-
   range,
-
   compareRange,
-
 }: {
-
-  titleAddon: ReactNode;
-
+  areaId?: ReportHubAreaId;
+  integrityBadge?: ReactNode;
+  showAskButton?: boolean;
+  /** @deprecated Usare integrityBadge + showAskButton */
+  titleAddon?: ReactNode;
   preset: ReportPeriodPreset;
-
   onPreset: (p: ReportPeriodPreset) => void;
-
   customFrom: string;
-
   customTo: string;
-
   onCustomFrom: (s: string) => void;
-
   onCustomTo: (s: string) => void;
-
   compareMode: ReportCompareMode;
-
   onCompareMode: (m: ReportCompareMode) => void;
-
   compareCustomFrom: string;
-
   compareCustomTo: string;
-
   onCompareCustomFrom: (s: string) => void;
-
   onCompareCustomTo: (s: string) => void;
-
   range: DateRange;
-
   compareRange: DateRange | null;
-
 }) {
+  const areaLabel = areaId ? getReportHubArea(areaId)?.label : undefined;
+  const metaStart = titleAddon ?? (
+    <>
+      {integrityBadge}
+      {showAskButton ? <ReportAskToolbarButton /> : null}
+    </>
+  );
+  const showMetaRow = Boolean(areaLabel || metaStart);
 
   return (
-
     <div className={reportCommandBarClass} data-testid="page-ready-toolbar">
       <PageHeaderPageActionMenu
         items={[
@@ -116,51 +85,37 @@ export function ReportToolbar({
           },
         ]}
       />
-      {titleAddon ? (
-        <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
-          {titleAddon}
+      <div className={reportCommandFiltersShellClass}>
+        {showMetaRow ? (
+          <div className={reportToolbarMetaRowClass}>
+            <div className={reportToolbarMetaStartClass}>
+              {areaLabel ? <span className={reportToolbarAreaLabelClass}>{areaLabel}</span> : null}
+              {areaLabel && metaStart ? (
+                <span className="hidden h-4 w-px bg-[color:var(--cab-border)] sm:inline-block" aria-hidden />
+              ) : null}
+              {metaStart}
+            </div>
+          </div>
+        ) : null}
+        <div className={reportCommandFiltersBodyClass}>
+          <ReportControls
+            preset={preset}
+            onPreset={onPreset}
+            customFrom={customFrom}
+            customTo={customTo}
+            onCustomFrom={onCustomFrom}
+            onCustomTo={onCustomTo}
+            compareMode={compareMode}
+            onCompareMode={onCompareMode}
+            compareCustomFrom={compareCustomFrom}
+            compareCustomTo={compareCustomTo}
+            onCompareCustomFrom={onCompareCustomFrom}
+            onCompareCustomTo={onCompareCustomTo}
+            range={range}
+            compareRange={compareRange}
+          />
         </div>
-      ) : null}
-
-      <div className={`min-w-0 ${reportCommandFiltersShellClass} p-3 sm:p-4`}>
-
-        <ReportControls
-
-          preset={preset}
-
-          onPreset={onPreset}
-
-          customFrom={customFrom}
-
-          customTo={customTo}
-
-          onCustomFrom={onCustomFrom}
-
-          onCustomTo={onCustomTo}
-
-          compareMode={compareMode}
-
-          onCompareMode={onCompareMode}
-
-          compareCustomFrom={compareCustomFrom}
-
-          compareCustomTo={compareCustomTo}
-
-          onCompareCustomFrom={onCompareCustomFrom}
-
-          onCompareCustomTo={onCompareCustomTo}
-
-          range={range}
-
-          compareRange={compareRange}
-
-        />
-
       </div>
-
     </div>
-
   );
-
 }
-

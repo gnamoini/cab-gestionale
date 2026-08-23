@@ -14,6 +14,10 @@ export const PWA_FAVICON_ROOT_PATH = "/favicon.ico" as const;
 export const PWA_MASKABLE_ICON_PATH = `${PWA_ICON_BASE_PATH}/icon-512x512-maskable.png` as const;
 export const PWA_MONOCHROME_ICON_PATH = `${PWA_ICON_BASE_PATH}/icon-monochrome.png` as const;
 
+/** Banner install PWA — sorgente 192px, display 48px (nitido su retina). */
+export const PWA_BANNER_APP_ICON_SIZE_PX = 48;
+export const PWA_BANNER_APP_ICON_SRC = `${PWA_ICON_BASE_PATH}/icon-192x192.png`;
+
 function iconPath(size: number): string {
   return `${PWA_ICON_BASE_PATH}/icon-${size}x${size}.png`;
 }

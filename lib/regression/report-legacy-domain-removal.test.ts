@@ -37,13 +37,14 @@ const blockedCharts = LEGACY_CHART_MIGRATION_MATRIX.filter((e) => e.status === "
 assert.equal(blockedCharts.length, 0, "no BLOCKED charts after P9");
 
 const migrated = listMigratedChartIds();
-const analyticsView = readFileSync(
-  join(process.cwd(), "components/report/report-analytics-view.tsx"),
+const hubView = readFileSync(
+  join(process.cwd(), "components/report/report-hub-view.tsx"),
   "utf8",
 );
-assert.doesNotMatch(analyticsView, /LegacyBlockedAccordion/);
-assert.doesNotMatch(analyticsView, /legacy-blocked/);
-assert.doesNotMatch(analyticsView, /ReportSections/);
+assert.doesNotMatch(hubView, /LegacyBlockedAccordion/);
+assert.doesNotMatch(hubView, /legacy-blocked/);
+assert.doesNotMatch(hubView, /ReportSections/);
+assert.match(hubView, /report-hub/);
 
 for (const sectionId of removed) {
   const stillInConfig = REPORT_SECTIONS.some((s) => s.id === sectionId);

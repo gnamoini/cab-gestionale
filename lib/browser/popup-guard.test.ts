@@ -23,33 +23,50 @@ type MockWindow = {
   closed: boolean;
   opener: Window | null;
   location: { href: string; replace: (url: string) => void };
+  document: {
+    open: () => void;
+    write: (html: string) => void;
+    close: () => void;
+  };
   close: () => void;
 };
 
 let mockWindows: MockWindow[] = [];
 let openImpl: (url: string, target?: string, features?: string) => MockWindow | null = () => null;
 let dialogCalls = 0;
+let lastEmbedSrc = "";
+
+function createMockWindow(url: string): MockWindow {
+  const win: MockWindow = {
+    closed: false,
+    opener: globalThis as unknown as Window,
+    location: {
+      href: url,
+      replace(next: string) {
+        this.href = next;
+      },
+    },
+    document: {
+      open: () => {},
+      write: (html: string) => {
+        const match = /src="([^"]+)"/.exec(html);
+        lastEmbedSrc = match?.[1] ?? "";
+      },
+      close: () => {},
+    },
+    close() {
+      this.closed = true;
+    },
+  };
+  mockWindows.push(win);
+  return win;
+}
 
 function installWindowOpenMock() {
   mockWindows = [];
   dialogCalls = 0;
-  openImpl = (url: string) => {
-    const win: MockWindow = {
-      closed: false,
-      opener: globalThis as unknown as Window,
-      location: {
-        href: url,
-        replace(next: string) {
-          this.href = next;
-        },
-      },
-      close() {
-        this.closed = true;
-      },
-    };
-    mockWindows.push(win);
-    return win;
-  };
+  lastEmbedSrc = "";
+  openImpl = (url: string) => createMockWindow(url);
 
   (globalThis as { window?: Window }).window = {
     open: (url: string, target?: string, features?: string) =>
@@ -158,10 +175,14 @@ const deferred = openDeferredPopup({ context: "pdf", label: "PDF" });
 assert.ok(!("status" in deferred));
 
 if (!("status" in deferred)) {
-  const navigated = deferred.navigate("blob:pdf-test");
+  const navigated = deferred.navigate("/api/pdf/artifacts/preventivo?id=1");
   assert.equal(navigated.status, "opened");
-  assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "blob:pdf-test");
+  assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "/api/pdf/artifacts/preventivo?id=1");
   assert.equal(dialogCalls, 0);
+
+  const blobNav = deferred.navigate("blob:pdf-test");
+  assert.equal(blobNav.status, "opened");
+  assert.equal(lastEmbedSrc, "blob:pdf-test");
 
   // 9: fetch error path closes blank tab, no retry session
   const deferredErr = openDeferredPopup({ context: "pdf" });
@@ -203,13 +224,8 @@ const blockedArtifact = openDeferredPopup({
 assert.equal("status" in blockedArtifact && blockedArtifact.status, "blocked");
 if ("status" in blockedArtifact && blockedArtifact.status === "blocked") {
   openImpl = (url: string) => {
-    const win: MockWindow = {
-      closed: false,
-      opener: null,
-      location: { href: url, replace(next: string) { this.href = next; } },
-      close() { this.closed = true; },
-    };
-    mockWindows.push(win);
+    const win = createMockWindow(url);
+    win.opener = null;
     return win;
   };
   const retried = retryPopupFromSession(blockedArtifact.sessionId);
@@ -225,8 +241,8 @@ assert.ok(!("status" in deferredBlob));
 if (!("status" in deferredBlob)) {
   const win = mockWindows[mockWindows.length - 1];
   assert.ok(win);
-  win!.location.replace = () => {
-    throw new Error("replace failed");
+  win!.document.write = () => {
+    throw new Error("embed failed");
   };
   const navFail = deferredBlob.navigate("blob:stored");
   assert.equal(navFail.status, "blocked");

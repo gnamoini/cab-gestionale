@@ -1,8 +1,8 @@
 "use client";
 
 import type { UseQueryOptions } from "@tanstack/react-query";
-import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
-import { LAVORAZIONI_REPORT_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import { fetchLavorazioniListAuthorized, fetchLavorazioniArchivioReportAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
+import { LAVORAZIONI_REPORT_FILTERS, LAVORAZIONI_REPORT_ARCHIVIO_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import { reportManualEntriesEntry } from "@/lib/domain/report-manual-entries-entry";
 import { lavorazioniListQueryKey, reportManualEntriesQueryKey } from "@/lib/render/query-key-factory";
 import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
@@ -12,6 +12,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 
 const LAVORAZIONI_REPORT_SCOPE = "lavorazioni.list.report" as const;
+const LAVORAZIONI_REPORT_ARCHIVIO_SCOPE = "lavorazioni.list.reportArchivio" as const;
 const REPORT_MANUAL_ENTRIES_SCOPE = "report.manualEntries" as const;
 
 type RqOpts<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">;
@@ -26,6 +27,23 @@ export function useReportLavorazioniQuery(options?: RqOpts<LavorazioneListRow[]>
     entityType: "lavorazioni",
     scope: "list",
     ownershipScopeKey: LAVORAZIONI_REPORT_SCOPE,
+    expectedServerKey: queryKey,
+    ...gestOpts,
+    ...viewOpts,
+    ...options,
+  });
+}
+
+export function useReportLavorazioniArchivioQuery(options?: RqOpts<LavorazioneListRow[]>) {
+  const gestOpts = useGestionaleQueryOpts();
+  const viewOpts = useReportViewQueryOpts();
+  const queryKey = lavorazioniListQueryKey(LAVORAZIONI_REPORT_ARCHIVIO_FILTERS, false);
+  return useSharedEntityQuery({
+    queryKey,
+    queryFn: () => fetchLavorazioniArchivioReportAuthorized(),
+    entityType: "lavorazioni",
+    scope: "list",
+    ownershipScopeKey: LAVORAZIONI_REPORT_ARCHIVIO_SCOPE,
     expectedServerKey: queryKey,
     ...gestOpts,
     ...viewOpts,

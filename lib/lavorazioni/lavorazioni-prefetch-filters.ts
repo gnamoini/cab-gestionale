@@ -26,6 +26,13 @@ export const LAVORAZIONI_REPORT_FILTERS: LavorazioneFilters = {
   fetchMode: "report",
 };
 
+/** Report — solo archivio (completate) per metriche chiusura. */
+export const LAVORAZIONI_REPORT_ARCHIVIO_FILTERS: LavorazioneFilters = {
+  includeMezzo: false,
+  fetchMode: "report",
+  archived: true,
+};
+
 /** Staff — conteggio archivio head (titolo sezione collassata). */
 export const LAVORAZIONI_CHIUSE_COUNT_FILTERS: LavorazioneFilters = {
   includeMezzo: true,

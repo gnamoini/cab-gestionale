@@ -72,14 +72,6 @@ const DipendenteDetailModal = dynamic(
   { ssr: false },
 );
 
-const DipendentiOperationalPanel = dynamic(
-  () =>
-    import("@/components/operational-analytics/dipendenti-operational-panel").then((m) => ({
-      default: m.DipendentiOperationalPanel,
-    })),
-  { ssr: false },
-);
-
 function formatWorkDateIt(dateYmd: string): string {
   const [y, m, d] = dateYmd.split("-");
   return `${d}/${m}/${y}`;
@@ -412,8 +404,6 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
             fillTodayFerieDisabled={fillTodayFerieDisabled}
             monthKeysWithData={ts.monthKeysWithData}
           />
-
-          {ts.loadPhase === "ready" ? <DipendentiOperationalPanel monthKey={monthKey} /> : null}
 
           <TimesheetLoadError
             loadPhase={ts.loadPhase}

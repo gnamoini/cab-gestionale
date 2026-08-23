@@ -1,10 +1,13 @@
 "use client";
 
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
-import { openDeferredPopup, type PopupGuardContext, isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import {
+  openDeferredPopup,
+  type DeferredPopupHandle,
+  type PopupGuardContext,
+  isDeferredPopupBlocked,
+} from "@/lib/browser/popup-guard";
 import { pushGestionaleToast } from "@/context/toast-context";
-import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 
 export type OpenPdfArtifactParams = {
   id?: string;
@@ -25,27 +28,34 @@ export function buildPdfArtifactUrl(type: PdfArtifactType, params?: OpenPdfArtif
   return qs ? `/api/pdf/artifacts/${type}?${qs}` : `/api/pdf/artifacts/${type}`;
 }
 
-function fileNameFromContentDisposition(header: string | null, fallback = "documento.pdf"): string {
-  if (!header) return fallback;
-  const utf8 = /filename\*=UTF-8''([^;\s]+)/i.exec(header);
-  if (utf8?.[1]) {
-    try {
-      return decodeURIComponent(utf8[1]).trim() || fallback;
-    } catch {
-      return utf8[1].trim() || fallback;
-    }
-  }
-  const ascii = /filename="([^"]+)"/i.exec(header);
-  return ascii?.[1]?.trim() || fallback;
-}
-
 function resolvePdfContext(type: PdfArtifactType): PopupGuardContext {
   if (type === "report-bundle") return "report";
   if (type.startsWith("scheda")) return "scheda";
   return "pdf";
 }
 
-/** Scarica PDF da URL same-origin e apre anteprima in nuova scheda. */
+function acquireDeferredPdfHandle(options: {
+  url: string;
+  context: PopupGuardContext;
+  label?: string;
+  deferredHandle?: DeferredPopupHandle | null;
+}): DeferredPopupHandle | null {
+  if (options.deferredHandle?.isAlive()) return options.deferredHandle;
+
+  const deferredResult = openDeferredPopup({
+    context: options.context,
+    label: options.label ?? "PDF",
+    retryUrl: options.url,
+  });
+
+  if (isDeferredPopupBlocked(deferredResult)) return null;
+  return deferredResult;
+}
+
+/**
+ * Apre un artifact PDF same-origin nella scheda pre-aperta sul click utente.
+ * Naviga l'URL API direttamente (come il pulsante Riprova) — evita blob: che resta bianco.
+ */
 export async function openPdfStreamInNewTab(
   url: string,
   options?: {
@@ -53,6 +63,7 @@ export async function openPdfStreamInNewTab(
     context?: PopupGuardContext;
     label?: string;
     artifactType?: PdfArtifactType;
+    deferredHandle?: DeferredPopupHandle | null;
   },
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
@@ -67,65 +78,36 @@ export async function openPdfStreamInNewTab(
     options?.context ??
     (options?.artifactType ? resolvePdfContext(options.artifactType) : "pdf");
 
-  const deferredResult = openDeferredPopup({
+  const deferred = acquireDeferredPdfHandle({
+    url: trimmed,
     context,
-    label: options?.label ?? "PDF",
-    retryUrl: trimmed,
+    label: options?.label,
+    deferredHandle: options?.deferredHandle,
   });
-
-  if (isDeferredPopupBlocked(deferredResult)) return false;
-  const deferred = deferredResult;
+  if (!deferred) return false;
 
   pushGestionaleToast(options?.loadingMessage ?? "Generazione PDF in corso…", "info", 5000);
 
-  try {
-    const res = await fetch(trimmed, { credentials: "same-origin", cache: "no-store" });
-    if (!res.ok) {
-      deferred.close();
-      let message = "Generazione PDF non riuscita";
-      try {
-        const body = (await res.json()) as { error?: string };
-        if (body.error?.trim()) message = body.error.trim();
-      } catch {
-        /* risposta HTML di errore */
-      }
-      trackRuntimeEvent(RuntimeEvents.pdfGenerationFailed, { context, phase: "navigate" });
-      pushGestionaleToast(message, "warning", 5200);
-      return false;
-    }
+  const nav = deferred.navigate(trimmed);
+  if (nav.status === "opened") return true;
 
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("application/pdf")) {
-      deferred.close();
-      trackRuntimeEvent(RuntimeEvents.pdfGenerationFailed, { context, phase: "navigate" });
-      pushGestionaleToast("Risposta PDF non valida.", "warning", 5200);
-      return false;
-    }
-
-    const blob = await res.blob();
-    const fileName = fileNameFromContentDisposition(res.headers.get("content-disposition"));
-    const blobUrl = URL.createObjectURL(new File([blob], fileName, { type: "application/pdf" }));
-    return openUrlInNewTab(blobUrl, {
-      revokeBlobUrlAfterMs: 120_000,
-      context,
-      label: options?.label,
-      deferredHandle: deferred,
-    });
-  } catch {
+  if (nav.status !== "blocked") {
     deferred.close();
-    trackRuntimeEvent(RuntimeEvents.pdfNetworkError, { context, phase: "navigate" });
     pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
-    return false;
   }
+
+  return false;
 }
 
 /** Scarica l'artifact server-side e apre il PDF in nuova scheda (anteprima, non download forzato). */
 export async function openPdfArtifact(
   type: PdfArtifactType,
   params?: OpenPdfArtifactParams,
+  deferredHandle?: DeferredPopupHandle | null,
 ): Promise<boolean> {
   return openPdfStreamInNewTab(buildPdfArtifactUrl(type, params), {
     artifactType: type,
     context: resolvePdfContext(type),
+    deferredHandle,
   });
 }
