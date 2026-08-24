@@ -37,8 +37,7 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { stockAdjustFetch } from "@/lib/magazzino/stock-adjust-client";
-import { getStockEntity, mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
+import { runStockAdjustPipeline } from "@/lib/magazzino/stock-pipeline-execute";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import { useQueryClient } from "@tanstack/react-query";
@@ -216,15 +215,10 @@ export function RicambioEditModal({
       setSaveBusy(true);
       try {
         if (scortaDelta !== 0) {
-          const entity = getStockEntity(queryClient, ricambioId);
-          const expectedVersion = entity?.stockVersion ?? 0;
-          const operationId = crypto.randomUUID();
           const stats = modalitaModifica;
-          const moved = await stockAdjustFetch({
+          const moved = await runStockAdjustPipeline(queryClient, {
             ricambioId,
             delta: scortaDelta,
-            expectedVersion,
-            operationId,
             contaStatistiche: stats,
             origine: stats ? "manual_adjustment" : "inventario",
             causale: stats
@@ -237,17 +231,6 @@ export function RicambioEditModal({
             onSaveError(moved.error ?? "Aggiornamento scorta non riuscito.");
             return;
           }
-          mergeStockEntity(
-            queryClient,
-            {
-              ricambioId,
-              quantita: moved.data.quantita,
-              stockVersion: moved.data.stockVersion,
-              lastOperationId: moved.data.operationId,
-            },
-            "mutation",
-            { operationId: moved.data.operationId, receivedVersion: moved.data.stockVersion },
-          );
           next.scorta = moved.data.quantita;
         }
         const patch = ricambioUiToMagazzinoUpdate(next, mezziListePrefs);

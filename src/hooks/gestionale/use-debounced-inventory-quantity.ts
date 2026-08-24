@@ -50,9 +50,7 @@ function resolveServerQuantity(
   fallbackScorta: number,
 ): number {
   const entity = getStockEntity(qc, ricambioId);
-  if (entity && (entity.quantita > 0 || entity.stockVersion > 0)) {
-    return entity.quantita;
-  }
+  if (entity) return entity.quantita;
   return Math.max(0, Math.round(fallbackScorta));
 }
 

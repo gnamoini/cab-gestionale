@@ -16,7 +16,13 @@ export const GESTIONALE_RESERVED_ACTION =
 const PERMISSION_PATTERN =
   /\b(401|403)\b|permesso|negat|\brls\b|row-level|unauthor|forbidden|jwt|sessione|non autenticat|not authorized|policy|insufficient privilege|insufficient_privilege|42501|PGRST301|permission denied|new row violates|violates row-level/i;
 
-const STOCK_INSUFFICIENT_PATTERN = /giacenza insufficiente/i;
+const STOCK_INSUFFICIENT_PATTERN = /giacenza insufficiente|insufficient_stock/i;
+
+const STOCK_VERSION_CONFLICT_PATTERN =
+  /stock_version_conflict|conflitto versione giacenza|STOCK_VERSION_CONFLICT/i;
+
+const STOCK_ADJUST_FAILED_PATTERN =
+  /aggiornamento stock|stock engine fallito|scorta non riuscita|aggiornamento scorta/i;
 
 const NETWORK_PATTERN = /failed to fetch|networkerror|network error|load failed|econnreset|etimedout/i;
 
@@ -77,6 +83,22 @@ export function humanizeGestionaleError(raw: string, ctx?: GestionaleErrorContex
 
   if (STOCK_INSUFFICIENT_PATTERN.test(message)) {
     return "Giacenza insufficiente per il movimento richiesto.";
+  }
+
+  if (STOCK_VERSION_CONFLICT_PATTERN.test(message)) {
+    return "La giacenza è stata aggiornata da un altro utente. Ricarica e riprova.";
+  }
+
+  if (STOCK_ADJUST_FAILED_PATTERN.test(message)) {
+    return "Aggiornamento scorta non riuscito. Riprova tra poco.";
+  }
+
+  if (
+    process.env.NODE_ENV === "development" &&
+    ctx?.module === "magazzino" &&
+    TECHNICAL_PATTERN.test(message)
+  ) {
+    return message;
   }
 
   if (PERMISSION_PATTERN.test(message)) {

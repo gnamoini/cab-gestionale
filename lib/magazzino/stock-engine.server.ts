@@ -61,7 +61,7 @@ function mapRpcRow(raw: Record<string, unknown>): StockApplyMovementResult {
 
 function mapRpcError(error: { message?: string; code?: string }): never {
   const msg = error.message ?? "";
-  if (msg.includes("stock_version_conflict") || error.code === "23505") {
+  if (msg.includes("stock_version_conflict")) {
     throw new StockVersionConflictError();
   }
   if (msg.includes("insufficient_stock") || error.code === "23514") {
