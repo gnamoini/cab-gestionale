@@ -24,7 +24,7 @@ export function useClientPortalFiltersPersistence() {
   useEffect(() => {
     const initial = readFiltersSync();
     setFilters(initial);
-    setSearchInput(initial.search);
+    setSearchInput(typeof initial.search === "string" ? initial.search : "");
     setFiltersHydrated(true);
     setRestoring(false);
   }, []);
@@ -32,6 +32,9 @@ export function useClientPortalFiltersPersistence() {
   const patchFilters = useCallback((patch: Partial<ClientPortalListFilters>) => {
     setFilters((prev) => {
       const next = { ...prev, ...patch };
+      if ("search" in patch) {
+        next.search = typeof patch.search === "string" ? patch.search : "";
+      }
       saveClientPortalFiltersPersisted(next);
       return next;
     });

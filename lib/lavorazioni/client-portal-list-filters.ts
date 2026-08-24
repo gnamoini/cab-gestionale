@@ -50,6 +50,10 @@ function normalizeListFilterField(value: string | undefined): string {
   return v;
 }
 
+function normalizePortalSearchField(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 /** Normalizza filtri persistiti — reset list-filters obsoleti su migrazione v3→v4. */
 export function sanitizePersistedPortalFilters(
   raw: Partial<PersistedClientPortalFilters>,
@@ -60,6 +64,7 @@ export function sanitizePersistedPortalFilters(
     ...raw,
     section: "",
   };
+  merged.search = normalizePortalSearchField(merged.search);
 
   if (options?.resetListFilters) {
     merged.addetto = FILTER_ALL;
@@ -84,7 +89,7 @@ export function sanitizePersistedPortalFilters(
 }
 
 export function clientPortalFiltersActive(f: ClientPortalListFilters): boolean {
-  return f.search.trim() !== "" || lavorazioniAdvancedFiltersActive(f);
+  return normalizePortalSearchField(f.search).trim() !== "" || lavorazioniAdvancedFiltersActive(f);
 }
 
 function readLegacyPersistedRaw(): Partial<PersistedClientPortalFilters> | null {

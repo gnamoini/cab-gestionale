@@ -8,6 +8,7 @@ import {
 import {
   clientPortalBundleMatchesFilters,
   CLIENT_PORTAL_FILTERS_EMPTY,
+  clientPortalFiltersActive,
   sanitizePersistedPortalFilters,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
@@ -189,6 +190,14 @@ const emptySchede: LavorazioneSchedeStore = {};
   assert.equal(sanitized.addetto, FILTER_ALL);
   assert.equal(sanitized.marca, FILTER_ALL);
   assert.equal(sanitized.stato, FILTER_ALL);
+}
+
+// search null in sessionStorage non deve crashare clientPortalFiltersActive
+{
+  const sanitized = sanitizePersistedPortalFilters({ search: null as unknown as string });
+  assert.equal(sanitized.search, "");
+  assert.equal(clientPortalFiltersActive(sanitized), false);
+  assert.doesNotThrow(() => sanitized.search.trim());
 }
 
 console.log("client-portal-list-filters.test.ts: ok");

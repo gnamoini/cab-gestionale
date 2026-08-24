@@ -49,10 +49,10 @@ export function resolveAddettoSnapshotRef(
   const fromRighe =
     store[row.id]?.lavorazioni?.campi.righe
       .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addettoId?.trim() || a.addetto.trim()) ?? null;
+      .find((a) => a.addettoId?.trim() || a.addetto?.trim()) ?? null;
   if (fromRighe) {
     const id = fromRighe.addettoId?.trim() || null;
-    const legacy = fromRighe.addetto.trim();
+    const legacy = fromRighe.addetto?.trim() ?? "";
     return { addettoId: id, addettoLegacy: id ? null : legacy || null };
   }
 

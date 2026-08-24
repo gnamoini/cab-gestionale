@@ -24,7 +24,7 @@ export function buildClientPortalStatoProgress(
   }
 
   const orderIds = statiOpts.map((s) => s.id);
-  const resolved = migrateStatoConfigId(currentStatoId.trim());
+  const resolved = migrateStatoConfigId((currentStatoId ?? "").trim());
   let currentIndex = orderIds.indexOf(resolved);
   if (currentIndex < 0) {
     const orderIdx = statoWorkflowOrderIndex(resolved, orderIds);
