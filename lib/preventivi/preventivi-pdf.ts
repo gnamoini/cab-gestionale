@@ -32,7 +32,11 @@ export function preventivoOfficialPreviewPath(preventivoId: string): string {
 }
 
 /** PDF preventivo salvato — nuova scheda (SSOT artifact API). */
-export async function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): Promise<void> {
+export async function openPreventivoPdfInNewTab(
+  p: PreventivoRecord,
+  autore: string,
+  deferredHandle?: DeferredPopupHandle | null,
+): Promise<void> {
   if (typeof window === "undefined") return;
-  await openPdfArtifact("preventivo", { id: p.id, autore });
+  await openPdfArtifact("preventivo", { id: p.id, autore }, deferredHandle);
 }

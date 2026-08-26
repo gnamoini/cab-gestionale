@@ -168,6 +168,8 @@ import {
   PageToolbarMetaToggle,
 } from "@/components/design-system";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
+import { useRbac } from "@/src/hooks/use-rbac";
+import { IconNavIdentificaRicambio } from "@/src/lib/permissions/gestionale-page-icons";
 import { useDataImportExportPageActions } from "@/components/data-import/data-import-export-toolbar";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
@@ -521,6 +523,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     () => settingsRows.find((r) => r.module === "magazzino" && r.key === "stock_policy")?.value,
     [settingsRows],
   );
+  const { canAccessPage } = useRbac();
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const magPerm = permModules.magazzino;
   const { clearMagazzinoNotifications } = useAdminNotificationStore();
@@ -1686,6 +1689,15 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         onSelect: () => setManualLabelOpen(true),
       });
     }
+    if (canAccessPage("/identifica-ricambio")) {
+      items.push({
+        id: "identifica-ricambio",
+        label: "Identifica ricambio",
+        description: "Ricerca assistita AI del codice ricambio",
+        icon: <IconNavIdentificaRicambio className="h-5 w-5" />,
+        onSelect: () => router.push("/identifica-ricambio"),
+      });
+    }
     if (magCanDeleteRicambio && generatedListinoCount > 0) {
       items.push({
         id: "delete-listino",
@@ -1702,6 +1714,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     magPerm.canRead,
     magCanDeleteRicambio,
     generatedListinoCount,
+    canAccessPage,
+    router,
   ]);
 
   const magazzinoMenuHeaderActions = useMemo(

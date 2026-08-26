@@ -1,3 +1,5 @@
+export { reportMagazzinoPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ReportAreaMagazzinoView } from "@/components/report/areas/report-area-magazzino-view";
 import { ReportAreaPage } from "@/components/report/report-area-page";

@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { OfflinePageViewLazy } from "@/components/public-surfaces/public-surface-loaders";
+export { offlinePageMetadata as metadata } from "@/lib/site/app-page-metadata";
 
-export const metadata: Metadata = {
-  title: "Offline | CAB",
-  description: "Connessione assente — CAB Gestionale Officina",
-};
+import { OfflinePageViewLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export default function OfflinePage() {
   return <OfflinePageViewLazy />;

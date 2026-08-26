@@ -1,3 +1,5 @@
+export { preventiviPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { Suspense } from "react";
 import { dehydrate } from "@tanstack/react-query";
 import { redirect } from "next/navigation";

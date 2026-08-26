@@ -135,6 +135,8 @@ import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-stor
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
+import { buildPdfArtifactUrl } from "@/lib/pdf/request-pdf-artifact";
+import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
 import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import {
   peekPendingPreventivoPayload,
@@ -326,8 +328,15 @@ function PreventivoRowActions({
         tooltipForce
         className={prevTableActionBtnSecondary}
         onClick={() => {
+          const artifactUrl = buildPdfArtifactUrl("preventivo", { id: p.id, autore });
+          const deferredResult = openDeferredPopup({
+            context: "pdf",
+            label: "PDF preventivo",
+            retryUrl: artifactUrl,
+          });
+          if (isDeferredPopupBlocked(deferredResult)) return;
           void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-            openPreventivoPdfInNewTab(p, "Gestionale"),
+            openPreventivoPdfInNewTab(p, autore, deferredResult),
           );
         }}
       >
@@ -801,24 +810,38 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const handleDdtAction = useCallback(
     async (preventivo: PreventivoRecord) => {
       const existing = getDdtForPreventivo(preventivo.id);
+      const retryUrl = existing ? buildPdfArtifactUrl("ddt", { id: existing.id }) : undefined;
+      const deferredResult = openDeferredPopup({
+        context: "pdf",
+        label: "PDF DDT",
+        retryUrl,
+      });
+      if (isDeferredPopupBlocked(deferredResult)) return;
+      const deferred = deferredResult;
+
       if (existing) {
         try {
-          await openDdtPdfInNewTab(existing.id);
+          await openDdtPdfInNewTab(existing.id, deferred);
         } catch (e) {
+          deferred.close();
           gestToast.errorOnce("ddt-print", e);
         }
         return;
       }
-      if (!canWritePreventivi) return;
+      if (!canWritePreventivi) {
+        deferred.close();
+        return;
+      }
       setDdtBusyId(preventivo.id);
       try {
         const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
         const created = await ddtEntry.createOrReplaceForPreventivo(draft);
         if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
         await refetchDdtIndex();
-        await openDdtPdfInNewTab(created.data.id);
+        await openDdtPdfInNewTab(created.data.id, deferred);
         gestToast.successOnce("ddt-created", "DDT generato.");
       } catch (e) {
+        deferred.close();
         gestToast.errorOnce("ddt-create", e);
       } finally {
         setDdtBusyId(null);

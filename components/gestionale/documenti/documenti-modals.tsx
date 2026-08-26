@@ -24,6 +24,9 @@ import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-sh
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import type { ModalSize } from "@/lib/ui/modal-max-width-class";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { DocumentSparePartsFields } from "@/components/gestionale/documenti/document-spare-parts-fields";
+import { DocumentAiIndexBadges } from "@/components/gestionale/documenti/document-ai-index-badges";
+import type { DocumentAiIndexBadgeState } from "@/lib/documents/document-spare-parts-meta";
 import {
   GlobalAttrezzatureMarcaSelect,
   GlobalAttrezzatureModelloSelect,
@@ -212,6 +215,9 @@ export function UploadDocumentoModal({
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
   const [importListinoToMagazzino, setImportListinoToMagazzino] = useState(false);
+  const [aiSparePartsEnabled, setAiSparePartsEnabled] = useState(false);
+  const [aiDocumentKind, setAiDocumentKind] = useState<DocumentoGestionale["aiDocumentKind"]>("spare_parts_catalog");
+  const [aiPriceEnabled, setAiPriceEnabled] = useState(false);
   const submitLock = useSubmitLock();
 
   const marcaOnly = isDocumentoMarcaOnlyCategoria(categoria);
@@ -219,6 +225,13 @@ export function UploadDocumentoModal({
 
   useEffect(() => {
     setApplicabilita(defaultApplicabilitaForCategoria(categoria));
+    if (categoria === "cataloghi" || categoria === "listini" || categoria === "manuali") {
+      setAiSparePartsEnabled(true);
+      setAiDocumentKind(categoria === "listini" ? "price_list" : "spare_parts_catalog");
+      setAiPriceEnabled(categoria === "listini");
+    } else {
+      setAiSparePartsEnabled(false);
+    }
   }, [categoria]);
 
   useEffect(() => {
@@ -309,6 +322,9 @@ export function UploadDocumentoModal({
           marcaKey: marcaTrim || undefined,
           modelloKey: marcaTrim && snap.effectiveApp === "modello" ? modelloTrim : undefined,
           associazioni: undefined,
+          aiSparePartsEnabled,
+          aiDocumentKind: aiSparePartsEnabled ? aiDocumentKind : undefined,
+          aiPriceEnabled: aiSparePartsEnabled ? aiPriceEnabled : undefined,
         };
         const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
         const resolved = resolveDocumentoApplicazione(tmp);
@@ -500,6 +516,15 @@ export function UploadDocumentoModal({
               maxLength={TEXT_LONG}
             />
           </label>
+          <DocumentSparePartsFields
+            enabled={aiSparePartsEnabled}
+            onEnabledChange={setAiSparePartsEnabled}
+            documentKind={aiDocumentKind}
+            onDocumentKindChange={setAiDocumentKind}
+            priceEnabled={aiPriceEnabled}
+            onPriceEnabledChange={setAiPriceEnabled}
+            disabled={isUploading}
+          />
         </GestionaleModalScrollBody>
       </form>
     </DocumentiModalShell>
@@ -523,6 +548,21 @@ export function DocumentoInfoModal({
 }) {
   const gestToast = useGestionaleToast();
   const r = resolveDocumentoApplicazione(doc);
+  const [aiBadges, setAiBadges] = useState<DocumentAiIndexBadgeState | null>(null);
+
+  useEffect(() => {
+    if (!doc.aiSparePartsEnabled) {
+      setAiBadges(null);
+      return;
+    }
+    void fetch(`/api/documents/${doc.id}/spare-parts-index`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { badges?: DocumentAiIndexBadgeState } | null) => {
+        if (data?.badges) setAiBadges(data.badges);
+      })
+      .catch(() => undefined);
+  }, [doc.id, doc.aiSparePartsEnabled]);
+
   const canOpenFile = canOpenDocumento(doc);
   const fileUnavailableLabel = documentoFileUnavailableLabel(doc);
   const entita = documentoSenzaMarcaUi(doc)
@@ -606,6 +646,7 @@ export function DocumentoInfoModal({
             <InfoRow label="Dimensione" value={`${doc.dimensioneKb} KB`} />
           </div>
           <InfoRow label="Note" value={doc.note?.trim() ? doc.note : "—"} />
+          {doc.aiSparePartsEnabled && aiBadges ? <DocumentAiIndexBadges badges={aiBadges} /> : null}
         </GestionaleModalScrollBody>
       </div>
     </DocumentiModalShell>
@@ -635,6 +676,11 @@ export function DocumentoEditModal({
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [aiSparePartsEnabled, setAiSparePartsEnabled] = useState(doc.aiSparePartsEnabled === true);
+  const [aiDocumentKind, setAiDocumentKind] = useState<DocumentoGestionale["aiDocumentKind"]>(
+    doc.aiDocumentKind ?? "spare_parts_catalog",
+  );
+  const [aiPriceEnabled, setAiPriceEnabled] = useState(doc.aiPriceEnabled === true);
   const submitLock = useSubmitLock();
 
   const marcaOnly = isDocumentoMarcaOnlyCategoria(categoria);
@@ -704,6 +750,9 @@ export function DocumentoEditModal({
           marcaKey: marcaTrim || undefined,
           modelloKey: marcaTrim && snap.effectiveApp === "modello" ? modelloTrim : undefined,
           associazioni: undefined,
+          aiSparePartsEnabled,
+          aiDocumentKind: aiSparePartsEnabled ? aiDocumentKind : undefined,
+          aiPriceEnabled: aiSparePartsEnabled ? aiPriceEnabled : undefined,
         };
 
         setSaving(true);
@@ -849,6 +898,15 @@ export function DocumentoEditModal({
               maxLength={TEXT_LONG}
             />
           </label>
+          <DocumentSparePartsFields
+            enabled={aiSparePartsEnabled}
+            onEnabledChange={setAiSparePartsEnabled}
+            documentKind={aiDocumentKind}
+            onDocumentKindChange={setAiDocumentKind}
+            priceEnabled={aiPriceEnabled}
+            onPriceEnabledChange={setAiPriceEnabled}
+            disabled={saving}
+          />
         </GestionaleModalScrollBody>
       </form>
     </DocumentiModalShell>

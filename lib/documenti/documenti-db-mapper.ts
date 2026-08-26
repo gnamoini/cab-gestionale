@@ -12,6 +12,8 @@ import { requestArchiveDocumentUploadPolicy } from "@/lib/documenti/document-upl
 import { sha256HexFromFile } from "@/lib/documents/document-content-hash";
 import type { DocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import { mergeDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
+import type { DocumentSparePartsMeta } from "@/lib/documents/document-spare-parts-meta";
+import { mergeDocumentSparePartsMeta } from "@/lib/documents/document-spare-parts-meta";
 import { normalizeStorageObjectPath, sanitizeStorageFileName } from "@/src/lib/storage/storage-paths";
 
 export { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-from-stored";
@@ -68,7 +70,19 @@ export function gestionaleToDocumentoInsert(
         typeof doc.mimeType === "string" && doc.mimeType.trim() ? doc.mimeType.trim() : undefined,
       uploadedAt: doc.caricatoIl || new Date().toISOString(),
       ...(intelligence ? mergeDocumentIntelligenceMeta({}, intelligence) : {}),
+      ...mergeDocumentSparePartsMeta({}, sparePartsMetaFromGestionale(doc)),
     },
+  };
+}
+
+function sparePartsMetaFromGestionale(doc: Omit<DocumentoGestionale, "id">): DocumentSparePartsMeta {
+  return {
+    aiSparePartsEnabled: doc.aiSparePartsEnabled,
+    aiPriceEnabled: doc.aiPriceEnabled,
+    aiDocumentKind: doc.aiDocumentKind,
+    aiSourceType: doc.aiSourceType,
+    aiYear: doc.aiYear,
+    aiLanguage: doc.aiLanguage,
   };
 }
 

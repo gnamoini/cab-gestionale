@@ -38,11 +38,13 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo, ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
+import type { MezziQrSelection } from "@/lib/mezzi/client/mezzi-qr-selection";
+import { dsCheckboxInput } from "@/lib/ui/design-system";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 
-/** 5 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
-const mezziTableActionsColClass = "w-[14rem] min-w-[14rem]";
+/** 6 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
+const mezziTableActionsColClass = "w-[16rem] min-w-[16rem]";
 
 const EMPTY_MEZZO_PRESET_IDS: ReadonlySet<string> = new Set();
 
@@ -175,16 +177,29 @@ export type MezziTableProps = {
   onSort: (k: MezziSortKey) => void;
   flashRowId: string | null;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
+  labelMode?: boolean;
+  qrSelection?: MezziQrSelection;
+  onOpenQrLabel?: (m: MezzoGestito) => void;
 };
+
+function IconQrLabel({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h6v6H4V5zm10 0h6v6h-6V5zM4 15h6v6H4v-6zm13-3h3v3h-3v-3zm0 4h3v3h-3v-3zm-4 4h3v3h-3v-3z" />
+    </svg>
+  );
+}
 
 function MezzoRowActions({
   m,
   hasActivePreset,
   onHub,
+  onOpenQrLabel,
 }: {
   m: MezzoGestito;
   hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
+  onOpenQrLabel?: (m: MezzoGestito) => void;
 }) {
   return (
     <>
@@ -231,6 +246,16 @@ function MezzoRowActions({
       >
         <IconClipboardList />
       </IconActionButton>
+      {onOpenQrLabel ? (
+        <IconActionButton
+          label="Stampa etichetta QR"
+          tooltipForce
+          className={dsTableActionBtnSecondary}
+          onClick={() => onOpenQrLabel(m)}
+        >
+          <IconQrLabel />
+        </IconActionButton>
+      ) : null}
     </>
   );
 }
@@ -242,6 +267,9 @@ function MezzoRowInner({
   flash,
   hasActivePreset,
   onHub,
+  labelMode,
+  qrSelection,
+  onOpenQrLabel,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
@@ -249,6 +277,9 @@ function MezzoRowInner({
   flash: boolean;
   hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
+  labelMode?: boolean;
+  qrSelection?: MezziQrSelection;
+  onOpenQrLabel?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   const nLavorazioni = interventi.length;
@@ -260,6 +291,17 @@ function MezzoRowInner({
       data-gestionale-row-tone={gestionaleListTableRowTone({ flash })}
       className={mezziTableRowClass}
     >
+      {labelMode && qrSelection ? (
+        <td className={`${gestionaleListTableTdCenter} w-10 py-2`}>
+          <input
+            type="checkbox"
+            className={dsCheckboxInput}
+            checked={qrSelection.isSelected(m.id)}
+            onChange={() => qrSelection.toggle(m.id)}
+            aria-label={`Seleziona mezzo ${m.targa ?? m.id}`}
+          />
+        </td>
+      ) : null}
       <td className={`min-w-0 ${mezziTableTd}`}>
         <div className={mezziCellStackClass}>
           <span className={mezziCellPrimaryClass}>{displayScalar(m.cliente)}</span>
@@ -299,7 +341,12 @@ function MezzoRowInner({
       </td>
       <td className={gestionaleListTableTdAzioni}>
         <div className={gestionaleListTableActionsGroupEnd}>
-          <MezzoRowActions m={m} hasActivePreset={hasActivePreset} onHub={onHub} />
+          <MezzoRowActions
+            m={m}
+            hasActivePreset={hasActivePreset}
+            onHub={onHub}
+            onOpenQrLabel={onOpenQrLabel}
+          />
         </div>
       </td>
     </tr>
@@ -336,6 +383,9 @@ function MezzoMobileCard({
   flash,
   hasActivePreset,
   onHub,
+  labelMode,
+  qrSelection,
+  onOpenQrLabel,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
@@ -344,6 +394,9 @@ function MezzoMobileCard({
   flash: boolean;
   hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
+  labelMode?: boolean;
+  qrSelection?: MezziQrSelection;
+  onOpenQrLabel?: (m: MezzoGestito) => void;
 }) {
   const ultimaLav = ultimaLavorazioneLabel(interventi);
   const { date: ultimaModifica, autore: ultimaModificaAutore } =
@@ -405,7 +458,15 @@ function MezzoMobileCard({
 
       <LavorazioneMobileCardFooter
         meta={
-          ultimaModifica !== "—" ? (
+          labelMode && qrSelection ? (
+            <input
+              type="checkbox"
+              className={dsCheckboxInput}
+              checked={qrSelection.isSelected(m.id)}
+              onChange={() => qrSelection.toggle(m.id)}
+              aria-label={`Seleziona mezzo ${m.targa ?? m.id}`}
+            />
+          ) : ultimaModifica !== "—" ? (
             <Tooltip content={modificaTooltip ?? undefined} side="top" multiline>
               <div className="min-w-0 cursor-default text-xs font-medium leading-tight text-[color:var(--cab-text-muted)]">
                 <p className="min-w-0 truncate tabular-nums">
@@ -420,7 +481,12 @@ function MezzoMobileCard({
           ) : null
         }
       >
-        <MezzoRowActions m={m} hasActivePreset={hasActivePreset} onHub={onHub} />
+        <MezzoRowActions
+          m={m}
+          hasActivePreset={hasActivePreset}
+          onHub={onHub}
+          onOpenQrLabel={onOpenQrLabel}
+        />
       </LavorazioneMobileCardFooter>
     </CardMobile>
   );
@@ -440,6 +506,9 @@ export function MezziTable({
   onSort,
   flashRowId,
   onHub,
+  labelMode = false,
+  qrSelection,
+  onOpenQrLabel,
 }: MezziTableProps) {
   const activePresetIds = mezzoIdsWithActivePreset ?? EMPTY_MEZZO_PRESET_IDS;
   const renderMezzoRow = useCallback(
@@ -455,11 +524,26 @@ export function MezziTable({
           flash={flashRowId === m.id}
           hasActivePreset={activePresetIds.has(m.id)}
           onHub={onHub}
+          labelMode={labelMode}
+          qrSelection={qrSelection}
+          onOpenQrLabel={onOpenQrLabel}
         />
       );
     },
-    [rows, interventiByMezzoId, inOfficina, flashRowId, activePresetIds, onHub],
+    [
+      rows,
+      interventiByMezzoId,
+      inOfficina,
+      flashRowId,
+      activePresetIds,
+      onHub,
+      labelMode,
+      qrSelection,
+      onOpenQrLabel,
+    ],
   );
+
+  const colSpan = labelMode ? 9 : 8;
 
   if (listSurface === "table") {
     return (
@@ -467,6 +551,7 @@ export function MezziTable({
         wrapClassName="mt-0"
         colgroup={
           <>
+            {labelMode ? <col className="w-10" /> : null}
             <col className="w-[14%]" />
             <col className="w-[9%]" />
             <col className="w-[12%]" />
@@ -479,6 +564,14 @@ export function MezziTable({
         }
         headRow={
           <>
+            {labelMode ? (
+              <th
+                className="w-10 px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]"
+                scope="col"
+              >
+                Sel.
+              </th>
+            ) : null}
             <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
             <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
             <GlobalTableSortTh label="Attrezzatura" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -504,7 +597,7 @@ export function MezziTable({
         }
         empty={rows.length === 0}
         emptyMessage="Nessun mezzo corrisponde ai criteri."
-        colSpan={8}
+        colSpan={colSpan}
         virtualRows={{
           rowCount: rows.length,
           renderRow: renderMezzoRow,
@@ -540,6 +633,9 @@ export function MezziTable({
               flash={flashRowId === m.id}
               hasActivePreset={activePresetIds.has(m.id)}
               onHub={onHub}
+              labelMode={labelMode}
+              qrSelection={qrSelection}
+              onOpenQrLabel={onOpenQrLabel}
             />
           ))
         )}

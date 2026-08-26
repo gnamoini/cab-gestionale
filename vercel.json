@@ -7,6 +7,7 @@
     { "path": "/api/cron/dipendenti-presenze-reminder", "schedule": "0 16 * * 1-5" },
     { "path": "/api/cron/health-score-weekly-snapshot", "schedule": "0 21 * * 0" },
     { "path": "/api/cron/report-business-report-weekly", "schedule": "0 7 * * 1" },
-    { "path": "/api/cron/report-business-report-monthly", "schedule": "0 8 1 * *" }
+    { "path": "/api/cron/spare-parts-document-index-queue", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/spare-parts-part-search-queue", "schedule": "* * * * *" },
   ]
 }

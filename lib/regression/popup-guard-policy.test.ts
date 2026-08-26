@@ -61,5 +61,8 @@ assert.match(providers, /PopupGuardProvider/);
 
 const popupGuard = read("lib/browser/popup-guard.ts");
 assert.doesNotMatch(popupGuard, /window\.open\([^)]*noopener/);
+assert.doesNotMatch(popupGuard, /<embed\b/);
+assert.match(popupGuard, /navigateBlobPdfInPopup/);
+assert.match(popupGuard, /location\.replace/);
 
 console.log("popup-guard-policy: OK");

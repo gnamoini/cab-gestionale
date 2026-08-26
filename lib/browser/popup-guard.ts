@@ -158,21 +158,44 @@ function escapeHtmlAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
-/** ponytail: embed blob in pre-opened tab — `location.replace(blob:)` resta bianco su alcuni browser */
-function tryEmbedPdfInDeferredPopup(popup: Window, blobUrl: string, title: string): boolean {
+function tryLocationReplace(popup: Window, url: string): boolean {
   try {
+    if (popup.closed) return false;
+    popup.location.replace(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** ponytail: iframe blob solo se `location.replace` fallisce — CSP `object-src 'none'` vieta embed */
+function tryIframeBlobPdfInPopup(popup: Window, blobUrl: string, title: string): boolean {
+  try {
+    if (popup.closed) return false;
     const doc = popup.document;
     doc.open();
     doc.write(
       `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtmlAttr(title)}</title>` +
-        `<style>html,body{margin:0;height:100%;overflow:hidden;}embed{position:absolute;inset:0;width:100%;height:100%;border:0;}</style></head>` +
-        `<body><embed src="${escapeHtmlAttr(blobUrl)}" type="application/pdf" /></body></html>`,
+        `<style>html,body{margin:0;height:100%;overflow:hidden;}iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}</style></head>` +
+        `<body><iframe src="${escapeHtmlAttr(blobUrl)}" title="${escapeHtmlAttr(title)}"></iframe></body></html>`,
     );
     doc.close();
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Naviga una tab pre-aperta verso un blob PDF.
+ * 1. location.replace(blobUrl) — viewer nativo
+ * 2. iframe blob via document.write — fallback tecnico
+ */
+function navigateBlobPdfInPopup(popup: Window, blobUrl: string, title: string): boolean {
+  if (popup.closed) return false;
+  if (tryLocationReplace(popup, blobUrl)) return true;
+  if (popup.closed) return false;
+  return tryIframeBlobPdfInPopup(popup, blobUrl, title);
 }
 
 /**
@@ -198,6 +221,25 @@ export function openSafePopup(opts: OpenSafePopupOptions): OpenSafePopupResult {
   if (!trimmed) return { status: "invalid_url" };
 
   const urlKind = classifyPopupUrlKind(trimmed);
+  const label = opts.label ?? popupContextLabel(opts.context);
+
+  if (trimmed.startsWith("blob:")) {
+    const popup = openPopupWindow("about:blank");
+    if (!isPopupAlive(popup)) {
+      return handleBlockedPopup(opts, urlKind);
+    }
+    if (!navigateBlobPdfInPopup(popup, trimmed, label)) {
+      closePopupWindow(popup);
+      return handleBlockedPopup(opts, urlKind);
+    }
+    scheduleBlobUrlRevoke(trimmed, opts.revokeBlobUrlAfterMs);
+    trackRuntimeEvent(
+      RuntimeEvents.popupOpenSuccess,
+      telemetryMeta(opts.context, urlKind, opts.phase ?? "sync"),
+    );
+    return { status: "opened" };
+  }
+
   const popup = openPopupWindow(trimmed);
 
   if (!isPopupAlive(popup)) {
@@ -263,24 +305,21 @@ function createDeferredHandle(
         return blockNavigate(trimmed, options);
       }
 
-      try {
-        if (trimmed.startsWith("blob:")) {
-          if (!tryEmbedPdfInDeferredPopup(popup, trimmed, label)) {
-            return blockNavigate(trimmed, options);
-          }
-        } else {
-          popup.location.replace(trimmed);
+      if (trimmed.startsWith("blob:")) {
+        if (!navigateBlobPdfInPopup(popup, trimmed, label)) {
+          return blockNavigate(trimmed, options);
         }
-        navigated = true;
-        scheduleBlobUrlRevoke(trimmed, options?.revokeBlobUrlAfterMs);
-        trackRuntimeEvent(
-          RuntimeEvents.popupPreopenSuccess,
-          telemetryMeta(context, classifyPopupUrlKind(trimmed), "navigate"),
-        );
-        return { status: "opened" };
-      } catch {
+      } else if (!tryLocationReplace(popup, trimmed)) {
         return blockNavigate(trimmed, options);
       }
+
+      navigated = true;
+      scheduleBlobUrlRevoke(trimmed, options?.revokeBlobUrlAfterMs);
+      trackRuntimeEvent(
+        RuntimeEvents.popupPreopenSuccess,
+        telemetryMeta(context, classifyPopupUrlKind(trimmed), "navigate"),
+      );
+      return { status: "opened" };
     },
     close() {
       if (closed) return;

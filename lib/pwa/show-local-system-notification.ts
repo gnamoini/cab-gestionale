@@ -1,5 +1,7 @@
 "use client";
 
+import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
+
 const DEFAULT_ICON = "/icons/icon-192x192.png";
 
 export type LocalSystemNotificationOptions = {
@@ -21,7 +23,7 @@ export async function showLocalSystemNotification(
 
   try {
     const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification(options.title.trim() || "CAB Gestionale", {
+    await registration.showNotification(options.title.trim() || CAB_APP_PRODUCT_NAME, {
       body: options.body.trim() || "Nuova notifica",
       icon: options.icon?.trim() || DEFAULT_ICON,
       tag: options.tag.trim() || "cab-notification",

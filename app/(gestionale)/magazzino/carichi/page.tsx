@@ -1,3 +1,5 @@
+export { magazzinoCarichiPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
 import { ReceivingListView } from "@/components/gestionale/magazzino/carichi/receiving-list-view";

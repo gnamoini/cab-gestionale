@@ -41,7 +41,7 @@ import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
 import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
 import { useListSurface } from "@/lib/ui/use-list-surface";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
-import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
+import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarMetaToggle, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import {
   Q_MEZZI_HUB,
@@ -80,7 +80,32 @@ import {
   collapsibleExpandedBoolPref,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
+import { useMezziQrSelection } from "@/lib/mezzi/client/mezzi-qr-selection";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+
+const MezziBulkQrLabelToolbar = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-bulk-qr-label-toolbar").then((m) => ({
+      default: m.MezziBulkQrLabelToolbar,
+    })),
+  { ssr: false },
+);
+
+const MezzoQrLabelActions = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzo-qr-label-actions").then((m) => ({
+      default: m.MezzoQrLabelActions,
+    })),
+  { ssr: false },
+);
+
+const MezzoQrLabelModalShell = dynamic(
+  () =>
+    import("@/components/gestionale/lavorazioni/lavorazioni-modals").then((m) => ({
+      default: m.LavorazioniModalShell,
+    })),
+  { ssr: false },
+);
 
 const MezziTagliandiPanel = dynamic(
   () =>
@@ -142,6 +167,10 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
   const mezziPerm = usePermissions("mezzi");
   const { user } = useAuth();
   const canEditVehicles = mezziPerm.canWrite;
+  const canReadVehicles = mezziPerm.canRead;
+  const [labelMode, setLabelMode] = useState(false);
+  const qrSelection = useMezziQrSelection();
+  const [qrLabelMezzo, setQrLabelMezzo] = useState<MezzoGestito | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -793,15 +822,33 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
             }
             onFilterReset={resetMezziToolbarFilters}
             meta={
-              <PageToolbarResultCount
-                count={sorted.length}
-                filtersActive={mezziFieldFiltersActive(mezziFieldFilterState)}
-                searchActive={searchApplied.trim().length > 0}
-                onSearchReset={() => setSearchClearSignal((n) => n + 1)}
-                onFilterReset={resetMezziToolbarFilters}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <PageToolbarResultCount
+                  count={sorted.length}
+                  filtersActive={mezziFieldFiltersActive(mezziFieldFilterState)}
+                  searchActive={searchApplied.trim().length > 0}
+                  onSearchReset={() => setSearchClearSignal((n) => n + 1)}
+                  onFilterReset={resetMezziToolbarFilters}
+                />
+                {canReadVehicles ? (
+                  <PageToolbarMetaToggle
+                    className="min-h-10 min-w-0 sm:min-h-9"
+                    label="Stampa etichette"
+                    shortLabel="Etichette"
+                    checked={labelMode}
+                    onChange={(next) => {
+                      setLabelMode(next);
+                      if (!next) qrSelection.clear();
+                    }}
+                  />
+                ) : null}
+              </div>
             }
           />
+
+          {labelMode ? (
+            <MezziBulkQrLabelToolbar selection={qrSelection} onClearSelection={qrSelection.clear} />
+          ) : null}
 
           {mezziError ? (
             <LoadingErrorState
@@ -826,6 +873,9 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
                 onSort={onSort}
                 flashRowId={flashRowId}
                 onHub={openMezzoHub}
+                labelMode={labelMode}
+                qrSelection={qrSelection}
+                onOpenQrLabel={canReadVehicles ? setQrLabelMezzo : undefined}
               />
           </MezziTableSection>
           </SkeletonBoundary>
@@ -870,8 +920,26 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
             setEditMezzo(h);
           }}
           canEdit={canEditVehicles}
+          canReadLabels={canReadVehicles}
           onDelete={canEditVehicles ? () => handleDeleteMezzo(hubMezzo) : undefined}
         />
+      ) : null}
+
+      {qrLabelMezzo ? (
+        <MezzoQrLabelModalShell
+          modalSize="formSmall"
+          title="Etichetta QR mezzo"
+          onRequestClose={() => setQrLabelMezzo(null)}
+        >
+          <MezzoQrLabelActions
+            mezzoId={qrLabelMezzo.id}
+            targa={qrLabelMezzo.targa ?? ""}
+            canRead={canReadVehicles}
+            canWrite={canEditVehicles}
+            compact
+            onClose={() => setQrLabelMezzo(null)}
+          />
+        </MezzoQrLabelModalShell>
       ) : null}
 
       <MezzoEliminaConfirmDialog

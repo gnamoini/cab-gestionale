@@ -1,3 +1,5 @@
+export { dipendentiPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
 import { DipendentiViewLazy } from "@/components/gestionale/lazy-route-views";

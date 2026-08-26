@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { APP_PAGE_TITLE_BRAND, APP_PAGE_TITLE_SEPARATOR } from "@/lib/site/app-page-metadata";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GlobalErrorView } from "@/components/observability/global-error-view";
 import { DEFAULT_PERSISTED_THEME_MODE } from "@/lib/theme/user-theme-prefs";
@@ -49,7 +50,7 @@ export default function GlobalError({
       style={{ colorScheme: defaultTheme }}
     >
       <head suppressHydrationWarning>
-        <title>Errore | CAB Gestionale Officina</title>
+        <title>{`Errore${APP_PAGE_TITLE_SEPARATOR}${APP_PAGE_TITLE_BRAND}`}</title>
         <style
           id="cab-theme-critical"
           dangerouslySetInnerHTML={{ __html: CAB_THEME_CRITICAL_INLINE_STYLE }}

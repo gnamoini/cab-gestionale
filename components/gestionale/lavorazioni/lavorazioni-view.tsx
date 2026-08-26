@@ -103,7 +103,15 @@ import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
+import {
+  Q_CREATE_NUOVA_LAVORAZIONE,
+  Q_FOCUS_LAV_ROW,
+  Q_FOCUS_MEZZO,
+  Q_LAVORAZIONI_MEZZO_ID,
+  Q_MEZZO_ENTRY_SOURCE,
+  Q_MEZZO_QR_TOKEN,
+} from "@/lib/navigation/dashboard-log-links";
+import type { MezzoSelectionSource } from "@/lib/lavorazioni/selected-mezzo-context";
 import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
 import {
   buildLavorazioniPillOptionsFromGlobal,
@@ -1680,6 +1688,75 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
   const openDetailByIdRef = useRef(openDetailById);
   openDetailByIdRef.current = openDetailById;
+
+  const createDeepLinkConsumedRef = useRef(false);
+
+  useEffect(() => {
+    if (createDeepLinkConsumedRef.current) return;
+    const createNuova = searchParams.get(Q_CREATE_NUOVA_LAVORAZIONE)?.trim();
+    if (createNuova !== "1") return;
+
+    const mezzoToken = searchParams.get(Q_MEZZO_QR_TOKEN)?.trim();
+    const mezzoIdDirect = searchParams.get(Q_LAVORAZIONI_MEZZO_ID)?.trim();
+    const rawSource = searchParams.get(Q_MEZZO_ENTRY_SOURCE)?.trim();
+    const source = (rawSource as MezzoSelectionSource | undefined) ?? (mezzoToken ? "qr" : "manual");
+
+    if (!mezzoToken && !mezzoIdDirect) return;
+
+    createDeepLinkConsumedRef.current = true;
+
+    const openWithMezzoId = (mezzoId: string) => {
+      deferredRouterReplace(router, pathname, { scroll: false });
+      if (!canEditWorkOrders) {
+        gestToast.error("Non hai i permessi per creare una nuova lavorazione.");
+        return;
+      }
+      primeCreateModal();
+      setSelectedMezzo({ mode: "existing", mezzoId, source });
+      requestAnimationFrame(() => setCreateOpen(true));
+    };
+
+    if (mezzoIdDirect && !mezzoToken) {
+      const t = window.setTimeout(() => openWithMezzoId(mezzoIdDirect), 80);
+      return () => window.clearTimeout(t);
+    }
+
+    if (!mezzoToken) return;
+
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/mezzo-labels/resolve?token=${encodeURIComponent(mezzoToken)}`,
+          );
+          if (cancelled) return;
+          if (!res.ok) {
+            gestToast.error("QR non valido o mezzo non trovato.");
+            deferredRouterReplace(router, pathname, { scroll: false });
+            return;
+          }
+          const data = (await res.json()) as { mezzoId: string };
+          if (cancelled || !data.mezzoId) return;
+          openWithMezzoId(data.mezzoId);
+        } catch {
+          if (!cancelled) gestToast.error("Impossibile risolvere il QR del mezzo.");
+        }
+      })();
+    }, 80);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [
+    searchParams,
+    pathname,
+    router,
+    canEditWorkOrders,
+    gestToast,
+    primeCreateModal,
+  ]);
 
   useEffect(() => {
     const rawFocus = searchParams.get(Q_FOCUS_MEZZO)?.trim();

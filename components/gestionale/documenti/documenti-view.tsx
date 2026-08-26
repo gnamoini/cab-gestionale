@@ -10,6 +10,7 @@ import { documentiEntry } from "@/lib/domain/documenti-entry";
 import { useDocumentiListQuery, useLogListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
+import { requestDocumentSparePartsIndex } from "@/lib/documents/document-spare-parts-enqueue.client";
 import {
   gestionaleToDocumentoInsert,
   gestionaleToDocumentoUpdate,
@@ -691,6 +692,9 @@ export function DocumentiView() {
               : undefined;
           refreshDocumenti(row.id, uploadedAt || row.caricatoIl);
           warmupDocumentPreview(row.id, { source: "archive" });
+          if (row.aiSparePartsEnabled && row.tipoFile === "pdf") {
+            void requestDocumentSparePartsIndex(row.id);
+          }
           uploadSourceFileRef.current = null;
           return row;
         },
@@ -720,6 +724,9 @@ export function DocumentiView() {
         }
         if (old) {
           const saved = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
+          if (saved.aiSparePartsEnabled && saved.tipoFile === "pdf") {
+            void requestDocumentSparePartsIndex(saved.id);
+          }
           const changes = diffDocumentiMetadati(old, saved);
           if (changes.length > 0) {
             void changes;

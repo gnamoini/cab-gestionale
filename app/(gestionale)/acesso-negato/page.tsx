@@ -1,3 +1,5 @@
+export { accessoNegatoPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import Link from "next/link";
 import { sanitizePostLoginRequestedPath } from "@/lib/auth/resolve-post-login-redirect";
 import { dsBtnNeutral } from "@/lib/ui/design-system";

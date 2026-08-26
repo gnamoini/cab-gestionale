@@ -20,7 +20,7 @@ export const fetchDdtListPayloadServer = cache(async (): Promise<ServiceResult<D
   return fetchDdtListPayload(sb);
 });
 
-export async function fetchDdtDetailServer(id: string): Promise<DdtDetail | null> {
+export const fetchDdtDetailServer = cache(async (id: string): Promise<DdtDetail | null> => {
   const allowed = await verifyServerPageRead("preventivi");
   if (!allowed) return null;
   const sb = await createSupabaseServerUserClient();
@@ -41,4 +41,4 @@ export async function fetchDdtDetailServer(id: string): Promise<DdtDetail | null
     rows: rows.data ?? [],
     links: links.data ?? [],
   };
-}
+});

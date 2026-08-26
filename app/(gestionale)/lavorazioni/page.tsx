@@ -1,3 +1,5 @@
+export { lavorazioniPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { Suspense } from "react";
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";

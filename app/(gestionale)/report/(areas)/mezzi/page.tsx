@@ -1,3 +1,5 @@
+export { reportMezziPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ReportAreaMezziView } from "@/components/report/areas/report-area-mezzi-view";
 import { ReportAreaPage } from "@/components/report/report-area-page";

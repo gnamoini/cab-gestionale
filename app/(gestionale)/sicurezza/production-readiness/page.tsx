@@ -1,3 +1,5 @@
+export { sicurezzaProductionReadinessPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ProductionReadinessViewLazy } from "@/components/gestionale/lazy-route-views";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";

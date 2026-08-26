@@ -39,7 +39,7 @@ export const fetchPreventiviBillingStatusServer = cache(
   },
 );
 
-export async function fetchPreventivoRecordServer(id: string): Promise<ServiceResult<PreventivoRecord>> {
+export const fetchPreventivoRecordServer = cache(async (id: string): Promise<ServiceResult<PreventivoRecord>> => {
   const allowed = await verifyServerPageRead("preventivi");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
@@ -53,4 +53,4 @@ export async function fetchPreventivoRecordServer(id: string): Promise<ServiceRe
     mezzo = (m as MezzoRow | null) ?? null;
   }
   return success(preventivoRowToRecord(row, mezzo));
-}
+});

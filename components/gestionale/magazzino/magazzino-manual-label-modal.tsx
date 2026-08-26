@@ -115,12 +115,15 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
     setOpeningPdf(true);
     try {
       const blob = await postRender("pdf");
-      await openPdfBlobInNewTab(blob, pdfFileName(), {
+      const opened = await openPdfBlobInNewTab(blob, pdfFileName(), {
         showLoadingFeedback: false,
         context: "etichette",
         label: "PDF etichetta",
         deferredHandle: deferred,
       });
+      if (!opened) {
+        gestToast.error("Impossibile aprire il PDF etichetta.");
+      }
     } catch {
       deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");

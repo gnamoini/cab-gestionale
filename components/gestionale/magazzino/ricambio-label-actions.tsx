@@ -121,12 +121,15 @@ export function RicambioLabelActions({
         throw new Error("PDF non disponibile");
       }
       const blob = await res.blob();
-      await openPdfBlobInNewTab(blob, pdfFileName(), {
+      const opened = await openPdfBlobInNewTab(blob, pdfFileName(), {
         showLoadingFeedback: false,
         context: "etichette",
         label: "PDF etichetta",
         deferredHandle: deferred,
       });
+      if (!opened) {
+        gestToast.error("Impossibile aprire il PDF etichetta.");
+      }
     } catch {
       deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");

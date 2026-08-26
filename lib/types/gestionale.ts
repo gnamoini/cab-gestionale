@@ -46,6 +46,13 @@ export interface DocumentoGestionale {
   fileEstensione?: string;
   /** MIME type originale (persistenza meta, opzionale). */
   mimeType?: string;
+  /** Ricambi AI: indicizzazione catalogo per identificazione ricambi. */
+  aiSparePartsEnabled?: boolean;
+  aiPriceEnabled?: boolean;
+  aiDocumentKind?: "spare_parts_catalog" | "price_list" | "oem_manual" | "exploded_view" | "other";
+  aiSourceType?: "oem" | "distributor" | "internal";
+  aiYear?: string;
+  aiLanguage?: string;
   /** Thumbnail available (stored key or PDF/image type). */
   hasPreview?: boolean;
   /** Cache-buster for preview/delivery URLs. */

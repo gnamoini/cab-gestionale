@@ -4,6 +4,7 @@ import {
   resolvePushNotificationUrl,
   type PwaPushOpenMessage,
 } from "@/lib/pwa/push-routing";
+import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
 
 const PUSH_DEFAULT_ICON = "/icons/icon-192x192.png";
 
@@ -33,7 +34,7 @@ function parsePushData(event: PushEvent): PushMessageData {
 export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
   sw.addEventListener("push", (event) => {
     const data = parsePushData(event);
-    const title = data.title?.trim() || "CAB Gestionale";
+    const title = data.title?.trim() || CAB_APP_PRODUCT_NAME;
     const body = data.body?.trim() || "Nuova notifica";
     const icon = data.icon?.trim() || PUSH_DEFAULT_ICON;
     const tag = data.tag?.trim() || "cab-notification";

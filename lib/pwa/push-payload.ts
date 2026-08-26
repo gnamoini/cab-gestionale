@@ -1,4 +1,5 @@
 import type { PushNotificationPayload } from "@/lib/pwa/push-types";
+import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
 import { PWA_ICON_BASE_PATH } from "@/lib/pwa/pwa-icons";
 import { resolvePushHrefFromNotification, resolvePushNotificationUrl } from "@/lib/pwa/push-routing";
 
@@ -14,7 +15,7 @@ export type PushPayloadInput = {
 };
 
 export function buildPushNotificationPayload(input: PushPayloadInput): PushNotificationPayload {
-  const title = input.title.trim() || "CAB Gestionale";
+  const title = input.title.trim() || CAB_APP_PRODUCT_NAME;
   const body = input.body.trim() || "Nuova notifica";
   const href = resolvePushNotificationUrl(
     resolvePushHrefFromNotification({

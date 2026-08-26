@@ -1,3 +1,5 @@
+export { reportDipendentiPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ReportAreaDipendentiView } from "@/components/report/areas/report-area-dipendenti-view";
 import { ReportAreaPage } from "@/components/report/report-area-page";

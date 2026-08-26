@@ -1,3 +1,5 @@
+export { reportPreventiviPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ReportAreaPreventiviView } from "@/components/report/areas/report-area-preventivi-view";
 import { ReportAreaPage } from "@/components/report/report-area-page";

@@ -34,7 +34,8 @@ type MockWindow = {
 let mockWindows: MockWindow[] = [];
 let openImpl: (url: string, target?: string, features?: string) => MockWindow | null = () => null;
 let dialogCalls = 0;
-let lastEmbedSrc = "";
+let lastIframeSrc = "";
+let replaceCalls: string[] = [];
 
 function createMockWindow(url: string): MockWindow {
   const win: MockWindow = {
@@ -43,14 +44,15 @@ function createMockWindow(url: string): MockWindow {
     location: {
       href: url,
       replace(next: string) {
+        replaceCalls.push(next);
         this.href = next;
       },
     },
     document: {
       open: () => {},
       write: (html: string) => {
-        const match = /src="([^"]+)"/.exec(html);
-        lastEmbedSrc = match?.[1] ?? "";
+        const match = /<iframe[^>]+src="([^"]+)"/.exec(html);
+        lastIframeSrc = match?.[1] ?? "";
       },
       close: () => {},
     },
@@ -65,7 +67,8 @@ function createMockWindow(url: string): MockWindow {
 function installWindowOpenMock() {
   mockWindows = [];
   dialogCalls = 0;
-  lastEmbedSrc = "";
+  lastIframeSrc = "";
+  replaceCalls = [];
   openImpl = (url: string) => createMockWindow(url);
 
   (globalThis as { window?: Window }).window = {
@@ -82,6 +85,7 @@ function installWindowOpenMock() {
 function installBlockedOpenMock() {
   mockWindows = [];
   dialogCalls = 0;
+  replaceCalls = [];
   openImpl = () => null;
   (globalThis as { window?: Window }).window = {
     open: () => null,
@@ -180,9 +184,31 @@ if (!("status" in deferred)) {
   assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "/api/pdf/artifacts/preventivo?id=1");
   assert.equal(dialogCalls, 0);
 
+  replaceCalls = [];
+  lastIframeSrc = "";
   const blobNav = deferred.navigate("blob:pdf-test");
   assert.equal(blobNav.status, "opened");
-  assert.equal(lastEmbedSrc, "blob:pdf-test");
+  assert.deepEqual(replaceCalls, ["blob:pdf-test"], "blob navigate must call location.replace first");
+  assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "blob:pdf-test");
+  assert.equal(lastIframeSrc, "", "iframe must not be used when location.replace succeeds");
+
+  // iframe fallback only when location.replace fails
+  const deferredIframe = openDeferredPopup({ context: "pdf", label: "PDF iframe" });
+  assert.ok(!("status" in deferredIframe));
+  if (!("status" in deferredIframe)) {
+    const iframeWin = mockWindows[mockWindows.length - 1];
+    assert.ok(iframeWin);
+    replaceCalls = [];
+    lastIframeSrc = "";
+    iframeWin!.location.replace = () => {
+      throw new Error("replace blocked");
+    };
+    const iframeNav = deferredIframe.navigate("blob:iframe-fallback");
+    assert.equal(iframeNav.status, "opened");
+    assert.equal(replaceCalls.length, 0);
+    assert.equal(lastIframeSrc, "blob:iframe-fallback");
+    assert.equal(iframeWin!.closed, false, "tab must stay open when iframe fallback succeeds");
+  }
 
   // 9: fetch error path closes blank tab, no retry session
   const deferredErr = openDeferredPopup({ context: "pdf" });
@@ -233,7 +259,7 @@ if ("status" in blockedArtifact && blockedArtifact.status === "blocked") {
   assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "/api/pdf/artifacts/report-bundle");
 }
 
-// 5b: retry opens blob after navigate block
+// 5b: retry opens blob after full navigate chain fails
 installWindowOpenMock();
 registerPopupBlockedDialogHandler(null);
 const deferredBlob = openDeferredPopup({ context: "pdf", showBlockedDialog: false });
@@ -241,18 +267,37 @@ assert.ok(!("status" in deferredBlob));
 if (!("status" in deferredBlob)) {
   const win = mockWindows[mockWindows.length - 1];
   assert.ok(win);
+  win!.location.replace = () => {
+    throw new Error("replace failed");
+  };
   win!.document.write = () => {
-    throw new Error("embed failed");
+    throw new Error("iframe failed");
   };
   const navFail = deferredBlob.navigate("blob:stored");
   assert.equal(navFail.status, "blocked");
+  assert.equal(win!.closed, true, "tab closes only after navigate chain fully fails");
   if (navFail.status === "blocked") {
+    openImpl = (url: string) => {
+      const retryWin = createMockWindow(url);
+      retryWin.opener = null;
+      return retryWin;
+    };
     const retriedBlob = retryPopupFromSession(navFail.sessionId);
     assert.equal(retriedBlob.status, "opened");
     assert.equal(mockWindows[mockWindows.length - 1]?.location.href, "blob:stored");
     clearPopupRetrySession(navFail.sessionId);
   }
 }
+
+// openSafePopup blob uses about:blank + location.replace
+installWindowOpenMock();
+registerPopupBlockedDialogHandler(null);
+replaceCalls = [];
+const blobOpened = openSafePopup({ url: "blob:safe-popup", context: "pdf", showBlockedDialog: false });
+assert.equal(blobOpened.status, "opened");
+assert.equal(mockWindows.length, 1);
+assert.equal(mockWindows[0]?.location.href, "blob:safe-popup");
+assert.deepEqual(replaceCalls, ["blob:safe-popup"]);
 
 // 7: documento API URL
 installWindowOpenMock();
@@ -277,6 +322,9 @@ const popupGuardSrc = fs.readFileSync(
   "utf8",
 );
 assert.doesNotMatch(popupGuardSrc, /window\.open\([^)]*noopener/);
+assert.doesNotMatch(popupGuardSrc, /<embed\b/);
+assert.match(popupGuardSrc, /scheduleBlobUrlRevoke/);
+assert.match(popupGuardSrc, /window\.setTimeout\([\s\S]*URL\.revokeObjectURL/);
 
 assert.ok(POPUP_RETRY_SESSION_TTL_MS > 0);
 

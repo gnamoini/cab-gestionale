@@ -1,3 +1,5 @@
+export { reportLavorazioniPageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import { PageLayout } from "@/components/design-system";
 import { ReportAreaLavorazioniView } from "@/components/report/areas/report-area-lavorazioni-view";
 import { ReportAreaPage } from "@/components/report/report-area-page";

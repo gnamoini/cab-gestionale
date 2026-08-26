@@ -7,6 +7,8 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
+import { buildPdfArtifactUrl } from "@/lib/pdf/request-pdf-artifact";
+import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -53,7 +55,16 @@ import {
   dsTableActionTextBtn,
   dsTableActionTextBtnPrimary,
 } from "@/lib/ui/design-system";
+import dynamic from "next/dynamic";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+
+const MezzoQrLabelActions = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzo-qr-label-actions").then((m) => ({
+      default: m.MezzoQrLabelActions,
+    })),
+  { ssr: false },
+);
 import type { CSSProperties } from "react";
 
 const lavorazioneAttivaPillStyle = (active: boolean): CSSProperties | undefined =>
@@ -101,6 +112,7 @@ export function MezziHubDetailModal({
   onEdit,
   onDelete,
   canEdit = true,
+  canReadLabels = true,
 }: {
   mezzo: MezzoGestito;
   initialTab?: MezziHubTabId;
@@ -109,6 +121,7 @@ export function MezziHubDetailModal({
   onEdit: () => void;
   onDelete?: () => void;
   canEdit?: boolean;
+  canReadLabels?: boolean;
 }) {
   const [tab, setTab] = useState<MezziHubTabId>(initialTab);
 
@@ -340,6 +353,18 @@ export function MezziHubDetailModal({
                   />
                 </HubModalPanoramicaFieldGrid>
               </HubModalPanoramicaSubsection>
+
+              {canReadLabels && !mezzo.hubSynthetic ? (
+                <HubModalPanoramicaSubsection title="Etichetta QR portachiavi">
+                  <MezzoQrLabelActions
+                    mezzoId={mezzo.id}
+                    targa={mezzo.targa ?? ""}
+                    canRead={canReadLabels}
+                    canWrite={canEdit}
+                    compact
+                  />
+                </HubModalPanoramicaSubsection>
+              ) : null}
             </div>
 
             {mezzo.note?.trim() ? (
@@ -404,11 +429,21 @@ export function MezziHubDetailModal({
                         <button
                           type="button"
                           className={dsTableActionTextBtnPrimary}
-                          onClick={() =>
+                          onClick={() => {
+                            const artifactUrl = buildPdfArtifactUrl("preventivo", {
+                              id: p.id,
+                              autore: "Gestionale",
+                            });
+                            const deferredResult = openDeferredPopup({
+                              context: "pdf",
+                              label: "PDF preventivo",
+                              retryUrl: artifactUrl,
+                            });
+                            if (isDeferredPopupBlocked(deferredResult)) return;
                             void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-                              openPreventivoPdfInNewTab(p, "Gestionale"),
-                            )
-                          }
+                              openPreventivoPdfInNewTab(p, "Gestionale", deferredResult),
+                            );
+                          }}
                         >
                           PDF
                         </button>

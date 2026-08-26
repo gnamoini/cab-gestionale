@@ -249,6 +249,7 @@ export const aiService = {
     operation?: string;
     provider?: AiProviderId;
     timeoutMs?: number;
+    tools?: Record<string, unknown>;
   }): Promise<AiServiceResult<{ text: string }>> {
     try {
       const { result, meta } = await runWithFailover({
@@ -258,6 +259,7 @@ export const aiService = {
           const out = await generateText({
             model,
             prompt: input.prompt,
+            ...(input.tools ? { tools: input.tools as never } : {}),
             abortSignal: AbortSignal.timeout(input.timeoutMs ?? readRuntimeTimeoutMs()),
           });
           return { text: out.text };
@@ -283,6 +285,7 @@ export const aiService = {
     operation?: string;
     provider?: AiProviderId;
     timeoutMs?: number;
+    tools?: Record<string, unknown>;
   }): Promise<AiServiceResult<{ object: T; usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }; response?: unknown }>> {
     try {
       const { result, meta } = await runWithFailover({
@@ -294,6 +297,7 @@ export const aiService = {
             schema: input.schema,
             system: input.system,
             temperature: input.temperature,
+            ...(input.tools ? { tools: input.tools as never } : {}),
             abortSignal: AbortSignal.timeout(input.timeoutMs ?? readRuntimeTimeoutMs()),
           };
           const out = input.messages

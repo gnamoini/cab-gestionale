@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
 import {
   buildPwaMetadataIcons,
   PWA_DESCRIPTION,
@@ -10,7 +11,10 @@ import {
 export const siteMetadata: Metadata = {
   metadataBase: resolveSiteMetadataBase(),
   applicationName: PWA_NAME,
-  title: PWA_NAME,
+  title: {
+    default: CAB_APP_PRODUCT_NAME,
+    template: `%s · ${CAB_APP_PRODUCT_NAME}`,
+  },
   description: PWA_DESCRIPTION,
   icons: buildPwaMetadataIcons(),
   appleWebApp: {

@@ -7,6 +7,7 @@ import {
 } from "@/lib/preventivi/preventivo-row-state";
 import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
+import { readDocumentSparePartsMeta } from "@/lib/documents/document-spare-parts-meta";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { buildLogModificaSummary, isSystemLogAzione } from "@/lib/gestionale-log/log-summary";
@@ -73,6 +74,7 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
     }
   }
   const intelligence = readDocumentIntelligenceMeta(meta as Record<string, unknown>);
+  const spareParts = readDocumentSparePartsMeta(meta as Record<string, unknown>);
   const tipoFile = resolveDocumentoTipoFile({
     urlFile: row.url_file,
     nome,
@@ -112,6 +114,12 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
     urlDocumento: row.url_file,
     hasPreview: Boolean(intelligence.thumbnailKey) || previewCapable,
     contentVersion,
+    aiSparePartsEnabled: spareParts.aiSparePartsEnabled,
+    aiPriceEnabled: spareParts.aiPriceEnabled,
+    aiDocumentKind: spareParts.aiDocumentKind,
+    aiSourceType: spareParts.aiSourceType,
+    aiYear: spareParts.aiYear,
+    aiLanguage: spareParts.aiLanguage,
   };
 }
 

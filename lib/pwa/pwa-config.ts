@@ -5,7 +5,7 @@ import { resolvePwaPushClientEnabled } from "@/lib/pwa/push-enabled";
 export const PWA_NAME = CAB_APP_PRODUCT_NAME;
 export const PWA_SHORT_NAME = "C.A.B." as const;
 export const PWA_DESCRIPTION =
-  "Gestionale web per officina: magazzino ricambi, lavorazioni, ERP/CRM, report e documentale." as const;
+  "Gestionale interno C.A.B. per officina: lavorazioni, magazzino, preventivi, fatturazione, report e documenti." as const;
 
 export const PWA_LANG = "it" as const;
 export const PWA_DIR = "ltr" as const;
