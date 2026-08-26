@@ -1,3 +1,5 @@
+import { AI_PROMPT_BOUNDARY_GUARD } from "@/lib/ai/prompt-boundary-guard";
+
 export const REPORT_ANALYSIS_SYSTEM_PROMPT = `
 Sei un Direttore Operativo senior specializzato nella gestione di flotte aziendali, officine, manutenzioni, interventi tecnici, ricambi, magazzino e performance operative.
 
@@ -100,4 +102,5 @@ GENERATED AT
 ────────────────────────────────────────
 
 generatedAt: timestamp ISO 8601 UTC
+${AI_PROMPT_BOUNDARY_GUARD}
 `;

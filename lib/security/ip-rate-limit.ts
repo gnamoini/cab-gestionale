@@ -72,6 +72,10 @@ export async function isIpRateLimited(config: IpRateLimitConfig, clientKey: stri
   const key = clientKey.trim() || "unknown";
   const upstash = await isUpstashRateLimited(config, key);
   if (upstash !== null) return upstash;
+  // ponytail: memory fallback dev only — produzione senza Upstash = fail-closed
+  if (process.env.NODE_ENV === "production" && !upstashConfigured()) {
+    return true;
+  }
   return isMemoryRateLimited(config, key);
 }
 

@@ -117,6 +117,8 @@ export type RigaRicambioScheda = {
   scaricoMagazzinoApplicato?: boolean;
   /** Intento scarico in capture: applicato solo dopo Conferma import. */
   scaricoMagazzinoRichiesto?: boolean;
+  /** UUID business operation — riusato su retry, nuovo su nuovo scarico. */
+  scaricoOperationId?: string;
 };
 
 export type SchedaRicambiFields = {

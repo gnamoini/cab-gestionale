@@ -9,12 +9,13 @@ import {
   partExtractionSchema,
 } from "@/lib/ai/spare-parts/types/schemas";
 import { loadDocumentBytes } from "@/lib/ai/spare-parts/indexing/file-search-index.server";
+import { AI_PROMPT_BOUNDARY_GUARD } from "@/lib/ai/prompt-boundary-guard";
 
 const SYSTEM_CLASSIFY = `Classify each PDF page by kind: text, table, exploded, manual, cover, index, price_list, other.
-Return structured JSON only.`;
+Return structured JSON only.${AI_PROMPT_BOUNDARY_GUARD}`;
 
 const SYSTEM_EXTRACT = `Extract spare parts from catalog pages: position number, part number, description.
-Link exploded diagram positions to table rows when possible. Do not invent codes.`;
+Link exploded diagram positions to table rows when possible. Do not invent codes.${AI_PROMPT_BOUNDARY_GUARD}`;
 
 export async function runDocumentUnderstandingPipeline(
   sb: SupabaseClient,

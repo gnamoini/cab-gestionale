@@ -4,10 +4,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+import { verifyServerIsAdmin } from "@/src/lib/auth/server-permission-guards";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const canManage = await verifyServerIsAdmin();
+  if (!canManage) {
+    return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
+  }
+
   const serviceKey = assertSupabaseServiceRoleKey();
   const { url } = assertSupabasePublicEnv();
   const client = createClient(url, serviceKey, {

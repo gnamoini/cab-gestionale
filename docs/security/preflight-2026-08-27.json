@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-08-26T22:50:38.353Z",
+  "current_migration_version": "offline",
+  "pending_migrations": [
+    "20261226120100_security_definer_default_acl_ssot.sql",
+    "20261226120200_security_definer_grants_reconcile.sql",
+    "20261226120201_security_definer_grants_from_manifest.sql",
+    "20261226120300_security_rls_operative_history_p0.sql",
+    "20261226120400_security_rls_metadata_hardening.sql",
+    "20261226120500_security_rpc_body_guards_p0.sql",
+    "20261226120600_security_storage_path_acl.sql",
+    "20261226120700_ordine_fornitore_status_transition_guard.sql",
+    "20261226120800_document_access_token_entropy.sql",
+    "20261226120900_ai_part_search_owner_rls.sql",
+    "20261226121000_security_rpc_body_guards_gap.sql",
+    "20261226121100_single_writer_transaction_flags.sql",
+    "20261226121200_import_commit_dedup.sql",
+    "20261226121300_communication_delivery_idempotency.sql",
+    "20261226121400_ai_part_search_worker_lease.sql"
+  ],
+  "manifest_entries": 243,
+  "functions_affected": {
+    "anon_exec_definer_total": null,
+    "public_exec_definer_total": null,
+    "mutating_anon_exec": null
+  },
+  "default_acl_before": [],
+  "expected_breaking_changes": [
+    "anon EXECUTE revoked on ~109 SECURITY DEFINER functions",
+    "PUBLIC EXECUTE revoked (invoice_write_status_axes, cab_invoke_*, etc.)",
+    "Direct UPDATE ordini_fornitori.status blocked outside canonical RPC",
+    "cliente role blocked on staff /api/* at edge"
+  ],
+  "triggers_to_add": [
+    "ordini_fornitori_status_guard",
+    "import_commit_dedup PK",
+    "communication delivery_operation_id",
+    "ai_part_search lease columns"
+  ]
+}

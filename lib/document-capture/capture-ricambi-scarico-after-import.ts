@@ -27,6 +27,9 @@ export async function applyCaptureRicambiScarichiAfterImport(opts: {
   let applied = 0;
 
   for (const row of rows) {
+    if (!row.scaricoOperationId) {
+      row.scaricoOperationId = crypto.randomUUID();
+    }
     const res = await applyMagazzinoScaricoDaScheda({
       ricambioId: row.ricambioId!,
       lavorazioneId: opts.lavorazioneId,
@@ -34,11 +37,13 @@ export async function applyCaptureRicambiScarichiAfterImport(opts: {
       autore: opts.autore,
       riepilogo: `Import scheda ricambi · ${opts.identLine}`,
       qc: opts.qc,
+      scaricoOperationId: row.scaricoOperationId,
     });
     if (res.ok) {
       applied += 1;
       row.scaricoMagazzinoApplicato = true;
       row.scaricoMagazzinoRichiesto = false;
+      row.scaricoOperationId = res.operationId;
     } else {
       failed.push({
         label: row.ricambioNome || row.codice || row.id,
@@ -70,8 +75,11 @@ export async function applyCaptureRicambiScarichiAfterImport(opts: {
           },
         });
       }
-    } catch {
-      // Stock già scaricato; flag scheda opzionale.
+    } catch (persistErr) {
+      failed.push({
+        label: "persist_scheda_flags",
+        error: persistErr instanceof Error ? persistErr.message : "Persist flag scheda fallito",
+      });
     }
   }
 

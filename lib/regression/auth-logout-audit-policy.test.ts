@@ -18,7 +18,8 @@ assert.match(authCtx, /AUTH_REFRESH_DEBOUNCE_MS/);
 assert.doesNotMatch(authCtx, /RECONCILE_SUCCESS_TTL/);
 assert.doesNotMatch(authCtx, /setStatus\("pending"\)/);
 assert.match(authCtx, /applyReconcileVerdict/);
-assert.match(authCtx, /signOut\(\{ scope: "local" \}\)/);
+assert.match(authCtx, /signOut\(\{ scope: "global" \}\)/);
+assert.doesNotMatch(authCtx, /signOut\(\{ scope: "local" \}\)/);
 
 assert.doesNotMatch(coordinator, /clearInvalidAuthSession/);
 assert.doesNotMatch(coordinator, /signOut/);
@@ -27,7 +28,8 @@ assert.doesNotMatch(authGate, /auth-session-coordinator/);
 assert.match(authGate, /loginRedirectInFlightRef/);
 assert.match(authGate, /refresh\(\{ force: true \}\)/);
 
-assert.match(clearInvalid, /scope: "local"/);
+assert.match(clearInvalid, /scope: "global"/);
+assert.doesNotMatch(clearInvalid, /scope: "local"/);
 
 const revokeAdmin = read("lib/auth/revoke-user-sessions.server.ts");
 assert.match(revokeAdmin, /"global"/);

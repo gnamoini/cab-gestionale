@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createCommunicationAdminClient } from "@/lib/communications/application/communication-dispatcher.server";
-import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const allowed = await verifyServerPageRead("impostazioni");
+  const allowed = await verifyServerPageWrite("impostazioni");
   if (!allowed) {
     return NextResponse.json({ error: "Permesso richiesto." }, { status: 403 });
   }

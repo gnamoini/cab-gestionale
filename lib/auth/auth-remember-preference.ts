@@ -47,5 +47,6 @@ export function setAuthRememberPreference(remember: boolean): void {
   }
 
   const maxAgePart = remember ? `;max-age=${AUTH_PERSISTENT_COOKIE_MAX_AGE}` : "";
-  document.cookie = `${CAB_AUTH_REMEMBER_COOKIE_KEY}=${value};path=/;SameSite=Lax${maxAgePart}`;
+  const securePart = window.location.protocol === "https:" ? ";Secure" : "";
+  document.cookie = `${CAB_AUTH_REMEMBER_COOKIE_KEY}=${value};path=/;SameSite=Lax${maxAgePart}${securePart}`;
 }

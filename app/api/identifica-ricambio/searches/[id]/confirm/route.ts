@@ -17,6 +17,14 @@ export async function POST(request: Request, context: RouteContext) {
   } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { data: search } = await sb
+    .from("ai_part_searches")
+    .select("id, created_by")
+    .eq("id", id)
+    .maybeSingle();
+  if (!search) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (search.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   let body: { candidateId?: string; note?: string } = {};
   try {
     body = (await request.json()) as { candidateId?: string; note?: string };

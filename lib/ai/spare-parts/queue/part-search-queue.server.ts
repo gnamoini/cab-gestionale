@@ -31,32 +31,17 @@ export async function claimPartSearchJobs(
   sb: SupabaseClient,
   limit: number,
 ): Promise<PartSearchRow[]> {
-  const now = new Date().toISOString();
-  const { data: pending } = await sb
-    .from("ai_part_searches")
-    .select("id, created_by, status, input_json, attempt_count")
-    .eq("status", "pending")
-    .or(`next_retry_at.is.null,next_retry_at.lte.${now}`)
-    .order("created_at", { ascending: true })
-    .limit(limit * 3);
-
-  const claimed: PartSearchRow[] = [];
-  for (const row of pending ?? []) {
-    if (claimed.length >= limit) break;
-    const { data: updated, error } = await sb
-      .from("ai_part_searches")
-      .update({
-        status: "processing",
-        attempt_count: (row.attempt_count as number) + 1,
-        updated_at: now,
-      })
-      .eq("id", row.id)
-      .eq("status", "pending")
-      .select("id, created_by, status, input_json, attempt_count")
-      .maybeSingle();
-    if (!error && updated) claimed.push(updated as PartSearchRow);
+  const { data, error } = await sb.rpc("ai_part_search_claim_jobs", { p_limit: limit });
+  if (error || !data) {
+    return [];
   }
-  return claimed;
+  return (data as PartSearchRow[]).map((row) => ({
+    id: row.id,
+    created_by: row.created_by,
+    status: row.status,
+    input_json: row.input_json as Record<string, unknown>,
+    attempt_count: row.attempt_count,
+  }));
 }
 
 export async function appendSearchStage(

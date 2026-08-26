@@ -30,6 +30,18 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     dependsOn: ["security.rbac.matrix"],
   },
   {
+    id: "security.remediation",
+    implementation: { type: "test-suite", reference: "security-remediation" },
+    domain: "security",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "security",
+    sourceOfTruth: "docs/security/rpc-access-manifest.json",
+    impact: ["all-users", "tenant-isolation", "customer-data", "compliance-audit"],
+    dependsOn: ["security.rbac.hardening"],
+  },
+  {
     id: "security.typescript.compile",
     implementation: { type: "npm", reference: "ci:tsc" },
     domain: "security",

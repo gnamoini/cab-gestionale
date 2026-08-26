@@ -13,14 +13,16 @@ export async function applyMagazzinoScaricoDaScheda(opts: {
   autore: string;
   riepilogo: string;
   qc: QueryClient;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+  /** Persisted on scheda row; generated once per business scarico intent. */
+  scaricoOperationId?: string;
+}): Promise<{ ok: true; operationId: string } | { ok: false; error: string }> {
   void opts.autore;
   void opts.riepilogo;
   const qty = Math.round(Number(opts.quantita));
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, error: "Quantità non valida" };
 
   const entity = getStockEntity(opts.qc, opts.ricambioId);
-  const operationId = crypto.randomUUID();
+  const operationId = opts.scaricoOperationId ?? crypto.randomUUID();
   const res = await stockAdjustFetch({
     ricambioId: opts.ricambioId,
     delta: -qty,
@@ -53,5 +55,5 @@ export async function applyMagazzinoScaricoDaScheda(opts: {
   scheduleReportBroadcastRefresh(opts.qc);
   void opts.qc.invalidateQueries({ queryKey: ["dashboard", "health-score"] });
 
-  return { ok: true };
+  return { ok: true, operationId: res.data.operationId };
 }

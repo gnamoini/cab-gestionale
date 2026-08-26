@@ -198,15 +198,12 @@ export const ordiniFornitoriService = {
       if (beforeRow.status === "annullato") return err("Ordine annullato.");
       if (beforeRow.status === status) return success(undefined);
 
-      let q = c
-        .from("ordini_fornitori")
-        .update({ status })
-        .eq("id", id)
-        .neq("status", "annullato");
-      if (expectedUpdatedAt) q = q.eq("updated_at", expectedUpdatedAt);
-      const { data, error } = await q.select("id").maybeSingle();
+      const { error } = await c.rpc("ordine_fornitore_transition_status", {
+        p_id: id,
+        p_new_status: status,
+        p_expected_updated_at: expectedUpdatedAt ?? null,
+      });
       if (error) return err(error.message);
-      if (!data) return err("CONFLICT: record modified");
 
       const oggetto = [beforeRow.numero, beforeRow.fornitore_label].filter(Boolean).join(" — ") || id;
       await writeModificaLog(c, {

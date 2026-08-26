@@ -5,6 +5,7 @@ import {
   SECURITY_RBAC_HARDENING_SUITE,
   SECURITY_RBAC_SUITE,
 } from "@/lib/control/suites/security-rbac.suite";
+import { SECURITY_REMEDIATION_SUITE } from "@/lib/control/suites/security-remediation.suite";
 import { REGRESSION_P0 } from "@/lib/control/suites/regression-p0.suite";
 import { REGRESSION_P1 } from "@/lib/control/suites/regression-p1.suite";
 import { REGRESSION_P2 } from "@/lib/control/suites/regression-p2.suite";
@@ -176,6 +177,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   },
   "security-rbac": { resolve: () => runTestFiles(SECURITY_RBAC_SUITE) },
   "security-rbac-hardening": { resolve: () => runTestFiles(SECURITY_RBAC_HARDENING_SUITE) },
+  "security-remediation": { resolve: () => runTestFiles(SECURITY_REMEDIATION_SUITE) },
   "regression-p0": { resolve: () => runTestFiles(REGRESSION_P0) },
   "regression-p1": { resolve: () => runTestFiles(REGRESSION_P1) },
   "regression-p2": { resolve: () => runTestFiles(REGRESSION_P2) },

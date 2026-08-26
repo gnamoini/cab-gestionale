@@ -6,6 +6,10 @@ import {
   withImportCorrelation,
 } from "@/lib/import-core/import-http.server";
 import { getImportExecution, scheduleExecutionRetry } from "@/lib/import-core/import-executions.server";
+import {
+  assertImportFileProcessAccess,
+  ImportFileAccessError,
+} from "@/lib/import-files/import-file-access.server";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
@@ -23,6 +27,15 @@ export async function POST(request: Request, context: RouteContext) {
   const sb = await createSupabaseServerUserClient();
   const execution = await getImportExecution(sb, id);
   if (!execution) return importErrorJson("EXECUTION_NOT_FOUND", correlationId, 404);
+
+  try {
+    await assertImportFileProcessAccess(execution.importFileId, userId);
+  } catch (error) {
+    if (error instanceof ImportFileAccessError && error.code === "NOT_FOUND") {
+      return importErrorJson("EXECUTION_NOT_FOUND", correlationId, 404);
+    }
+    return importErrorJson("PERMISSION_DENIED", correlationId, 403);
+  }
 
   if (execution.status !== "failed") {
     return NextResponse.json(

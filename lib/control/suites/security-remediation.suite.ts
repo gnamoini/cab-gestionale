@@ -1,0 +1,20 @@
+/** Security remediation v2 — Phase 9 regression gate (PR blocker). */
+export const SECURITY_REMEDIATION_SUITE: readonly string[] = [
+  "lib/regression/security-migration-gate.test.ts",
+  "lib/regression/security-definer-anon-execute.test.ts",
+  "lib/regression/security-definer-manifest-coverage.test.ts",
+  "lib/regression/security-definer-default-acl.test.ts",
+  "lib/regression/security-migration-history-scan.test.ts",
+  "lib/regression/api-route-authz-audit.test.ts",
+  "lib/regression/security-media-cache-policy.test.ts",
+  "lib/regression/security-portal-data-isolation.test.ts",
+  "lib/regression/security-webhook-resend.test.ts",
+  "lib/regression/security-import-retry-owner.test.ts",
+  "lib/regression/auth-logout-global-policy.test.ts",
+  "lib/regression/security-ai-prompt-boundary.test.ts",
+  "lib/regression/security-live-catalog-gate.test.ts",
+  "lib/regression/security-cliente-api-deny.test.ts",
+  "lib/regression/security-communication-delivery-idempotency.test.ts",
+  "lib/regression/security-adversarial-regression.test.ts",
+  "lib/regression/security-storage-object-boundary.test.ts",
+];

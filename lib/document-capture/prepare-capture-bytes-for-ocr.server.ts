@@ -1,13 +1,13 @@
 import "server-only";
 
-import { unzipSync } from "fflate";
+import { safeUnzipSync } from "@/lib/security/safe-unzip";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { isCaptureOfficeMime } from "@/lib/document-capture/mime-allowlist";
 import { readSpreadsheetWorkbook, sheetToMatrix } from "@/lib/spreadsheet/xlsx-server";
 
 function docxToPlainText(bytes: Uint8Array): string {
-  const entries = unzipSync(bytes);
+  const entries = safeUnzipSync(bytes);
   const xmlBytes = entries["word/document.xml"];
   if (!xmlBytes) throw new Error("Documento Word non valido");
   const xml = new TextDecoder().decode(xmlBytes);

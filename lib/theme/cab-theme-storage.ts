@@ -79,7 +79,8 @@ export function readThemeBootCache(): PersistedThemeMode | null {
 export function writeThemeBootCookie(mode: PersistedThemeMode): void {
   if (typeof document === "undefined") return;
   try {
-    document.cookie = `${CAB_THEME_STORAGE_KEY}=${mode};path=/;max-age=${CAB_THEME_COOKIE_MAX_AGE};SameSite=Lax`;
+    const securePart = window.location.protocol === "https:" ? ";Secure" : "";
+    document.cookie = `${CAB_THEME_STORAGE_KEY}=${mode};path=/;max-age=${CAB_THEME_COOKIE_MAX_AGE};SameSite=Lax${securePart}`;
   } catch {
     /* ignore */
   }

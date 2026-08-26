@@ -1,0 +1,3711 @@
+{
+  "generatedAt": "2026-08-26T22:18:52.258Z",
+  "projectRef": "oxmnuovsgenqkuwfolqh",
+  "source": "expected-post-remediation-v2",
+  "summary": {
+    "securityDefinerCount": 243,
+    "anonExecuteCount": 0,
+    "authenticatedExecuteCount": 202,
+    "serviceRoleExecuteCount": 243,
+    "withoutAuthCheckCount": 84,
+    "note": "Expected after 20261226120100-20800 migrations applied"
+  },
+  "defaultAcls": [
+    {
+      "grantor": "postgres",
+      "schema": "public",
+      "defaclobjtype": "f",
+      "defaclacl": "{postgres=X/postgres,supabase_admin=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "grantor": "supabase_admin",
+      "schema": "public",
+      "defaclobjtype": "f",
+      "defaclacl": "{postgres=X/supabase_admin,supabase_admin=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+    },
+    {
+      "grantor": "postgres",
+      "schema": "storage",
+      "defaclobjtype": "f",
+      "defaclacl": "{postgres=X/postgres,supabase_admin=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "grantor": "supabase_admin",
+      "schema": "storage",
+      "defaclobjtype": "f",
+      "defaclacl": "{postgres=X/supabase_admin,supabase_admin=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+    }
+  ],
+  "grantorRoles": [
+    "postgres",
+    "supabase_admin"
+  ],
+  "functions": [
+    {
+      "name": "ai_provider_key_record_failure",
+      "args": "p_key_id uuid, p_error_code text, p_cooldown_seconds integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "ai_provider_key_record_success",
+      "args": "p_key_id uuid, p_latency_ms integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "allocate_invoice_number",
+      "args": "p_document_type text, p_series text, p_year integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "annulla_ordine_fornitore",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "append_billing_event",
+      "args": "p_entity_type text, p_entity_id uuid, p_aggregate_type text, p_aggregate_id uuid, p_invoice_id uuid, p_event_category text, p_event_type text, p_correlation_id uuid, p_causation_id uuid, p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "append_preventivo_event",
+      "args": "p_preventivo_id uuid, p_event_type text, p_actor_type text, p_actor_id uuid, p_payload jsonb, p_snapshot jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "apply_invoice_status_backfill",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "archive_lavorazione_client_portal",
+      "args": "p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "assert_ddt_preventivo_row_allocations",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assert_invoice_preventivo_allocations",
+      "args": "p_invoice_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "asset_lifecycle_v1_db_enabled",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assign_ddt_numero",
+      "args": "p_anno integer, p_serie text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assign_lavorazione_codice",
+      "args": "p_created_at timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assign_ordine_fornitore_numero",
+      "args": "p_data_ordine date",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assign_preventivo_numero_lavorazione",
+      "args": "p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "assign_preventivo_numero_manuale",
+      "args": "p_created_at timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "audit_entity_retention_limit",
+      "args": "p_entita text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "bulk_upsert_app_settings",
+      "args": "p_items jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_claim_communication_outbox_batch",
+      "args": "p_limit integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_claim_communication_send_batch",
+      "args": "p_limit integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_claim_delivery_queue_batch",
+      "args": "p_job_phase text, p_limit integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_claim_notification_outbox_batch",
+      "args": "p_limit integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_complete_communication_outbox",
+      "args": "p_outbox_id uuid, p_status text, p_error text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_complete_communication_send",
+      "args": "p_queue_id uuid, p_status text, p_error text, p_next_attempt_at timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_complete_delivery_queue",
+      "args": "p_queue_id uuid, p_success boolean, p_error text, p_retry_delay_seconds integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_complete_notification_outbox",
+      "args": "p_outbox_id uuid, p_status text, p_error text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_count_unread_notifications",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_create_notification",
+      "args": "p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_detect_schedule_conflicts",
+      "args": "p_start timestamp with time zone, p_end timestamp with time zone, p_work_order_id uuid, p_exclude_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_dismiss_notification",
+      "args": "p_notification_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_dispatch_notifications_bulk",
+      "args": "p_company_id uuid, p_dispatch_notification_event_id text, p_dispatch_idempotency_key text, p_actor_id uuid, p_items jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_enqueue_communication_outbox",
+      "args": "p_domain_event_type text, p_entity_type text, p_entity_id uuid, p_idempotency_key text, p_actor_id uuid, p_payload jsonb, p_company_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_enqueue_notification_outbox",
+      "args": "p_notification_event_id text, p_entity_type text, p_entity_id uuid, p_idempotency_key text, p_actor_id uuid, p_payload jsonb, p_company_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_enqueue_raw_delivery",
+      "args": "p_notification_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_fanout_client_portal_lavorazione_notification",
+      "args": "p_event text, p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_fanout_client_portal_lavorazione_notification_core",
+      "args": "p_event text, p_lavorazione_id uuid, p_created_by uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_fanout_enqueue_raw_after_notification",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_communication_outbox_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_communication_send_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_fatturazione_overdue_digest_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_lavorazioni_overdue_digest_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_notification_outbox_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_push_delivery_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_push_subscription_cleanup_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_spare_parts_document_index_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_invoke_spare_parts_part_search_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_list_notifications_inbox",
+      "args": "p_limit integer, p_cursor_priority_rank integer, p_cursor_created_at timestamp with time zone, p_cursor_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_list_workshop_schedule_by_work_order",
+      "args": "p_work_order_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_list_workshop_schedule_events",
+      "args": "p_start timestamp with time zone, p_end timestamp with time zone, p_filters jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_log_notification_pipeline_trace",
+      "args": "p_trace_id uuid, p_stage text, p_entity_id uuid, p_notification_event_id text, p_recipient_count integer, p_notifications_created integer, p_realtime_delivered boolean, p_client_received boolean, p_error text, p_meta jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_mark_all_notifications_read",
+      "args": "p_max integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_mark_notification_read",
+      "args": "p_notification_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_migrate_dashboard_promemoria_to_schedule",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_patch_workshop_schedule_times",
+      "args": "p_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_publish_notification",
+      "args": "p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text, p_idempotency_key text, p_translation_key text, p_translation_params jsonb, p_snapshot jsonb, p_actions jsonb, p_payload_version text, p_expires_at timestamp with time zone, p_source_domain_event text, p_actor_id uuid, p_priority text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_release_communication_outbox",
+      "args": "p_outbox_id uuid, p_error text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_release_notification_outbox",
+      "args": "p_outbox_id uuid, p_error text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_revoke_push_subscription",
+      "args": "p_endpoint text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_sync_lavorazione_actual_labor_hours_safety_net",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "cab_touch_push_presence",
+      "args": "p_endpoint text, p_presence_status text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_upsert_push_subscription",
+      "args": "p_endpoint text, p_p256dh text, p_auth text, p_user_agent text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cab_upsert_workshop_schedule_event",
+      "args": "p_id uuid, p_title text, p_description text, p_event_type text, p_block_type text, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_planning_status text, p_priority text, p_work_order_id uuid, p_series_id uuid, p_recurrence_frequency text, p_recurrence_interval integer, p_recurrence_until date",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cancel_ddt",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cancel_invoice",
+      "args": "p_invoice_id uuid, p_reason text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "check_username_available",
+      "args": "p_username text, p_exclude_user_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "cleanup_import_storage",
+      "args": "p_batch_size integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, storage"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "close_attrezzatura_assignment",
+      "args": "p_attrezzatura_id uuid, p_change_reason assignment_change_reason, p_note text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "commit_ddt_pdf_artifact",
+      "args": "p_ddt_id uuid, p_storage_path text, p_hash text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "commit_preventivo_status_transition",
+      "args": "p_preventivo_id uuid, p_to_stato text, p_artifact jsonb, p_confermato_by uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public, extensions"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "complete_lavorazione_tagliando",
+      "args": "p_lavorazione_id uuid, p_mezzo_id uuid, p_config_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_execution_type maintenance_execution_type, p_preset_snapshot jsonb, p_compliance_auto numeric, p_compliance_diff_json jsonb, p_compliance_algorithm_version text, p_snapshot_schema_version text, p_parts jsonb, p_checklist jsonb, p_forecast jsonb, p_skip_forecast boolean, p_no_preset_reason text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "confirm_ddt",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "count_mezzo_dependencies",
+      "args": "p_mezzo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "create_credit_note_from_invoice",
+      "args": "p_invoice_id uuid, p_amount numeric, p_reason text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "create_ddt_with_rows",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "create_invoice_with_rows_and_links",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "create_ordine_fornitore_with_righe",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "current_profile_role",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "customer_balance_reconciliation_report",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "ddt_preventivo_row_delivered_qty",
+      "args": "p_preventivo_id uuid, p_source_ref text, p_exclude_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "delete_mezzo",
+      "args": "p_mezzo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_ai_index_is_usable",
+      "args": "p_index_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "document_capture_abort_apply",
+      "args": "p_capture_id uuid, p_application_id uuid, p_reason text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_begin_apply",
+      "args": "p_capture_id uuid, p_application_id uuid, p_resume boolean",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_complete_apply",
+      "args": "p_capture_id uuid, p_application_id uuid, p_success boolean, p_event_type text, p_lavorazione_id uuid, p_mezzo_id uuid, p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_create_upload_policy",
+      "args": "p_capture_id uuid, p_file_name text, p_expected_mime text, p_expected_size_bytes bigint, p_source text, p_document_category text, p_scheda_tipo text, p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_finalize",
+      "args": "p_capture_id uuid, p_sha256 text, p_mime text, p_file_size_bytes bigint, p_storage_version text, p_storage_etag text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_mutate_with_event",
+      "args": "p_capture_id uuid, p_event_type text, p_idempotency_key text, p_payload jsonb, p_new_status text, p_lavorazione_id uuid, p_mezzo_id uuid, p_attrezzatura_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_patch",
+      "args": "p_capture_id uuid, p_status text, p_document_category text, p_scheda_tipo text, p_lavorazione_id uuid, p_mezzo_id uuid, p_attrezzatura_id uuid, p_soft_delete boolean, p_deletion_reason text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_rate_limit_check",
+      "args": "p_operation text, p_max integer, p_window_seconds integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "document_capture_storage_object_allowed",
+      "args": "p_object_name text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "enqueue_search_rebuild",
+      "args": "p_entity_type text, p_entity_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "execute_rename_job_complete",
+      "args": "p_job_id uuid, p_metrics jsonb, p_health jsonb, p_entity_snapshot jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "execute_rename_job_start",
+      "args": "p_job_id uuid, p_actor uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "expire_import_files",
+      "args": "p_uploaded_ttl interval, p_processed_ttl interval, p_failed_ttl interval",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "expire_pending_document_captures",
+      "args": "p_ttl interval",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "get_activity_feed",
+      "args": "p_limit integer, p_days integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "get_audit_retention_config",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "handle_new_user",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_begin_processing",
+      "args": "p_file_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_cancel",
+      "args": "p_file_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_complete_processing",
+      "args": "p_file_id uuid, p_outcome text, p_failed_reason_code text, p_last_error jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_create_upload_policy",
+      "args": "p_file_id uuid, p_kind text, p_file_name text, p_expected_mime text, p_expected_size_bytes bigint, p_import_session_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_finalize",
+      "args": "p_file_id uuid, p_sha256 text, p_mime text, p_file_size_bytes bigint",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "import_file_storage_object_allowed",
+      "args": "p_object_name text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "inventory_receiving_apply",
+      "args": "p_document_id uuid, p_lines jsonb, p_user_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "invoice_apply_transition",
+      "args": "p_invoice_id uuid, p_transition text, p_payload jsonb, p_actor_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "invoice_apply_transition",
+      "args": "p_invoice_id uuid, p_transition text, p_payload jsonb, p_actor_id uuid, p_expected_version integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "invoice_insert_event",
+      "args": "p_entity_type text, p_entity_id uuid, p_aggregate_type text, p_aggregate_id uuid, p_invoice_id uuid, p_event_category text, p_event_type text, p_correlation_id uuid, p_causation_id uuid, p_payload jsonb, p_actor_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_legacy_status_audit_report",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_payment_reconciliation_report",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_preventivo_allocated_total",
+      "args": "p_preventivo_id uuid, p_exclude_invoice_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_status_backfill_snapshot",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_status_migration_report",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "invoice_write_status_axes",
+      "args": "p_invoice_id uuid, p_document_status text, p_payment_status text, p_sdi_status text, p_correlation_id uuid, p_causation_id uuid, p_emit_event boolean, p_actor_id uuid, p_transition text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "is_ddt_visible_to_client",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "is_preventivo_visible_to_client",
+      "args": "p_preventivo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "log_app_settings_update_audit",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "maintenance_plans_v1_db_enabled",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "mark_ddt_consegnato",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "mark_ddt_stampato",
+      "args": "p_ddt_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "mark_preventivo_viewed_by_client",
+      "args": "p_preventivo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "notification_cliente_inbox_eligible",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "notification_staff_inbox_eligible",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "notification_visible_to_auth_user",
+      "args": "p_n notifications",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "open_attrezzatura_assignment",
+      "args": "p_attrezzatura_id uuid, p_mezzo_id uuid, p_change_reason assignment_change_reason, p_note text, p_actor_id uuid, p_valid_from timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "ordine_fornitore_receive_delivery",
+      "args": "p_ordine_id uuid, p_batch_id text, p_lines jsonb, p_apply_stock boolean",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "process_search_rebuild_queue",
+      "args": "p_batch_size integer",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_app_settings_audit_retention",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_log_modifiche_dashboard_window",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_log_modifiche_per_entity",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_log_modifiche_retention",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_maintenance_audit_events_retention",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "prune_mezzo_anagrafica_history_retention",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_auth_uid",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_bunder_can",
+      "args": "p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_delete",
+      "args": "p_resource text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read",
+      "args": "p_resource text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_app_settings",
+      "args": "p_module text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_lavorazione_row",
+      "args": "p_mezzo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_log",
+      "args": "p_entita text, p_entita_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_log_row",
+      "args": "p_entita text, p_entita_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_operational",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_row",
+      "args": "p_resource text, p_row_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_read_storage",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_write",
+      "args": "p_resource text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_write_app_settings_row",
+      "args": "p_module text, p_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_write_operational",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_can_write_storage",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_cliente_ref",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_has_capability",
+      "args": "p_user_id uuid, p_capability text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_is_admin",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_is_cliente",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_is_operatore",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_is_operatore_or_admin",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_is_ospite",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_lavorazione_visible_to_cliente",
+      "args": "p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_lifecycle_mezzo_id",
+      "args": "p_table text, p_record_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_maintenance_plans_mezzi_write",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_maintenance_plans_settings_write",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_mezzo_visible_to_cliente",
+      "args": "p_mezzo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_module_can",
+      "args": "p_module text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_module_from_page_access",
+      "args": "p_user_id uuid, p_module text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_normalized_role",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_operational_diary_dashboard_read",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_operational_diary_dashboard_write",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_operator_global_settings_db_enabled",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_pilot_operator_global_settings_enabled",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_report_page_read",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_report_page_write",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_resource_module_can",
+      "args": "p_resource text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_role",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_role_for_user",
+      "args": "p_user_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_role_has_permission",
+      "args": "p_role_key text, p_permission_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_scope_cliente",
+      "args": "p_table text, p_record_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_scope_cliente_lavorazioni_mezzo",
+      "args": "p_mezzo_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_scope_log_modifiche",
+      "args": "p_entita text, p_entita_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_staff_has_any_module_read",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_staff_has_any_module_write",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "rbac_storage_documenti_path_allowed",
+      "args": "p_object_name text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_storage_images_path_allowed",
+      "args": "p_object_name text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_user_company_id",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_user_effective_permission",
+      "args": "p_user_id uuid, p_permission_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "rbac_user_page_access_level",
+      "args": "p_user_id uuid, p_page_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "reassign_attrezzatura_mezzo",
+      "args": "p_attrezzatura_id uuid, p_new_mezzo_id uuid, p_change_reason assignment_change_reason, p_note text, p_actor_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "recalc_compliance_rule_due",
+      "args": "p_rule_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_invoice_search_document",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_lavorazione_search_document",
+      "args": "p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_magazzino_search_document",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_mezzo_search_document",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_ordine_fornitore_search_document",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "refresh_preventivo_search_document",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "register_customer_payment_multi",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "register_invoice_payment",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "register_maintenance_execution_v2",
+      "args": "p_config_id uuid, p_mezzo_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_anomaly_note text, p_lavorazione_id uuid, p_scheda_lavorazione_id uuid, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_execution_type maintenance_execution_type, p_preset_snapshot jsonb, p_parts jsonb, p_forecast jsonb, p_checklist jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "register_maintenance_execution_v2",
+      "args": "p_config_id uuid, p_mezzo_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_anomaly_note text, p_lavorazione_id uuid, p_scheda_lavorazione_id uuid, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_parts jsonb, p_forecast jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "replace_ddt_for_preventivo",
+      "args": "p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "resolve_auth_email_for_login",
+      "args": "p_identifier text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "security_set_user_role",
+      "args": "p_user_id uuid, p_role_key text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "soft_delete_dashboard_promemoria",
+      "args": "p_id uuid, p_scope text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "soft_delete_lavorazione",
+      "args": "p_lavorazione_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "soft_delete_operational_diary_entry",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "soft_delete_workshop_schedule_event",
+      "args": "p_id uuid",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "sync_mezzo_km_from_reading",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_ai_part_searches_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_attrezzature_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_clienti_anagrafiche_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_communication_outbox_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_communication_send_queue_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_compliance_record_recalc_rule",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_delivery_queue_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_document_ai_index_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_documenti_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_fanout_client_portal_lavorazione_completata",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_fanout_client_portal_lavorazione_ingresso",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_invoices_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_assign_codice",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_outbox_archived",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_outbox_completed",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_outbox_created",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_outbox_deleted",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_outbox_updated",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_lavorazioni_refresh_search_document",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_magazzino_outbox_stock_crossing",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_magazzino_refresh_search_document",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_magazzino_ricambi_outbox_created",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_magazzino_ricambi_outbox_deleted",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_mezzi_enqueue_lavorazioni_search_rebuild",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_mezzi_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_mezzi_refresh_search_document",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_movimenti_ricambi_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_notification_outbox_invoke_worker",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_ordini_fornitori_assign_numero",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_ordini_fornitori_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_preventivi_assign_numero",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_preventivi_communication_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_preventivi_outbox",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_preventivi_refresh_search_document",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "trg_scheda_lavorazione_refresh_parent_search",
+      "args": "",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": false
+    },
+    {
+      "name": "update_ddt_draft",
+      "args": "p_ddt_id uuid, p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "update_invoice_draft_with_rows",
+      "args": "p_invoice_id uuid, p_payload jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "update_ordine_fornitore_draft",
+      "args": "p_id uuid, p_payload jsonb, p_expected_updated_at timestamp with time zone",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "user_effective_can",
+      "args": "p_module text, p_op text",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": true,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    },
+    {
+      "name": "wse_write_history",
+      "args": "p_event_id uuid, p_revision integer, p_action text, p_before jsonb, p_after jsonb",
+      "owner": "postgres",
+      "securityDefiner": true,
+      "config": [
+        "search_path=public"
+      ],
+      "grants": {
+        "anon": false,
+        "authenticated": false,
+        "serviceRole": true
+      },
+      "hasAuthCheck": true
+    }
+  ],
+  "policySnapshot": {
+    "operative_history_cases": [
+      "ohc_read_staff_only NOT rbac_is_cliente()"
+    ],
+    "operative_history_signals": [
+      "ohs_read_staff_only"
+    ],
+    "tkb_draft_store": [
+      "tkb_draft_read_staff",
+      "tkb_draft_write_security"
+    ],
+    "tkb_published_snapshots": [
+      "tkb_snapshots_insert_security"
+    ],
+    "health_score_runs": [
+      "health_score_runs_select_auth"
+    ],
+    "organizations": [
+      "legacy org helpers dropped in 20260910120005"
+    ]
+  }
+}

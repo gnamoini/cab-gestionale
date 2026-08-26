@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-08-26T22:15:01.884Z",
+  "migrationsScanned": 303,
+  "grantExecuteAnonCount": 1,
+  "findings": [
+    {
+      "file": "20260527120000_profiles_username_login.sql",
+      "line": 104,
+      "lineText": "grant execute on function public.resolve_auth_email_for_login(text) to anon, authenticated;",
+      "pattern": "grant_execute_anon"
+    }
+  ]
+}

@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
-import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
-import { createClient } from "@supabase/supabase-js";
-import { waitUntil } from "@vercel/functions";
-import { processPartSearchQueueOnly } from "@/lib/ai/spare-parts/workers/spare-parts-worker.server";
 import { sparePartSearchInputSchema } from "@/lib/ai/spare-parts/types/schemas";
 
 export const runtime = "nodejs";
@@ -19,14 +14,19 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   const sb = await createSupabaseServerUserClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: search } = await sb
     .from("ai_part_searches")
-    .select("id, status, input_json")
+    .select("id, status, input_json, created_by")
     .eq("id", id)
     .maybeSingle();
 
   if (!search) return NextResponse.json({ error: "Ricerca non trovata" }, { status: 404 });
+  if (search.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (search.status !== "draft") {
     return NextResponse.json({ error: "Ricerca già avviata" }, { status: 409 });
   }
@@ -61,14 +61,6 @@ export async function POST(_request: Request, context: RouteContext) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const serviceKey = readSupabaseServiceRoleKey();
-  if (serviceKey) {
-    const { url } = assertSupabasePublicEnv();
-    const admin = createClient(url, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    waitUntil(processPartSearchQueueOnly(admin));
-  }
-
+  // ponytail: pg_cron worker claims jobs — no waitUntil duplicate invoke
   return NextResponse.json({ ok: true, status: "pending" });
 }

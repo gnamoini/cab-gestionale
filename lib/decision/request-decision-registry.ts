@@ -6,6 +6,7 @@ export const TTL_SHORT = 3600;
 
 export const MEDIA_CACHE_IMMUTABLE = "public, max-age=31536000, immutable";
 export const MEDIA_CACHE_SHORT = "public, max-age=3600";
+export const MEDIA_CACHE_PRIVATE = "private, no-store";
 
 export const NON_EDGE_PREFIXES = [
   "/api/pdf/",
@@ -77,7 +78,7 @@ export function classifyMediaCacheTier(normalizedPath: string): CacheTier {
 }
 
 export function cacheControlForTier(tier: CacheTier): string {
-  return tier === "immutable" ? MEDIA_CACHE_IMMUTABLE : MEDIA_CACHE_SHORT;
+  return tier === "immutable" ? MEDIA_CACHE_IMMUTABLE : MEDIA_CACHE_PRIVATE;
 }
 
 export function ttlForTier(tier: CacheTier): number {

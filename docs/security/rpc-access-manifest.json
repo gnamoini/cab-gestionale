@@ -1,0 +1,3036 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-26T22:45:37.583Z",
+  "sourceBaseline": "docs/security/baseline-pre-remediation-2026-08-26.json",
+  "policy": "SECURITY DEFINER + EXECUTE anon = DENY. Absent from manifest = no client EXECUTE.",
+  "entries": {
+    "ai_provider_key_record_failure(p_key_id uuid, p_error_code text, p_cooldown_seconds integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "ai_provider_key_record_success(p_key_id uuid, p_latency_ms integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "allocate_invoice_number(p_document_type text, p_series text, p_year integer)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "annulla_ordine_fornitore(p_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "append_billing_event(p_entity_type text, p_entity_id uuid, p_aggregate_type text, p_aggregate_id uuid, p_invoice_id uuid, p_event_category text, p_event_type text, p_correlation_id uuid, p_causation_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "append_preventivo_event(p_preventivo_id uuid, p_event_type text, p_actor_type text, p_actor_id uuid, p_payload jsonb, p_snapshot jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff preventivi write",
+      "findingRefs": [
+        "SEC-05",
+        "SEC-11"
+      ]
+    },
+    "apply_invoice_status_backfill()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "archive_lavorazione_client_portal(p_lavorazione_id uuid)": {
+      "classification": "PORTALE_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Cliente portal visibility/ownership"
+    },
+    "assert_ddt_preventivo_row_allocations(p_ddt_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "assert_invoice_preventivo_allocations(p_invoice_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "asset_lifecycle_v1_db_enabled()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "assign_ddt_numero(p_anno integer, p_serie text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "assign_lavorazione_codice(p_created_at timestamp with time zone)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "assign_ordine_fornitore_numero(p_data_ordine date)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "assign_preventivo_numero_lavorazione(p_lavorazione_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "assign_preventivo_numero_manuale(p_created_at timestamp with time zone)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "audit_entity_retention_limit(p_entita text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "bulk_upsert_app_settings(p_items jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "cab_claim_communication_outbox_batch(p_limit integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_claim_communication_send_batch(p_limit integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_claim_delivery_queue_batch(p_job_phase text, p_limit integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_claim_notification_outbox_batch(p_limit integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_complete_communication_outbox(p_outbox_id uuid, p_status text, p_error text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_complete_communication_send(p_queue_id uuid, p_status text, p_error text, p_next_attempt_at timestamp with time zone)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_complete_delivery_queue(p_queue_id uuid, p_success boolean, p_error text, p_retry_delay_seconds integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_complete_notification_outbox(p_outbox_id uuid, p_status text, p_error text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_count_unread_notifications()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_create_notification(p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_detect_schedule_conflicts(p_start timestamp with time zone, p_end timestamp with time zone, p_work_order_id uuid, p_exclude_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_dismiss_notification(p_notification_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_dispatch_notifications_bulk(p_company_id uuid, p_dispatch_notification_event_id text, p_dispatch_idempotency_key text, p_actor_id uuid, p_items jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_enqueue_communication_outbox(p_domain_event_type text, p_entity_type text, p_entity_id uuid, p_idempotency_key text, p_actor_id uuid, p_payload jsonb, p_company_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_enqueue_notification_outbox(p_notification_event_id text, p_entity_type text, p_entity_id uuid, p_idempotency_key text, p_actor_id uuid, p_payload jsonb, p_company_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_enqueue_raw_delivery(p_notification_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_fanout_client_portal_lavorazione_notification(p_event text, p_lavorazione_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_fanout_client_portal_lavorazione_notification_core(p_event text, p_lavorazione_id uuid, p_created_by uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_fanout_enqueue_raw_after_notification()": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_invoke_communication_outbox_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_communication_send_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_fatturazione_overdue_digest_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_lavorazioni_overdue_digest_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_notification_outbox_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_push_delivery_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_push_subscription_cleanup_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_spare_parts_document_index_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_invoke_spare_parts_part_search_worker()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "cab_list_notifications_inbox(p_limit integer, p_cursor_priority_rank integer, p_cursor_created_at timestamp with time zone, p_cursor_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_list_workshop_schedule_by_work_order(p_work_order_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_list_workshop_schedule_events(p_start timestamp with time zone, p_end timestamp with time zone, p_filters jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_log_notification_pipeline_trace(p_trace_id uuid, p_stage text, p_entity_id uuid, p_notification_event_id text, p_recipient_count integer, p_notifications_created integer, p_realtime_delivered boolean, p_client_received boolean, p_error text, p_meta jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_mark_all_notifications_read(p_max integer)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_mark_notification_read(p_notification_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_migrate_dashboard_promemoria_to_schedule()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_patch_workshop_schedule_times(p_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cab_publish_notification(p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text, p_idempotency_key text, p_translation_key text, p_translation_params jsonb, p_snapshot jsonb, p_actions jsonb, p_payload_version text, p_expires_at timestamp with time zone, p_source_domain_event text, p_actor_id uuid, p_priority text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff impostazioni write",
+      "findingRefs": [
+        "SEC-05",
+        "SEC-11"
+      ]
+    },
+    "cab_release_communication_outbox(p_outbox_id uuid, p_error text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_release_notification_outbox(p_outbox_id uuid, p_error text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_revoke_push_subscription(p_endpoint text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false
+    },
+    "cab_sync_lavorazione_actual_labor_hours_safety_net()": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_touch_push_presence(p_endpoint text, p_presence_status text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false
+    },
+    "cab_upsert_push_subscription(p_endpoint text, p_p256dh text, p_auth text, p_user_agent text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false
+    },
+    "cab_upsert_workshop_schedule_event(p_id uuid, p_title text, p_description text, p_event_type text, p_block_type text, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_planning_status text, p_priority text, p_work_order_id uuid, p_series_id uuid, p_recurrence_frequency text, p_recurrence_interval integer, p_recurrence_until date)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "cancel_ddt(p_ddt_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "cancel_invoice(p_invoice_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "check_username_available(p_username text, p_exclude_user_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "cleanup_import_storage(p_batch_size integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "close_attrezzatura_assignment(p_attrezzatura_id uuid, p_change_reason assignment_change_reason, p_note text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "commit_ddt_pdf_artifact(p_ddt_id uuid, p_storage_path text, p_hash text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "commit_preventivo_status_transition(p_preventivo_id uuid, p_to_stato text, p_artifact jsonb, p_confermato_by uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "complete_lavorazione_tagliando(p_lavorazione_id uuid, p_mezzo_id uuid, p_config_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_execution_type maintenance_execution_type, p_preset_snapshot jsonb, p_compliance_auto numeric, p_compliance_diff_json jsonb, p_compliance_algorithm_version text, p_snapshot_schema_version text, p_parts jsonb, p_checklist jsonb, p_forecast jsonb, p_skip_forecast boolean, p_no_preset_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "confirm_ddt(p_ddt_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "count_mezzo_dependencies(p_mezzo_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_credit_note_from_invoice(p_invoice_id uuid, p_amount numeric, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_ddt_with_rows(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_invoice_with_rows_and_links(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_ordine_fornitore_with_righe(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "current_profile_role()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "customer_balance_reconciliation_report()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "ddt_preventivo_row_delivered_qty(p_preventivo_id uuid, p_source_ref text, p_exclude_ddt_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "delete_mezzo(p_mezzo_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "document_ai_index_is_usable(p_index_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "document_capture_abort_apply(p_capture_id uuid, p_application_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_begin_apply(p_capture_id uuid, p_application_id uuid, p_resume boolean)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_complete_apply(p_capture_id uuid, p_application_id uuid, p_success boolean, p_event_type text, p_lavorazione_id uuid, p_mezzo_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_create_upload_policy(p_capture_id uuid, p_file_name text, p_expected_mime text, p_expected_size_bytes bigint, p_source text, p_document_category text, p_scheda_tipo text, p_lavorazione_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_finalize(p_capture_id uuid, p_sha256 text, p_mime text, p_file_size_bytes bigint, p_storage_version text, p_storage_etag text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_mutate_with_event(p_capture_id uuid, p_event_type text, p_idempotency_key text, p_payload jsonb, p_new_status text, p_lavorazione_id uuid, p_mezzo_id uuid, p_attrezzatura_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_patch(p_capture_id uuid, p_status text, p_document_category text, p_scheda_tipo text, p_lavorazione_id uuid, p_mezzo_id uuid, p_attrezzatura_id uuid, p_soft_delete boolean, p_deletion_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_rate_limit_check(p_operation text, p_max integer, p_window_seconds integer)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "document_capture_storage_object_allowed(p_object_name text, p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "enqueue_search_rebuild(p_entity_type text, p_entity_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "execute_rename_job_complete(p_job_id uuid, p_metrics jsonb, p_health jsonb, p_entity_snapshot jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff impostazioni write",
+      "findingRefs": [
+        "SEC-05",
+        "SEC-11"
+      ]
+    },
+    "execute_rename_job_start(p_job_id uuid, p_actor uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff impostazioni write",
+      "findingRefs": [
+        "SEC-05",
+        "SEC-11"
+      ]
+    },
+    "expire_import_files(p_uploaded_ttl interval, p_processed_ttl interval, p_failed_ttl interval)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "expire_pending_document_captures(p_ttl interval)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "get_activity_feed(p_limit integer, p_days integer)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "get_audit_retention_config()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "handle_new_user()": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "import_file_begin_processing(p_file_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "import_file_cancel(p_file_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "import_file_complete_processing(p_file_id uuid, p_outcome text, p_failed_reason_code text, p_last_error jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "import_file_create_upload_policy(p_file_id uuid, p_kind text, p_file_name text, p_expected_mime text, p_expected_size_bytes bigint, p_import_session_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "import_file_finalize(p_file_id uuid, p_sha256 text, p_mime text, p_file_size_bytes bigint)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "import_file_storage_object_allowed(p_object_name text, p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "inventory_receiving_apply(p_document_id uuid, p_lines jsonb, p_user_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_apply_transition(p_invoice_id uuid, p_transition text, p_payload jsonb, p_actor_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_apply_transition(p_invoice_id uuid, p_transition text, p_payload jsonb, p_actor_id uuid, p_expected_version integer)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_insert_event(p_entity_type text, p_entity_id uuid, p_aggregate_type text, p_aggregate_id uuid, p_invoice_id uuid, p_event_category text, p_event_type text, p_correlation_id uuid, p_causation_id uuid, p_payload jsonb, p_actor_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione write",
+      "findingRefs": [
+        "SEC-05",
+        "SEC-11"
+      ]
+    },
+    "invoice_legacy_status_audit_report()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "invoice_payment_reconciliation_report()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "invoice_preventivo_allocated_total(p_preventivo_id uuid, p_exclude_invoice_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "invoice_status_backfill_snapshot()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "invoice_status_migration_report()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Staff fatturazione/report read",
+      "findingRefs": [
+        "SEC-04"
+      ]
+    },
+    "invoice_write_status_axes(p_invoice_id uuid, p_document_status text, p_payment_status text, p_sdi_status text, p_correlation_id uuid, p_causation_id uuid, p_emit_event boolean, p_actor_id uuid, p_transition text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "is_ddt_visible_to_client(p_ddt_id uuid)": {
+      "classification": "PORTALE_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Cliente portal visibility/ownership"
+    },
+    "is_preventivo_visible_to_client(p_preventivo_id uuid)": {
+      "classification": "PORTALE_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Cliente portal visibility/ownership"
+    },
+    "log_app_settings_update_audit()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "maintenance_plans_v1_db_enabled()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "mark_ddt_consegnato(p_ddt_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "mark_ddt_stampato(p_ddt_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "mark_preventivo_viewed_by_client(p_preventivo_id uuid)": {
+      "classification": "PORTALE_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Cliente portal visibility/ownership"
+    },
+    "notification_cliente_inbox_eligible()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "notification_staff_inbox_eligible()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "notification_visible_to_auth_user(p_n notifications)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
+    "open_attrezzatura_assignment(p_attrezzatura_id uuid, p_mezzo_id uuid, p_change_reason assignment_change_reason, p_note text, p_actor_id uuid, p_valid_from timestamp with time zone)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "ordine_fornitore_receive_delivery(p_ordine_id uuid, p_batch_id text, p_lines jsonb, p_apply_stock boolean)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "process_search_rebuild_queue(p_batch_size integer)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "prune_app_settings_audit_retention()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "prune_log_modifiche_dashboard_window()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "prune_log_modifiche_per_entity()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "prune_log_modifiche_retention()": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "prune_maintenance_audit_events_retention()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "prune_mezzo_anagrafica_history_retention()": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "rbac_auth_uid()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_bunder_can(p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_delete(p_resource text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read(p_resource text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_app_settings(p_module text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_lavorazione_row(p_mezzo_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_log(p_entita text, p_entita_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_log_row(p_entita text, p_entita_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_operational()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_row(p_resource text, p_row_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_read_storage()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_write(p_resource text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_write_app_settings_row(p_module text, p_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_write_operational()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_can_write_storage()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_cliente_ref()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_has_capability(p_user_id uuid, p_capability text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_is_admin()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_is_cliente()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_is_operatore()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_is_operatore_or_admin()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_is_ospite()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_lavorazione_visible_to_cliente(p_lavorazione_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_lifecycle_mezzo_id(p_table text, p_record_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_maintenance_plans_mezzi_write()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_maintenance_plans_settings_write()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_mezzo_visible_to_cliente(p_mezzo_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_module_can(p_module text, p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_module_from_page_access(p_user_id uuid, p_module text, p_op text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "rbac_normalized_role()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_operational_diary_dashboard_read()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_operational_diary_dashboard_write()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_operator_global_settings_db_enabled()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_pilot_operator_global_settings_enabled()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_report_page_read()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_report_page_write()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_resource_module_can(p_resource text, p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_role()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_role_for_user(p_user_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "rbac_role_has_permission(p_role_key text, p_permission_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_scope_cliente(p_table text, p_record_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_scope_cliente_lavorazioni_mezzo(p_mezzo_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_scope_log_modifiche(p_entita text, p_entita_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_staff_has_any_module_read()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_staff_has_any_module_write()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_storage_documenti_path_allowed(p_object_name text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_storage_images_path_allowed(p_object_name text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_user_company_id()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_user_effective_permission(p_user_id uuid, p_permission_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "rbac_user_page_access_level(p_user_id uuid, p_page_key text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "reassign_attrezzatura_mezzo(p_attrezzatura_id uuid, p_new_mezzo_id uuid, p_change_reason assignment_change_reason, p_note text, p_actor_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "recalc_compliance_rule_due(p_rule_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "refresh_invoice_search_document(p_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "refresh_lavorazione_search_document(p_lavorazione_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "refresh_magazzino_search_document(p_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "refresh_mezzo_search_document(p_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "refresh_ordine_fornitore_search_document(p_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "refresh_preventivo_search_document(p_id uuid)": {
+      "classification": "CRON_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-06",
+        "SEC-11"
+      ]
+    },
+    "register_customer_payment_multi(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "register_invoice_payment(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "register_maintenance_execution_v2(p_config_id uuid, p_mezzo_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_anomaly_note text, p_lavorazione_id uuid, p_scheda_lavorazione_id uuid, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_execution_type maintenance_execution_type, p_preset_snapshot jsonb, p_parts jsonb, p_forecast jsonb, p_checklist jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "register_maintenance_execution_v2(p_config_id uuid, p_mezzo_id uuid, p_plan_id uuid, p_performed_at date, p_ore_at_service numeric, p_km_at_service numeric, p_mezzo_ore_snapshot numeric, p_note text, p_anomaly_note text, p_lavorazione_id uuid, p_scheda_lavorazione_id uuid, p_preset_version_id uuid, p_interval_type maintenance_interval_type, p_interval_value_at_execution numeric, p_parts jsonb, p_forecast jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "replace_ddt_for_preventivo(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "resolve_auth_email_for_login(p_identifier text)": {
+      "classification": "PUBLIC_SAFE",
+      "grants": [
+        "anon",
+        "service_role"
+      ],
+      "anonAllow": true,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Login email resolve only; body validates input",
+      "findingRefs": [
+        "SEC-PUBLIC-SAFE"
+      ]
+    },
+    "security_set_user_role(p_user_id uuid, p_role_key text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "soft_delete_dashboard_promemoria(p_id uuid, p_scope text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "soft_delete_lavorazione(p_lavorazione_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "soft_delete_operational_diary_entry(p_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "soft_delete_workshop_schedule_event(p_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "sync_mezzo_km_from_reading()": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "trg_ai_part_searches_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_attrezzature_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_clienti_anagrafiche_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_communication_outbox_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_communication_send_queue_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_compliance_record_recalc_rule()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_delivery_queue_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_document_ai_index_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_documenti_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_fanout_client_portal_lavorazione_completata()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_fanout_client_portal_lavorazione_ingresso()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_invoices_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_assign_codice()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_outbox_archived()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_outbox_completed()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_outbox_created()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_outbox_deleted()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_outbox_updated()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_lavorazioni_refresh_search_document()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_magazzino_outbox_stock_crossing()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_magazzino_refresh_search_document()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_magazzino_ricambi_outbox_created()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_magazzino_ricambi_outbox_deleted()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_mezzi_enqueue_lavorazioni_search_rebuild()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_mezzi_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_mezzi_refresh_search_document()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_movimenti_ricambi_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_notification_outbox_invoke_worker()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_ordini_fornitori_assign_numero()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_ordini_fornitori_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_preventivi_assign_numero()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_preventivi_communication_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_preventivi_outbox()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_preventivi_refresh_search_document()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_scheda_lavorazione_refresh_parent_search()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "Trigger/pg internal; no PostgREST client",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "update_ddt_draft(p_ddt_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "update_invoice_draft_with_rows(p_invoice_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "update_ordine_fornitore_draft(p_id uuid, p_payload jsonb, p_expected_updated_at timestamp with time zone)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "Default staff callable; anon revoked",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "user_effective_can(p_module text, p_op text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": false,
+      "notes": "RBAC helper for RLS/policies"
+    },
+    "wse_write_history(p_event_id uuid, p_revision integer, p_action text, p_before jsonb, p_after jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    }
+  }
+}

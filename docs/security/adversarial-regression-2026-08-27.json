@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-27T00:00:00.000Z",
+  "suite": "adversarial-regression",
+  "scenarios": [
+    { "id": "anon_mutating_rpc", "expected": "DENY", "status": "covered_by_manifest_grants" },
+    { "id": "cliente_staff_api", "expected": "403", "status": "proxy_handler_test" },
+    { "id": "retry_scarico_same_operation_id", "expected": "single_decrement", "status": "scaricoOperationId_ssot" },
+    { "id": "retry_import_same_key", "expected": "single_commit", "status": "import_commit_dedup" },
+    { "id": "retry_email_delivery_op", "expected": "single_send", "status": "delivery_operation_id_column" },
+    { "id": "ai_worker_lease", "expected": "single_claim", "status": "ai_part_search_claim_jobs" },
+    { "id": "zip_bomb", "expected": "abort", "status": "safe-unzip.ts" },
+    { "id": "ocr_injection", "expected": "no_policy_override", "status": "prompt_boundary_guard" }
+  ]
+}

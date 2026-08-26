@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Rimuove cookie e storage locale Supabase (solo sessione corrente — non altri dispositivi). */
+/** Rimuove sessione Supabase su tutti i dispositivi del refresh token. */
 export async function clearInvalidAuthSession(sb: SupabaseClient): Promise<void> {
   try {
-    await sb.auth.signOut({ scope: "local" });
+    await sb.auth.signOut({ scope: "global" });
   } catch {
     /* ignore */
   }

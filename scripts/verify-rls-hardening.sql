@@ -86,3 +86,35 @@ where routine_schema = 'public'
 
 -- 10) Bucket documenti privato
 select id, public from storage.buckets where id in ('documenti', 'images');
+
+-- 11) Operative history: policies must not be USING(true)
+select schemaname, tablename, policyname, qual::text as using_expr
+from pg_policies
+where schemaname = 'public'
+  and tablename in ('operative_history_cases', 'operative_history_signals')
+  and (qual::text = 'true' or qual is null)
+order by tablename, policyname;
+
+-- 12) TKB draft store: staff-only (not cliente)
+select schemaname, tablename, policyname, qual::text as using_expr
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'tkb_draft_store'
+  and qual::text not like '%rbac_is_cliente%'
+order by policyname;
+
+-- 13) security_assert_* helpers exist
+select proname
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and proname like 'security_assert_%'
+order by proname;
+
+-- 14) anon EXECUTE on SECURITY DEFINER (expect 0 post-remediation)
+select count(*) as anon_security_definer_execute_count
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.prosecdef
+  and has_function_privilege('anon', p.oid, 'EXECUTE');

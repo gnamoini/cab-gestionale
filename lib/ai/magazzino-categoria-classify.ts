@@ -4,6 +4,7 @@ import { z } from "zod";
 import { aiService } from "@/lib/ai/runtime/service";
 import { aiErrorMessage } from "@/lib/ai/runtime/errors";
 import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
+import { AI_PROMPT_BOUNDARY_GUARD } from "@/lib/ai/prompt-boundary-guard";
 import { resolveMagazzinoCategoriaFromMaster } from "@/lib/magazzino/magazzino-categoria-infer";
 
 const BATCH_SIZE = 50;
@@ -18,7 +19,7 @@ const magazzinoCategoriaClassifySchema = z.object({
 });
 
 const CLASSIFY_SYSTEM = `Sei un assistente per officina meccanica. Assegna a ogni ricambio la categoria più appropriata dalla lista fornita.
-Usa solo etichette esatte dalla lista. Se non sei sicuro, usa "Generale" (o l'equivalente nella lista).`;
+Usa solo etichette esatte dalla lista. Se non sei sicuro, usa "Generale" (o l'equivalente nella lista).${AI_PROMPT_BOUNDARY_GUARD}`;
 
 export type MagazzinoCategoriaClassifyResult =
   | { ok: true; map: Map<number, string> }

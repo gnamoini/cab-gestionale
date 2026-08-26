@@ -592,7 +592,7 @@ export function AuthProvider({
         if (uid) {
           authLogsEntry.logLogoutFireAndForget(uid, email);
         }
-        await sb.auth.signOut({ scope: "local" });
+        await sb.auth.signOut({ scope: "global" });
       } catch {
         /* ignore */
       }

@@ -31,8 +31,18 @@ export async function POST(request: Request) {
   }
 
   const sb = await createSupabaseServerUserClient();
-  const { data: search } = await sb.from("ai_part_searches").select("id").eq("id", body.searchId).maybeSingle();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: search } = await sb
+    .from("ai_part_searches")
+    .select("id, created_by")
+    .eq("id", body.searchId)
+    .maybeSingle();
   if (!search) return NextResponse.json({ error: "Ricerca non trovata" }, { status: 404 });
+  if (search.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const safeName = sanitizeStorageFileName(body.fileName, "foto");
   const path = `ai_part_search/${body.searchId}/${crypto.randomUUID()}-${safeName}`;

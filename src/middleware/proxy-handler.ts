@@ -15,6 +15,7 @@ import {
   isClienteRole,
   pathnameToPage,
 } from "@/lib/auth/rbac";
+import { isStaffOnlyApiPath } from "@/lib/auth/staff-api-allowlist";
 import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
@@ -55,6 +56,11 @@ function isPwaStaticAsset(pathname: string): boolean {
 /** Cron worker (Bearer CRON_SECRET / service role) — no sessione utente. */
 function isCronApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/cron/");
+}
+
+/** Webhook provider (firma Svix) — no sessione utente. */
+function isWebhookApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/webhooks/");
 }
 function logEdgeRedirect(from: string, to: string, reason: string): void {
   lazyLogBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
@@ -99,7 +105,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     return NextResponse.next();
   }
 
-  if (isCronApiPath(pathname)) {
+  if (isCronApiPath(pathname) || isWebhookApiPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -186,6 +192,10 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
       console.info(`[boot-timing] proxy GET / → ${home} ${Date.now() - t0}ms`);
     }
     return redirect;
+  }
+
+  if (pathname.startsWith("/api/") && activeUser && isClienteRole(activeUser) && isStaffOnlyApiPath(pathname)) {
+    return NextResponse.json({ error: "Permesso negato." }, { status: 403 });
   }
 
   if (isClienteRole(activeUser)) {

@@ -26,8 +26,9 @@ import {
 } from "@/lib/ai/spare-parts/ranking/score";
 import { isSparePartsMockMode, mockVisualAnalysis } from "@/lib/ai/spare-parts/providers/mock";
 import { runWebSearchStage } from "@/lib/ai/spare-parts/retrieval/web.server";
+import { AI_PROMPT_BOUNDARY_GUARD } from "@/lib/ai/prompt-boundary-guard";
 
-const VISUAL_SYSTEM = `Analyze workshop spare part photos. Extract structured fields. Do not invent part numbers.`;
+const VISUAL_SYSTEM = `Analyze workshop spare part photos. Extract structured fields. Do not invent part numbers.${AI_PROMPT_BOUNDARY_GUARD}`;
 
 function hitToCandidate(hit: StructuredCatalogHit, webUsed: boolean): CandidatePart {
   const verified = hit.partNumberVerified;

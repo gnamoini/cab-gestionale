@@ -13,6 +13,7 @@ import {
   applyListinoColumnMap,
 } from "@/lib/magazzino/listino-import/parse-listino-column-map";
 import type { ListinoImportRawRow } from "@/lib/magazzino/listino-import/listino-import-types";
+import { AI_PROMPT_BOUNDARY_GUARD } from "@/lib/ai/prompt-boundary-guard";
 import {
   LISTINO_PDF_CHUNK_DELAY_MS,
   LISTINO_PDF_MAX_CHUNKS,
@@ -22,11 +23,11 @@ import {
 
 const LISTINO_PDF_SYSTEM = `Sei un assistente per officina meccanica. Estrai righe ricambi da listini fornitore PDF.
 Per ogni riga restituisci codice articolo, descrizione, prezzo listino numerico (EUR), marca opzionale se presente.
-Ignora intestazioni, totali, note legali.`;
+Ignora intestazioni, totali, note legali.${AI_PROMPT_BOUNDARY_GUARD}`;
 
 const LISTINO_COLUMNS_SYSTEM = `Mappa le colonne di un listino Excel/CSV italiano o inglese.
 Indica indice colonna (0-based) per codice, descrizione, prezzo listino, marca opzionale.
-headerRowIndex = riga intestazioni, dataStartRowIndex = prima riga dati.`;
+headerRowIndex = riga intestazioni, dataStartRowIndex = prima riga dati.${AI_PROMPT_BOUNDARY_GUARD}`;
 
 export type ListinoAiParseResult =
   | { ok: true; rows: ListinoImportRawRow[]; warnings: string[] }

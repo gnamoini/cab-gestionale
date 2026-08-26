@@ -42,9 +42,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Company non trovata" }, { status: 400 });
   }
 
+  const actorId = snap.userId;
+
   const buildCommand = buildDispatchCommandFromLegacy(
     body.notificationEventId,
-    body.actorId ?? snap.userId,
+    actorId,
     body.legacyNotification,
   );
 
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
     const result = await dispatchNotificationEvent({
       notificationEventId: body.notificationEventId,
       companyId,
-      actorId: body.actorId ?? snap.userId,
+      actorId,
       excludeActor: body.excludeActor,
       dispatchIdempotencyKey: body.dispatchIdempotencyKey,
       buildCommand: (recipientId) => buildCommand(recipientId)!,
