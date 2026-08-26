@@ -39,5 +39,5 @@ Badge in modale dettaglio: **File Search**, **AI Catalog**, **Esplosi** (da `sta
 ## Troubleshooting
 
 - Documento non usato in ricerca: verificare flag AI, PDF, `understanding_status = ready`.
-- Coda bloccata: controllare cron Vercel e `CRON_SECRET`.
+- Coda bloccata: controllare pg_cron (`spare-parts-*-poll`) e `CRON_SECRET` in vault (`push_delivery_cron_secret`).
 - Web sempre attivo: match strutturato assente o sotto soglia (`shouldRunWebSearch`).
