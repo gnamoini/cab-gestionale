@@ -11,8 +11,7 @@ import {
   MANUAL_LABEL_PRESET_IDS,
   labelPresetOptionLabel,
 } from "@/lib/inventory-labels";
-import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
+import { tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -73,10 +72,6 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
     return res.blob();
   }
 
-  function pdfFileName(): string {
-    const safe = form.codice.trim().replace(/[^a-zA-Z0-9_-]/g, "") || "manuale";
-    return normalizePdfDownloadFileName(`etichetta-${safe}.pdf`);
-  }
 
   function revokePreview() {
     setPreviewUrl((prev) => {
@@ -106,26 +101,24 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
     }
   }
 
-  async function handleOpenPdf() {
-    if (!canRender) return;
-    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichetta" });
-    if (isDeferredPopupBlocked(deferredResult)) return;
-    const deferred = deferredResult;
+  function buildManualLabelPdfUrl(): string {
+    const sp = new URLSearchParams({
+      format: "pdf",
+      preset,
+      quantity: String(quantity),
+      marca: form.marca.trim(),
+      descrizione: form.descrizione.trim(),
+      codice: form.codice.trim(),
+    });
+    return `/api/inventory-labels/manual/render?${sp.toString()}`;
+  }
 
+  function handleOpenPdf() {
+    if (!canRender) return;
     setOpeningPdf(true);
     try {
-      const blob = await postRender("pdf");
-      const opened = await openPdfBlobInNewTab(blob, pdfFileName(), {
-        showLoadingFeedback: false,
-        context: "etichette",
-        label: "PDF etichetta",
-        deferredHandle: deferred,
-      });
-      if (!opened) {
-        gestToast.error("Impossibile aprire il PDF etichetta.");
-      }
+      tryOpenViaTemporaryAnchor(buildManualLabelPdfUrl());
     } catch {
-      deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");
     } finally {
       setOpeningPdf(false);

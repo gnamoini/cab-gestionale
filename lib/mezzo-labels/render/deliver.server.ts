@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildMezzoQrUrl } from "@/lib/mezzo-labels/domain/tokens";
 import { ensureActiveMezzoQrToken } from "@/lib/mezzo-labels/domain/tokens.server";
@@ -51,12 +52,12 @@ export async function deliverMezzoLabel(input: DeliverMezzoLabelInput): Promise<
     bytes = new Uint8Array(await renderMezzoLabelPng(input.payload, qrUrl));
   }
 
-  await writeMezzoLabelEvent(input.sb, {
-    eventType: "MEZZO_LABEL_PRINTED",
+  scheduleMezzoLabelPrintedAudit(input.sb, {
     mezzoId: input.mezzoId,
     userId: input.userId,
     device: input.device,
-    payload: { format: input.format, token: tokenRow.token },
+    format: input.format,
+    token: tokenRow.token,
   });
 
   return {
@@ -65,6 +66,38 @@ export async function deliverMezzoLabel(input: DeliverMezzoLabelInput): Promise<
     fileName: fileNameForMezzo(input.payload, input.format),
     token: tokenRow.token,
   };
+}
+
+function scheduleMezzoLabelPrintedAudit(
+  sb: SupabaseClient,
+  input: Pick<DeliverMezzoLabelInput, "mezzoId" | "userId" | "device" | "format"> & { token: string },
+): void {
+  after(() => {
+    void writeMezzoLabelEvent(sb, {
+      eventType: "MEZZO_LABEL_PRINTED",
+      mezzoId: input.mezzoId,
+      userId: input.userId,
+      device: input.device,
+      payload: { format: input.format, token: input.token },
+    });
+  });
+}
+
+function scheduleMezzoLabelBulkPrintedAudit(
+  sb: SupabaseClient,
+  input: Pick<DeliverMezzoLabelInput, "userId" | "device"> & { mezzoIds: string[]; batchSize: number },
+): void {
+  after(() => {
+    for (const mezzoId of input.mezzoIds) {
+      void writeMezzoLabelEvent(sb, {
+        eventType: "MEZZO_LABEL_BULK_PRINTED",
+        mezzoId,
+        userId: input.userId,
+        device: input.device,
+        payload: { batchSize: input.batchSize },
+      });
+    }
+  });
 }
 
 export type MezzoLabelBulkItem = {
@@ -90,15 +123,12 @@ export async function deliverMezzoLabelsBulk(input: {
 
   const bytes = await renderMezzoLabelsPdf(slots);
 
-  for (const item of input.items) {
-    await writeMezzoLabelEvent(input.sb, {
-      eventType: "MEZZO_LABEL_BULK_PRINTED",
-      mezzoId: item.mezzoId,
-      userId: input.userId,
-      device: input.device,
-      payload: { batchSize: input.items.length },
-    });
-  }
+  scheduleMezzoLabelBulkPrintedAudit(input.sb, {
+    mezzoIds: input.items.map((item) => item.mezzoId),
+    userId: input.userId,
+    device: input.device,
+    batchSize: input.items.length,
+  });
 
   return { bytes, count: input.items.length };
 }

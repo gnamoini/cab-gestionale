@@ -16,11 +16,7 @@ import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
 import { DipendentiTimesheetSection } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
-import {
-  buildDipendentiPdfContext,
-  openDipendentiPdfComplessivoInNewTab,
-  openDipendentiPdfDipendenteInNewTab,
-} from "@/lib/dipendenti/pdf/dipendenti-pdf-export";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { prefetchDipendentiMonthEntries } from "@/lib/dipendenti/prefetch-dipendenti-month-entries";
 import { buildEmptyDay8hUpserts, buildEmptyDayFerieUpserts, resolveFerieTipoAssenza } from "@/lib/dipendenti/timesheet-bulk-fill-day";
 import {
@@ -171,29 +167,10 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
     setEditorTarget({ dipendenteId, workDate });
   }, []);
 
-  const pdfContext = useCallback(
-    () =>
-      buildDipendentiPdfContext({
-        monthKey,
-        employees: ts.displayEmployees,
-        entries: ts.entries,
-        tipiAssenza: ts.tipiAssenza,
-        addettiRecords: ts.dipendentiRecords,
-      }),
-    [monthKey, ts.displayEmployees, ts.entries, ts.tipiAssenza, ts.dipendentiRecords],
-  );
-
   const handleExportPdfComplessivo = useCallback(() => {
     if (pdfExporting || ts.displayEmployees.length === 0) return;
-    void (async () => {
-      setPdfExporting(true);
-      try {
-        await openDipendentiPdfComplessivoInNewTab(pdfContext());
-      } finally {
-        setPdfExporting(false);
-      }
-    })();
-  }, [pdfExporting, pdfContext, ts.displayEmployees.length]);
+    openPdfArtifactFromUserClick("dipendenti-aziendale", { month: monthKey });
+  }, [pdfExporting, monthKey, ts.displayEmployees.length]);
 
   const handleExportPdfDipendente = useCallback(() => {
     if (pdfExporting) return;
@@ -206,15 +183,11 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
       toastValidation(GESTIONALE_TOAST.dipendentiSelectAddettoForPdf);
       return;
     }
-    void (async () => {
-      setPdfExporting(true);
-      try {
-        await openDipendentiPdfDipendenteInNewTab(pdfContext(), employee);
-      } finally {
-        setPdfExporting(false);
-      }
-    })();
-  }, [pdfExporting, pdfContext, ts.displayEmployees, filterEmployeeId, toastValidation]);
+    openPdfArtifactFromUserClick("dipendenti-dipendente", {
+      month: monthKey,
+      employeeId: employee.id,
+    });
+  }, [pdfExporting, monthKey, ts.displayEmployees, filterEmployeeId, toastValidation]);
 
   const handleBootstrap = useCallback(async () => {
     setBootstrapPending(true);

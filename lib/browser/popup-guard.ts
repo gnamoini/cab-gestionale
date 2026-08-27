@@ -50,6 +50,11 @@ type PopupBlockedDialogHandler = (request: PopupBlockedDialogRequest) => void;
 
 let popupBlockedDialogHandler: PopupBlockedDialogHandler | null = null;
 
+/** ponytail: secondo window.open sullo stesso click (Strict Mode) → riusa tab pre-aperta */
+let recentDeferredPopup: DeferredPopupHandle | null = null;
+let recentDeferredPopupAt = 0;
+const RECENT_DEFERRED_REUSE_MS = 500;
+
 export function registerPopupBlockedDialogHandler(handler: PopupBlockedDialogHandler | null): void {
   popupBlockedDialogHandler = handler;
 }
@@ -139,7 +144,7 @@ function handleBlockedPopup(
 
   trackRuntimeEvent(RuntimeEvents.popupOpenBlocked, telemetryMeta(opts.context, urlKind, opts.phase ?? "sync"));
 
-  if (opts.showBlockedDialog !== false) {
+  if (opts.showBlockedDialog !== false && opts.phase !== "navigate") {
     requestBlockedDialog(session.id, opts.context, session.label);
   }
 
@@ -186,16 +191,41 @@ function tryIframeBlobPdfInPopup(popup: Window, blobUrl: string, title: string):
   }
 }
 
+function navigateBlobPdfInSameWindow(popup: Window, blobUrl: string): boolean {
+  try {
+    if (popup.closed) return false;
+    popup.location.href = blobUrl;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Naviga una tab pre-aperta verso un blob PDF.
  * 1. location.replace(blobUrl) — viewer nativo
- * 2. iframe blob via document.write — fallback tecnico
+ * 2. location.href — fallback stessa tab
  */
 function navigateBlobPdfInPopup(popup: Window, blobUrl: string, title: string): boolean {
   if (popup.closed) return false;
   if (tryLocationReplace(popup, blobUrl)) return true;
   if (popup.closed) return false;
-  return tryIframeBlobPdfInPopup(popup, blobUrl, title);
+  if (navigateBlobPdfInSameWindow(popup, blobUrl)) return true;
+  if (popup.closed) return false;
+  if (tryIframeBlobPdfInPopup(popup, blobUrl, title)) return true;
+  return false;
+}
+
+/** Apre blob PDF nella tab già aperta (deferred) — no secondo window.open. */
+export function navigateBlobPdfInPopupWindow(
+  popup: Window,
+  blobUrl: string,
+  title: string,
+  revokeAfterMs?: number,
+): boolean {
+  if (!navigateBlobPdfInPopup(popup, blobUrl, title)) return false;
+  scheduleBlobUrlRevoke(blobUrl, revokeAfterMs);
+  return true;
 }
 
 /**
@@ -224,6 +254,17 @@ export function openSafePopup(opts: OpenSafePopupOptions): OpenSafePopupResult {
   const label = opts.label ?? popupContextLabel(opts.context);
 
   if (trimmed.startsWith("blob:")) {
+    const direct = openPopupWindow(trimmed);
+    if (isPopupAlive(direct)) {
+      detachOpener(direct!);
+      scheduleBlobUrlRevoke(trimmed, opts.revokeBlobUrlAfterMs);
+      trackRuntimeEvent(
+        RuntimeEvents.popupOpenSuccess,
+        telemetryMeta(opts.context, urlKind, opts.phase ?? "sync"),
+      );
+      return { status: "opened" };
+    }
+
     const popup = openPopupWindow("about:blank");
     if (!isPopupAlive(popup)) {
       return handleBlockedPopup(opts, urlKind);
@@ -263,6 +304,21 @@ function closePopupWindow(popup: Window): void {
   }
 }
 
+function createAnchorOpenedHandle(): DeferredPopupHandle {
+  return {
+    getWindow() {
+      return null;
+    },
+    navigate() {
+      return { status: "opened" };
+    },
+    close() {},
+    isAlive() {
+      return false;
+    },
+  };
+}
+
 function createDeferredHandle(
   popup: Window,
   context: PopupGuardContext,
@@ -270,13 +326,12 @@ function createDeferredHandle(
   showBlockedDialog?: boolean,
 ): DeferredPopupHandle {
   let closed = false;
-  let navigated = false;
 
   const blockNavigate = (
     url: string,
     options?: { revokeBlobUrlAfterMs?: number },
   ): { status: "blocked"; sessionId: string } => {
-    if (!closed && !popup.closed) {
+    if (!popup.closed) {
       closePopupWindow(popup);
     }
     closed = true;
@@ -293,7 +348,7 @@ function createDeferredHandle(
     );
   };
 
-  return {
+  const handle: DeferredPopupHandle = {
     getWindow() {
       if (closed || popup.closed) return null;
       return popup;
@@ -309,11 +364,10 @@ function createDeferredHandle(
         if (!navigateBlobPdfInPopup(popup, trimmed, label)) {
           return blockNavigate(trimmed, options);
         }
-      } else if (!tryLocationReplace(popup, trimmed)) {
+      } else if (!tryLocationReplace(popup, trimmed) && !navigateBlobPdfInSameWindow(popup, trimmed)) {
         return blockNavigate(trimmed, options);
       }
 
-      navigated = true;
       scheduleBlobUrlRevoke(trimmed, options?.revokeBlobUrlAfterMs);
       trackRuntimeEvent(
         RuntimeEvents.popupPreopenSuccess,
@@ -322,16 +376,20 @@ function createDeferredHandle(
       return { status: "opened" };
     },
     close() {
-      if (closed) return;
-      closed = true;
-      if (!navigated && !popup.closed) {
+      if (!popup.closed) {
         closePopupWindow(popup);
       }
+      closed = true;
+      if (recentDeferredPopup === handle) recentDeferredPopup = null;
     },
     isAlive() {
       return !closed && !popup.closed;
     },
   };
+
+  recentDeferredPopup = handle;
+  recentDeferredPopupAt = Date.now();
+  return handle;
 }
 
 /**
@@ -355,6 +413,27 @@ export function openDeferredPopup(opts: OpenDeferredPopupOptions): OpenDeferredP
   const popup = openPopupWindow("about:blank");
 
   if (!isPopupAlive(popup)) {
+    const now = Date.now();
+    if (
+      recentDeferredPopup?.isAlive() &&
+      now - recentDeferredPopupAt < RECENT_DEFERRED_REUSE_MS
+    ) {
+      return recentDeferredPopup;
+    }
+
+    if (retryUrl) {
+      try {
+        tryOpenViaTemporaryAnchor(retryUrl);
+        trackRuntimeEvent(
+          RuntimeEvents.popupOpenSuccess,
+          telemetryMeta(opts.context, classifyPopupUrlKind(retryUrl), "anchor_preopen"),
+        );
+        return createAnchorOpenedHandle();
+      } catch {
+        /* anchor fallback failed — real block below */
+      }
+    }
+
     trackRuntimeEvent(
       RuntimeEvents.popupPreopenFailed,
       telemetryMeta(opts.context, "about_blank", "preopen"),
@@ -378,6 +457,7 @@ export function openDeferredPopup(opts: OpenDeferredPopupOptions): OpenDeferredP
     telemetryMeta(opts.context, "about_blank", "preopen"),
   );
 
+  // ponytail: no document.write su tab pre-aperta — location.replace(blob|api) fallisce dopo write
   return createDeferredHandle(popup, opts.context, label, opts.showBlockedDialog);
 }
 
@@ -442,7 +522,7 @@ export function tryOpenViaTemporaryAnchor(url: string, downloadFileName?: string
   const a = document.createElement("a");
   a.href = url;
   a.target = "_blank";
-  a.rel = "noopener noreferrer";
+  // ponytail: no rel=noopener — Chromium/Electron può aprire tab vuota senza navigare
   if (downloadFileName?.trim()) {
     a.download = downloadFileName.trim();
   }

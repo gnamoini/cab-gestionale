@@ -3,7 +3,7 @@
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import type { StaffLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
 import { useQuery } from "@tanstack/react-query";
 
@@ -79,7 +79,7 @@ export function LavorazioneOfficialDocumentsPanel({
               type="button"
               className={dsTableActionTextBtn}
               onClick={() => {
-                void openPdfArtifact(doc.kind === "preventivo" ? "preventivo" : "ddt", { id: doc.id });
+                openPdfArtifactFromUserClick(doc.kind === "preventivo" ? "preventivo" : "ddt", { id: doc.id });
               }}
             >
               Apri

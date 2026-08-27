@@ -5,7 +5,7 @@ import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavor
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
-import { openPdfStreamInNewTab } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfStreamFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
 import { useQuery } from "@tanstack/react-query";
 
@@ -77,7 +77,7 @@ function ClientOfficialDocumentsBody({ lavorazioneId }: { lavorazioneId: string 
               type="button"
               className={dsTableActionTextBtn}
               onClick={() => {
-                void openPdfStreamInNewTab(doc.streamPath);
+                openPdfStreamFromUserClick(doc.streamPath);
               }}
             >
               Apri

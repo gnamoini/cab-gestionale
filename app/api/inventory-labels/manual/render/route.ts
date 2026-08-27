@@ -6,7 +6,7 @@ import { renderLabelPng } from "@/lib/inventory-labels/render/png";
 import { renderSingleLabelPdf } from "@/lib/inventory-labels/render/pdf";
 import { renderLabelSvg } from "@/lib/inventory-labels/render/svg";
 import { sanitizeFilenamePart } from "@/lib/inventory-labels/render/pdf-pipeline";
-import { manualLabelRenderSchema } from "@/lib/inventory-labels/validation";
+import { manualLabelRenderSchema, type ManualLabelRenderRequest } from "@/lib/inventory-labels/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,6 +20,26 @@ const CONTENT_TYPES = {
 function manualLabelFileName(codice: string, format: keyof typeof CONTENT_TYPES): string {
   const safe = sanitizeFilenamePart(codice || "manuale");
   return `etichetta-${safe}.${format}`;
+}
+
+export async function GET(request: Request) {
+  const auth = await requireInventoryLabelsRead();
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  const url = new URL(request.url);
+  const parsed = manualLabelRenderSchema.safeParse({
+    marca: url.searchParams.get("marca") ?? "",
+    descrizione: url.searchParams.get("descrizione") ?? "",
+    codice: url.searchParams.get("codice") ?? "",
+    preset: url.searchParams.get("preset") ?? undefined,
+    format: url.searchParams.get("format") ?? "pdf",
+    quantity: url.searchParams.get("quantity") ?? undefined,
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
+  }
+
+  return renderManualLabelBytes(parsed.data);
 }
 
 export async function POST(request: Request) {
@@ -38,7 +58,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
   }
 
-  const { marca, descrizione, codice, preset, format, quantity } = parsed.data;
+  return renderManualLabelBytes(parsed.data);
+}
+
+async function renderManualLabelBytes(data: ManualLabelRenderRequest) {
+  const { marca, descrizione, codice, preset, format, quantity } = data;
   const template = getLabelTemplate(preset, "manual");
   if (!template) {
     return NextResponse.json({ error: "Formato etichetta non valido" }, { status: 400 });

@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
-import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
+import { tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dsSystemBannerActions } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -27,6 +26,7 @@ export function MezzoQrLabelActions({
   onClose,
 }: MezzoQrLabelActionsProps) {
   const gestToast = useGestionaleToast();
+  const pdfOpeningRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [openingPdf, setOpeningPdf] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -44,11 +44,6 @@ export function MezzoQrLabelActions({
       `/api/mezzo-labels/mezzi/${encodeURIComponent(mezzoId)}/render?format=${format}`,
     [mezzoId],
   );
-
-  const pdfFileName = useCallback(() => {
-    const safe = targa.replace(/[^a-zA-Z0-9_-]/g, "") || mezzoId.slice(0, 8);
-    return normalizePdfDownloadFileName(`etichetta-mezzo-${safe}.pdf`);
-  }, [mezzoId, targa]);
 
   const handlePreview = useCallback(async () => {
     if (!canRead) return;
@@ -68,34 +63,30 @@ export function MezzoQrLabelActions({
     }
   }, [canRead, gestToast, renderUrl]);
 
-  const handleOpenPdf = useCallback(async () => {
-    if (!canRead) return;
-    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichetta mezzo" });
-    if (isDeferredPopupBlocked(deferredResult)) return;
-    const deferred = deferredResult;
+  const handleOpenPdf = useCallback(() => {
+    if (!canRead || pdfOpeningRef.current) return;
+    const id = mezzoId.trim();
+    if (!id) {
+      gestToast.error("Mezzo non valido.");
+      return;
+    }
 
+    pdfOpeningRef.current = true;
     setOpeningPdf(true);
+
+    const pdfPath = renderUrl("pdf");
+
     try {
-      const res = await fetch(renderUrl("pdf"));
-      if (!res.ok) {
-        deferred.close();
-        throw new Error("PDF non disponibile");
-      }
-      const blob = await res.blob();
-      const ok = await openPdfBlobInNewTab(blob, pdfFileName(), {
-        showLoadingFeedback: false,
-        context: "etichette",
-        label: "PDF etichetta mezzo",
-        deferredHandle: deferred,
-      });
-      if (!ok) gestToast.error("Impossibile aprire il PDF etichetta.");
+      // ponytail: un solo tab — API inline via anchor (no window.open about:blank)
+      tryOpenViaTemporaryAnchor(pdfPath);
       onClose?.();
     } catch {
-      gestToast.error("Generazione PDF etichetta non riuscita.");
+      gestToast.error("Impossibile aprire il PDF etichetta.");
     } finally {
+      pdfOpeningRef.current = false;
       setOpeningPdf(false);
     }
-  }, [canRead, gestToast, onClose, pdfFileName, renderUrl]);
+  }, [canRead, gestToast, mezzoId, onClose, renderUrl]);
 
   const handleRegenerate = useCallback(async () => {
     if (!canWrite) return;
@@ -159,7 +150,7 @@ export function MezzoQrLabelActions({
           size="sm"
           loading={openingPdf}
           disabled={busy}
-          onClick={() => void handleOpenPdf()}
+          onClick={handleOpenPdf}
         >
           Stampa etichetta QR
         </LoadingButton>

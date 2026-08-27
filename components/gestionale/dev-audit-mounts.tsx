@@ -11,13 +11,11 @@ import { AssetCacheDebugMount } from "@/lib/observability/asset-cache-debug";
 import { RuntimeCoordinationDebugMount } from "@/lib/observability/runtime-coordination-debug";
 import { VisualLayoutLinterMount } from "@/components/gestionale/visual-layout-linter-mount";
 import { OverflowRootCauseAuditMount } from "@/components/observability/overflow-root-cause-audit-mount";
-import { DevSystemBannersPreviewMount } from "@/components/gestionale/dev-system-banners-preview-mount";
 
 /** DEV-only audit tooling — imported dynamically from app-shell in development. */
 export function DevAuditMounts() {
   return (
     <>
-      <DevSystemBannersPreviewMount />
       <ResponsiveLayoutAuditMount />
       <OverflowRootCauseAuditMount />
       <VisualLayoutLinterMount />

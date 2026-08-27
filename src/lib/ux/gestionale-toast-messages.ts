@@ -24,4 +24,6 @@ export const GESTIONALE_TOAST = {
   dipendentiFillTodayFerieSuccess:
     "Assenze di oggi aggiornate (8 ore ferie sulle celle vuote).",
   dipendentiCopyDayToAllSuccess: "Ore copiate a tutti gli addetti per il giorno selezionato.",
+  popupBlocked:
+    "Il browser ha bloccato i pop-up. Consenti i pop-up per questo sito e ripeti l'azione.",
 } as const;

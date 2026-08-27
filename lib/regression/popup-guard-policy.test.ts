@@ -48,13 +48,12 @@ assert.match(openUrl, /openSafePopup/);
 assert.match(openUrl, /openBlankPopupWindow/);
 
 const openPreview = read("lib/pdf/open-pdf-blob-preview.ts");
-assert.match(openPreview, /openDeferredPopup/);
-assert.match(openPreview, /acquireDeferredHandle/);
+assert.match(openPreview, /submitPdfPreviewInNewTab/);
+assert.match(openPreview, /openSafePopup/);
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
-assert.match(requestArtifact, /openDeferredPopup/);
-assert.match(requestArtifact, /retryUrl:\s*options\.url/);
-assert.match(requestArtifact, /deferred\.close\(\)/);
+assert.match(requestArtifact, /tryOpenViaTemporaryAnchor/);
+assert.match(requestArtifact, /openSameOriginApiPdf/);
 
 const providers = read("components/app-providers-core.tsx");
 assert.match(providers, /PopupGuardProvider/);

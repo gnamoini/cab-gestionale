@@ -2,10 +2,10 @@
 
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
 import {
-  openDeferredPopup,
+  openSafePopup,
+  tryOpenViaTemporaryAnchor,
   type DeferredPopupHandle,
   type PopupGuardContext,
-  isDeferredPopupBlocked,
 } from "@/lib/browser/popup-guard";
 import { pushGestionaleToast } from "@/context/toast-context";
 
@@ -34,28 +34,83 @@ function resolvePdfContext(type: PdfArtifactType): PopupGuardContext {
   return "pdf";
 }
 
-function acquireDeferredPdfHandle(options: {
-  url: string;
-  context: PopupGuardContext;
-  label?: string;
-  deferredHandle?: DeferredPopupHandle | null;
-}): DeferredPopupHandle | null {
-  if (options.deferredHandle?.isAlive()) return options.deferredHandle;
-
-  const deferredResult = openDeferredPopup({
-    context: options.context,
-    label: options.label ?? "PDF",
-    retryUrl: options.url,
-  });
-
-  if (isDeferredPopupBlocked(deferredResult)) return null;
-  return deferredResult;
+function isSameOriginApiPdfUrl(url: string): boolean {
+  return url.startsWith("/api/");
 }
 
-/**
- * Apre un artifact PDF same-origin nella scheda pre-aperta sul click utente.
- * Naviga l'URL API direttamente (come il pulsante Riprova) — evita blob: che resta bianco.
- */
+/** Come etichetta QR: anchor sync sull'API inline, poi window.open fallback. */
+function openSameOriginApiPdf(
+  url: string,
+  context: PopupGuardContext,
+  failureMessage?: string,
+): boolean {
+  const trimmed = url.trim();
+  if (!trimmed || !isSameOriginApiPdfUrl(trimmed)) return false;
+
+  try {
+    tryOpenViaTemporaryAnchor(trimmed);
+    return true;
+  } catch {
+    /* anchor blocked — fallback popup */
+  }
+
+  const opened = openSafePopup({ url: trimmed, context, phase: "sync" }).status === "opened";
+  if (opened) return true;
+
+  if (failureMessage) pushGestionaleToast(failureMessage, "warning", 5200);
+  return false;
+}
+
+function openDeferredApiPdf(
+  url: string,
+  deferred: DeferredPopupHandle,
+  context: PopupGuardContext,
+  failureMessage?: string,
+): boolean {
+  if (!deferred.isAlive()) {
+    deferred.close();
+    return openSameOriginApiPdf(url, context, failureMessage);
+  }
+  const nav = deferred.navigate(url.trim());
+  if (nav.status === "opened") return true;
+  deferred.close();
+  return openSameOriginApiPdf(url, context, failureMessage);
+}
+
+/** Sync sul click — window.open all'endpoint artifact. */
+export function openPdfStreamFromUserClick(
+  url: string,
+  options?: {
+    context?: PopupGuardContext;
+    label?: string;
+    loadingMessage?: string;
+  },
+): void {
+  const trimmed = url?.trim() ?? "";
+  if (!trimmed) {
+    pushGestionaleToast("URL del documento non valido.", "warning", 5200);
+    return;
+  }
+  const context = options?.context ?? "pdf";
+  if (options?.loadingMessage) {
+    pushGestionaleToast(options.loadingMessage, "info", 5000);
+  }
+  openSameOriginApiPdf(trimmed, context, "Generazione PDF non riuscita.");
+}
+
+export function openPdfArtifactFromUserClick(
+  type: PdfArtifactType,
+  params?: OpenPdfArtifactParams,
+  options?: { context?: PopupGuardContext; label?: string; loadingMessage?: string },
+): void {
+  const url = buildPdfArtifactUrl(type, params);
+  openPdfStreamFromUserClick(url, {
+    context: options?.context ?? resolvePdfContext(type),
+    label: options?.label,
+    loadingMessage: options?.loadingMessage,
+  });
+}
+
 export async function openPdfStreamInNewTab(
   url: string,
   options?: {
@@ -78,28 +133,27 @@ export async function openPdfStreamInNewTab(
     options?.context ??
     (options?.artifactType ? resolvePdfContext(options.artifactType) : "pdf");
 
-  const deferred = acquireDeferredPdfHandle({
-    url: trimmed,
-    context,
-    label: options?.label,
-    deferredHandle: options?.deferredHandle,
-  });
-  if (!deferred) return false;
-
-  pushGestionaleToast(options?.loadingMessage ?? "Generazione PDF in corso…", "info", 5000);
-
-  const nav = deferred.navigate(trimmed);
-  if (nav.status === "opened") return true;
-
-  if (nav.status !== "blocked") {
-    deferred.close();
-    pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
+  if (options?.loadingMessage) {
+    pushGestionaleToast(options.loadingMessage, "info", 5000);
   }
 
-  return false;
+  if (!isSameOriginApiPdfUrl(trimmed)) {
+    pushGestionaleToast("URL del documento non valido.", "warning", 5200);
+    return false;
+  }
+
+  if (options?.deferredHandle) {
+    return openDeferredApiPdf(
+      trimmed,
+      options.deferredHandle,
+      context,
+      "Generazione PDF non riuscita.",
+    );
+  }
+
+  return openSameOriginApiPdf(trimmed, context, "Generazione PDF non riuscita.");
 }
 
-/** Scarica l'artifact server-side e apre il PDF in nuova scheda (anteprima, non download forzato). */
 export async function openPdfArtifact(
   type: PdfArtifactType,
   params?: OpenPdfArtifactParams,

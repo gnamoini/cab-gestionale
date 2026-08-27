@@ -7,7 +7,7 @@ import {
   type DocumentoFileOpenResult,
 } from "@/lib/documenti/documento-file-access";
 import { archiveDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
-import { openSafePopup } from "@/lib/browser/popup-guard";
+import { openSafePopup, tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
@@ -301,8 +301,14 @@ export async function openDocumentoFile(
   const access = getDocumentoFileAccessState(doc);
   if (access.hasLocalBlob && doc.urlBlob?.trim()) {
     const href = doc.urlBlob.trim();
-    const opened = openSafePopup({ url: href, context: "documento", label: "documento" });
-    return opened.status === "opened"
+    let opened = false;
+    try {
+      tryOpenViaTemporaryAnchor(href);
+      opened = true;
+    } catch {
+      opened = openSafePopup({ url: href, context: "documento", label: "documento" }).status === "opened";
+    }
+    return opened
       ? { ok: true, href }
       : { ok: false, code: "unknown", message: documentoFileOpenFailureMessage("unknown") };
   }
@@ -320,8 +326,14 @@ export async function openDocumentoFile(
     };
   }
   const href = archiveDocumentDeliveryUrl(doc.id, "preview", doc.caricatoIl || doc.ultimaModifica);
-  const opened = openSafePopup({ url: href, context: "documento", label: "documento" });
-  return opened.status === "opened"
+  let opened = false;
+  try {
+    tryOpenViaTemporaryAnchor(href);
+    opened = true;
+  } catch {
+    opened = openSafePopup({ url: href, context: "documento", label: "documento" }).status === "opened";
+  }
+  return opened
     ? { ok: true, href }
     : { ok: false, code: "unknown", message: documentoFileOpenFailureMessage("unknown") };
 }

@@ -2,9 +2,7 @@
 
 import { pushGestionaleToast } from "@/context/toast-context";
 import {
-  openDeferredPopup,
-  isDeferredPopupBlocked,
-  type DeferredPopupHandle,
+  openSafePopup,
   type PopupGuardContext,
 } from "@/lib/browser/popup-guard";
 import {
@@ -12,7 +10,7 @@ import {
   PDF_PREVIEW_LEGACY_API_PATH,
 } from "@/lib/pdf/pdf-preview-config";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
-import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
+import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 
 /** Nome file sicuro per download (spazi → underscore). */
 export function normalizePdfDownloadFileName(fileName: string): string {
@@ -21,65 +19,60 @@ export function normalizePdfDownloadFileName(fileName: string): string {
   return withExt.replace(/\s+/g, "_");
 }
 
-function previewPostErrorMessage(status: number): string {
-  if (status === 413) return "PDF troppo grande per l'anteprima server. Apertura locale.";
-  if (status === 429) return "Troppe richieste PDF. Apertura locale.";
-  if (status === 400) return "Anteprima PDF non valida. Apertura locale.";
-  if (status === 403) return "Non autorizzato all'anteprima PDF. Apertura locale.";
-  return "Anteprima PDF non disponibile. Apertura locale.";
-}
-
-function acquireDeferredHandle(options: {
-  deferredHandle?: DeferredPopupHandle | null;
-  context: PopupGuardContext;
-  label?: string;
-}): DeferredPopupHandle | null {
-  if (options.deferredHandle?.isAlive()) return options.deferredHandle;
-
-  const deferredResult = openDeferredPopup({
-    context: options.context,
-    label: options.label ?? "PDF",
-  });
-
-  if (isDeferredPopupBlocked(deferredResult)) return null;
-  return deferredResult;
-}
-
-function openPdfFileInTab(
+/**
+ * POST multipart → nuova scheda con PDF inline (nessun about:blank, nessun fetch client).
+ * Richiede user gesture sul submit sincrono.
+ */
+export function submitPdfPreviewInNewTab(
   pdfFile: File,
-  options: {
-    revokeBlobUrlAfterMs?: number;
-    context: PopupGuardContext;
-    label?: string;
-    deferredHandle: DeferredPopupHandle | null;
-  },
+  previewAction = PDF_PREVIEW_API_PATH,
 ): boolean {
-  const url = URL.createObjectURL(pdfFile);
-  return openUrlInNewTab(url, {
-    revokeBlobUrlAfterMs: options.revokeBlobUrlAfterMs ?? 120_000,
-    context: options.context,
-    label: options.label,
-    deferredHandle: options.deferredHandle,
-  });
+  if (typeof document === "undefined") return false;
+  try {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = previewAction;
+    form.target = "_blank";
+    form.enctype = "multipart/form-data";
+    form.style.display = "none";
+
+    const fileNameInput = document.createElement("input");
+    fileNameInput.type = "hidden";
+    fileNameInput.name = "fileName";
+    fileNameInput.value = normalizePdfDownloadFileName(pdfFile.name);
+    form.appendChild(fileNameInput);
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.name = "pdf";
+    fileInput.multiple = false;
+    const dt = new DataTransfer();
+    dt.items.add(pdfFile);
+    fileInput.files = dt.files;
+    form.appendChild(fileInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Anteprima PDF in nuova scheda con nome file corretto al download.
- * POST multipart → risposta PDF inline con Content-Disposition (multi-istanza safe).
+ * PDF già in memoria — preview server in nuova scheda (form POST target=_blank).
  */
-export async function openPdfBlobInNewTab(
+export function openPdfBlobInNewTab(
   blob: Blob,
   fileName: string,
   options?: {
-    revokeBlobUrlAfterMs?: number;
     previewAction?: string;
     showLoadingFeedback?: boolean;
-    onBusyChange?: (busy: boolean) => void;
     context?: PopupGuardContext;
     label?: string;
-    deferredHandle?: DeferredPopupHandle | null;
   },
-): Promise<boolean> {
+): boolean {
   if (typeof window === "undefined") return false;
 
   const downloadName = normalizePdfDownloadFileName(fileName);
@@ -88,64 +81,66 @@ export async function openPdfBlobInNewTab(
       ? blob
       : new File([blob], downloadName, { type: "application/pdf" });
 
-  const context = options?.context ?? "pdf";
-  const activeHandle = acquireDeferredHandle({
-    deferredHandle: options?.deferredHandle,
-    context,
-    label: options?.label,
-  });
-
-  if (!activeHandle) return false;
+  if (options?.showLoadingFeedback !== false) {
+    pushGestionaleToast("Apertura PDF in corso…", "info", 4000);
+  }
 
   const previewAction = options?.previewAction ?? PDF_PREVIEW_API_PATH;
-  const showLoading = options?.showLoadingFeedback !== false;
-  const setBusy = (busy: boolean) => options?.onBusyChange?.(busy);
+  if (submitPdfPreviewInNewTab(pdfFile, previewAction)) return true;
 
-  if (showLoading) {
-    pushGestionaleToast("Apertura PDF in corso…", "info", 6000);
+  const context = options?.context ?? "pdf";
+  const url = URL.createObjectURL(pdfFile);
+  const opened =
+    openSafePopup({ url, context, label: options?.label, phase: "sync" }).status === "opened" ||
+    openUrlInNewTab(url, { downloadFileName: downloadName, context, label: options?.label });
+  if (!opened) URL.revokeObjectURL(url);
+  if (!opened) {
+    pushGestionaleToast("Impossibile aprire il PDF.", "warning", 5200);
   }
-  setBusy(true);
+  return opened;
+}
 
-  try {
-    const formData = new FormData();
-    formData.append("fileName", downloadName);
-    formData.append("pdf", pdfFile, downloadName);
+/** PDF da fetch — tab pre-aperta (deferred) o form POST sync. */
+export function openFetchedPdfBlobInNewTab(
+  blob: Blob,
+  fileName: string,
+  options?: {
+    deferredHandle?: DeferredPopupHandle | null;
+    context?: PopupGuardContext;
+    label?: string;
+    revokeBlobUrlAfterMs?: number;
+  },
+): boolean {
+  const downloadName = normalizePdfDownloadFileName(fileName);
+  const pdfFile =
+    blob instanceof File && blob.type === "application/pdf"
+      ? blob
+      : new File([blob], downloadName, { type: "application/pdf" });
+  const context = options?.context ?? "pdf";
 
-    const res = await fetch(previewAction, {
-      method: "POST",
-      body: formData,
-      credentials: "same-origin",
+  if (options?.deferredHandle?.isAlive()) {
+    const url = URL.createObjectURL(pdfFile);
+    const opened = openUrlInNewTab(url, {
+      deferredHandle: options.deferredHandle,
+      context,
+      label: options?.label,
+      revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs ?? 120_000,
+      downloadFileName: downloadName,
     });
-
-    if (res.ok && res.headers.get("content-type")?.includes("application/pdf")) {
-      const responseBlob = await res.blob();
-      const named = new File([responseBlob], downloadName, { type: "application/pdf" });
-      return openPdfFileInTab(named, {
-        revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs,
-        context,
-        label: options?.label,
-        deferredHandle: activeHandle,
-      });
+    if (!opened) {
+      URL.revokeObjectURL(url);
+      options.deferredHandle.close();
+      return openPdfBlobInNewTab(blob, fileName, { context, label: options?.label, showLoadingFeedback: false });
     }
-
-    pushGestionaleToast(previewPostErrorMessage(res.status), "warning", 5200);
-  } catch {
-    trackRuntimeEvent(RuntimeEvents.pdfNetworkError, { context, phase: "navigate" });
-    pushGestionaleToast("Anteprima PDF non disponibile. Apertura locale.", "warning", 5200);
-  } finally {
-    setBusy(false);
+    return true;
   }
 
-  return openPdfFileInTab(pdfFile, {
-    revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs,
+  return openPdfBlobInNewTab(blob, fileName, {
     context,
     label: options?.label,
-    deferredHandle: activeHandle,
+    showLoadingFeedback: false,
   });
 }
 
 /** @deprecated Usare {@link PDF_PREVIEW_API_PATH}. */
 export const PDF_PREVIEW_LEGACY_ACTION = PDF_PREVIEW_LEGACY_API_PATH;
-
-export { openDeferredPopup };
-export type { DeferredPopupHandle };

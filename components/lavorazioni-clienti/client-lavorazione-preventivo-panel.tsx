@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import type { ClientPreventivoPortalPayload } from "@/lib/preventivi/preventivo-client-portal-types";
-import { openPdfStreamInNewTab } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfStreamFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { dsGapMd, dsStackPage } from "@/lib/ui/design-system";
 import { clientLavorazionePreventivoKey } from "@/src/lib/react-query/query-keys";
 
@@ -80,7 +80,7 @@ export function ClientLavorazionePreventivoPanel({ lavorazioneId }: { lavorazion
             <button
               type="button"
               className="text-sm font-medium text-[color:var(--cab-accent)] underline"
-              onClick={() => void openPdfStreamInNewTab(data.streamPath)}
+              onClick={() => openPdfStreamFromUserClick(data.streamPath)}
             >
               Apri PDF
             </button>

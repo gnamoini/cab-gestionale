@@ -1,5 +1,6 @@
 "use client";
 
+import { generateOrdineFornitorePdfBytes, ordineFornitorePdfFileName } from "@/lib/ordini-fornitori/ordine-fornitore-pdf-generate";
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
@@ -15,34 +16,31 @@ export async function openOrdineFornitorePdfInNewTab(
   await openPdfArtifact("ordine-fornitore", { id: o.id }, deferredHandle);
 }
 
-/** Anteprima WYSIWYG dall'editor — non richiede salvataggio su DB. */
-export async function openOrdineFornitorePdfPreviewFromRecord(
+/** Anteprima WYSIWYG dall'editor — sync form POST dopo generazione bytes. */
+export function openOrdineFornitorePdfPreviewFromRecord(
   record: OrdineFornitoreRecord,
-  deferredHandle?: DeferredPopupHandle | null,
-): Promise<void> {
-  pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
-  try {
-    const [{ generateOrdineFornitorePdfBytes, ordineFornitorePdfFileName }, logo] = await Promise.all([
-      import("@/lib/ordini-fornitori/ordine-fornitore-pdf-generate"),
-      loadBrandingLogoDataUrl(),
-    ]);
-    const bytes = generateOrdineFornitorePdfBytes(record, logo);
-    const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-    const opened = await openPdfBlobInNewTab(blob, ordineFornitorePdfFileName(record), {
-      deferredHandle,
-      context: "pdf",
-      label: "PDF ordine fornitore",
-      showLoadingFeedback: false,
-    });
-    if (!opened) {
-      pushGestionaleToast(
-        "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-        "warning",
-        5200,
-      );
-    }
-  } catch {
-    deferredHandle?.close();
-    pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
+  logoDataUrl?: string | null,
+): boolean {
+  const bytes = generateOrdineFornitorePdfBytes(record, logoDataUrl ?? null);
+  const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+  const opened = openPdfBlobInNewTab(blob, ordineFornitorePdfFileName(record), {
+    context: "pdf",
+    label: "PDF ordine fornitore",
+    showLoadingFeedback: false,
+  });
+  if (!opened) {
+    pushGestionaleToast(
+      "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+      "warning",
+      5200,
+    );
   }
+  return opened;
+}
+
+export async function openOrdineFornitorePdfPreviewFromRecordAsync(
+  record: OrdineFornitoreRecord,
+): Promise<boolean> {
+  const logo = await loadBrandingLogoDataUrl();
+  return openOrdineFornitorePdfPreviewFromRecord(record, logo);
 }

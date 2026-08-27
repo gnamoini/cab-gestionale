@@ -10,8 +10,7 @@ import {
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
 } from "@/lib/inventory-labels";
-import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
+import { tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
@@ -86,11 +85,6 @@ export function RicambioLabelActions({
     return `/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/render?${sp.toString()}`;
   }
 
-  function pdfFileName(): string {
-    const safe = codice.replace(/[^a-zA-Z0-9_-]/g, "") || ricambioId.slice(0, 8);
-    return normalizePdfDownloadFileName(`etichetta-${safe}.pdf`);
-  }
-
   async function handlePreview() {
     await ensureExpanded();
     setLoading(true);
@@ -107,31 +101,11 @@ export function RicambioLabelActions({
     }
   }
 
-  async function handleOpenPdf() {
-    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichetta" });
-    if (isDeferredPopupBlocked(deferredResult)) return;
-    const deferred = deferredResult;
-
+  function handleOpenPdf() {
     setOpeningPdf(true);
     try {
-      await ensureExpanded();
-      const res = await fetch(renderUrl("pdf"));
-      if (!res.ok) {
-        deferred.close();
-        throw new Error("PDF non disponibile");
-      }
-      const blob = await res.blob();
-      const opened = await openPdfBlobInNewTab(blob, pdfFileName(), {
-        showLoadingFeedback: false,
-        context: "etichette",
-        label: "PDF etichetta",
-        deferredHandle: deferred,
-      });
-      if (!opened) {
-        gestToast.error("Impossibile aprire il PDF etichetta.");
-      }
+      tryOpenViaTemporaryAnchor(renderUrl("pdf"));
     } catch {
-      deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");
     } finally {
       setOpeningPdf(false);

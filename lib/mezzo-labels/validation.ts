@@ -23,6 +23,19 @@ export const mezzoLabelBulkRequestSchema = z
 
 export type MezzoLabelBulkRequest = z.infer<typeof mezzoLabelBulkRequestSchema>;
 
+export const mezzoLabelBulkQuerySchema = z.object({
+  format: z.enum(MEZZO_LABEL_FORMATS).default("pdf"),
+  id: z.array(z.string().uuid()).optional(),
+});
+
+export function mezzoBulkIdsFromSearchParams(params: URLSearchParams): string[] {
+  const fromRepeated = normalizeMezzoBulkIds(params.getAll("id"));
+  if (fromRepeated.length > 0) return fromRepeated;
+  const csv = params.get("ids");
+  if (!csv) return [];
+  return normalizeMezzoBulkIds(csv.split(","));
+}
+
 export function normalizeMezzoBulkIds(ids: string[]): string[] {
   return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
 }

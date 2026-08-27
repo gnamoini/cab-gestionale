@@ -188,3 +188,27 @@ export const renderLabelQuerySchema = z.object({
 export function isBulkSyncCount(totalLabelCount: number): boolean {
   return totalLabelCount <= BULK_SYNC_MAX;
 }
+
+/** GET bulk PDF — id ripetuti + qty allineati (default 1). */
+export function bulkLabelItemsFromSearchParams(params: URLSearchParams): BulkLabelCompactItem[] {
+  const ids = params.getAll("id").map((id) => id.trim()).filter(Boolean);
+  if (ids.length === 0) {
+    const csv = params.get("ids");
+    if (!csv) return [];
+    return csv
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .map((id) => ({ id, quantity: 1 }));
+  }
+  const qtys = params.getAll("qty");
+  return ids.map((id, index) => {
+    const raw = qtys[index] ?? qtys[0];
+    const parsed = Number(raw);
+    const quantity =
+      Number.isFinite(parsed) && parsed >= BULK_QUANTITY_MIN
+        ? Math.min(BULK_QUANTITY_MAX, Math.floor(parsed))
+        : 1;
+    return { id, quantity };
+  });
+}

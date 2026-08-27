@@ -20,7 +20,7 @@ import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ra
 
 import type { DateRange } from "@/lib/report/date-ranges";
 
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 
 import { getReportHubArea, type ReportHubAreaId } from "@/lib/report/report-hub-areas-config";
 
@@ -81,7 +81,7 @@ export function ReportToolbar({
             id: "export-pdf",
             label: "Esporta PDF",
             description: "Esporta il report gestionale in PDF",
-            onSelect: () => void openPdfArtifact("report-bundle"),
+            onSelect: () => openPdfArtifactFromUserClick("report-bundle", undefined, { context: "report" }),
           },
         ]}
       />

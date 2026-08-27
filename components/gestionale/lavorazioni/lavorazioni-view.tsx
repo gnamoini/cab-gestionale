@@ -131,7 +131,7 @@ import {
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifact, openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import {
   buildLavorazioneRowProfileResolver,
   mergeLazyProfileNamesIntoResolver,
@@ -2352,14 +2352,11 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [pagedChiuse.length, renderArchivioDesktopRow, archivioPagedBundleRevisionKey],
   );
 
-  const onPrintLavorazioniInCorso = useCallback(async () => {
+  const onPrintLavorazioniInCorso = useCallback(() => {
     if (printBusy) return;
     setPrintBusy(true);
-    try {
-      await openPdfArtifact("lavorazioni-in-corso");
-    } finally {
-      setPrintBusy(false);
-    }
+    openPdfArtifactFromUserClick("lavorazioni-in-corso");
+    setPrintBusy(false);
   }, [printBusy]);
 
   const lavorazioniPageMenuItems = useLavorazioniPageMenuItems({

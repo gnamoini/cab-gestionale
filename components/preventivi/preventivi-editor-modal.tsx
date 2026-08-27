@@ -30,8 +30,8 @@ import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import {
   PREVENTIVO_RIGA_MATERIALI_ID,
 } from "@/lib/preventivi/preventivi-voci-standard";
-import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
-import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
+import { openPreventivoPdfPreviewFromRecord } from "@/lib/preventivi/preventivi-pdf";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
@@ -147,6 +147,7 @@ export function PreventiviEditorModal({
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const [descRegenBusy, setDescRegenBusy] = useState(false);
   const [descProgressLabel, setDescProgressLabel] = useState<string | null>(null);
+  const pdfLogoRef = useRef<string | null>(null);
   const [withdrawPending, setWithdrawPending] = useState(false);
   const prevPerms = usePermissions("preventivi");
   const profilo = useOfficinaProfiloOperativo();
@@ -166,6 +167,16 @@ export function PreventiviEditorModal({
     (d: PreventivoRecord): PreventivoRecord => normalizePreventivoEditorRecord(d, profilo),
     [profilo],
   );
+
+  useEffect(() => {
+    if (!open) {
+      pdfLogoRef.current = null;
+      return;
+    }
+    void loadBrandingLogoDataUrl().then((logo) => {
+      pdfLogoRef.current = logo;
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open || !record) {
@@ -555,11 +566,8 @@ export function PreventiviEditorModal({
             type="button"
             className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
             onClick={() => {
-              const deferredResult = openDeferredPopup({ context: "pdf", label: "PDF preventivo" });
-              if (isDeferredPopupBlocked(deferredResult)) return;
-              void importPreventiviPdf().then(({ openPreventivoPdfPreviewFromRecord }) =>
-                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore, deferredResult),
-              );
+              if (!draft) return;
+              openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore, pdfLogoRef.current);
             }}
           >
             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>

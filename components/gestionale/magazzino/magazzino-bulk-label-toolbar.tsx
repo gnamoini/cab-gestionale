@@ -15,34 +15,25 @@ import {
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
+  isBulkSyncCount,
 } from "@/lib/inventory-labels";
 import {
   labelQuantitiesToCompactItems,
   type LabelSelection,
 } from "@/lib/inventory-labels/client/label-selection";
-import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import type { DeferredPopupHandle } from "@/lib/pdf/open-pdf-blob-preview";
-import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
+import {
+  buildInventoryBulkPdfUrl,
+  inventoryBulkJobPdfUrl,
+} from "@/lib/inventory-labels/client/bulk-pdf-url";
+import {
+  isDeferredPopupBlocked,
+  openDeferredPopup,
+  tryOpenViaTemporaryAnchor,
+  type DeferredPopupHandle,
+} from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type BulkLabelPhase = "idle" | "preparing" | "generating" | "opening";
-
-function bulkPdfFileName(count: number): string {
-  return normalizePdfDownloadFileName(`etichette-${count}.pdf`);
-}
-
-async function openLabelArtifact(
-  blob: Blob,
-  labelCount: number,
-  deferredHandle?: DeferredPopupHandle | null,
-): Promise<boolean> {
-  return openPdfBlobInNewTab(blob, bulkPdfFileName(labelCount), {
-    showLoadingFeedback: false,
-    context: "etichette",
-    label: "PDF etichette",
-    deferredHandle,
-  });
-}
 
 const BULK_FETCH_TIMEOUT_MS = 280_000;
 
@@ -55,6 +46,20 @@ const LABEL_PRESET_SELECT_ITEMS = LABEL_PRESET_IDS.map((id) => ({
 
 const LABEL_PRESET_PICKER_SHELL =
   "w-full min-w-0 !justify-between !text-left rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] bg-[var(--cab-surface)] font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]";
+
+function openBulkLabelPdfUrl(url: string, deferred?: DeferredPopupHandle | null): boolean {
+  if (deferred?.isAlive()) {
+    const nav = deferred.navigate(url);
+    if (nav.status === "opened") return true;
+    deferred.close();
+  }
+  try {
+    tryOpenViaTemporaryAnchor(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function MagazzinoBulkLabelToolbar({
   selection,
@@ -74,6 +79,18 @@ export function MagazzinoBulkLabelToolbar({
 
   const handlePrint = useCallback(async () => {
     if (!hasSelection) return;
+    const items = labelQuantitiesToCompactItems(selection.quantities);
+
+    if (isBulkSyncCount(totalLabels)) {
+      try {
+        tryOpenViaTemporaryAnchor(buildInventoryBulkPdfUrl(items, preset, clienteLabel));
+        return;
+      } catch {
+        gestToast.error("Impossibile aprire il PDF etichette.");
+        return;
+      }
+    }
+
     const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichette" });
     if (isDeferredPopupBlocked(deferredResult)) return;
     const deferred = deferredResult;
@@ -81,7 +98,6 @@ export function MagazzinoBulkLabelToolbar({
     setPhase("preparing");
     setProgress(0);
     try {
-      const items = labelQuantitiesToCompactItems(selection.quantities);
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), BULK_FETCH_TIMEOUT_MS);
       setPhase("generating");
@@ -96,14 +112,14 @@ export function MagazzinoBulkLabelToolbar({
       if (res.status === 202) {
         const { jobId } = (await res.json()) as { jobId: string };
         gestToast.info(`Generazione ${totalLabels} etichette in corso…`);
+        const jobPdfUrl = inventoryBulkJobPdfUrl(jobId);
         const poll = async (attempt = 0): Promise<void> => {
           if (attempt > 120) throw new Error("Timeout job etichette");
-          const jobRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
+          const jobRes = await fetch(jobPdfUrl);
           if (jobRes.headers.get("Content-Type")?.includes("application/pdf")) {
             setPhase("opening");
             setProgress(100);
-            const blob = await jobRes.blob();
-            const opened = await openLabelArtifact(blob, totalLabels, deferred);
+            const opened = openBulkLabelPdfUrl(jobPdfUrl, deferred);
             if (!opened) {
               gestToast.error("Impossibile aprire il PDF etichette.");
               return;
@@ -126,12 +142,9 @@ export function MagazzinoBulkLabelToolbar({
           if (typeof status.progress === "number") setProgress(status.progress);
           if (status.status === "completed") {
             setPhase("opening");
-            const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
-            const blob = await pdfRes.blob();
-            const opened = await openLabelArtifact(blob, totalLabels, deferred);
+            const opened = openBulkLabelPdfUrl(jobPdfUrl, deferred);
             if (!opened) {
               gestToast.error("Impossibile aprire il PDF etichette.");
-              return;
             }
             return;
           }
@@ -160,8 +173,7 @@ export function MagazzinoBulkLabelToolbar({
       }
       setPhase("opening");
       setProgress(100);
-      const blob = await res.blob();
-      const opened = await openLabelArtifact(blob, totalLabels, deferred);
+      const opened = openBulkLabelPdfUrl(buildInventoryBulkPdfUrl(items, preset, clienteLabel), deferred);
       if (!opened) {
         gestToast.error("Impossibile aprire il PDF etichette.");
         return;

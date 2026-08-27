@@ -6,9 +6,7 @@ import { HubIconPencil, HubIconTrash } from "@/components/design-system/hub-tabl
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
-import { buildPdfArtifactUrl } from "@/lib/pdf/request-pdf-artifact";
-import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -429,21 +427,12 @@ export function MezziHubDetailModal({
                         <button
                           type="button"
                           className={dsTableActionTextBtnPrimary}
-                          onClick={() => {
-                            const artifactUrl = buildPdfArtifactUrl("preventivo", {
+                          onClick={() =>
+                            openPdfArtifactFromUserClick("preventivo", {
                               id: p.id,
                               autore: "Gestionale",
-                            });
-                            const deferredResult = openDeferredPopup({
-                              context: "pdf",
-                              label: "PDF preventivo",
-                              retryUrl: artifactUrl,
-                            });
-                            if (isDeferredPopupBlocked(deferredResult)) return;
-                            void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-                              openPreventivoPdfInNewTab(p, "Gestionale", deferredResult),
-                            );
-                          }}
+                            })
+                          }
                         >
                           PDF
                         </button>

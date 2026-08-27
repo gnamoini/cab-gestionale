@@ -1,5 +1,6 @@
 import { pushGestionaleToast } from "@/context/toast-context";
 import {
+  navigateBlobPdfInPopupWindow,
   openBlankPopupWindow,
   openSafePopup,
   tryOpenViaTemporaryAnchor,
@@ -8,7 +9,29 @@ import {
 } from "@/lib/browser/popup-guard";
 
 const DEFAULT_BLOCKED_MSG =
-  "Impossibile aprire il file in una nuova scheda. Consenti i pop-up per questo sito oppure verifica che il documento sia valido.";
+  "Impossibile aprire il file in una nuova scheda. Verifica che il documento sia valido o riprova.";
+
+const DEFERRED_NAVIGATE_FAILED_MSG =
+  "Non è stato possibile aprire il documento nella nuova scheda. Riprova.";
+
+function scheduleLocalBlobRevoke(url: string, revokeAfterMs?: number): void {
+  if (!url.startsWith("blob:") || typeof window === "undefined") return;
+  window.setTimeout(() => URL.revokeObjectURL(url), revokeAfterMs ?? 120_000);
+}
+
+function tryOpenViaAnchorFirst(
+  url: string,
+  downloadFileName?: string,
+  revokeAfterMs?: number,
+): boolean {
+  try {
+    tryOpenViaTemporaryAnchor(url, downloadFileName);
+    scheduleLocalBlobRevoke(url, revokeAfterMs);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export type OpenUrlInNewTabOptions = {
   revokeBlobUrlAfterMs?: number;
@@ -34,10 +57,43 @@ export function openUrlInNewTab(url: string, options?: OpenUrlInNewTabOptions): 
   const context = options?.context ?? "pdf";
   const revokeAfter = options?.revokeBlobUrlAfterMs;
   const downloadFileName = options?.downloadFileName?.trim();
+  const label = options?.label ?? "PDF";
 
-  if (options?.deferredHandle?.isAlive()) {
-    const result = options.deferredHandle.navigate(trimmed, { revokeBlobUrlAfterMs: revokeAfter });
-    return result.status === "opened";
+  if (options?.deferredHandle) {
+    const aliveBefore = options.deferredHandle.isAlive();
+
+    let openedInDeferred = false;
+    if (aliveBefore) {
+      const result = options.deferredHandle.navigate(trimmed, { revokeBlobUrlAfterMs: revokeAfter });
+      if (result.status === "opened") {
+        openedInDeferred = true;
+      } else if (trimmed.startsWith("blob:")) {
+        const win = options.deferredHandle.getWindow();
+        if (win && navigateBlobPdfInPopupWindow(win, trimmed, label, revokeAfter)) {
+          openedInDeferred = true;
+        }
+      }
+    }
+
+    if (openedInDeferred) return true;
+
+    options.deferredHandle.close();
+
+    // ponytail: mai openSafePopup dopo deferred — anchor fallback
+    if (trimmed.startsWith("blob:") || trimmed.startsWith("/api/")) {
+      if (tryOpenViaAnchorFirst(trimmed, downloadFileName, revokeAfter)) return true;
+    } else if (downloadFileName) {
+      if (tryOpenViaAnchorFirst(trimmed, downloadFileName, revokeAfter)) return true;
+    }
+
+    const msg = options?.blockedMessage ?? DEFERRED_NAVIGATE_FAILED_MSG;
+    pushGestionaleToast(msg, "warning", 5200);
+    return false;
+  }
+
+  // ponytail: sync click — anchor prima di popup (no about:blank)
+  if (trimmed.startsWith("/api/") || trimmed.startsWith("blob:")) {
+    if (tryOpenViaAnchorFirst(trimmed, downloadFileName, revokeAfter)) return true;
   }
 
   const result = openSafePopup({

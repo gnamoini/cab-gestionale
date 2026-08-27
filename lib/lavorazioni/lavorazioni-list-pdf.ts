@@ -1,6 +1,6 @@
 "use client";
 
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 
 export type LavorazioniInCorsoPdfRow = {
   cliente: string;
@@ -18,9 +18,9 @@ export { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-
  * Export PDF lista lavorazioni in corso — server artifact (DTO + storage cache).
  * I parametri `rows` / `autore` sono ignorati: i dati sono caricati lato server.
  */
-export async function openLavorazioniInCorsoPdfInNewTab(
+export function openLavorazioniInCorsoPdfInNewTab(
   _rows?: readonly LavorazioniInCorsoPdfRow[],
   _autore?: string,
-): Promise<void> {
-  await openPdfArtifact("lavorazioni-in-corso");
+): void {
+  openPdfArtifactFromUserClick("lavorazioni-in-corso");
 }

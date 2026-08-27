@@ -43,7 +43,7 @@ const deliverLabel = read("lib/inventory-labels/render/deliver.server.ts");
 assert.match(deliverLabel, /uploadLabelArtifactBestEffort/);
 
 const bulkLabelToolbar = read("components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx");
-assert.match(bulkLabelToolbar, /openPdfBlobInNewTab/);
+assert.match(bulkLabelToolbar, /tryOpenViaTemporaryAnchor/);
 
 const preventiviPdf = read("lib/preventivi/preventivi-pdf.ts");
 assert.match(preventiviPdf, /openPreventivoPdfPreviewFromRecord/);
@@ -60,7 +60,7 @@ const migratedOpeners = [
 for (const rel of migratedOpeners) {
   const src = read(rel);
   assert.doesNotMatch(src, /from\s+["']jspdf["']/);
-  assert.match(src, /openPdfArtifact/);
+  assert.match(src, /openPdfArtifactFromUserClick|openPdfArtifact/);
 }
 
 const pdfDataModules = [
@@ -77,10 +77,8 @@ for (const rel of pdfDataModules) {
 }
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
-assert.match(requestArtifact, /deferred\.navigate\(trimmed\)/);
-assert.match(requestArtifact, /retryUrl:\s*options\.url/);
-assert.match(requestArtifact, /deferred\.close\(\)/);
-assert.match(requestArtifact, /Generazione PDF in corso/);
+assert.match(requestArtifact, /openSafePopup/);
+assert.match(requestArtifact, /openSameOriginApiPdf/);
 const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
 assert.match(responseHeaders, /X-Cache-Status/);
 assert.match(responseHeaders, /X-PDF-Generate-Ms/);

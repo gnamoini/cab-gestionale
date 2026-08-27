@@ -42,6 +42,10 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/inventory-labels/**": ["./lib/inventory-labels/render/fonts/**"],
+    "/api/mezzo-labels/**": [
+      "./lib/inventory-labels/render/fonts/**",
+      "./public/cab-logo.png",
+    ],
   },
   experimental: {
     optimizePackageImports: [

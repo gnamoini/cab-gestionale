@@ -8,10 +8,12 @@ import { isInventoryLabelsBulkRateLimited } from "@/lib/inventory-labels/api-rat
 import { createBulkLabelJob, renderBulkLabelPdfSync } from "@/lib/inventory-labels/jobs/bulk-label-job.server";
 import { LabelPdfTimeoutError } from "@/lib/inventory-labels/render/pdf-timeout";
 import {
+  bulkLabelItemsFromSearchParams,
   bulkLabelRequestSchema,
   BULK_SYNC_MAX,
   BULK_ABSOLUTE_MAX,
   isBulkSyncCount,
+  labelPresetSchema,
   normalizeBulkLabelRequest,
 } from "@/lib/inventory-labels/validation";
 
@@ -95,8 +97,80 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireInventoryLabelsRead();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  return NextResponse.json({ syncMax: BULK_SYNC_MAX, absoluteMax: BULK_ABSOLUTE_MAX });
+
+  const url = new URL(request.url);
+  const items = bulkLabelItemsFromSearchParams(url.searchParams);
+  if (items.length === 0) {
+    return NextResponse.json({ syncMax: BULK_SYNC_MAX, absoluteMax: BULK_ABSOLUTE_MAX });
+  }
+
+  const format = url.searchParams.get("format") ?? "pdf";
+  if (format !== "pdf") {
+    return NextResponse.json({ error: "Il bulk GET supporta solo format=pdf" }, { status: 400 });
+  }
+
+  const presetRaw = url.searchParams.get("preset") ?? "";
+  const presetParsed = labelPresetSchema.safeParse(presetRaw);
+  if (!presetParsed.success) {
+    return NextResponse.json({ error: "Preset non valido" }, { status: 400 });
+  }
+
+  const parsed = bulkLabelRequestSchema.safeParse({
+    items,
+    preset: presetParsed.data,
+    format: "pdf",
+    includeBarcode: false,
+    clienteLabel: url.searchParams.get("clienteLabel") === "true",
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Richiesta non valida", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const normalized = normalizeBulkLabelRequest(parsed.data);
+  const { preset, includeBarcode, clienteLabel, totalLabels } = normalized;
+  if (!isBulkSyncCount(totalLabels)) {
+    return NextResponse.json(
+      { error: `Massimo ${BULK_SYNC_MAX} etichette per GET sync — usa POST bulk` },
+      { status: 400 },
+    );
+  }
+  if (!auth.userId) return NextResponse.json({ error: "Utente non autenticato" }, { status: 401 });
+
+  const origin = requestOrigin(request);
+  try {
+    const { bytes, contentType, pipeline, skippedIds, cacheHitCount, cacheMissCount, durationMs } =
+      await renderBulkLabelPdfSync({
+        items: normalized.items,
+        preset,
+        includeBarcode,
+        clienteLabel,
+        userId: auth.userId,
+        origin,
+      });
+    const ext = contentType === "application/zip" ? "zip" : "pdf";
+    return new Response(Buffer.from(bytes), {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": `inline; filename="${bulkFilename(totalLabels, ext)}"`,
+        "X-Label-Pdf-Pipeline": pipeline,
+        "X-Label-Duration-Ms": String(durationMs),
+        "X-Label-Cache": `HIT:${cacheHitCount},MISS:${cacheMissCount}`,
+        "X-Label-Skipped-Count": String(skippedIds.length),
+        "X-Label-Total-Count": String(totalLabels),
+      },
+    });
+  } catch (e) {
+    const status = e instanceof LabelPdfTimeoutError ? 504 : 500;
+    return NextResponse.json(
+      {
+        error: e instanceof Error ? e.message : "Generazione bulk fallita",
+        errorCode: e instanceof LabelPdfTimeoutError ? e.code : "LABEL_PDF_FAILED",
+      },
+      { status },
+    );
+  }
 }

@@ -5,6 +5,13 @@ import { mezzoLabelGridTemplate, MEZZO_LABEL_TEMPLATE } from "@/lib/mezzo-labels
 import { renderMezzoLabelPng } from "@/lib/mezzo-labels/render/png";
 import type { MezzoLabelPayload } from "@/lib/mezzo-labels/domain/types";
 
+/** jsPDF 4.x su Node: addImage può toccare loadFile — etichette usano solo PNG in memoria. */
+type JsPdfApiWithFs = typeof jsPDF.API & { allowFsRead?: string[] };
+const jsPdfApi = jsPDF.API as JsPdfApiWithFs;
+if (!Array.isArray(jsPdfApi.allowFsRead)) {
+  jsPdfApi.allowFsRead = ["**"];
+}
+
 export type MezzoLabelPdfSlot = {
   payload: MezzoLabelPayload;
   qrUrl: string;
@@ -22,7 +29,7 @@ function gridTemplate(): LabelTemplateDefinition {
     typography: { scale: 1, weight: "normal", tracking: 0, lineHeight: 1.2 },
     layoutMode: "horizontal-qr-left",
     supplierLayout: "inline-slash",
-    qr: { maxSizeMm: MEZZO_LABEL_TEMPLATE.qr.sizeMm, position: "top-left" },
+    qr: { maxSizeMm: MEZZO_LABEL_TEMPLATE.qr.maxSizeMm, position: "top-left" },
     barcode: { heightMm: 0 },
     elements: [],
   };

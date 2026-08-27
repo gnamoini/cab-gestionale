@@ -1,29 +1,35 @@
 "use client";
 
+import { generatePreventivoPdfBytes, preventivoPdfFileName } from "@/lib/preventivi/preventivo-pdf-generate";
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
-/** Anteprima WYSIWYG dall'editor — non richiede salvataggio su DB. */
-export async function openPreventivoPdfPreviewFromRecord(
+/** Anteprima WYSIWYG dall'editor — sync submit dopo generazione bytes. */
+export function openPreventivoPdfPreviewFromRecord(
   p: PreventivoRecord,
   autore: string,
-  deferredHandle?: DeferredPopupHandle | null,
-): Promise<void> {
-  const [{ generatePreventivoPdfBytes, preventivoPdfFileName }, logo] = await Promise.all([
-    import("@/lib/preventivi/preventivo-pdf-generate"),
-    loadBrandingLogoDataUrl(),
-  ]);
+  logoDataUrl?: string | null,
+): boolean {
   const operatore = p.lastEditedBy?.trim() || autore.trim() || "Operatore";
-  const bytes = generatePreventivoPdfBytes(p, operatore, logo);
+  const bytes = generatePreventivoPdfBytes(p, operatore, logoDataUrl ?? null);
   const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-  await openPdfBlobInNewTab(blob, preventivoPdfFileName(p), {
-    deferredHandle,
+  return openPdfBlobInNewTab(blob, preventivoPdfFileName(p), {
     context: "pdf",
     label: "PDF preventivo",
+    showLoadingFeedback: false,
   });
+}
+
+/** Anteprima async (carica logo) — usa solo se il click può attendere prima del submit. */
+export async function openPreventivoPdfPreviewFromRecordAsync(
+  p: PreventivoRecord,
+  autore: string,
+): Promise<boolean> {
+  const logo = await loadBrandingLogoDataUrl();
+  return openPreventivoPdfPreviewFromRecord(p, autore, logo);
 }
 
 /** Pagina anteprima ufficiale embedded (link diretto / portale). */

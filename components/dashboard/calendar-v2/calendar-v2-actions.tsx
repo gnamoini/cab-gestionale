@@ -8,7 +8,7 @@ import {
   reportDeepLinkForDay,
   reportDeepLinkForWeek,
 } from "@/lib/report/calendar-report-service";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
 
 export function CalendarV2Actions({
@@ -50,7 +50,7 @@ export function CalendarV2Actions({
       <button
         type="button"
         className={erpBtnNeutral}
-        onClick={() => void openPdfArtifact("report-bundle")}
+        onClick={() => openPdfArtifactFromUserClick("report-bundle", undefined, { context: "report" })}
       >
         Export PDF
       </button>

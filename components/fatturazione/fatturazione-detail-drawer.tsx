@@ -10,7 +10,7 @@ import {
   formatInvoiceMoney,
 } from "@/components/fatturazione/fattura-status-badge";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-size-system";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { InvoiceDetail } from "@/lib/fatturazione/types";
@@ -245,7 +245,7 @@ export function FatturazioneDetailDrawer({
         <button
           type="button"
           className={dsBtnNeutralForm}
-          onClick={() => void openPdfArtifact("fattura", { id: inv.id })}
+          onClick={() => openPdfArtifactFromUserClick("fattura", { id: inv.id })}
         >
           Stampa PDF
         </button>

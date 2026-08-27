@@ -58,7 +58,7 @@ import {
   readOfficinaDestinatarioOrdiniFromRows,
 } from "@/lib/officina/officina-destinatario-ordini";
 import { readOfficinaBancheOrdiniFromRows } from "@/lib/officina/officina-banche-ordini";
-import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import { openOrdineFornitorePdfPreviewFromRecord } from "@/lib/ordini-fornitori/ordine-fornitore-pdf";
 import {
   calcolaTotaliOrdineFornitore,
@@ -232,6 +232,7 @@ export function OrdineFornitoreEditorModal({
     [settingsQ?.data?.rows],
   );
 
+  const pdfLogoRef = useRef<string | null>(null);
   const baselineRef = useRef(initialRecord);
   const modalRootRef = useRef<HTMLDivElement | null>(null);
   const importFinalizedRef = useRef(importMeta?.saved ?? false);
@@ -242,6 +243,12 @@ export function OrdineFornitoreEditorModal({
   const canEditStatus = !viewMode && canWrite && initialRecord.status !== "annullato";
   const statusDirty = !isNew && record.status !== initialRecord.status;
   const canSave = canWrite && (isNew || !fieldsReadOnly || statusDirty);
+
+  useEffect(() => {
+    void loadBrandingLogoDataUrl().then((logo) => {
+      pdfLogoRef.current = logo;
+    });
+  }, [initialRecord.id, isNew]);
 
   useEffect(() => {
     baselineRef.current = initialRecord;
@@ -525,9 +532,7 @@ export function OrdineFornitoreEditorModal({
             type="button"
             className={preventivoEditorFooterBtnNeutral}
             onClick={() => {
-              const deferredResult = openDeferredPopup({ context: "pdf", label: "PDF ordine fornitore" });
-              if (isDeferredPopupBlocked(deferredResult)) return;
-              void openOrdineFornitorePdfPreviewFromRecord(pdfPreviewRecord, deferredResult);
+              openOrdineFornitorePdfPreviewFromRecord(pdfPreviewRecord, pdfLogoRef.current);
             }}
           >
             Anteprima
