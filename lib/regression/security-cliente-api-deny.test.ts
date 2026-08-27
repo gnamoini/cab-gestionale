@@ -7,7 +7,7 @@ const src = fs.readFileSync(path.join(ROOT, "src/middleware/proxy-handler.ts"), 
 const allowlist = fs.readFileSync(path.join(ROOT, "lib/auth/staff-api-allowlist.ts"), "utf8");
 
 assert.match(src, /isStaffOnlyApiPath/);
-assert.match(src, /isClienteRole\(activeUser\).*403/s);
+assert.match(src, /isClienteRole\(activeUser\)[\s\S]*403/);
 assert.match(allowlist, /CLIENTE_API_ALLOWLIST/);
 
 console.log("security-cliente-api-deny.test: OK");

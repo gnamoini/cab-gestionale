@@ -19,7 +19,7 @@ assert.ok(sessionA, "SECURITY_INTEGRATION_SESSION_A required");
 assert.ok(privatePath, "SECURITY_INTEGRATION_MEDIA_PATH required");
 
 async function fetchMedia(cookie: string | undefined) {
-  const url = `${base.replace(/\/$/, "")}/api/media/image?path=${encodeURIComponent(privatePath!)}`;
+  const url = `${base!.replace(/\/$/, "")}/api/media/image?path=${encodeURIComponent(privatePath!)}`;
   const res = await fetch(url, {
     headers: cookie ? { cookie } : {},
     redirect: "manual",

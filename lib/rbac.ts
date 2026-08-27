@@ -67,10 +67,12 @@ function rawRoleKey(user: RbacUserInput): string | null {
 }
 
 export function resolveCanonicalRole(user: RbacUserInput): CanonicalRole {
-  const raw = rawRoleKey(user);
+  const raw = rawRoleKey(user)?.trim();
   if (!raw) return "guest";
   if ((CANONICAL_ROLES as readonly string[]).includes(raw)) return raw as CanonicalRole;
-  return LEGACY_ROLE_MAP[raw] ?? "guest";
+  const lower = raw.toLowerCase();
+  if ((CANONICAL_ROLES as readonly string[]).includes(lower)) return lower as CanonicalRole;
+  return LEGACY_ROLE_MAP[raw] ?? LEGACY_ROLE_MAP[lower] ?? "guest";
 }
 
 export const RBAC_DENIED_MESSAGE = "Non hai i permessi per eseguire questa azione.";

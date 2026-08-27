@@ -37,8 +37,10 @@ import {
   publishClientEffectivePermissionsSnapshot,
 } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { mergeRolePageAccessWithSeed } from "@/src/lib/rbac/load-rbac-data";
 import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
+import { resolveRole } from "@/lib/auth/rbac";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { setAuthRememberPreference } from "@/lib/auth/auth-remember-preference";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
@@ -202,24 +204,26 @@ export function AuthProvider({
 
   useLayoutEffect(() => {
     if (!initialSnapshot?.user?.id) return;
+    const roleKey = resolveRole(initialSnapshot.user.roleKey ?? initialSnapshot.user.ruolo);
+    const rolePageAccess = mergeRolePageAccessWithSeed(
+      roleKey,
+      initialSnapshot.rolePageAccess ?? {},
+    );
     queryClient.setQueryData(
       [...QK.userPermissions, initialSnapshot.user.id] as const,
       initialSnapshot.userPageOverrides ?? [],
     );
     queryClient.setQueryData(
       [...QK.userPermissions, "role-page-access", initialSnapshot.user.id] as const,
-      {
-        roleKey: initialSnapshot.user.roleKey ?? initialSnapshot.user.ruolo,
-        rolePageAccess: initialSnapshot.rolePageAccess ?? {},
-      },
+      { roleKey, rolePageAccess },
     );
     const snap = resolveEffectivePermissions({
       userId: initialSnapshot.user.id,
-      roleKey: initialSnapshot.user.roleKey ?? initialSnapshot.user.ruolo,
-      rolePageAccess: initialSnapshot.rolePageAccess ?? {},
+      roleKey,
+      rolePageAccess,
       userPageOverrideRows: initialSnapshot.userPageOverrides ?? [],
       pilotDbEnabled: false,
-      permissionsHydrated: true,
+      permissionsHydrated: false,
     });
     if (isRbacSnapshotReady(snap)) {
       publishClientEffectivePermissionsSnapshot(snap);

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { RoleRow } from "@/src/types/supabase-tables";
 import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
+import { normalizeRoleKey } from "@/src/lib/rbac/normalize-role-key";
 
 export const ROLES_COLUMNS = "id, key, name, description, is_system, is_active, created_at, updated_at" as const;
 export const ROLE_PAGE_ACCESS_COLUMNS = "role_id, page_key, access_level, created_at, updated_at" as const;
@@ -38,31 +39,35 @@ export async function loadRolePageAccess(
   admin: SupabaseClient,
   roleKey: string,
 ): Promise<Record<string, PageAccessLevel>> {
+  const normalizedKey = normalizeRoleKey(roleKey);
+  const out: Record<string, PageAccessLevel> = {};
+
   const { data: role, error: roleErr } = await admin
     .from("roles")
     .select("id")
-    .eq("key", roleKey)
+    .eq("key", normalizedKey)
     .eq("is_active", true)
     .maybeSingle();
-  if (roleErr || !role?.id) return {};
-
-  const { data: rows, error } = await admin
-    .from("role_page_access")
-    .select("page_key, access_level")
-    .eq("role_id", role.id);
-  if (error) {
-    logRbacPageReadError("loadRolePageAccess", error);
-    return {};
-  }
-
-  const out: Record<string, PageAccessLevel> = {};
-  for (const row of rows ?? []) {
-    const level = row.access_level as PageAccessLevel;
-    if (level === "write" || level === "read" || level === "none") {
-      out[row.page_key] = level;
+  if (roleErr) {
+    logRbacPageReadError("loadRolePageAccess.roles", roleErr);
+  } else if (role?.id) {
+    const { data: rows, error } = await admin
+      .from("role_page_access")
+      .select("page_key, access_level")
+      .eq("role_id", role.id);
+    if (error) {
+      logRbacPageReadError("loadRolePageAccess", error);
+    } else {
+      for (const row of rows ?? []) {
+        const level = row.access_level as PageAccessLevel;
+        if (level === "write" || level === "read" || level === "none") {
+          out[row.page_key] = level;
+        }
+      }
     }
   }
-  return out;
+
+  return mergeRolePageAccessWithSeed(normalizedKey, out);
 }
 
 export async function loadAllRolePageAccess(admin: SupabaseClient): Promise<Map<string, Record<string, PageAccessLevel>>> {

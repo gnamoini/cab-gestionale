@@ -5,7 +5,9 @@ import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import {
   loadRolePageAccess,
   loadUserPageOverrides,
+  mergeRolePageAccessWithSeed,
 } from "@/src/lib/rbac/load-rbac-data";
+import { resolveRole } from "@/lib/auth/rbac";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -24,9 +26,14 @@ export const permissionsService = {
         const { data: gu } = await c.auth.getUser();
         uid = gu.user?.id ?? null;
       }
-      if (!uid) return success({ roleKey: "guest", rolePageAccess: {} });
+      if (!uid) {
+        return success({
+          roleKey: "guest",
+          rolePageAccess: mergeRolePageAccessWithSeed("guest", {}),
+        });
+      }
 
-      const roleKey = await fetchRbacRoleKeyForUser(c, uid);
+      const roleKey = resolveRole(await fetchRbacRoleKeyForUser(c, uid));
       const rolePageAccess = await loadRolePageAccess(c, roleKey);
       return success({ roleKey, rolePageAccess });
     } catch (e) {

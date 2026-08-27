@@ -9,6 +9,7 @@ import { useUserPageOverridesQuery, useRolePageAccessQuery } from "@/src/hooks/u
 import { publishClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
+import { resolveRole } from "@/lib/auth/rbac";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
@@ -53,8 +54,11 @@ export function useEffectivePermissionsSource(): {
       permissionsHydrated,
     });
 
-    if (isRbacSnapshotReady(snap)) {
+    if (snap.permissionsHydrated) {
       publishClientEffectivePermissionsSnapshot(snap);
+      publishStickyRbacSnapshot(snap);
+      lastGoodRef.current = snap;
+    } else if (resolveRole(snap.roleKey ?? snap.role) === "admin") {
       publishStickyRbacSnapshot(snap);
       lastGoodRef.current = snap;
     }

@@ -13,9 +13,9 @@ import {
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
 import { readClientEffectivePermissionsSnapshotCache } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
-import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { readStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { resolveRole } from "@/lib/auth/rbac";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
 const DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
@@ -24,7 +24,10 @@ function snapshotAllows(
   snap: EffectivePermissionsSnapshot | null | undefined,
   check: (resolved: ResolvedPageAccess) => boolean,
 ): boolean {
-  return Boolean(snap && isRbacSnapshotReady(snap) && check(snap.resolved));
+  if (!snap?.resolved || !check(snap.resolved)) return false;
+  if (snap.permissionsHydrated) return true;
+  // ponytail: allineato a resolvePageAccess — admin non attende hydration DB
+  return resolveRole(snap.roleKey ?? snap.role) === "admin";
 }
 
 function readGuardSnapshots(): EffectivePermissionsSnapshot[] {

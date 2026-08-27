@@ -1,5 +1,5 @@
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
-import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
+import { resolveRole } from "@/lib/auth/rbac";
 
 let stickySnapshot: EffectivePermissionsSnapshot | null = null;
 
@@ -8,7 +8,13 @@ export function readStickyRbacSnapshot(): EffectivePermissionsSnapshot | null {
 }
 
 export function publishStickyRbacSnapshot(snapshot: EffectivePermissionsSnapshot | null): void {
-  if (snapshot && isRbacSnapshotReady(snapshot)) {
+  if (!snapshot) return;
+  if (snapshot.permissionsHydrated) {
+    stickySnapshot = snapshot;
+    return;
+  }
+  // ponytail: admin bypass hydration — allineato a permission-guards snapshotAllows
+  if (resolveRole(snapshot.roleKey ?? snapshot.role) === "admin") {
     stickySnapshot = snapshot;
   }
 }

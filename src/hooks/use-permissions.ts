@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { permissionsEntry } from "@/lib/domain/permissions-entry";
-import { isRbacPageTableUnavailableError } from "@/src/lib/rbac/load-rbac-data";
+import { isRbacPageTableUnavailableError, mergeRolePageAccessWithSeed } from "@/src/lib/rbac/load-rbac-data";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
   GESTIONALE_PERMISSION_MODULES,
@@ -26,7 +26,10 @@ export function useRolePageAccessQuery(): UseQueryResult<import("@/src/services/
     queryFn: async () => {
       const r = await permissionsEntry.listMyRolePageAccess(user?.id);
       if (!r.success) {
-        if (isRbacPageTableUnavailableError(r.error)) return { roleKey: "guest", rolePageAccess: {} };
+        if (isRbacPageTableUnavailableError(r.error)) {
+          const roleKey = resolveRole(user?.roleKey ?? user?.ruolo);
+          return { roleKey, rolePageAccess: mergeRolePageAccessWithSeed(roleKey, {}) };
+        }
         throw new Error(r.error ?? "Errore permessi ruolo");
       }
       return r.data ?? { roleKey: "guest", rolePageAccess: {} };
@@ -34,7 +37,7 @@ export function useRolePageAccessQuery(): UseQueryResult<import("@/src/services/
     enabled: isAuthSessionEstablished(status) && !!user?.id,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 86_400_000,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,
@@ -59,7 +62,7 @@ export function useUserPageOverridesQuery(): UseQueryResult<
     enabled: isAuthSessionEstablished(status) && !!user?.id,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 86_400_000,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,

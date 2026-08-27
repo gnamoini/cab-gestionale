@@ -136,7 +136,9 @@ export const lavorazioniService = {
         updated_by: createdBy ?? userId,
       } as LavorazioneInsert;
       const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select(LAVORAZIONI_COLUMNS).single();
-      if (error) return err(error.message);
+      if (error) {
+        return err(error.message);
+      }
       const r = row as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, r);
       await writeModificaLog(sb, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, ctx) });
@@ -158,7 +160,9 @@ export const lavorazioniService = {
       )
         .select(LAVORAZIONI_COLUMNS)
         .single();
-      if (error) return err(error.message);
+      if (error) {
+        return err(error.message);
+      }
       const r = row as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, r);
       await writeModificaLog(sb, {

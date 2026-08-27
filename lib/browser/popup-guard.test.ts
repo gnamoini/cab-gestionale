@@ -27,6 +27,17 @@ type MockWindow = {
     open: () => void;
     write: (html: string) => void;
     close: () => void;
+    createElement: (tag: string) => {
+      tag: string;
+      href: string;
+      target: string;
+      style: { display: string };
+      click: () => void;
+    };
+    body: {
+      appendChild: () => void;
+      removeChild: () => void;
+    };
   };
   close: () => void;
 };

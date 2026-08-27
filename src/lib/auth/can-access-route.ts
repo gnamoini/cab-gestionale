@@ -10,6 +10,8 @@ export type CanAccessRouteInput = {
 /** Accesso route — delega al resolver pagina (SSOT). */
 export function canAccessRoute(input: CanAccessRouteInput): boolean {
   const effectiveCtx = input.ctx ?? input.snapshot?.rbacContext;
-  if (!effectiveCtx?.resolved) return false;
+  if (!effectiveCtx?.resolved) {
+    return false;
+  }
   return canAccessPage(input.pathname, effectiveCtx as RequiredRbacContext);
 }
