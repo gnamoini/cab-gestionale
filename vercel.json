@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm install --include=optional",
   "crons": [
     { "path": "/api/cron/ai-runtime-sync", "schedule": "0 3 * * *" },
     { "path": "/api/cron/push-delivery", "schedule": "0 4 * * *" },

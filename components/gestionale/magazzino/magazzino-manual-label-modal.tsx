@@ -10,7 +10,7 @@ import {
   DEFAULT_LABEL_PRESET,
   MANUAL_LABEL_PRESET_IDS,
   labelPresetOptionLabel,
-} from "@/lib/inventory-labels";
+} from "@/lib/inventory-labels/domain/templates";
 import { tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";

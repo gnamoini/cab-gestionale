@@ -37,14 +37,30 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  /** ponytail: Turbopack production trace sharp come hash esterno → libvips mancante su Vercel (500 PDF etichette). */
+  serverExternalPackages: ["sharp"],
   images: {
     qualities: [75, 100],
   },
   outputFileTracingIncludes: {
-    "/api/inventory-labels/**": ["./lib/inventory-labels/render/fonts/**"],
+    "/*": [
+      "./node_modules/@img/sharp-libvips-linux-x64/**",
+      "./node_modules/@img/sharp-linux-x64/**",
+    ],
+    "/api/inventory-labels/**": [
+      "./lib/inventory-labels/render/fonts/**",
+      "./node_modules/@img/sharp-libvips-linux-x64/**",
+      "./node_modules/@img/sharp-linux-x64/**",
+    ],
     "/api/mezzo-labels/**": [
       "./lib/inventory-labels/render/fonts/**",
       "./public/cab-logo.png",
+      "./node_modules/@img/sharp-libvips-linux-x64/**",
+      "./node_modules/@img/sharp-linux-x64/**",
+    ],
+    "/api/media/image": [
+      "./node_modules/@img/sharp-libvips-linux-x64/**",
+      "./node_modules/@img/sharp-linux-x64/**",
     ],
   },
   experimental: {

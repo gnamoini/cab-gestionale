@@ -9,7 +9,7 @@ import {
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
-} from "@/lib/inventory-labels";
+} from "@/lib/inventory-labels/domain/templates";
 import { tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";

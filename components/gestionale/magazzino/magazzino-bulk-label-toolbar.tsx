@@ -11,12 +11,11 @@ import {
   dsPageToolbar,
 } from "@/lib/ui/design-system";
 import {
-  BULK_SYNC_MAX,
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
-  isBulkSyncCount,
-} from "@/lib/inventory-labels";
+} from "@/lib/inventory-labels/domain/templates";
+import { BULK_SYNC_MAX, isBulkSyncCount } from "@/lib/inventory-labels/validation";
 import {
   labelQuantitiesToCompactItems,
   type LabelSelection,
