@@ -1,0 +1,10 @@
+diff --git a/src/lib/auth/effective-module-access.ts b/src/lib/auth/effective-module-access.ts
+index 668841cf..b53b8972 100644
+--- a/src/lib/auth/effective-module-access.ts
++++ b/src/lib/auth/effective-module-access.ts
+@@ -1,5 +1,4 @@
+ import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+-import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
+ import type { UserPermissionRow } from "@/src/types/supabase-tables";
+ import { buildEffectivePermissionsByModule } from "@/src/lib/permissions/effective-permissions";
+ import { resolveRole } from "@/lib/auth/rbac";

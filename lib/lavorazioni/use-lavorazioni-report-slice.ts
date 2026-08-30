@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
+
 import { useMemo } from "react";
 import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
 import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";

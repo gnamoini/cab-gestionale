@@ -1,0 +1,12 @@
+diff --git a/components/observability/boot-investigation-mount.tsx b/components/observability/boot-investigation-mount.tsx
+index 2a20dcc1..aed18ff7 100644
+--- a/components/observability/boot-investigation-mount.tsx
++++ b/components/observability/boot-investigation-mount.tsx
+@@ -29,6 +29,7 @@ export function BootInvestigationMount() {
+       innerWidth: typeof window !== "undefined" ? window.innerWidth : null,
+       userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 80) : null,
+     });
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only boot log
+   }, []);
+ 
+   useEffect(() => {

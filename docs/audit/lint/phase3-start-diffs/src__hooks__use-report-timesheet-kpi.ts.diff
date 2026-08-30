@@ -1,0 +1,26 @@
+diff --git a/src/hooks/use-report-timesheet-kpi.ts b/src/hooks/use-report-timesheet-kpi.ts
+index 3e7677d3..ef9a3592 100644
+--- a/src/hooks/use-report-timesheet-kpi.ts
++++ b/src/hooks/use-report-timesheet-kpi.ts
+@@ -43,10 +43,17 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
+     (showMonthDelta && previousMonthQuery.isPending);
+   const isError = employeesQuery.isError || entriesQuery.isError;
+ 
+-  const rawEntries = (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[];
+-  const rawPreviousEntries = showMonthDelta
+-    ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
+-    : [];
++  const rawEntries = useMemo(
++    () => (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[],
++    [entriesQuery.data],
++  );
++  const rawPreviousEntries = useMemo(
++    () =>
++      showMonthDelta
++        ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
++        : [],
++    [showMonthDelta, previousMonthQuery.data],
++  );
+ 
+   const entries = useMemo(
+     () => filterEntriesForReportTimesheetKpi(rawEntries, tipiAssenza),

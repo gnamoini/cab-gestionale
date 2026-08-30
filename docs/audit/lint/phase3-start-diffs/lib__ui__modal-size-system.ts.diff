@@ -1,0 +1,13 @@
+diff --git a/lib/ui/modal-size-system.ts b/lib/ui/modal-size-system.ts
+index 1f887cfc..9986faf0 100644
+--- a/lib/ui/modal-size-system.ts
++++ b/lib/ui/modal-size-system.ts
+@@ -144,7 +144,7 @@ export function resolveDrawerAsideClasses(size: DrawerSize): string {
+ export type GestionaleModalWidth = "standard" | "wide";
+ 
+ export function resolveGestionaleModalWidthFromLegacy(
+-  _size: GestionaleModalWidth = "standard",
++  
+ ): string {
+   return resolveModalWidthClasses("formMedium");
+ }

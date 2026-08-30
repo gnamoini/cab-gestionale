@@ -1,7 +1,10 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconActionButton } from "@/components/design-system";
+import { OptionalTooltip } from "@/components/ui";
 import { ShellNavIconClose } from "@/components/design-system/shell-nav-icons";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
@@ -322,13 +325,14 @@ export function PreventivoLavorazioniEditorSection({
                 <div className={preventivoEditorManodoperaNumCell}>
                   {oreScheda != null ? (
                     <div className={preventivoEditorManodoperaOreFieldWrap}>
-                      <span
-                        className={preventivoEditorManodoperaSchedaOreInside}
-                        title="Ore da scheda lavorazioni (non modificabili)"
-                        aria-label={`Ore scheda addetto riga ${idx + 1}: ${oreScheda}`}
-                      >
-                        Scheda {oreScheda}
-                      </span>
+                      <OptionalTooltip content="Ore da scheda lavorazioni (non modificabili)">
+                        <span
+                          className={preventivoEditorManodoperaSchedaOreInside}
+                          aria-label={`Ore scheda addetto riga ${idx + 1}: ${oreScheda}`}
+                        >
+                          Scheda {oreScheda}
+                        </span>
+                      </OptionalTooltip>
                       <GestionaleNumericField
                         className={preventivoEditorManodoperaOreFieldInputInner}
                         value={a.ore}

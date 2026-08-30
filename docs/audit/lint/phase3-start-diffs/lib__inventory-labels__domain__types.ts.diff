@@ -1,0 +1,56 @@
+diff --git a/lib/inventory-labels/domain/types.ts b/lib/inventory-labels/domain/types.ts
+index 03991a4c..857660a7 100644
+--- a/lib/inventory-labels/domain/types.ts
++++ b/lib/inventory-labels/domain/types.ts
+@@ -53,7 +53,11 @@ export type LabelTypography = {
+   lineHeight: number;
+ };
+ 
+-export type LabelLayoutMode = "horizontal-qr-left" | "vertical-stack" | "manual-centered";
++export type LabelLayoutMode =
++  | "horizontal-qr-left"
++  | "horizontal-qr-full-height"
++  | "vertical-stack"
++  | "manual-centered";
+ 
+ export type LabelKind = "internal" | "cliente" | "manual";
+ 
+@@ -97,15 +101,6 @@ export type LabelTemplateElement =
+       zoneBottomMm?: number;
+       vAlign?: "top" | "center";
+       hAlign?: "left" | "center";
+-    }
+-  | {
+-      type: "barcode";
+-      field: LabelTextField;
+-      format: "code128";
+-      xMm: number;
+-      yMm: number;
+-      heightMm: number;
+-      widthMm?: number;
+     };
+ 
+ export type LabelTemplateDefinition = {
+@@ -121,7 +116,6 @@ export type LabelTemplateDefinition = {
+   layoutMode: LabelLayoutMode;
+   supplierLayout: SupplierLayoutMode;
+   qr: { maxSizeMm: number; position: "top-left" | "top-center" };
+-  barcode: { heightMm: number };
+   elements: LabelTemplateElement[];
+ };
+ 
+@@ -138,13 +132,8 @@ export type InventoryQrTokenRow = {
+   superseded_by: string | null;
+ };
+ 
+-export const GENERATOR_VERSION = "1.6.0";
+-
+-/** Default generazione etichette — opt-in via checkbox/API. */
+-export const DEFAULT_INCLUDE_BARCODE = false;
++export const GENERATOR_VERSION = "1.7.0";
+ 
+ export type LabelRenderOptions = {
+-  /** Default false — se false il layout resta invariato, area barcode bianca. */
+-  includeBarcode?: boolean;
+   labelKind?: LabelKind;
+ };

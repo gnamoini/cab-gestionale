@@ -97,7 +97,7 @@ export function MezziBulkQrLabelToolbar({
   if (!hasSelection) return null;
 
   return (
-    <div className={`${dsPageToolbar} mt-3 flex flex-wrap items-center justify-between gap-3`}>
+    <div className={`${dsPageToolbar} mt-3 flex items-center justify-between gap-3 flex-nowrap sm:flex-wrap`}>
       <span className="text-sm font-medium text-[color:var(--cab-text)]">
         {count} mezz{count === 1 ? "o" : "i"} selezionat{count === 1 ? "o" : "i"}
       </span>

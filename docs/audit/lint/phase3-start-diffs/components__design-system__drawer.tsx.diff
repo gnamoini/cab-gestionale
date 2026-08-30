@@ -1,0 +1,39 @@
+diff --git a/components/design-system/drawer.tsx b/components/design-system/drawer.tsx
+index 7ad1da1a..e8693555 100644
+--- a/components/design-system/drawer.tsx
++++ b/components/design-system/drawer.tsx
+@@ -2,6 +2,7 @@
+ 
+ import {
+   useEffect,
++  useId,
+   useLayoutEffect,
+   useRef,
+   useState,
+@@ -99,8 +100,8 @@ export function Drawer({
+   contentFill = false,
+ }: DrawerProps) {
+   const asideRef = useRef<HTMLElement>(null);
+-  const autoTitleId = useRef(`cab-drawer-title-${Math.random().toString(36).slice(2, 9)}`);
+-  const titleId = titleIdProp ?? autoTitleId.current;
++  const autoTitleId = useId();
++  const titleId = titleIdProp ?? autoTitleId;
+   const maxMdDown = useMaxMdDown();
+   const [mounted, setMounted] = useState(false);
+   const [closing, setClosing] = useState(false);
+@@ -112,6 +113,7 @@ export function Drawer({
+ 
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setMounted(true);
+     setClosing(false);
+     if (!overlayRegisteredRef.current) {
+@@ -122,6 +124,7 @@ export function Drawer({
+ 
+   useLayoutEffect(() => {
+     if (!mounted || open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setClosing(true);
+   }, [mounted, open]);
+ 

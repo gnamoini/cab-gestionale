@@ -69,6 +69,18 @@ export const MagazzinoViewLazy = dynamic(() =>
   import("@/components/gestionale/magazzino/magazzino-view").then((m) => m.MagazzinoView),
 );
 
+export const ReceivingWizardLazy = dynamic(() =>
+  import("@/components/gestionale/magazzino/carichi/receiving-wizard").then((m) => m.ReceivingWizard),
+);
+
+export const ReceivingListViewLazy = dynamic(() =>
+  import("@/components/gestionale/magazzino/carichi/receiving-list-view").then((m) => m.ReceivingListView),
+);
+
 export const IdentificaRicambioViewLazy = dynamic(() =>
   import("@/components/gestionale/identifica-ricambio/identifica-ricambio-view").then((m) => m.IdentificaRicambioView),
+);
+
+export const AiProvidersSettingsPageLazy = dynamic(() =>
+  import("@/components/gestionale/impostazioni/ai-providers-settings-page").then((m) => m.AiProvidersSettingsPage),
 );

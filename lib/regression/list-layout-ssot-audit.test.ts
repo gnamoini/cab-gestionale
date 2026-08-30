@@ -234,7 +234,7 @@ const mdViews: Array<{
 
     file: "components/gestionale/dipendenti/timesheet-table-view.tsx",
 
-    mustHave: [/listSurface === "table"/],
+    mustHave: [/listSurface\s*(!==|===)\s*"table"/],
 
     mustNot: bannedLayoutPatterns,
 

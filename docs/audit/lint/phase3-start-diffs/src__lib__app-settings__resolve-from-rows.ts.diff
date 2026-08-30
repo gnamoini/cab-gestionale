@@ -1,0 +1,19 @@
+diff --git a/src/lib/app-settings/resolve-from-rows.ts b/src/lib/app-settings/resolve-from-rows.ts
+index 15615c58..fa7f5cfd 100644
+--- a/src/lib/app-settings/resolve-from-rows.ts
++++ b/src/lib/app-settings/resolve-from-rows.ts
+@@ -1,4 +1,4 @@
+-import { migrateAddettoColorMapNomeToId, syncAddettoColorMap, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
++import { migrateAddettoColorMapNomeToId, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
+ import {
+   defaultDipendentiRecords,
+   parseDipendentiRecordsFromPayload,
+@@ -87,7 +87,7 @@ function resolveLavorazioniAddettiFromDipendentiPayload(o: Record<string, unknow
+   };
+ }
+ 
+-function parsePrioritaDb(_raw: unknown): PrioritaLavorazione[] {
++function parsePrioritaDb(): PrioritaLavorazione[] {
+   return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
+ }
+ 

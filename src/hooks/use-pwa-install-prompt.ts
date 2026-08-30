@@ -69,6 +69,7 @@ export function usePwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- probe related-app install on mount
     void refreshInstalledOnDevice();
     const onVisible = () => {
       if (document.visibilityState === "visible") void refreshInstalledOnDevice();
@@ -80,6 +81,7 @@ export function usePwaInstallPrompt() {
   useEffect(() => {
     if (isPwaAppInstalledOnDeviceSync(displayMode)) return;
     if (!runtime.deferredPrompt) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setRelatedAppInstalled(false);
   }, [displayMode, runtime.deferredPrompt]);
 

@@ -1,0 +1,12 @@
+diff --git a/components/report/primitives/chart/aging-backlog-stacked-chart.tsx b/components/report/primitives/chart/aging-backlog-stacked-chart.tsx
+index 722191fb..0fd98fa5 100644
+--- a/components/report/primitives/chart/aging-backlog-stacked-chart.tsx
++++ b/components/report/primitives/chart/aging-backlog-stacked-chart.tsx
+@@ -52,7 +52,6 @@ export function ReportAgingBacklogStackedChart({
+           const y = padT + ri * rowH + rowH * 0.15;
+           const barH = rowH * 0.7;
+           let x = padL;
+-          const color = row.color ?? FALLBACK_COLORS[ri % FALLBACK_COLORS.length]!;
+           return (
+             <g key={row.statoId}>
+               <text

@@ -44,7 +44,7 @@ export function ReportEconomicTabs({
 
   return (
     <div className="min-w-0">
-      <div className="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="Dettaglio economico">
+      <div className="mb-3 flex gap-2 flex-nowrap sm:flex-wrap" role="tablist" aria-label="Dettaglio economico">
         {TABS.map((t) => (
           <button
             key={t.id}

@@ -1,0 +1,16 @@
+diff --git a/components/gestionale/mezzi/mezzi-tagliandi-overview.tsx b/components/gestionale/mezzi/mezzi-tagliandi-overview.tsx
+index a9421d5e..e39fca91 100644
+--- a/components/gestionale/mezzi/mezzi-tagliandi-overview.tsx
++++ b/components/gestionale/mezzi/mezzi-tagliandi-overview.tsx
+@@ -386,9 +386,11 @@ export function MezziTagliandiOverview({
+   const [assignOpen, setAssignOpen] = useState(false);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setLocalPresetFilter(presetFilter);
+   }, [presetFilter]);
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setLocalStatoFilter(statoFilter);
+   }, [statoFilter]);
+ 

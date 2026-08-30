@@ -1,0 +1,325 @@
+diff --git a/components/gestionale/magazzino/magazzino-view.tsx b/components/gestionale/magazzino/magazzino-view.tsx
+index 9b3b4ccc..c31de1d9 100644
+--- a/components/gestionale/magazzino/magazzino-view.tsx
++++ b/components/gestionale/magazzino/magazzino-view.tsx
+@@ -3,7 +3,6 @@
+ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
+ import "./magazzino-scroll.css";
+ 
+-import type { ReactElement, ReactNode } from "react";
+ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
+ import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
+@@ -11,10 +10,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
+ import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
+ import {
+   CardMobile,
+-  CloseButton,
+-  GestionaleAiActionButton,
++  _CloseButton,
++  _GestionaleAiActionButton,
+   IconActionButton,
+-  LoadingButton,
++  _LoadingButton,
+   LoadingFormSkeleton,
+   SkeletonBoundary,
+ } from "@/components/design-system";
+@@ -67,7 +66,6 @@ const MagazzinoLogDrawer = dynamic(
+   () => import("@/components/gestionale/magazzino/magazzino-log-drawer").then((m) => m.MagazzinoLogDrawer),
+   { ssr: false },
+ );
+-import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
+ import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
+ import { useMagazzinoListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+ import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
+@@ -75,16 +73,15 @@ import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestion
+ import { usesServerSearch } from "@/lib/search/registry";
+ import type { MagazzinoFilters } from "@/src/services/magazzino.service";
+ import { useQueryClient } from "@tanstack/react-query";
+-import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
+-import { cabSyncEventForEntity, dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
+-import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow, magazzinoListQueryKey } from "@/lib/magazzino/magazzino-list-cache";
++import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
++import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
++import { patchMagazzinoListCache, magazzinoListQueryKey } from "@/lib/magazzino/magazzino-list-cache";
+ import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
+ import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+ import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+ import {
+   formatMarkupDisplay,
+-  type RicambioFormState,
+ } from "@/lib/magazzino/form";
+ import { readCompatDisplayForUi, readCompatLabelsForUi, readCompatModelsDisplayForUi } from "@/lib/magazzino/compat/compat-read-guard";
+ import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
+@@ -107,11 +104,11 @@ import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-m
+ import {
+   dsPageToolbarCtaCompact,
+   GESTIONALE_SEARCH_PLACEHOLDER,
+-  dsBtnNeutral,
+-  dsBtnDanger,
+-  dsBtnPrimary,
++  _dsBtnNeutral,
++  _dsBtnDanger,
++  _dsBtnPrimary,
+   dsBtnSoftOrange,
+-  dsFocus,
++  _dsFocus,
+   dsTableActionBtnInfo,
+   dsTableActionGlyph,
+ } from "@/lib/ui/design-system";
+@@ -124,7 +121,7 @@ import {
+   gestionaleListTableIsLastRow,
+   gestionaleListTableLastRowAttr,
+   gestionaleListTableRowClass,
+-  gestionaleListTableRowSurfaceClass,
++  _gestionaleListTableRowSurfaceClass,
+   gestionaleListTableRowTone,
+   gestionaleListTableRowToneFlash,
+   gestionaleListTableRowToneLowStock,
+@@ -201,11 +198,10 @@ import {
+   buildMagazzinoLocalLogEntry,
+   buildMagazzinoScortaPersistedLogEntry,
+ } from "@/lib/magazzino/magazzino-log-events";
+-import { getStockEntity, seedStockEntitiesFromRows } from "@/lib/magazzino/stock-entity-cache";
++import { seedStockEntitiesFromRows } from "@/lib/magazzino/stock-entity-cache";
+ import { hydrateJournalFromSession } from "@/lib/magazzino/stock-client-store";
+ import { mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
+ import { stockVoidMovementFetch } from "@/lib/magazzino/stock-void-movement-client";
+-import { invalidateReportUniverse } from "@/lib/report/invalidate-report-universe";
+ import {
+   migrateMagazzinoModalitaModificaPreferenceV2,
+   readMagazzinoModalitaModifica,
+@@ -215,7 +211,6 @@ import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-
+ import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+ import { MagazzinoCarichiCaptureLauncher } from "@/components/gestionale/magazzino/carichi/magazzino-carichi-capture-launcher";
+ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+-import type { TooltipSide } from "@/lib/ui/tooltip-portal";
+ import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
+ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+@@ -238,7 +233,6 @@ import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/ke
+ import { useCompatMezziListe } from "@/src/hooks/use-compat-mezzi-liste";
+ import { useCabAppSettingsPayloadQuery, useMagazzinoSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
+ import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
+-import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+ import { Q_FOCUS_RICAMBIO, Q_OPEN_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+ import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
+ import { deleteGeneratedListinoRicambiRequest } from "@/lib/magazzino/listino-import/listino-import-client";
+@@ -280,7 +274,7 @@ function initialFornitoriFromProducts(rows: RicambioMagazzino[]) {
+   return [...s].sort((a, b) => a.localeCompare(b, "it"));
+ }
+ 
+-function formatFornitoreAlternativoDisplay(p: RicambioMagazzino): string {
++function _formatFornitoreAlternativoDisplay(p: RicambioMagazzino): string {
+   const alts = p.fornitoriAlternativi ?? [];
+   const firstName = alts[0]?.fornitore.trim() || p.fornitoreNonOriginale.trim();
+   if (!firstName) return "—";
+@@ -440,7 +434,7 @@ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
+   return s || "—";
+ }
+ 
+-function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): CampoChange[] {
++function _diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): CampoChange[] {
+   const out: CampoChange[] = [];
+   for (const key of DIFF_KEYS) {
+     const b = fmtForDiff(key, before);
+@@ -457,7 +451,7 @@ function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): Campo
+   return out;
+ }
+ 
+-function changesForNuovoRicambio(r: RicambioMagazzino): CampoChange[] {
++function _changesForNuovoRicambio(r: RicambioMagazzino): CampoChange[] {
+   return DIFF_KEYS.map((key) => ({
+     campo: CAMPO_LABEL[key] ?? String(key),
+     prima: "—",
+@@ -470,9 +464,6 @@ type MagazzinoLogTipo = "aggiunta" | "update" | "rimozione";
+ type MagazzinoLogEntry = MagazzinoChangeLogEntry;
+ 
+ /** Stile interazioni ERP uniforme (hover / active / ring) */
+-const erpFocus = dsFocus;
+-const erpBtnNeutral = dsBtnNeutral;
+-const erpBtnAccent = dsBtnPrimary;
+ const erpBtnSoftOrange = dsBtnSoftOrange;
+ function IconInfoMagazzino({ className = dsTableActionGlyph }: { className?: string }) {
+   return (
+@@ -518,6 +509,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   }
+   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
+   const appSettings = settingsPayload.data?.resolved;
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const settingsRows = settingsPayload.data?.rows ?? [];
+   const stockPolicyRaw = useMemo(
+     () => settingsRows.find((r) => r.module === "magazzino" && r.key === "stock_policy")?.value,
+@@ -563,6 +555,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   }, [searchApplied]);
+   const rawMagazzinoListQ = useMagazzinoListQuery(magazzinoFetchFilters);
+   const magazzinoListQ = useMagazzinoRicambiUIQuery(magazzinoFetchFilters);
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const prodotti = magazzinoListQ.data ?? [];
+ 
+   useEffect(() => {
+@@ -631,7 +624,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+ 
+   const [newOpen, setNewOpen] = useState(false);
+   const [modalChunkMountedKey, setModalChunkMountedKey] = useState<string | null>(null);
+-  const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, errorOnce } =
++  const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, _errorOnce } =
+     useGestionaleToast();
+   const { confirm, confirmDialog } = useGestionaleConfirm();
+   const [eliminaRicambioTarget, setEliminaRicambioTarget] = useState<RicambioMagazzino | null>(null);
+@@ -667,7 +660,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   } | null>(null);
+ 
+   const [logEntries, setLogEntries] = useState<MagazzinoLogEntry[]>([]);
+-  const [logPersistReady, setLogPersistReady] = useState(false);
++  const [_logPersistReady, setLogPersistReady] = useState(false);
+   const [logOpen, setLogOpen] = useState(false);
+ 
+   const listPageSize = useResponsiveListPageSize();
+@@ -707,6 +700,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+ 
+   const pagedMagLogFeed = useMemo(
+     () => sliceMagLogFeed(magLogFeed),
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+     [magLogFeed, sliceMagLogFeed, magLogDrawerPage],
+   );
+ 
+@@ -757,7 +751,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     applyLogEntry(entry);
+   }
+ 
+-  function queueFieldUpdates(ricambioId: string, ricambioLabel: string, incoming: CampoChange[], autore: string) {
++  function _queueFieldUpdates(ricambioId: string, ricambioLabel: string, incoming: CampoChange[], autore: string) {
+     const cur = pendingLogRef.current;
+     if (cur && cur.ricambioId !== ricambioId) flushPendingLog();
+     let p = pendingLogRef.current;
+@@ -882,6 +876,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+         });
+       });
+     },
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+     [flashRow],
+   );
+ 
+@@ -1039,7 +1034,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     };
+   }, [masterPrefsHydrated, magPerm.canWrite, magMasterPayloadSig, masterMarche, masterCategorie, masterMezzi, masterFornitori, upsertMagazzinoMaster]);
+ 
+-  const lastPersistedLogRef = useRef<MagazzinoLogEntry[] | null>(null);
+ 
+   useEffect(() => {
+     setLogPersistReady(true);
+@@ -1073,12 +1067,12 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     [categorieGlobal, masterCategorie, categorieFromRows],
+   );
+ 
+-  const fornitori = useMemo(
++  const _fornitori = useMemo(
+     () => mergeMasterWithRows(masterFornitori, fornitoriFromRows),
+     [masterFornitori, fornitoriFromRows],
+   );
+ 
+-  const mezzi = useMemo(
++  const _mezzi = useMemo(
+     () => mergeMasterWithRows(masterMezzi, mezziFromRows),
+     [masterMezzi, mezziFromRows],
+   );
+@@ -1204,6 +1198,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     resetPage();
+   }, [searchApplied, advancedFilters, soloSottoScorta, nascondiScortaZero, sortColumn, sortPhase, listPageSize, resetPage]);
+ 
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const pagedMagazzino = useMemo(() => sliceItems(filteredSorted), [sliceItems, filteredSorted, page]);
+ 
+   const magazzinoTableReadyMarked = useRef(false);
+@@ -1258,6 +1253,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+       });
+       applyLogEntry(entry);
+     },
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+     [authorName, modalitaModifica],
+   );
+ 
+@@ -1284,6 +1280,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+       onCommitSuccess: handleDebouncedScortaCommitSuccess,
+       onCommitError: handleDebouncedScortaCommitError,
+     }),
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+     [
+       modalitaModifica,
+       magCanCreateRicambio,
+@@ -1362,6 +1359,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     setDetail({ id: p.id, mode: "info" });
+   }
+ 
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   function setLabelQtyForRicambio(id: string, qty: number) {
+     if (!labelMode) return;
+     setLabelQuantity(id, qty);
+@@ -1449,13 +1447,13 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     return magLogTimelineByRicambio[detailRicambio.id] ?? [];
+   }, [detailRicambio, magLogTimelineByRicambio]);
+ 
+-  function addMasterMarca() {
++  function _addMasterMarca() {
+     const t = nuovaMarca.trim();
+     if (!t) return;
+     setMasterMarche((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
+     setNuovaMarca("");
+   }
+-  async function removeMasterMarca(m: string) {
++  async function _removeMasterMarca(m: string) {
+     const n = prodotti.filter((p) => p.marca === m).length;
+     if (n > 0) {
+       const ok = await confirm({
+@@ -1468,13 +1466,13 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     }
+     setMasterMarche((prev) => prev.filter((x) => x !== m));
+   }
+-  function addMasterCategoria() {
++  function _addMasterCategoria() {
+     const t = nuovaCategoria.trim();
+     if (!t) return;
+     setMasterCategorie((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
+     setNuovaCategoria("");
+   }
+-  async function removeMasterCategoria(c: string) {
++  async function _removeMasterCategoria(c: string) {
+     const n = prodotti.filter((p) => p.categoria === c).length;
+     if (n > 0) {
+       const ok = await confirm({
+@@ -1487,7 +1485,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     }
+     setMasterCategorie((prev) => prev.filter((x) => x !== c));
+   }
+-  async function removeMasterMezzo(m: string) {
++  async function _removeMasterMezzo(m: string) {
+     const n = prodotti.reduce(
+       (acc, p) => acc + (rowUsesCompatLabel(p, m, mezziListe, compatReadOpts) ? 1 : 0),
+       0,
+@@ -1503,13 +1501,13 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     }
+     setMasterMezzi((prev) => prev.filter((x) => x !== m));
+   }
+-  function addMasterFornitore() {
++  function _addMasterFornitore() {
+     const t = nuovoFornitore.trim();
+     if (!t) return;
+     setMasterFornitori((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
+     setNuovoFornitore("");
+   }
+-  async function removeMasterFornitore(f: string) {
++  async function _removeMasterFornitore(f: string) {
+     const n = prodotti.filter((p) => ricambioHasFornitoreAlternativo(p, f)).length;
+     if (n > 0) {
+       const ok = await confirm({
+@@ -1539,7 +1537,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+ 
+   const hasAdvancedPanelFilters = magazzinoAdvancedFiltersActive(advancedFilters);
+ 
+-  const hasMagazzinoFilters =
++  const hasPageClientFilters =
+     searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero;
+ 
+   const renderMagazzinoDesktopRow = useCallback(

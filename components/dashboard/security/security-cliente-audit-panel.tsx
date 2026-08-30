@@ -94,7 +94,7 @@ export function SecurityClienteAuditPanel({ readOnly = false }: Props) {
 
       {expanded ? (
         <div className="mt-4 space-y-4 border-t border-[color:var(--cab-border)] pt-4">
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-2 flex-nowrap sm:flex-wrap">
             {!readOnly ? (
               <button type="button" className={dsPageToolbarBtn} onClick={() => void runAudit()} disabled={loading}>
                 {loading ? "Analisi…" : "Aggiorna report"}

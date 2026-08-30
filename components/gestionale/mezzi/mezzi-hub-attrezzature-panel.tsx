@@ -96,6 +96,7 @@ export function MezziHubPanoramicaAttrezzaturaSection({
   }, [mezzoId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void reload();
   }, [reload]);
 

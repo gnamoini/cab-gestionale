@@ -51,7 +51,7 @@ export function SectionMetricGrid({ metricIds }: { metricIds: readonly string[] 
 
 export function SectionTrend({
   trendMetricId,
-  granularity,
+  
 }: {
   trendMetricId: string;
   granularity: ReportAnalyticsGranularity;
@@ -64,43 +64,6 @@ export function SectionTrend({
     <div className="mt-4 min-w-0">
       <ReportTrendChart series={series} title={label} />
     </div>
-  );
-}
-
-function DomainSection({
-  registrationKey,
-  sectionId,
-  title,
-  subtitle,
-  persistKey,
-  trendMetricId,
-  granularity = "month",
-}: {
-  registrationKey: string;
-  sectionId: Parameters<typeof resolveSectionMetricIds>[0];
-  title: string;
-  subtitle: string;
-  persistKey: string;
-  trendMetricId?: string;
-  granularity?: ReportAnalyticsGranularity;
-}) {
-  const metricIds = useMemo(() => resolveSectionMetricIds(sectionId), [sectionId]);
-  const fetchIds = useMemo(() => {
-    if (!trendMetricId || metricIds.includes(trendMetricId)) return metricIds;
-    return [...metricIds, trendMetricId];
-  }, [metricIds, trendMetricId]);
-
-  useRegisterAnalyticsSection(registrationKey, sectionId, {
-    metricIds: fetchIds,
-    includeSeries: Boolean(trendMetricId),
-    granularity: trendMetricId ? granularity : undefined,
-  });
-
-  return (
-    <ReportAnalysisSectionShell title={title} subtitle={subtitle} persistKey={persistKey}>
-      <SectionMetricGrid metricIds={metricIds} />
-      {trendMetricId ? <SectionTrend trendMetricId={trendMetricId} granularity={granularity} /> : null}
-    </ReportAnalysisSectionShell>
   );
 }
 

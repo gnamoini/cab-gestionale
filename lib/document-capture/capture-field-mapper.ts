@@ -285,7 +285,7 @@ export function resolveCaptureRicambioRowText(
   descrizioneOcr: string,
   addettiRecords?: readonly AddettoRecord[],
 ): { ricambioNome: string; addetto: string } {
-  let nome = nomeOcr.trim();
+  const nome = nomeOcr.trim();
   let desc = descrizioneOcr.trim();
 
   if (!desc && nome) {

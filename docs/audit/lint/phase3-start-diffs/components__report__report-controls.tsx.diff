@@ -1,0 +1,22 @@
+diff --git a/components/report/report-controls.tsx b/components/report/report-controls.tsx
+index 17f61f03..8b26c529 100644
+--- a/components/report/report-controls.tsx
++++ b/components/report/report-controls.tsx
+@@ -158,7 +158,7 @@ export function ReportControls({
+         aria-labelledby="report-panel-analisi-title"
+       >
+         <div className={periodPanelHeaderClass}>
+-          <div className="flex min-w-0 flex-wrap items-center gap-2">
++          <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
+             <h2 id="report-panel-analisi-title" className={reportPeriodPanelTitleClass}>
+               Periodo analisi
+             </h2>
+@@ -212,7 +212,7 @@ export function ReportControls({
+         aria-labelledby="report-panel-confronto-title"
+       >
+         <div className={periodPanelHeaderClass}>
+-          <div className="flex min-w-0 flex-wrap items-center gap-2">
++          <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
+             <h2 id="report-panel-confronto-title" className={reportPeriodPanelTitleClass}>
+               Periodo confronto
+             </h2>

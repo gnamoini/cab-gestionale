@@ -1,0 +1,16 @@
+diff --git a/lib/document-capture/finalize-transaction.server.ts b/lib/document-capture/finalize-transaction.server.ts
+index 1c23b066..a1fdfcd3 100644
+--- a/lib/document-capture/finalize-transaction.server.ts
++++ b/lib/document-capture/finalize-transaction.server.ts
+@@ -165,9 +165,9 @@ export async function finalizeDocumentCaptureInTransaction(input: {
+     };
+   }
+ 
+-  let bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
++  const bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
+   const fileName = input.storagePath.split("/").pop() ?? "document";
+-  let mime = normalizeCaptureMime({
++  const mime = normalizeCaptureMime({
+     mime: fileData.type,
+     fileName,
+     bytes,

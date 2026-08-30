@@ -12,7 +12,6 @@ function exists(rel: string): boolean {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
-const layout = read("app/layout.tsx");
 const siteViewport = read("lib/site/site-viewport.ts");
 assert.match(siteViewport, /viewportFit:\s*"cover"/);
 assert.match(siteViewport, /width:\s*"device-width"/);

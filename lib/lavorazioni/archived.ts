@@ -1,4 +1,3 @@
-import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 
 /** True se la lavorazione è stata archiviata manualmente (portale / storico). */

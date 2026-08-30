@@ -113,7 +113,7 @@ export function mergeMezziHubRows(
   attive: LavorazioneAttiva[],
   storico: LavorazioneArchiviata[],
   preventivi: PreventivoRecord[],
-  _documenti: DocumentoGestionale[],
+  
 ): MezzoGestito[] {
   const rows: MezzoGestito[] = baseMezzi.map((m) => ({ ...m }));
 

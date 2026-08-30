@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TKB_BUILDER_VERSION, TKB_PIPELINE_VERSION } from "../versions";
-import { countActivities, emptyDraftBundle, mergeFragments, patchDraftFromFragments } from "../merge/merge-engine";
+import { countActivities, mergeFragments, patchDraftFromFragments } from "../merge/merge-engine";
 import { collectFromAllAdapters, listTkbAdapters } from "./adapter-registry";
 import { createIngestionContext } from "./adapter-types";
 import { buildSearchIndex } from "./search-index-builder";

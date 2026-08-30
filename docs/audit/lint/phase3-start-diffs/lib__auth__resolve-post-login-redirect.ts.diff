@@ -1,0 +1,50 @@
+diff --git a/lib/auth/resolve-post-login-redirect.ts b/lib/auth/resolve-post-login-redirect.ts
+index 3202b0d4..1d37a5c1 100644
+--- a/lib/auth/resolve-post-login-redirect.ts
++++ b/lib/auth/resolve-post-login-redirect.ts
+@@ -1,5 +1,3 @@
+-import { buildGestionaleNav, type GestionaleNavHref } from "@/components/gestionale/gestionale-nav-config";
+-import { GESTIONALE_PAGES } from "@/src/lib/permissions/gestionale-pages";
+ import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
+ import {
+   ACCESS_DENIED_PATH,
+@@ -27,6 +25,15 @@ function stagingBlocksRedirect(path: string): boolean {
+   return isStagingBlockedPathname(pathOnly);
+ }
+ 
++/** Entrypoint QR mezzi — consentito post-login per tutti i ruoli autenticati. */
++export function isMezzoQrEntryPath(path: string): boolean {
++  const pathOnly = path.split("?")[0] ?? path;
++  if (!pathOnly.startsWith("/m/q/")) return false;
++  if (pathOnly === "/m/q/errore" || pathOnly.startsWith("/m/q/errore/")) return false;
++  const segment = pathOnly.slice("/m/q/".length);
++  return segment.length > 0;
++}
++
+ /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
+ export function resolveFirstAccessibleNavHref(
+   navAccess: RbacNavAccess,
+@@ -55,13 +62,16 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
+ 
+   if (isClienteRole(input.user)) {
+     const requested = sanitizePostLoginRequestedPath(input.requestedPath);
+-    if (
+-      requested &&
+-      !stagingBlocksRedirect(requested) &&
+-      (requested === CLIENTE_HOME_PATH || requested.startsWith(`${CLIENTE_HOME_PATH}/`)) &&
+-      (!input.navAccess || input.navAccess.canAccessRoute(requested))
+-    ) {
+-      return requested;
++    if (requested && !stagingBlocksRedirect(requested)) {
++      if (isMezzoQrEntryPath(requested)) {
++        return requested;
++      }
++      if (
++        (requested === CLIENTE_HOME_PATH || requested.startsWith(`${CLIENTE_HOME_PATH}/`)) &&
++        (!input.navAccess || input.navAccess.canAccessRoute(requested))
++      ) {
++        return requested;
++      }
+     }
+     return CLIENTE_HOME_PATH;
+   }

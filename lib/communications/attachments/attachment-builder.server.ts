@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { deliverPdfArtifact } from "@/lib/pdf-artifacts/pdf-artifact-generate.server";
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
 import type { CommunicationAttachmentRef } from "@/lib/communications/domain/communication-types";

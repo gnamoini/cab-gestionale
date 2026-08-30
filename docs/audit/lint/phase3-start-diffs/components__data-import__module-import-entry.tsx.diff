@@ -1,0 +1,13 @@
+diff --git a/components/data-import/module-import-entry.tsx b/components/data-import/module-import-entry.tsx
+index d6d95f4d..20342ee5 100644
+--- a/components/data-import/module-import-entry.tsx
++++ b/components/data-import/module-import-entry.tsx
+@@ -10,7 +10,7 @@ export function ModuleImportEntry({
+   module,
+   buttonLabel = "Importa",
+   className = "",
+-  onCompleted,
++  
+ }: {
+   entity: ImportEntity;
+   module: GestionalePermissionModule;

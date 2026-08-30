@@ -1,6 +1,6 @@
 import { SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
 import { schedaRowsToBundle, schedaRowsToStore } from "@/lib/schede/schede-db-mapper";
-import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { SupabaseClient } from "@supabase/supabase-js";

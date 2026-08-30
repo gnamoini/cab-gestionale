@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import {
   buildCandidateFingerprint,
-  buildConditionHash,
 } from "@/lib/report/decision-center/fingerprint/decision-fingerprint";
 import { canTransitionDecisionStatus } from "@/lib/report/decision-center/state/decision-status-transitions";
 import { mergeCandidatesWithPersistence } from "@/lib/report/decision-center/engine/merge-decision-with-persistence";

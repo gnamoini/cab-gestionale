@@ -55,7 +55,7 @@ export function ReportDecisionCard({
 
       <div className="flex flex-col gap-4 p-4 pl-5 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap sm:flex-wrap">
             <ReportDecisionPriority priority={decision.priority} />
             <ReportTrustBadge trust={decision.trust} compact />
           </div>
@@ -89,7 +89,7 @@ export function ReportDecisionCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-muted)_20%,transparent)] px-4 py-3 pl-5">
+      <div className="flex items-center justify-between gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-muted)_20%,transparent)] px-4 py-3 pl-5 flex-nowrap sm:flex-wrap">
         <ReportDecisionStatus status={decision.status} canWrite={canWrite} onChange={onStatusChange} />
         {drill.supported ? (
           <button

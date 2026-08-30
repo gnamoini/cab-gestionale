@@ -1,0 +1,12 @@
+diff --git a/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field.tsx b/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field.tsx
+index 73ff4e02..24a018b1 100644
+--- a/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field.tsx
++++ b/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field.tsx
+@@ -71,6 +71,7 @@ export function OrdineFornitoreRigaMagazzinoField({
+               <button
+                 type="button"
+                 role="option"
++                aria-selected={false}
+                 className="flex w-full min-w-0 flex-col px-2 py-1.5 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
+                 onPointerDown={(e) => {
+                   e.preventDefault();

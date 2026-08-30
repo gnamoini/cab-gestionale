@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/dipendenti/dipendente-detail-modal.tsx b/components/gestionale/dipendenti/dipendente-detail-modal.tsx
+index 1214b369..66d3ad9f 100644
+--- a/components/gestionale/dipendenti/dipendente-detail-modal.tsx
++++ b/components/gestionale/dipendenti/dipendente-detail-modal.tsx
+@@ -21,7 +21,6 @@ export function DipendenteDetailModal({
+   employee,
+   monthKey,
+   entries,
+-  tipiAssenza: _tipiAssenza,
+ }: {
+   open: boolean;
+   onClose: () => void;

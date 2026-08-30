@@ -88,39 +88,6 @@ async function setSupabaseEdgeSecrets(secrets) {
   return true;
 }
 
-async function syncVaultCronSecret(serviceKey, cronSecret) {
-  const url = `https://${PROJECT_REF}.supabase.co/rest/v1/rpc/cab_invoke_push_delivery_worker`;
-  // vault update via SQL through Supabase Management — use execute_sql via fetch to pg not available.
-  // ponytail: POST /database/query Management API
-  const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();
-  if (!token) {
-    console.warn("[vault] skip — imposta push_delivery_cron_secret manualmente o con SUPABASE_ACCESS_TOKEN");
-    return false;
-  }
-  const sql = `
-    delete from vault.secrets where name = 'push_delivery_cron_secret';
-    select vault.create_secret(
-      '${cronSecret.replace(/'/g, "''")}',
-      'push_delivery_cron_secret',
-      'Bearer auth for Vercel /api/cron/push-delivery'
-    );
-  `;
-  const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query: sql }),
-  });
-  if (!res.ok) {
-    console.error(`[vault] sync failed ${res.status}: ${await res.text()}`);
-    return false;
-  }
-  console.log("[vault] push_delivery_cron_secret synced");
-  return true;
-}
-
 function ensureVapidKeys(local) {
   let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || local.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
   let privateKey = process.env.VAPID_PRIVATE_KEY?.trim() || local.VAPID_PRIVATE_KEY?.trim();

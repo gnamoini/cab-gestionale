@@ -1,0 +1,13 @@
+diff --git a/components/report/decision-center/report-decision-center.tsx b/components/report/decision-center/report-decision-center.tsx
+index 63ba7693..9cac8a84 100644
+--- a/components/report/decision-center/report-decision-center.tsx
++++ b/components/report/decision-center/report-decision-center.tsx
+@@ -75,7 +75,7 @@ export function ReportDecisionCenter() {
+         persistKey="bi-decisions"
+         defaultCollapsed
+       >
+-        <div className="mb-4 flex flex-wrap items-center gap-2">
++        <div className="mb-4 flex items-center gap-2 flex-nowrap sm:flex-wrap">
+           <select
+             className={selectClass}
+             value={priorityFilter}

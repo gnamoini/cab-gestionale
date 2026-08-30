@@ -305,11 +305,11 @@ function releaseBodyScrollLock(lockId: number, epoch: number, hadMainLock: boole
 
 /** Pulisce lock fantasma: stack vuoto ma stili inline o attr residui. */
 export function healBodyScrollLockState(_reason?: string): void {
+  void _reason;
   if (typeof document === "undefined") return;
   if (lockStack.length > 0) return;
 
   const attr = document.body.getAttribute(BODY_LOCK_ATTR);
-  const hadAttr = Boolean(attr);
   const wasDomLocked = isDomScrollLocked();
   if (attr) {
     document.body.removeAttribute(BODY_LOCK_ATTR);
@@ -331,6 +331,7 @@ export function healBodyScrollLockState(_reason?: string): void {
 }
 /** Reset totale — route change, error boundary, stuck probe. */
 export function forceReleaseAllBodyScrollLocks(_reason?: string): void {
+  void _reason;
   if (typeof document === "undefined") return;
   lockEpoch += 1;
   lockStack = [];

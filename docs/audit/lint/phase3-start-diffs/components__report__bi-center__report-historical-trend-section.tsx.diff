@@ -1,0 +1,13 @@
+diff --git a/components/report/bi-center/report-historical-trend-section.tsx b/components/report/bi-center/report-historical-trend-section.tsx
+index 86ad5516..17301d8c 100644
+--- a/components/report/bi-center/report-historical-trend-section.tsx
++++ b/components/report/bi-center/report-historical-trend-section.tsx
+@@ -70,7 +70,7 @@ export function ReportHistoricalTrendContent() {
+       <p className="mb-3 text-xs text-[color:var(--cab-text-muted)]">
+         Periodo toolbar: {toolbarLabel} · Storico: {period.start} → {period.end}
+       </p>
+-      <div className="mb-3 flex flex-wrap items-end gap-3">
++      <div className="mb-3 flex items-end gap-3 flex-nowrap sm:flex-wrap">
+         <label className="flex min-w-0 flex-col gap-1 text-xs text-[color:var(--cab-text-muted)]">
+           Metrica
+           <select

@@ -2,7 +2,7 @@ import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import {
   preventiviAdvancedFiltersActive,
   preventiviRowMatchesAdvancedFilters,
-  preventivoStatoLabel,
+
   type PreventiviAdvancedFilters,
 } from "@/lib/preventivi/preventivi-advanced-filters";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
@@ -33,7 +33,7 @@ export function preventivoRowMatchesPageFilters(
   options?: { skipSearchFilter?: boolean },
 ): boolean {
   if (!options?.skipSearchFilter && !preventivoRowMatchesGlobalSearch(row, filters.search)) return false;
-  const { search: _s, ...advanced } = filters;
+  const { ...advanced } = filters;
   return preventiviRowMatchesAdvancedFilters(row, advanced);
 }
 

@@ -105,6 +105,7 @@ export function CaptureRicambioCodiceField({
             <button
               type="button"
               role="option"
+              aria-selected={false}
               aria-label={s.label}
               className={SUGGEST_ITEM}
               onPointerDown={(e) => e.preventDefault()}
@@ -133,6 +134,7 @@ export function CaptureRicambioCodiceField({
     <div ref={wrapRef} className={`relative min-w-0 max-md:overflow-visible ${className}`}>
       <input
         id={inputId}
+        role="combobox"
         className={`${inputClassName} w-full min-w-0`}
         value={value}
         autoComplete="off"

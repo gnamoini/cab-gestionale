@@ -119,7 +119,7 @@ function normalizeItem(raw: unknown): AdminDashboardNotification | null {
 function parseStoreItems(rawItems: unknown): Record<string, AdminDashboardNotification> {
   if (!rawItems || typeof rawItems !== "object") return {};
   const items: Record<string, AdminDashboardNotification> = {};
-  for (const [key, value] of Object.entries(rawItems as Record<string, unknown>)) {
+  for (const [, value] of Object.entries(rawItems as Record<string, unknown>)) {
     const item = normalizeItem(value);
     if (!item) continue;
     items[notificationStoreKey(item)] = item;

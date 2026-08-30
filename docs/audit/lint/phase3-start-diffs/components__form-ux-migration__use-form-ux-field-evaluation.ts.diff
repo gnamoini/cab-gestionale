@@ -1,0 +1,13 @@
+diff --git a/components/form-ux-migration/use-form-ux-field-evaluation.ts b/components/form-ux-migration/use-form-ux-field-evaluation.ts
+index e51013a7..fabff889 100644
+--- a/components/form-ux-migration/use-form-ux-field-evaluation.ts
++++ b/components/form-ux-migration/use-form-ux-field-evaluation.ts
+@@ -151,7 +151,7 @@ export function useFormUxFieldEvaluation({
+   );
+ 
+   const onBlur = useCallback(
+-    (_e: FocusEvent<HTMLInputElement>) => {
++    () => {
+       if (!evaluationEnabled) return;
+       clearDebounce();
+       executionTokenRef.current = createFormUxExecutionToken(formId, fieldId);

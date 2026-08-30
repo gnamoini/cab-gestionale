@@ -10,6 +10,6 @@ export const FATTURAZIONE_WORKFLOW_ACTIONS = [
 export type FatturazioneWorkflowAction = (typeof FATTURAZIONE_WORKFLOW_ACTIONS)[number];
 
 /** Fase 1: write abilita tutte le azioni operative. */
-export function canFatturazioneWorkflowAction(canWrite: boolean, _action: FatturazioneWorkflowAction): boolean {
+export function canFatturazioneWorkflowAction(canWrite: boolean): boolean {
   return canWrite;
 }

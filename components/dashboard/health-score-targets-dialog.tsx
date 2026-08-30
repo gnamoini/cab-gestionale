@@ -97,6 +97,7 @@ function TargetValueField({
   const [text, setText] = useState(() => String(value));
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setText(String(value));
   }, [value]);
 
@@ -208,6 +209,7 @@ export function HealthScoreTargetsDialog({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void loadConfig();
   }, [loadConfig, open]);
 

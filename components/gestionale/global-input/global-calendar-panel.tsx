@@ -40,6 +40,7 @@ export function GlobalCalendarPanel({
   const [todayYmd, setTodayYmd] = useState("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setMounted(true);
     setTodayYmd(toYmd(new Date()));
   }, []);

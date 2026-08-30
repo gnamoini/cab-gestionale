@@ -1,0 +1,12 @@
+diff --git a/lib/document-capture/extraction/tesseract-ocr.server.ts b/lib/document-capture/extraction/tesseract-ocr.server.ts
+index db4299b7..f6063378 100644
+--- a/lib/document-capture/extraction/tesseract-ocr.server.ts
++++ b/lib/document-capture/extraction/tesseract-ocr.server.ts
+@@ -94,7 +94,6 @@ export async function recognizePngBuffer(
+ 
+ export async function recognizePngBuffersPool(
+   items: Array<{ id: string; png: Buffer; mode?: OcrMode }>,
+-  _concurrency = 1,
+   trace?: AnalyzeTraceEmitter,
+ ): Promise<Map<string, { text: string; confidence: number }>> {
+   const out = new Map<string, { text: string; confidence: number }>();

@@ -185,7 +185,7 @@ export function MezziTagliandiAssignExistingModal({
       titleId={titleId}
       modalSize={isGuided ? "formMedium" : "formSmall"}
       footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
           <button type="button" className={dsBtnNeutral} onClick={onClose} disabled={upsertMut.isPending}>
             Annulla
           </button>

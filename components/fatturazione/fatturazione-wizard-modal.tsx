@@ -97,9 +97,11 @@ export function FatturazioneWizardModal({
   const [note, setNote] = useState("");
   const [statusOut, setStatusOut] = useState<"bozza" | "da_verificare" | "emessa">("bozza");
 
+   
   useEffect(() => {
     if (!editDetail) return;
     const inv = editDetail.invoice;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setOrigine((inv.origine as FatturazioneOrigine | null) ?? "manuale");
     setClienteLabel(inv.cliente_label);
     setCustomerId(inv.customer_id);

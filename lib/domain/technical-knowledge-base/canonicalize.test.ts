@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { canonicalizeDraftBundle, canonicalizeSlug } from "./canonicalize";
+import { canonicalizeSlug } from "./canonicalize";
 import { hashDraftBundle } from "./tkb-snapshot-builder";
 import type { TkbDraftBundle } from "./types";
 

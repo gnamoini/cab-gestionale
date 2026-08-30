@@ -1,0 +1,12 @@
+diff --git a/lib/dashboard/dashboard-widget-registry.ts b/lib/dashboard/dashboard-widget-registry.ts
+index cf4b2f81..d04db833 100644
+--- a/lib/dashboard/dashboard-widget-registry.ts
++++ b/lib/dashboard/dashboard-widget-registry.ts
+@@ -127,6 +127,6 @@ export function groupVisibleWidgetsBySection(
+ }
+ 
+ /** Stato operativo sopra brief operativo (tutti i breakpoint). */
+-export function resolveDashboardSectionOrder(_compactShell?: boolean): readonly DashboardWidgetSection[] {
++export function resolveDashboardSectionOrder(__compactShell?: boolean): readonly DashboardWidgetSection[] {
+   return DASHBOARD_SECTION_ORDER;
+ }

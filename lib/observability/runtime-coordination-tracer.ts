@@ -2,7 +2,7 @@ import { isRuntimeCoordinationTraceEnabled } from "@/lib/observability/config";
 import { getActiveCorrelationId } from "@/lib/observability/runtime-correlation-context";
 import type {
   RuntimeCoordinationEvent,
-  RuntimeCoordinationEventType,
+
   RuntimeTraceFilter,
 } from "@/lib/observability/runtime-coordination-types";
 import { RUNTIME_TRACE_RING_MAX } from "@/lib/observability/runtime-coordination-types";

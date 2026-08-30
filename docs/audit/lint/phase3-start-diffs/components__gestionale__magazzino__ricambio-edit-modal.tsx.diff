@@ -1,0 +1,11 @@
+diff --git a/components/gestionale/magazzino/ricambio-edit-modal.tsx b/components/gestionale/magazzino/ricambio-edit-modal.tsx
+index cedfa2f3..03d29fb3 100644
+--- a/components/gestionale/magazzino/ricambio-edit-modal.tsx
++++ b/components/gestionale/magazzino/ricambio-edit-modal.tsx
+@@ -1,6 +1,5 @@
+ "use client";
+ 
+-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
+ import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
+ import {
+   GestionaleModalFooterActions,

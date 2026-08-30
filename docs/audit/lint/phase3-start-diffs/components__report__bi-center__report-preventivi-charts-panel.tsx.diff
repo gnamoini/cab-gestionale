@@ -1,0 +1,16 @@
+diff --git a/components/report/bi-center/report-preventivi-charts-panel.tsx b/components/report/bi-center/report-preventivi-charts-panel.tsx
+index bea617f0..c9a0eb99 100644
+--- a/components/report/bi-center/report-preventivi-charts-panel.tsx
++++ b/components/report/bi-center/report-preventivi-charts-panel.tsx
+@@ -13,7 +13,10 @@ export function ReportPreventiviChartsPanel() {
+   const { canReadPage, isLoading: rbacLoading } = useRbac();
+   const canPreventivi = canReadPage("preventivi");
+   const preventiviQ = usePreventiviRecordsQuery(canPreventivi);
+-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
++  const preventivi = useMemo(
++    () => (preventiviQ.isError ? [] : preventiviQ.records),
++    [preventiviQ.isError, preventiviQ.records],
++  );
+   const preventiviFailed = canPreventivi && !preventiviQ.isLoading && preventiviQ.isError;
+ 
+   const funnelRows = useMemo(() => buildPreventiviFunnel(preventivi, range), [preventivi, range]);

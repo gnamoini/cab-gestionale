@@ -14,7 +14,7 @@ import {
   mezzoHaLavorazioneAttivaDb,
 } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { filterMezziGestiti } from "@/lib/mezzi/mezzi-list-fetch";
-import { matchSearchStringPreparedFromRaw, matchSearchStringWithPrepared } from "@/lib/search/match";
+import { matchSearchStringPreparedFromRaw } from "@/lib/search/match";
 import { scoreSearchDocumentWithPrepared } from "@/lib/search/rank";
 import {
   buildSearchRelevanceScoreMap,

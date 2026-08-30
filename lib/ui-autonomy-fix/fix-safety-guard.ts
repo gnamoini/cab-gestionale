@@ -57,6 +57,7 @@ export function isElementAllowlisted(el: Element, pageId: string): boolean {
 }
 
 export function wouldAlterDomStructure(_fix: UIFix, _el: Element): boolean {
+  void _el;
   /* Solo add-class ammesso — mai structural actions in questo engine. */
   return _fix.action !== "add-class" &&
     _fix.action !== "fix-flex" &&
@@ -117,5 +118,6 @@ export function validateFixSafety(
 
 /** True se il fix altererebbe la gerarchia (solo class-level = false). */
 export function wouldChangeLayoutHierarchy(_fix: UIFix): boolean {
+  void _fix;
   return false;
 }

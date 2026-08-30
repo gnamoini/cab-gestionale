@@ -11,12 +11,14 @@ export type EmailAttachment = {
 };
 
 export type SendEmailInput = {
-  to: string;
+  to: string | string[];
   subject: string;
   text: string;
   html?: string;
   from?: string;
   replyTo?: string;
+  cc?: string[];
+  bcc?: string[];
   inlineAttachments?: EmailInlineAttachment[];
   attachments?: EmailAttachment[];
 };

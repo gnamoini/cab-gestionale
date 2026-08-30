@@ -24,8 +24,9 @@ const TRUST_LABEL: Record<string, string> = {
 
 export function buildDeterministicAnswer(
   toolResults: AskReportToolResult[],
-  effective: EffectiveAskContext,
+  _effective: EffectiveAskContext,
 ): { answer: string; citations: AskReportCitation[]; followUps: AskReportFollowUp[] } {
+  void _effective;
   const citations = toolResults.flatMap((r) => r.citations);
   const followUps: AskReportFollowUp[] = [];
   const lines: string[] = [];

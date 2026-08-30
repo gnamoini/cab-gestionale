@@ -24,7 +24,10 @@ export function ReportCrossComparativeTrendChart() {
   const invoicesQ = useInvoicesQuery(canFatturazione);
   const timesheet = useReportTimesheetKpi(range);
 
-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
+  const invoices = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
+    [invoicesQ.isError, invoicesQ.invoices],
+  );
 
   useRegisterAnalyticsSection("bi-cross-trend", "cross", {
     metricIds: ["cross_efficiency", "cross_parts_job", "cross_cost_job", "cross_value_hour"],

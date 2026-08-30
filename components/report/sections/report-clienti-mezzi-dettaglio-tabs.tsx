@@ -159,7 +159,7 @@ export function ReportClientiMezziDettaglioTabs({
 
   return (
     <div className="min-w-0">
-      <div className="mb-3 flex flex-wrap gap-1.5" role="tablist">
+      <div className="mb-3 flex gap-1.5 flex-nowrap sm:flex-wrap" role="tablist">
         {tabBtn("mezzi", "Mezzi critici")}
         {tabBtn("clienti", "Clienti")}
       </div>

@@ -67,7 +67,7 @@ export async function handleImportParse(slug: string, body: unknown) {
     const meta = extractWorkbookMeta(bytes, parsed.data.fileName);
     assertBackupImportAllowed(meta, "parse");
     const result = await plugin.parseFile(parsed.data);
-    const { matrix: _m, ...rest } = result;
+    const { ...rest } = result;
     return { ok: true as const, data: rest };
   } catch (e) {
     if (e instanceof ImportValidationError) {

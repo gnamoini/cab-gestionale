@@ -1,0 +1,24 @@
+diff --git a/lib/selector-interaction/use-selector-exclusive-group.ts b/lib/selector-interaction/use-selector-exclusive-group.ts
+index e6a196e3..a99a6727 100644
+--- a/lib/selector-interaction/use-selector-exclusive-group.ts
++++ b/lib/selector-interaction/use-selector-exclusive-group.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useEffect, useRef } from "react";
++import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+ import {
+   closeOtherSelectorsInExclusiveGroup,
+   registerSelectorExclusiveGroup,
+@@ -15,7 +15,10 @@ export function useSelectorExclusiveGroup(
+ ): { notifyOpening: () => void } {
+   const memberIdRef = useRef<symbol>(Symbol("selector-exclusive-group"));
+   const onCloseRef = useRef(onClose);
+-  onCloseRef.current = onClose;
++
++  useLayoutEffect(() => {
++    onCloseRef.current = onClose;
++  }, [onClose]);
+ 
+   useEffect(() => {
+     if (!groupId) return;

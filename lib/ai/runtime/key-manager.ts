@@ -1,4 +1,5 @@
 import type { AiKeyStatus, ResolvedAiKey } from "@/lib/ai/runtime/types";
+import { AiRuntimeError, aiErrorMessage } from "@/lib/ai/runtime/errors";
 
 function isKeySelectable(key: ResolvedAiKey, now = Date.now()): boolean {
   if (key.status === "invalid" || key.status === "disabled") return false;
@@ -30,6 +31,43 @@ export function selectBestKey(keys: readonly ResolvedAiKey[]): ResolvedAiKey | n
     const bUsed = b.lastUsedAt?.getTime() ?? 0;
     return aUsed - bUsed;
   })[0]!;
+}
+
+/** Keys loaded but none selectable (cooldown / disabled) — not the same as missing config. */
+export function buildNoSelectableKeyError(keys: readonly ResolvedAiKey[]): AiRuntimeError {
+  if (keys.length === 0) {
+    return new AiRuntimeError("AI_CONFIG_MISSING", aiErrorMessage("AI_CONFIG_MISSING"));
+  }
+
+  const now = Date.now();
+  const futureCooldowns = keys
+    .map((k) => k.cooldownUntil?.getTime())
+    .filter((t): t is number => t != null && t > now);
+  const retryAfterSec =
+    futureCooldowns.length > 0
+      ? Math.max(1, Math.ceil((Math.min(...futureCooldowns) - now) / 1000))
+      : undefined;
+
+  const allCooldown = keys.every((k) => k.status === "cooldown" || k.status === "rate_limited");
+  if (allCooldown) {
+    const minutes = retryAfterSec != null ? Math.max(1, Math.ceil(retryAfterSec / 60)) : null;
+    const suffix =
+      minutes != null ? ` Riprova tra circa ${minutes} min.` : " Attendi qualche minuto e riprova.";
+    return new AiRuntimeError(
+      "AI_QUOTA_EXCEEDED",
+      `${aiErrorMessage("AI_QUOTA_EXCEEDED")}${suffix}`,
+      { retryAfterSec },
+    );
+  }
+
+  if (keys.every((k) => k.status === "invalid" || k.status === "disabled")) {
+    return new AiRuntimeError(
+      "AI_KEY_INVALID",
+      "Tutte le chiavi API AI sono disabilitate o non valide. Verifica Impostazioni → AI Providers.",
+    );
+  }
+
+  return new AiRuntimeError("AI_RATE_LIMIT", aiErrorMessage("AI_RATE_LIMIT"), { retryAfterSec });
 }
 
 export function orderKeysForFailover(keys: readonly ResolvedAiKey[], first: ResolvedAiKey): ResolvedAiKey[] {

@@ -74,7 +74,7 @@ export function ClientLavorazioneIngressoDialog({
   const bundle = useMemo(() => getOrCreateBundle(schedeStore, row.id), [schedeStore, row.id]);
   const fields = useMemo(
     () => resolveClientPortalSchedaIngressoFields(row, schedeStore, addettiGlobali, addettiRecords),
-    [bundle.ingresso?.campi, row, schedeStore, addettiGlobali, addettiRecords],
+    [row, schedeStore, addettiGlobali, addettiRecords],
   );
 
   if (!open) return null;

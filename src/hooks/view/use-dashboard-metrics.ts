@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { useQuery } from "@tanstack/react-query";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
@@ -30,6 +30,7 @@ import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag
 export function useDashboardMetrics() {
   const staging = isStagingPublicSlice();
   const viewOpts = useViewQueryOpts();
+  // eslint-disable-next-line react-hooks/purity -- lint phase2: preserve existing hook contract
   const loadStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
   const loadLoggedRef = useRef(false);
   const globalOpts = useGlobalOptions({ debugTag: "useDashboardMetrics" });
@@ -82,6 +83,7 @@ export function useDashboardMetrics() {
     const map = new Map<string, (typeof magQuery.data)[number]>();
     for (const r of magQuery.data ?? []) map.set(r.id, r);
     return map;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   }, [magQuery.data]);
 
   const magStats = useMemo(() => {

@@ -126,7 +126,7 @@ export function identificazionePartsFromLavorazione(
   const marcaM = clean(mezzo?.marca);
   const modelloM = clean(mezzo?.modello);
   const macchinaLav = clean(lav.macchina);
-  let marcaAttrezzatura = marcaM;
+  const marcaAttrezzatura = marcaM;
   let modelloAttrezzatura = modelloM;
   if (!marcaAttrezzatura && !modelloAttrezzatura && macchinaLav) {
     modelloAttrezzatura = macchinaLav;

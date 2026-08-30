@@ -9,7 +9,6 @@ export function buildInventoryBulkPdfUrl(
   const params = new URLSearchParams({
     format: "pdf",
     preset,
-    includeBarcode: "false",
     clienteLabel: clienteLabel ? "true" : "false",
   });
   for (const item of items) {

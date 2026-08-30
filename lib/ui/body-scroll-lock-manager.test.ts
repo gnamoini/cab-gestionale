@@ -50,7 +50,7 @@ function mountShellDom(gutter: "auto" | "stable" = "auto") {
   const main = document.querySelector("main.gestionale-scroll-y") as HTMLElement;
   assert.ok(main);
 
-  let clientWidth = 385;
+  const clientWidth = 385;
   Object.defineProperty(main, "offsetWidth", { get: () => 400, configurable: true });
   Object.defineProperty(main, "clientWidth", {
     get: () => (main.style.overflow === "hidden" ? 400 : clientWidth),

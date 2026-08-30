@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/global-input/global-calendar-panel.tsx b/components/gestionale/global-input/global-calendar-panel.tsx
+index c128a0a6..9585d0fe 100644
+--- a/components/gestionale/global-input/global-calendar-panel.tsx
++++ b/components/gestionale/global-input/global-calendar-panel.tsx
+@@ -40,6 +40,7 @@ export function GlobalCalendarPanel({
+   const [todayYmd, setTodayYmd] = useState("");
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setMounted(true);
+     setTodayYmd(toYmd(new Date()));
+   }, []);

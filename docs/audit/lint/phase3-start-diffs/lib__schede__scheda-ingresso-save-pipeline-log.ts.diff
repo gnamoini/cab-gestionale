@@ -1,0 +1,22 @@
+diff --git a/lib/schede/scheda-ingresso-save-pipeline-log.ts b/lib/schede/scheda-ingresso-save-pipeline-log.ts
+index a14e0656..8dfdba61 100644
+--- a/lib/schede/scheda-ingresso-save-pipeline-log.ts
++++ b/lib/schede/scheda-ingresso-save-pipeline-log.ts
+@@ -81,7 +81,7 @@ export function logIngressoSavePipeline(
+   }
+ 
+   if (DEBUG) {
+-    // eslint-disable-next-line no-console -- opt-in debug flag
++     
+     console.debug("[ingresso-save-pipeline]", alias, {
+       event,
+       timestamp,
+@@ -99,7 +99,7 @@ export function reportInvalidateFailure(err: unknown): void {
+     error: err instanceof Error ? err.message : String(err),
+   });
+   if (process.env.NODE_ENV === "development") {
+-    // eslint-disable-next-line no-console -- dev-only invalidate failure
++     
+     console.warn("[ingresso-save-pipeline] SAVE_INVALIDATE failed", err);
+   }
+ }

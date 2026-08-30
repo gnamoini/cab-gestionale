@@ -1,0 +1,12 @@
+diff --git a/lib/ui-os/ui-render-decision.ts b/lib/ui-os/ui-render-decision.ts
+index e15017c2..0f632eaa 100644
+--- a/lib/ui-os/ui-render-decision.ts
++++ b/lib/ui-os/ui-render-decision.ts
+@@ -56,7 +56,6 @@ export function evaluateRenderDecision(input: {
+ }): UIOsRenderDecision {
+   const { pageId, schema, mode, root = null } = input;
+   const effectiveMode = mode ?? getPageUIMode(pageId);
+-  const suggestedSchema = schema ?? { toolbar: "legacy", table: "legacy", layout: "legacy" };
+   const shadowReport = buildShadowReport(pageId, root ?? null);
+   const matchScore = schemaMatchScore(shadowReport.detectedSchema, shadowReport.suggestedSchema);
+   const pipelineErrors: string[] = [];

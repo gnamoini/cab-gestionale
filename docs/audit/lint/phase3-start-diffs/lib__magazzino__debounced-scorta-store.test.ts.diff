@@ -1,0 +1,13 @@
+diff --git a/lib/magazzino/debounced-scorta-store.test.ts b/lib/magazzino/debounced-scorta-store.test.ts
+index 3c877e52..4d9b5670 100644
+--- a/lib/magazzino/debounced-scorta-store.test.ts
++++ b/lib/magazzino/debounced-scorta-store.test.ts
+@@ -5,7 +5,7 @@ import {
+   acquireDebouncedScortaSubscriber,
+   clearDebouncedScortaStoreForTest,
+   commitDebouncedScortaNow,
+-  DEBOUNCED_SCORTA_MS,
++
+   decrementDebouncedScorta,
+   incrementDebouncedScorta,
+   getDebouncedScortaSnapshot,

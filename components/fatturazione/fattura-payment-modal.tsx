@@ -43,7 +43,9 @@ export function FatturaPaymentModal({
   const [riferimento, setRiferimento] = useState("");
   const [note, setNote] = useState("");
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setImporto(String(invoice.residuo));
   }, [invoice.id, invoice.residuo]);
 

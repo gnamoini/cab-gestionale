@@ -1,0 +1,12 @@
+diff --git a/lib/regression/report-p5-ui-no-formulas.test.ts b/lib/regression/report-p5-ui-no-formulas.test.ts
+index ca61e930..497fdbd8 100644
+--- a/lib/regression/report-p5-ui-no-formulas.test.ts
++++ b/lib/regression/report-p5-ui-no-formulas.test.ts
+@@ -4,7 +4,6 @@ import { join } from "node:path";
+ 
+ const ROOT = join(process.cwd());
+ const BI = join(ROOT, "components/report/bi-center");
+-const OP = join(BI, "operational");
+ 
+ const FORBIDDEN = ["buildInvoicePeriodKpiExtended", "countCompletedInRange", 'from("invoices")', "supabase"];
+ 

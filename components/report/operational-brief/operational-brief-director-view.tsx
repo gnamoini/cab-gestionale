@@ -33,7 +33,7 @@ export function OperationalBriefDirectorView({ brief }: { brief: OperationalBrie
         <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Brief operativo · {brief.period.label}
         </p>
-        <div className="mt-2 flex min-w-0 flex-wrap items-end justify-between gap-3">
+        <div className="mt-2 flex min-w-0 items-end justify-between gap-3 flex-nowrap sm:flex-wrap">
           <div>
             <p className={`text-lg font-semibold ${STATUS_CLASS[brief.executiveSummary.status]}`}>
               {STATUS_LABEL[brief.executiveSummary.status]}

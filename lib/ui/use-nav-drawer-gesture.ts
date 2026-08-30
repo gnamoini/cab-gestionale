@@ -124,14 +124,21 @@ export function useNavDrawerGesture({
   const drawerStateRef = useRef(drawerState);
   const canEdgeSwipeRef = useRef(canEdgeSwipe);
   const canDismissRef = useRef(canDismiss);
-  drawerStateRef.current = drawerState;
-  canEdgeSwipeRef.current = canEdgeSwipe;
-  canDismissRef.current = canDismiss;
+
+  useLayoutEffect(() => {
+    drawerStateRef.current = drawerState;
+    canEdgeSwipeRef.current = canEdgeSwipe;
+    canDismissRef.current = canDismiss;
+  }, [drawerState, canEdgeSwipe, canDismiss]);
 
   const [gestureActive, setGestureActive] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
   const snapTargetRef = useRef<"edge-cancel" | "dismiss-commit" | "dismiss-cancel" | null>(null);
+  const [snapTarget, setSnapTarget] = useState<"edge-cancel" | "dismiss-commit" | "dismiss-cancel" | null>(
+    null,
+  );
+  const [snapPanelWidth, setSnapPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
 
   const getPanelWidth = useCallback(() => {
     return panelRef.current?.offsetWidth ?? panelWidthProp ?? DEFAULT_PANEL_WIDTH;
@@ -221,6 +228,7 @@ export function useNavDrawerGesture({
     setIsDragging(false);
     setIsSnapping(false);
     snapTargetRef.current = null;
+    setSnapTarget(null);
     clearCompositorStyles(panelRef.current, backdropRef.current);
   }, [clearIdleTimer, releasePointer]);
 
@@ -267,7 +275,9 @@ export function useNavDrawerGesture({
         pointerDownInEdgeZone: false,
       };
       setIsDragging(false);
+      setSnapPanelWidth(panelWidthGestureRef.current);
       snapTargetRef.current = target;
+      setSnapTarget(target);
       setIsSnapping(true);
     },
     [releasePointer],
@@ -305,7 +315,6 @@ export function useNavDrawerGesture({
   const abortGesture = useCallback(() => {
     if (!gestureActiveRef.current) return;
     const kind = dragRef.current.kind;
-    const width = panelWidthGestureRef.current;
     const currentX = dragRef.current.lastDeltaX;
     clearIdleTimer();
 
@@ -559,7 +568,9 @@ export function useNavDrawerGesture({
         if (shouldCommitGesture(-currentX, width, velocity, "close") && currentX > -width * 0.3) {
           recordDrawerTelemetry("drawer_velocity_commit", { dir: "close" });
         }
+        setSnapPanelWidth(width);
         snapTargetRef.current = "dismiss-commit";
+        setSnapTarget("dismiss-commit");
         setIsSnapping(true);
         setIsDragging(false);
         if (reducedMotion) {
@@ -710,7 +721,7 @@ export function useNavDrawerGesture({
     return () => document.body.removeEventListener("lostpointercapture", onLostPointerCapture);
   }, [abortGesture, gestureActive]);
 
-  const isEdgeOpening = gestureActive || (isSnapping && snapTargetRef.current === "edge-cancel");
+  const isEdgeOpening = gestureActive || (isSnapping && snapTarget === "edge-cancel");
 
   const panelClassName = isDragging
     ? `cab-nav-drawer-dragging${isEdgeOpening ? " cab-nav-drawer-edge-opening" : ""}`
@@ -719,10 +730,10 @@ export function useNavDrawerGesture({
       : undefined;
 
   const panelStyle: CSSProperties | undefined =
-    isSnapping && snapTargetRef.current === "edge-cancel"
-      ? { transform: panelTransformOpen(0, panelWidthGestureRef.current) }
-      : isSnapping && snapTargetRef.current === "dismiss-commit"
-        ? { transform: panelTransformClose(-panelWidthGestureRef.current) }
+    isSnapping && snapTarget === "edge-cancel"
+      ? { transform: panelTransformOpen(0, snapPanelWidth) }
+      : isSnapping && snapTarget === "dismiss-commit"
+        ? { transform: panelTransformClose(-snapPanelWidth) }
         : undefined;
 
   return {

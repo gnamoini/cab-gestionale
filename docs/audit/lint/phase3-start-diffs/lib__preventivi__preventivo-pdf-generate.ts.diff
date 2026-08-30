@@ -1,0 +1,13 @@
+diff --git a/lib/preventivi/preventivo-pdf-generate.ts b/lib/preventivi/preventivo-pdf-generate.ts
+index 2c0d3b61..039f84e0 100644
+--- a/lib/preventivi/preventivo-pdf-generate.ts
++++ b/lib/preventivi/preventivo-pdf-generate.ts
+@@ -35,7 +35,7 @@ export function generatePreventivoPdfBytes(
+   });
+   y = pdfAdvanceAfterDocumentHeader(y, 0.5);
+ 
+-  y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
++  _y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
+     totaleRicambi: p.totaleRicambi,
+     totaleManodopera: p.totaleManodopera,
+     totaleSmaltimento: p.totaleSmaltimento ?? 0,

@@ -1,0 +1,45 @@
+diff --git a/lib/regression/smoke-regression-lists.ts b/lib/regression/smoke-regression-lists.ts
+index cb002f6d..4648213f 100644
+--- a/lib/regression/smoke-regression-lists.ts
++++ b/lib/regression/smoke-regression-lists.ts
+@@ -39,6 +39,7 @@ export const REGRESSION_CORE: readonly string[] = [
+   "lib/regression/report-kpi-bundle.test.ts",
+   "lib/report/report-kpi-catalog.test.ts",
+   "lib/report/report-domain-analytics.test.ts",
++  "lib/report/hub/build-hub-summary.test.ts",
+   "lib/regression/report-data-patterns-audit.test.ts",
+   "lib/report/metrics/report-metric-registry.test.ts",
+   "lib/report/kpi-series/capability-matrix.test.ts",
+@@ -165,6 +166,16 @@ export const REGRESSION_CORE: readonly string[] = [
+   "lib/regression/dashboard-promemoria-rbac.test.ts",
+   "lib/regression/dashboard-promemoria-soft-delete-rpc.test.ts",
+   "lib/magazzino/ricambio-stock-crossing.test.ts",
++  "lib/regression/stock-apply-movement-signature.test.ts",
++  "lib/regression/stock-writer-matrix.test.ts",
++  "lib/regression/magazzino-stock-audit-payload.test.ts",
++  "lib/regression/spare-parts-policy.test.ts",
++  "lib/regression/spare-parts-searchable-ready.test.ts",
++  "lib/regression/catalog-exact-match.test.ts",
++  "lib/regression/finalize-quality-gate.test.ts",
++  "lib/regression/identifica-ricambio-policy.test.ts",
++  "lib/regression/page-metadata-policy.test.ts",
++  "lib/regression/gestionale-sync-scope-coverage.test.ts",
+   "lib/magazzino/magazzino-meta.test.ts",
+   "lib/inventory-labels/domain/tokens.test.ts",
+   "lib/core/site-origin.test.ts",
+@@ -370,7 +381,6 @@ export const REGRESSION_EXTENDED: readonly string[] = [
+   "lib/regression/page-layout-suspense-policy.test.ts",
+   "lib/regression/loading-transition-fallback-policy.test.ts",
+   "lib/regression/dead-code-audit-policy.test.ts",
+-  "lib/regression/boot-investigation-policy.test.ts",
+   "lib/regression/layout-signature.test.ts",
+   "lib/regression/layout-score.test.ts",
+   "lib/regression/visual-layout-linter.test.ts",
+@@ -462,6 +472,7 @@ export const REGRESSION_EXTENDED: readonly string[] = [
+   "lib/regression/mobile-nav-drawer-policy.test.ts",
+   "lib/ui/nav-drawer-gesture.test.ts",
+   "lib/ui/use-nav-drawer-gesture.test.ts",
++  "lib/regression/numeric-input-anti-patterns.test.ts",
+   ...PERFORMANCE_GOVERNANCE_SUITE,
+ ] as const;
+ 

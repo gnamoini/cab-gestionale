@@ -20,7 +20,6 @@ function loadJson(rel) {
 function main() {
   mkdirSync(TRENDS, { recursive: true });
   const build = loadJson("test-results/build-budget-snapshot.json");
-  const snapshot = loadJson("test-results/performance-snapshot.json");
   const diff = loadJson("test-results/performance-regression-diff.json");
   const lighthouse = loadJson("test-results/lighthouse-snapshot.json");
 

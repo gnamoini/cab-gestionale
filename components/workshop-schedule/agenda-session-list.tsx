@@ -57,6 +57,7 @@ export function AgendaSessionList({
   const sorted = useMemo(() => sortAgendaSessions(sessions), [sessions]);
   const scrollRef = useRef<HTMLUListElement>(null);
   const useVirtual = scrollable && sorted.length >= AGENDA_LIST_VIRTUAL_THRESHOLD;
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
   const virtualizer = useVirtualizer({
     count: useVirtual ? sorted.length : 0,
     getScrollElement: () => scrollRef.current,

@@ -9,7 +9,7 @@ import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
 import { resolveReportV2DatasetsEnabled } from "@/lib/feature-flags/report-v2-flag";
 import { buildDatasetPayload, getDatasetPolicy } from "@/lib/report/datasets/build-dataset-payload";
 import type { ReportDatasetSlices } from "@/lib/report/datasets/builders/shared";
-import { defaultRequestedPeriod, resolveDatasetDateRanges } from "@/lib/report/datasets/period";
+import { resolveDatasetDateRanges } from "@/lib/report/datasets/period";
 import { checkDatasetAccess, type ReportDatasetId } from "@/lib/report/datasets/registry";
 import { buildIntegrityFromReportDto } from "@/lib/report/datasets/server/integrity-from-bundle";
 import { buildReportRangeKey } from "@/lib/report/report-domain-types";

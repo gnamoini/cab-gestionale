@@ -45,7 +45,7 @@ async function canUsePdfPreview(): Promise<boolean> {
 
   const snap = await resolveServerEffectivePermissions();
   if (!snap?.resolved) return false;
-  // can_read_operational: almeno una pagina operativa leggibile (fail-closed altrimenti).
+  // Operational read access: at least one operational page readable (fail-closed otherwise).
   return (
     canReadPage(snap.resolved, "lavorazioni") ||
     canReadPage(snap.resolved, "dashboard") ||

@@ -153,7 +153,7 @@ export function FatturazioneDetailDrawer({
 
   const body = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <div>
           <h3 className="text-lg font-semibold text-[color:var(--cab-text)]">{invoiceDisplayNumber(inv)}</h3>
           <p className="text-sm text-[color:var(--cab-text-muted)]">{inv.cliente_label}</p>
@@ -221,7 +221,7 @@ export function FatturazioneDetailDrawer({
         <p className="mb-2 text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Timeline</p>
         <InvoiceTimeline invoiceId={inv.id} />
       </div>
-      <div className="mt-auto flex flex-wrap gap-2 border-t border-[color:var(--cab-border)] pt-3">
+      <div className="mt-auto flex gap-2 border-t border-[color:var(--cab-border)] pt-3 min-w-0 flex-nowrap sm:flex-wrap">
         {isDraft && canWrite && onEditDraft ? (
           <button type="button" className={dsBtnNeutralForm} onClick={onEditDraft}>
             Modifica bozza

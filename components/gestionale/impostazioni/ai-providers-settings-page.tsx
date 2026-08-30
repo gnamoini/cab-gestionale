@@ -92,6 +92,7 @@ export function AiProvidersSettingsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void load();
   }, [load]);
 
@@ -186,7 +187,7 @@ export function AiProvidersSettingsPage() {
         title="AI Providers"
         description="Gestione chiavi API, health e priorità — senza redeploy Vercel."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <Link href="/impostazioni" className={erpBtnNeutral}>
               Impostazioni
             </Link>
@@ -207,8 +208,8 @@ export function AiProvidersSettingsPage() {
         <ul className="space-y-3">
           {googleKeys.map((k) => (
             <li key={k.id} className="rounded-lg border border-[color:var(--cab-border)] p-3 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+                <div className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                   <span
                     className={`rounded px-2 py-0.5 text-xs font-medium ${statusBadgeClass(k.status, k.enabled)}`}
                   >
@@ -217,7 +218,7 @@ export function AiProvidersSettingsPage() {
                   <strong>{k.slot}</strong>
                   <span className="text-[color:var(--cab-text-muted)]">({k.fingerprint})</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                   <button type="button" className={erpBtnNeutral} onClick={() => void testKey(k.id)}>
                     Test
                   </button>

@@ -115,21 +115,14 @@ function toBuckets(fragments: StoredFragment[]): EntityBucket {
   };
 
   const stored = new Map<string, StoredFragment>();
-  let duplicatesFound = 0;
-  let conflictsResolved = 0;
-  let performed = 0;
-  let added = 0;
-  let updated = 0;
 
   for (const frag of fragments) {
     const key = bucketKey(frag.entityKind, frag.entityKey);
     const existing = stored.get(key);
     if (!existing) {
       stored.set(key, frag);
-      added++;
       continue;
     }
-    duplicatesFound++;
     const win =
       frag.precedence > existing.precedence
         ? frag
@@ -138,10 +131,7 @@ function toBuckets(fragments: StoredFragment[]): EntityBucket {
           : (frag.updatedAt ?? "") >= (existing.updatedAt ?? "")
             ? frag
             : existing;
-    if (win !== existing) conflictsResolved++;
     stored.set(key, win);
-    updated++;
-    performed++;
   }
 
   for (const frag of stored.values()) {

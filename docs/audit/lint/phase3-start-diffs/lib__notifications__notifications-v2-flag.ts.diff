@@ -1,0 +1,13 @@
+diff --git a/lib/notifications/notifications-v2-flag.ts b/lib/notifications/notifications-v2-flag.ts
+index 7a240b90..153813bd 100644
+--- a/lib/notifications/notifications-v2-flag.ts
++++ b/lib/notifications/notifications-v2-flag.ts
+@@ -42,7 +42,7 @@ export function notificationsV2ReadsDb(mode: NotificationsV2Mode): boolean {
+   return true;
+ }
+ 
+-export function notificationsV2WritesLegacy(_mode: NotificationsV2Mode): boolean {
++export function notificationsV2WritesLegacy(): boolean {
+   return false;
+ }
+ 

@@ -136,8 +136,9 @@ function schedaIngressoSnapshotFromInputs(
 function detectIdentMismatch(
   scheda: SchedaIngressoSnapshot,
   mezzo: MezzoSnapshot,
-  ident: InterventoIdent,
+  _ident: InterventoIdent,
 ): boolean {
+  void _ident;
   if (!scheda.present || !mezzo.present || !scheda.campi) return false;
   const fromScheda: InterventoIdent = {
     targa: scheda.campi.targa,

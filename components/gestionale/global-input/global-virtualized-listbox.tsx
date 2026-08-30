@@ -54,6 +54,7 @@ export function GlobalVirtualizedListbox({
   const useVirtual = rowCount > GLOBAL_LISTBOX_VIRTUALIZE_THRESHOLD;
   const [externalMeasureReady, setExternalMeasureReady] = useState(!hostIsExternal);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollRef.current,

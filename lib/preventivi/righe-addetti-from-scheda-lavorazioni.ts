@@ -28,7 +28,7 @@ export function righeAddettiFromSchedaLavorazioni(
       (typeof (raw as { addetto?: string }).addetto === "string" ||
         typeof (raw as { oreImpiegate?: number }).oreImpiegate === "number")
         ? (() => {
-            const { addettiAssegnati: _drop, ...rest } = raw as Record<string, unknown>;
+            const { ...rest } = raw as Record<string, unknown>;
             return rest;
           })()
         : raw;

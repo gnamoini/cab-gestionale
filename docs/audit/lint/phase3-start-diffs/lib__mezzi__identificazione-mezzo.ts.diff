@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/identificazione-mezzo.ts b/lib/mezzi/identificazione-mezzo.ts
+index 60b63dcd..c15c3664 100644
+--- a/lib/mezzi/identificazione-mezzo.ts
++++ b/lib/mezzi/identificazione-mezzo.ts
+@@ -126,7 +126,7 @@ export function identificazionePartsFromLavorazione(
+   const marcaM = clean(mezzo?.marca);
+   const modelloM = clean(mezzo?.modello);
+   const macchinaLav = clean(lav.macchina);
+-  let marcaAttrezzatura = marcaM;
++  const marcaAttrezzatura = marcaM;
+   let modelloAttrezzatura = modelloM;
+   if (!marcaAttrezzatura && !modelloAttrezzatura && macchinaLav) {
+     modelloAttrezzatura = macchinaLav;

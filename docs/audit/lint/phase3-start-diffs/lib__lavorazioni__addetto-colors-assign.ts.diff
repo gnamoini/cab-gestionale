@@ -1,0 +1,32 @@
+diff --git a/lib/lavorazioni/addetto-colors-assign.ts b/lib/lavorazioni/addetto-colors-assign.ts
+index 04200a17..0feaf1a4 100644
+--- a/lib/lavorazioni/addetto-colors-assign.ts
++++ b/lib/lavorazioni/addetto-colors-assign.ts
+@@ -199,7 +199,8 @@ export function removeAddettoFromColorMapById(
+   record: Pick<AddettoRecord, "id" | "colorKey">,
+ ): Record<string, string> {
+   const key = addettoColorKey(record);
+-  const { [key]: _, ...rest } = prev;
++  const rest = { ...prev };
++  delete rest[key];
+   return rest;
+ }
+ 
+@@ -225,13 +226,15 @@ export function renameAddettoInColorMap(
+   nextName: string,
+ ): Record<string, string> {
+   const col = normalizeHex(prev[previousName]);
+-  const { [previousName]: _, ...rest } = prev;
++  const rest = { ...prev };
++  delete rest[previousName];
+   if (col) return { ...rest, [nextName]: col };
+   const used = usedHexSet(rest);
+   return { ...rest, [nextName]: nextUniqueAddettoColor(used, nextName.length * 999983) };
+ }
+ 
+ export function removeAddettoFromColorMap(prev: Record<string, string>, name: string): Record<string, string> {
+-  const { [name]: _, ...rest } = prev;
++  const rest = { ...prev };
++  delete rest[name];
+   return rest;
+ }

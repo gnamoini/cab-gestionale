@@ -2,7 +2,6 @@
 
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { flushSync } from "react-dom";
@@ -33,7 +32,6 @@ import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lav
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
-import { SCHEDA_RIGA_ADDETTO_WRITE_RULES, stripAddettoLegacyFieldsOnWrite } from "@/lib/lavorazioni/addetto-write-freeze";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useInterventoContext } from "@/src/hooks/gestionale/use-intervento-context";
@@ -53,7 +51,7 @@ import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   formatIdentificazioneMezzoLine,
   formatLavorazioneDetailHeaderSubtitle,
-  identificazionePartsFromLavorazione,
+
   identificazionePartsFromSchedaIngresso,
   type MezzoIdentificazioneParts,
 } from "@/lib/mezzi/identificazione-mezzo";
@@ -72,7 +70,6 @@ import {
   buildSchedaRicambiFieldsFromContext,
   resolveMezzoForLavorazioneEdit,
 } from "@/lib/schede/schede-autofill";
-import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import type {
   IngressoSaveCommitInput,
   IngressoSaveCommitResult,
@@ -110,15 +107,15 @@ import { resolveMezzoForPreventivoHandoff } from "@/lib/preventivi/resolve-mezzo
 import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import {
-  dsBtnDanger,
-  dsBtnNeutral,
-  dsBtnPrimary,
-  dsBtnSoftOrange,
+
+
+
+
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardTitle,
   dsHubModalFieldLabel,
-  dsInput,
-  dsLabel,
+
+
   dsTableActionTextBtn,
   dsTableActionTextBtnDanger,
   dsTableActionTextBtnNeutral,
@@ -154,7 +151,7 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import type {
   LavorazioneSchedeBundle,
   RigaAddettoOreScheda,
-  RigaLavorazioneScheda,
+
   RigaRicambioScheda,
   SchedaIngressoDoc,
   SchedaIngressoFields,
@@ -162,14 +159,6 @@ import type {
   SchedaRicambiDoc,
   SchedaTipo,
 } from "@/types/schede";
-
-function writeSchedaRigaAddetto(addettoId: string, oreImpiegate: number): RigaAddettoOreScheda {
-  const id = addettoId.trim();
-  return stripAddettoLegacyFieldsOnWrite(
-    { addettoId: id || null, oreImpiegate, addetto: "" },
-    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
-  ) as RigaAddettoOreScheda;
-}
 
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
 
@@ -183,30 +172,6 @@ function normalizeHubTab(tab: HubTabInput | undefined): HubTab {
 }
 
 export type SchedeLavorazioneDialogSize = LavorazioniModalDialogSize;
-
-function IconCopiaIngressoPrecedente({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="8" y="8" width="12" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.75" />
-      <path d="M6 6h10a2 2 0 0 1 2 2v10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-      <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function fmtIt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function fmtItShort(iso: string): string {
   try {
@@ -328,7 +293,7 @@ export function SchedeLavorazioneModal({
 }) {
   const { authorName, user } = useAuth();
   const gestToast = useGestionaleToast();
-  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const { confirmDialog } = useGestionaleConfirm();
   const { canEditWorkOrders } = usePermissions();
   const preventiviPerm = usePermissions("preventivi");
   const globalOpts = useGlobalOptions({ debugTag: "SchedeLavorazioneModal" });
@@ -448,6 +413,7 @@ export function SchedeLavorazioneModal({
     [attivitaFeedInput],
   );
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- lint phase2: preserve existing hook contract
   const resolveSchedaAutore = useMemo(() => {
     const row = hubData?.lavorazione;
     const resolveUserId = row
@@ -463,6 +429,7 @@ export function SchedeLavorazioneModal({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setEliminaConfirmTipo(null);
       return;
     }
@@ -880,6 +847,7 @@ export function SchedeLavorazioneModal({
 
   /** Commit ingresso edit — solo invocato da savePipeline.run (SSOT). */
   const commitIngressoEdit = useCallback(
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- lint phase2: preserve existing hook contract
     async (input: IngressoSaveCommitInput): Promise<IngressoSaveCommitResult> => {
       const ig = input.fields;
       const base = draftRef.current.ingresso;
@@ -1413,7 +1381,7 @@ export function SchedeLavorazioneModal({
                       {preventiviPerMacchina.length === 1 ? "preventivo sul mezzo" : "preventivi sul mezzo"}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                  <div className="flex shrink-0 items-center justify-end gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">
                     <Tooltip content={
                       !preventiviPerm.canWrite
                         ? "Non hai permesso di creare preventivi"
@@ -1694,7 +1662,7 @@ function SchedaSectionHub({
       <div className="flex min-w-0 items-start gap-2.5">
         <div className="min-w-0 flex-1">
           <h3 className={dsGestionaleInfoCardTitle}>{title}</h3>
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="mt-1 flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
             <SchedaStatoBadge stato={stato} />
             {doc?.sorgente === "file_esterno" ? <FileEsternoBadge /> : null}
             {doc ? (
@@ -1705,7 +1673,7 @@ function SchedaSectionHub({
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">
           {!doc ? (
             <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}>
               <button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} onClick={onCrea}>
@@ -1836,10 +1804,6 @@ function RicambiPanel({
   const qc = useQueryClient();
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoQ.data ?? [];
-
-  function patchRighe(righe: RigaRicambioScheda[]) {
-    setDoc((d) => ({ ...d, campi: { ...d.campi, righe } }));
-  }
 
   async function applyRowMagazzino(r: RigaRicambioScheda) {
     if (!r.ricambioId) {

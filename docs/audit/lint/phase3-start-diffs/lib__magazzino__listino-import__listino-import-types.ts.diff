@@ -1,0 +1,35 @@
+diff --git a/lib/magazzino/listino-import/listino-import-types.ts b/lib/magazzino/listino-import/listino-import-types.ts
+index 284e99d9..2f5e35d1 100644
+--- a/lib/magazzino/listino-import/listino-import-types.ts
++++ b/lib/magazzino/listino-import/listino-import-types.ts
+@@ -82,21 +82,25 @@ export const LISTINO_IMPORT_EXECUTE_CHUNK = 50;
+ export const LISTINO_IMPORT_DELETE_IN_CHUNK = 80;
+ 
+ /** PDF listino: pagine per blocco Gemini (listini multipagina). */
+-export const LISTINO_PDF_PAGES_PER_CHUNK = 5;
++export const LISTINO_PDF_PAGES_PER_CHUNK = 12;
+ /** PDF ≤ N pagine: una sola chiamata Gemini. */
+-export const LISTINO_PDF_SINGLE_CALL_MAX_PAGES = 8;
++export const LISTINO_PDF_SINGLE_CALL_MAX_PAGES = 16;
+ /** Chiamate Gemini parallele max per listino PDF (1 = sequenziale, evita 429). */
+ export const LISTINO_PDF_CHUNK_CONCURRENCY = 1;
+ /** Pausa tra un blocco e il successivo (ms). */
+-export const LISTINO_PDF_CHUNK_DELAY_MS = 2_000;
++export const LISTINO_PDF_CHUNK_DELAY_MS = 5_000;
+ /** Limite sicurezza blocchi (oltre → errore esplicito). */
+ export const LISTINO_PDF_MAX_CHUNKS = 40;
+ /** Blocchi max stimati nel budget route sequenziale (~600s / ~60s per blocco). */
+ export const LISTINO_PDF_BUDGET_WAVES = 10;
+ 
+ /** Pagine per blocco in base al totale — meno chiamate su PDF lunghi. */
+-export function resolveListinoPdfPagesPerChunk(pageCount: number): number {
++export function resolveListinoPdfPagesPerChunk(
++  pageCount: number,
++  options?: { pagesPerChunkMin?: number },
++): number {
++  const minChunk = options?.pagesPerChunkMin ?? LISTINO_PDF_PAGES_PER_CHUNK;
+   if (pageCount <= LISTINO_PDF_SINGLE_CALL_MAX_PAGES) return pageCount;
+   const targetChunks = Math.min(LISTINO_PDF_MAX_CHUNKS, LISTINO_PDF_BUDGET_WAVES);
+-  return Math.max(LISTINO_PDF_PAGES_PER_CHUNK, Math.ceil(pageCount / targetChunks));
++  return Math.max(minChunk, Math.ceil(pageCount / targetChunks));
+ }

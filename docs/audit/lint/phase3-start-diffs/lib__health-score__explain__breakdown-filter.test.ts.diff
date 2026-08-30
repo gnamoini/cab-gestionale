@@ -1,0 +1,13 @@
+diff --git a/lib/health-score/explain/breakdown-filter.test.ts b/lib/health-score/explain/breakdown-filter.test.ts
+index f23fb591..d63d35c0 100644
+--- a/lib/health-score/explain/breakdown-filter.test.ts
++++ b/lib/health-score/explain/breakdown-filter.test.ts
+@@ -71,7 +71,7 @@ const full = computeHealthScoreFromSnapshot({
+   computedAt: anchor.toISOString(),
+ });
+ 
+-const adminBreakdown = filterBreakdownForViewer(full.breakdown, {
++const _adminBreakdown = filterBreakdownForViewer(full.breakdown, {
+   lavorazioni: { canRead: true, canWrite: false },
+   magazzino: { canRead: true, canWrite: false },
+   dipendenti: { canRead: true, canWrite: false },

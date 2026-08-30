@@ -8,17 +8,8 @@ import {
 } from "@/lib/ai/runtime/map-ai-error";
 import type { AiErrorCode } from "@/lib/ai/runtime/types";
 import { validateRuntimePrerequisites } from "@/lib/ai/runtime/validate-runtime-prerequisites";
-import {
-  CaptureAnalyzeError,
-  CompileAnalyzeError,
-  errorDetailFromUnknown,
-  GeminiAnalyzeError,
-  isCaptureAnalyzeError,
-  PrerequisitesAnalyzeError,
-  ValidationAnalyzeError,
-} from "@/lib/document-capture/analyze-errors";
-import type { CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
-import { captureExtractionSchema, listCaptureExtractionFields } from "@/lib/document-capture/capture-extraction-schema";
+import { CompileAnalyzeError, errorDetailFromUnknown, GeminiAnalyzeError, isCaptureAnalyzeError, PrerequisitesAnalyzeError, ValidationAnalyzeError } from "@/lib/document-capture/analyze-errors";
+import { captureExtractionSchema, listCaptureExtractionFields, type CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import {
   loadPipelineState,
@@ -47,7 +38,6 @@ import {
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
 import { loadResolutionRuntimeContext } from "@/lib/entity-resolution/server/load-resolution-context.server";
-import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
 import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
 import { projectDocumentModelToFlatFields } from "@/lib/document-capture/projection/document-model-flat-projection";
@@ -679,7 +669,7 @@ export async function analyzeDocumentCaptureV41(
         ...f,
         attempt_id: attemptId,
       }));
-      let resolutionAudit = resolution?.audit;
+      const resolutionAudit = resolution?.audit;
       if (resolution) {
         fieldRows = mergeResolutionIntoFieldRows(fieldRows, resolution);
         const { error: upsertError } = await sb.from("document_capture_fields").upsert(fieldRows, {
@@ -690,7 +680,6 @@ export async function analyzeDocumentCaptureV41(
         }
       }
 
-      const schedaTipo = object.schedaTipo ?? inferCaptureSchedaTipo(fieldRows) ?? null;
 
       pipelineState = advancePipelineStateForPhase(pipelineState, "ai_extract", true);
       pipelineState = advancePipelineStateForPhase(pipelineState, "validate", validation.status !== "blocked");

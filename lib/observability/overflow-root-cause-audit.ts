@@ -431,7 +431,7 @@ export function findRootCulpritsFromHits(
 ): RootCulprit[] {
   const map = new Map<string, RootCulprit>();
 
-  for (const { element, hit } of hits) {
+  for (const { element } of hits) {
     const { element: rootEl, score, reasons } = promoteToRootElement(element, main, ctx);
     const raw = rawHitFromElement(rootEl, ctx);
     if (!raw) continue;

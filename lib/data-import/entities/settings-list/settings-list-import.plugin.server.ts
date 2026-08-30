@@ -8,7 +8,7 @@ import { generateImportTemplateXlsx } from "@/lib/data-import/core/template-gene
 import { parseSpreadsheetBuffer } from "@/lib/data-import/core/parse-spreadsheet";
 import type { FieldPatternSet } from "@/lib/data-import/core/column-mapper";
 import type {
-  ImportDuplicateAction,
+
   ImportEntity,
   ImportExecuteResult,
   ImportFieldDef,
@@ -230,7 +230,7 @@ export function createSettingsListImportPlugin(config: SettingsListPluginConfig)
           p_items: [{ module: config.module, key: config.settingsKey, payload }],
         });
       } else {
-        let list = strategy === "replace" ? [] : Array.isArray(payload[config.listField]) ? [...(payload[config.listField] as string[])] : [];
+        const list = strategy === "replace" ? [] : Array.isArray(payload[config.listField]) ? [...(payload[config.listField] as string[])] : [];
 
         for (let i = 0; i < decisions.length; i += IMPORT_EXECUTE_CHUNK) {
           const chunk = decisions.slice(i, i + IMPORT_EXECUTE_CHUNK);

@@ -1,0 +1,69 @@
+diff --git a/lib/inventory-labels/render/vertical-layout.ts b/lib/inventory-labels/render/vertical-layout.ts
+index 56b5ef4e..fab10489 100644
+--- a/lib/inventory-labels/render/vertical-layout.ts
++++ b/lib/inventory-labels/render/vertical-layout.ts
+@@ -2,15 +2,13 @@ import type { LabelTemplateElement, LabelTypography } from "@/lib/inventory-labe
+ import { labelFontScale } from "@/lib/inventory-labels/domain/templates";
+ 
+ const BLOCK_GAP_MM = 1.2;
+-const QR_BARCODE_GAP_MM = 1.5;
+ 
+ function scaledFontPt(basePt: number, scale: number, minPt: number, maxPt: number): number {
+   return Math.round(Math.min(maxPt, Math.max(minPt, basePt * scale)) * 2) / 2;
+ }
+ 
+ /**
+- * Layout verticale A4: QR centrato in alto, testi sotto, barcode in fondo.
+- * Spazio distribuito dinamicamente — nessuna coordinata hardcoded per blocco testo.
++ * Layout verticale A4: QR centrato in alto, testi sotto.
+  */
+ export function computeVerticalStackLayout(
+   widthMm: number,
+@@ -23,9 +21,10 @@ export function computeVerticalStackLayout(
+   const scale = labelFontScale(widthMm, heightMm) * typography.scale;
+   const primaryPt = scaledFontPt(7, scale, 12, 28) * typography.scale;
+   const altPt = scaledFontPt(6, scale, 10, 18) * typography.scale;
+-  const barcodeH = Math.min(8, Math.max(5, 5.5 * scale * 0.35));
+-  const barcodeY = heightMm - marginMm - barcodeH;
+-  const contentBottom = barcodeY - QR_BARCODE_GAP_MM;
++  const labelBottomMm = heightMm - marginMm;
++  const supplierBandH = Math.max(altPt * 0.35 * 2, 5);
++  const supplierTop = labelBottomMm - supplierBandH;
++  const contentBottom = supplierTop - 0.6;
+ 
+   const qrSize = Math.min(qrMaxSizeMm, innerW * 0.42, contentBottom - marginMm - 40);
+   const qrX = marginMm + (innerW - qrSize) / 2;
+@@ -86,29 +85,20 @@ export function computeVerticalStackLayout(
+       type: "text",
+       field: "fornitoreAlternativo",
+       xMm: textX,
+-      yMm: barcodeY - altPt * 0.35,
++      yMm: supplierTop,
+       fontPt: altPt,
+       maxWidthMm: textW,
+-      zoneBottomMm: barcodeY - 0.5,
++      zoneBottomMm: labelBottomMm,
+     },
+     {
+       type: "text",
+       field: "codiceAlternativo",
+       xMm: textX,
+-      yMm: barcodeY - 0.2,
++      yMm: supplierTop,
+       fontPt: altPt,
+       font: "mono",
+       maxWidthMm: textW,
+-      zoneBottomMm: barcodeY - 0.5,
+-    },
+-    {
+-      type: "barcode",
+-      field: "codice",
+-      format: "code128",
+-      xMm: qrX,
+-      yMm: barcodeY,
+-      heightMm: barcodeH,
+-      widthMm: qrSize,
++      zoneBottomMm: labelBottomMm,
+     },
+   ];
+ }

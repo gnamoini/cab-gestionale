@@ -23,6 +23,7 @@ export function useNotificationPreferences() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial preferences fetch on mount
     void reload();
   }, [reload]);
 

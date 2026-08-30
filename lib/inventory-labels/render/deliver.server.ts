@@ -29,7 +29,6 @@ export type DeliverLabelInput = {
   preset: string;
   format: LabelFormat;
   origin: string;
-  includeBarcode?: boolean;
   clienteLabel?: boolean;
   quantity?: number;
   userId?: string | null;
@@ -64,7 +63,6 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   const template = getLabelTemplate(input.preset, labelKind);
   if (!template) throw new Error("Template etichetta non valido");
 
-  const includeBarcode = clienteLabel ? false : input.includeBarcode === true;
   const quantity = Math.max(1, Math.min(99, input.quantity ?? 1));
   const canonicalOrigin = input.origin.replace(/\/+$/, "");
   const branding = clienteLabel ? await fetchBrandingSettingsFromDb() : null;
@@ -75,9 +73,9 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     templateVersion: template.version,
     generatorVersion: GENERATOR_VERSION,
     preset: input.preset,
-    includeBarcode,
     labelKind,
     clienteQrUrl,
+    qrToken: clienteLabel ? undefined : input.token,
     canonicalOrigin,
   });
   const effectiveHash = input.format === "pdf" && quantity > 1 ? `${hash}-q${quantity}` : hash;
@@ -109,7 +107,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   }
 
   const qrUrl = clienteLabel ? clienteQrUrl : buildInventoryQrUrl(input.token, input.origin);
-  const renderOptions = { includeBarcode, labelKind };
+  const renderOptions = { labelKind };
   const dedupKey = renderDedupKey(input.entityId, effectiveHash, input.format);
   let buffer: Buffer;
   if (input.format === "png") {

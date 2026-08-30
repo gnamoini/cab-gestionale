@@ -1,0 +1,14 @@
+diff --git a/lib/lavorazioni/addetto-display.test.ts b/lib/lavorazioni/addetto-display.test.ts
+index aaaf68c7..a0fc2408 100644
+--- a/lib/lavorazioni/addetto-display.test.ts
++++ b/lib/lavorazioni/addetto-display.test.ts
+@@ -1,7 +1,7 @@
+ import assert from "node:assert/strict";
+ import {
+-  addettoRefFromFields,
+-  getAddettoColorKey,
++
++
+   getAddettoDisplayName,
+   getAddettoPillHex,
+ } from "@/lib/lavorazioni/addetto-display";

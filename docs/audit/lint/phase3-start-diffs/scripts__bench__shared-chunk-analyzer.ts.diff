@@ -1,0 +1,12 @@
+diff --git a/scripts/bench/shared-chunk-analyzer.ts b/scripts/bench/shared-chunk-analyzer.ts
+index 70b822db..9bf724c5 100644
+--- a/scripts/bench/shared-chunk-analyzer.ts
++++ b/scripts/bench/shared-chunk-analyzer.ts
+@@ -207,7 +207,6 @@ async function main(): Promise<void> {
+     const inFirstLoad = firstLoadBases.has(chunkName);
+     const { packages, source, role } = attributeChunk(chunkFile);
+     const chunkSize = statSync(chunkFile).size;
+-    const content = readFileSync(chunkFile, "utf8");
+     const labels = [...packages.keys()];
+ 
+     if (inFirstLoad && meta && meta.firstLoadFactor >= 0.5) {

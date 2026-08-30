@@ -1,0 +1,24 @@
+diff --git a/lib/ddt/ddt-pdf.ts b/lib/ddt/ddt-pdf.ts
+index c35ee854..3e8dc595 100644
+--- a/lib/ddt/ddt-pdf.ts
++++ b/lib/ddt/ddt-pdf.ts
+@@ -1,7 +1,7 @@
+ "use client";
+ 
+ import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
+-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
++import { openPdfArtifact, openPdfArtifactFromUserClick } from "@/lib/pdf/client/pdf-viewer";
+ 
+ /** PDF DDT ufficiale — nuova scheda (SSOT artifact API). */
+ export async function openDdtPdfInNewTab(
+@@ -9,5 +9,9 @@ export async function openDdtPdfInNewTab(
+   deferredHandle?: DeferredPopupHandle | null,
+ ): Promise<void> {
+   if (typeof window === "undefined") return;
+-  await openPdfArtifact("ddt", { id: ddtId }, deferredHandle);
++  if (deferredHandle) {
++    await openPdfArtifact("ddt", { id: ddtId }, deferredHandle);
++    return;
++  }
++  openPdfArtifactFromUserClick("ddt", { id: ddtId });
+ }

@@ -8,7 +8,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { MagazzinoCapitalLineChart, MagazzinoEntrateUsciteBars } from "@/components/report/report-charts";
 import { reportChartShellClass } from "@/components/report/report-ui-tokens";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
+import { erpBtnNeutral } from "@/components/report/report-buttons";
 import { GlobalTableHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
@@ -32,7 +32,6 @@ import {
   dsTableTd,
   dsTableWrap,
   dsScrollbar,
-  dsTypoSmall,
 } from "@/lib/ui/design-system";
 
 const ReportMagazzinoManualHistoryModal = dynamic(

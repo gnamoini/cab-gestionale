@@ -15,6 +15,8 @@ const mag: MagazzinoMasterPrefs = {
       codiceFiscale: "12345678901",
       indirizzo: "",
       telefono: "",
+      email: "",
+      emailAggiuntive: [],
     },
     "bosch parts": {
       ragioneSociale: "Bosch Parts Italia",
@@ -22,6 +24,8 @@ const mag: MagazzinoMasterPrefs = {
       codiceFiscale: "",
       indirizzo: "",
       telefono: "",
+      email: "",
+      emailAggiuntive: [],
     },
   },
 };

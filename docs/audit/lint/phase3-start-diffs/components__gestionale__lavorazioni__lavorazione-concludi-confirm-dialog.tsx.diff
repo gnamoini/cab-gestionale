@@ -1,0 +1,172 @@
+diff --git a/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog.tsx b/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog.tsx
+index a16470a0..67f40ac4 100644
+--- a/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog.tsx
++++ b/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog.tsx
+@@ -1,27 +1,156 @@
+ "use client";
+ 
+-import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
++/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
++
++import { useEffect, useState, type FormEvent } from "react";
++import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
++import {
++  isoToDateInputValue,
++  isoToItDisplay,
++  localCalendarDayIsoFromDate,
++  ymdToItDisplay,
++} from "@/lib/lavorazioni/date-day-only";
++import { lavorazioneOggettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
++import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
++import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
++import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
++import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
++import {
++  GestionaleModalFooterActions,
++  GestionaleModalFooterCancelButton,
++  GestionaleModalFooterSaveButton,
++} from "@/components/design-system";
++import { dsInput, dsLabel } from "@/lib/ui/design-system";
++import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
++import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
++import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
++
++const CONCLUDI_FORM_ID = "lavorazione-concludi-form";
++
++function initialCompletionDateText(row: LavorazioneListRow): string {
++  const uscita = row.data_uscita?.trim();
++  if (uscita) {
++    if (/^\d{4}-\d{2}-\d{2}$/.test(uscita)) return ymdToItDisplay(uscita);
++    return isoToItDisplay(uscita);
++  }
++  return isoToItDisplay(localCalendarDayIsoFromDate());
++}
+ 
+ export function LavorazioneConcludiConfirmDialog({
++  row,
+   open,
+   onCancel,
+   onConfirm,
+   pending,
+ }: {
++  row: LavorazioneListRow | null;
+   open: boolean;
+   onCancel: () => void;
+-  onConfirm: () => void;
++  onConfirm: (completionYmd: string) => void;
+   pending?: boolean;
+ }) {
++  const [dateText, setDateText] = useState("");
++  const [dateErr, setDateErr] = useState<string | null>(null);
++  const submitLock = useSubmitLock();
++
++  useEffect(() => {
++    if (!open || !row) return;
++    setDateText(initialCompletionDateText(row));
++    setDateErr(null);
++  }, [open, row]);
++
++  if (!open || !row) return null;
++
++  const macchina = lavorazioneOggettoLabel(row);
++  const targa = row.mezzo?.targa?.trim();
++  const ingressoIt = row.data_ingresso?.trim()
++    ? /^\d{4}-\d{2}-\d{2}$/.test(row.data_ingresso.trim())
++      ? ymdToItDisplay(row.data_ingresso.trim())
++      : isoToItDisplay(row.data_ingresso)
++    : null;
++
++  async function onSubmit(e: FormEvent<HTMLFormElement>) {
++    e.preventDefault();
++    if (pending) return;
++
++    await runSubmitFromGetter(
++      e.currentTarget,
++      submitLock,
++      () => ({ dateText }),
++      (snap) => {
++        const parsed = parseItalianDayDisplayToIso(snap.dateText);
++        if (!parsed.ok) {
++          setDateErr("Data non valida. Usa gg/mm/aaaa.");
++          return;
++        }
++        const completionYmd = isoToDateInputValue(parsed.iso);
++        const ingressoYmd = row.data_ingresso?.trim().slice(0, 10);
++        if (ingressoYmd && completionYmd < ingressoYmd) {
++          setDateErr("La data di completamento non può essere precedente alla data di ingresso.");
++          return;
++        }
++        setDateErr(null);
++        onConfirm(completionYmd);
++      },
++    );
++  }
++
+   return (
+-    <GestionaleConfirmDialog
+-      open={open}
+-      title="Conferma conclusione lavorazione"
+-      message="La lavorazione verrà spostata nell'archivio. Vuoi continuare?"
+-      confirmLabel={pending ? "Conclusione…" : "Conferma"}
+-      pending={pending}
+-      onCancel={onCancel}
+-      onConfirm={onConfirm}
+-    />
++    <LavorazioniModalShell
++      modalSize="formSmall"
++      onRequestClose={pending ? () => {} : onCancel}
++      title="Archivia lavorazione"
++      subtitle={[macchina, targa].filter(Boolean).join(" · ")}
++      footer={
++        <GestionaleModalFooterActions>
++          <GestionaleModalFooterCancelButton onClick={onCancel} disabled={pending} />
++          <GestionaleModalFooterSaveButton
++            type="submit"
++            form={CONCLUDI_FORM_ID}
++            loading={pending}
++            loadingLabel="Archiviazione…"
++          >
++            Archivia
++          </GestionaleModalFooterSaveButton>
++        </GestionaleModalFooterActions>
++      }
++    >
++      <form
++        id={CONCLUDI_FORM_ID}
++        {...gestionaleFormFocusScopeProps()}
++        onSubmit={onSubmit}
++        className={`${gestionaleModalBodyFlexClass} overflow-hidden`}
++      >
++        <GestionaleModalScrollBody className="space-y-3">
++          <p className="text-sm text-[color:var(--cab-text-muted)]">
++            La lavorazione verrà spostata nell&apos;archivio con la data di completamento indicata sotto.
++          </p>
++          <div>
++            <label className={dsLabel} htmlFor="lav-concludi-date">
++              Data completamento
++            </label>
++            <LavorazioniDateField
++              id="lav-concludi-date"
++              value={dateText}
++              onChange={(v) => {
++                setDateText(v);
++                setDateErr(null);
++              }}
++              inputClassName={dsInput}
++              required
++            />
++          </div>
++          {ingressoIt ? (
++            <p className="text-[11px] text-[color:var(--cab-text-muted)]">
++              Data ingresso: <span className="font-medium text-[color:var(--cab-text)]">{ingressoIt}</span>
++            </p>
++          ) : null}
++          {dateErr ? <p className="text-xs text-red-600 dark:text-red-400">{dateErr}</p> : null}
++          <p className="text-[11px] leading-relaxed text-[color:var(--cab-text-muted)]">
++            Solo giorno (senza orario). Predefinita: oggi. Potrai modificarla anche dall&apos;archivio.
++          </p>
++        </GestionaleModalScrollBody>
++      </form>
++    </LavorazioniModalShell>
+   );
+ }

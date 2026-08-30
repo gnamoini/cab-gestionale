@@ -1,0 +1,30 @@
+diff --git a/components/gestionale/documenti/listino-import-preview-modal.tsx b/components/gestionale/documenti/listino-import-preview-modal.tsx
+index 71a79d97..d03cfb9b 100644
+--- a/components/gestionale/documenti/listino-import-preview-modal.tsx
++++ b/components/gestionale/documenti/listino-import-preview-modal.tsx
+@@ -25,7 +25,7 @@ import type {
+ } from "@/lib/magazzino/listino-import/listino-import-types";
+ import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
+ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+-import { dsBtnNeutral, dsScrollX } from "@/lib/ui/design-system";
++import { dsScrollX } from "@/lib/ui/design-system";
+ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+ 
+ const ACTION_LABELS: Record<ListinoImportAction, string> = {
+@@ -111,6 +111,7 @@ export function ListinoImportPreviewModal({
+   useEffect(() => {
+     if (!analysisRequested) return;
+     let cancelled = false;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setLoading(true);
+     setError(null);
+     void fetchListinoImportPreview(documentoId)
+@@ -271,7 +272,7 @@ export function ListinoImportPreviewModal({
+                   </p>
+                 ))}
+               </div>
+-              <div className="flex flex-wrap gap-2">
++              <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+                 <LoadingButton type="button" className="text-xs px-2 py-1" onClick={() => setBulkAction("create")}>
+                   Tutti: crea
+                 </LoadingButton>

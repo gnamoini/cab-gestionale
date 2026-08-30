@@ -7,7 +7,7 @@ import {
   parseCompatInput,
 } from "@/lib/magazzino/form";
 import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
-import { isCompatMarcaUniversalLine, marcaUniversalCompatLabel } from "@/lib/magazzino/ricambio-compat-resolver";
+import { isCompatMarcaUniversalLine } from "@/lib/magazzino/ricambio-compat-resolver";
 
 const baseMezziListe: MezziListePrefs = {
   clienti: [],

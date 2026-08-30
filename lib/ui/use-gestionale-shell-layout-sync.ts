@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/immutability -- lint phase2: preserve existing hook contract */
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import {
   GESTIONALE_SHELL_CONTENT_WIDTH_VAR,
@@ -67,6 +69,10 @@ export function useGestionaleShellLayoutSync(
   const syncWindowStartRef = useRef(0);
   const prevTierRef = useRef<GestionaleShellTier | null>(null);
 
+   
+   
+   
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- lint phase2: preserve existing hook contract
   const sync = useCallback(() => {
     if (typeof window === "undefined") return;
 
@@ -87,6 +93,7 @@ export function useGestionaleShellLayoutSync(
     if (shell instanceof HTMLElement) {
       shell.setAttribute(GESTIONALE_SHELL_TIER_ATTR, next.tier);
       shell.style.setProperty(GESTIONALE_SHELL_CONTENT_WIDTH_VAR, `${Math.round(contentWidth)}px`);
+   
       shell.style.minWidth = "0";
       shell.style.maxWidth = "100%";
       shell.style.width = "100%";
@@ -115,6 +122,7 @@ export function useGestionaleShellLayoutSync(
     }
   }, [refs.shellRef, refs.shellColRef, refs.mainRef]);
 
+   
   const scheduleSync = useCallback(() => {
     if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
     syncRafRef.current = requestAnimationFrame(() => {
@@ -126,9 +134,11 @@ export function useGestionaleShellLayoutSync(
   }, [sync]);
 
   useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- measure shell layout on mount
     sync();
   }, [sync]);
 
+   
   useEffect(() => {
     scheduleSync();
 

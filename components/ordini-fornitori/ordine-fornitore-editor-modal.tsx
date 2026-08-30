@@ -6,7 +6,7 @@ import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestiona
 import {
   IconActionButton,
   GestionaleCollapsibleSection,
-  GestionaleModalFooterActions,
+
   GestionaleModalFooterCancelButton,
   GestionaleModalFooterDeleteButton,
   GestionaleModalFooterSaveButton,
@@ -19,7 +19,8 @@ import { OrdineFornitoreDestinazioneFields } from "@/components/ordini-fornitori
 import { OrdineFornitoreFornitoreFields } from "@/components/ordini-fornitori/ordine-fornitore-fornitore-fields";
 import { OrdineFornitoreLogisticaFields } from "@/components/ordini-fornitori/ordine-fornitore-logistica-fields";
 import { OrdineFornitoreStoricoSection } from "@/components/ordini-fornitori/ordine-fornitore-storico-section";
-import { OrdineFornitoreSendEmailModal } from "@/components/ordini-fornitori/ordine-fornitore-send-email-modal";
+import { OrdineFornitoreEmailComposerModal } from "@/components/ordini-fornitori/ordine-fornitore-email-composer-modal";
+import { OrdineFornitoreComunicazioniSection } from "@/components/ordini-fornitori/ordine-fornitore-comunicazioni-section";
 import { CommunicationTestModeBadge } from "@/components/communications/communication-test-mode-badge";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -72,7 +73,7 @@ import type {
 } from "@/lib/ordini-fornitori/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import {
-  dsBtnDanger,
+
   dsInput,
   dsScrollbar,
   dsTable,
@@ -122,6 +123,8 @@ import {
 } from "@/lib/ordini-fornitori/ordine-fornitore-magazzino-picker";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import type { OrdineFornitoreEditorImportMeta } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
+import type { OrdineFornitoreEditorIdentificaMeta } from "@/lib/ordini-fornitori/identifica-ricambio/types";
+import { createOrdineFromIdentificaClient } from "@/lib/ordini-fornitori/identifica-ricambio/identifica-ordine-client";
 
 function newRigaId(): string {
   return crypto.randomUUID();
@@ -190,6 +193,7 @@ export function OrdineFornitoreEditorModal({
   mode = "edit",
   canWrite,
   importMeta,
+  identificaMeta,
   onClose,
   onSaved,
   onSwitchToEdit,
@@ -200,12 +204,28 @@ export function OrdineFornitoreEditorModal({
   mode?: "view" | "edit";
   canWrite: boolean;
   importMeta?: OrdineFornitoreEditorImportMeta;
+  identificaMeta?: OrdineFornitoreEditorIdentificaMeta;
   onClose: () => void;
   onSaved: (info?: { record?: OrdineFornitoreRecord }) => void | Promise<void>;
   onSwitchToEdit?: () => void;
   onDelete?: () => void;
 }) {
   const gestToast = useGestionaleToast();
+  const [fornitoreVerifiedByUser, setFornitoreVerifiedByUser] = useState(
+    () => !identificaMeta?.fornitoreNeedsVerification,
+  );
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync verification flag when identifica meta changes
+    setFornitoreVerifiedByUser(!identificaMeta?.fornitoreNeedsVerification);
+  }, [identificaMeta]);
+
+  const identificaPrezzoHint =
+    identificaMeta?.prezzoSuggerito != null
+      ? `Suggerito: ${fmtPreventivoEuro(identificaMeta.prezzoSuggerito)}${
+          identificaMeta.prezzoSource.label ? ` da ${identificaMeta.prezzoSource.label}` : ""
+        }`
+      : null;
+
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const submitLock = useSubmitLock();
   const settingsQ = useSharedAppSettingsQuery();
@@ -242,7 +262,10 @@ export function OrdineFornitoreEditorModal({
   const fieldsReadOnly = viewMode || !canWrite || (!isNew && initialRecord.status !== "bozza");
   const canEditStatus = !viewMode && canWrite && initialRecord.status !== "annullato";
   const statusDirty = !isNew && record.status !== initialRecord.status;
-  const canSave = canWrite && (isNew || !fieldsReadOnly || statusDirty);
+  const canSave =
+    canWrite &&
+    (isNew || !fieldsReadOnly || statusDirty) &&
+    (!identificaMeta?.fornitoreNeedsVerification || fornitoreVerifiedByUser);
 
   useEffect(() => {
     void loadBrandingLogoDataUrl().then((logo) => {
@@ -252,6 +275,7 @@ export function OrdineFornitoreEditorModal({
 
   useEffect(() => {
     baselineRef.current = initialRecord;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setRecord(initialRecord);
     setUnsavedExitOpen(false);
   }, [initialRecord]);
@@ -301,6 +325,7 @@ export function OrdineFornitoreEditorModal({
   const { oggetti: righeOggetti, speseVarie } = useMemo(() => splitOrdineRighe(record.righe), [record.righe]);
 
   const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: !viewMode });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const prodottiMagazzino = magazzinoQ.data ?? [];
   const [magAcRowId, setMagAcRowId] = useState<string | null>(null);
   const [magAcField, setMagAcField] = useState<"codice" | "descrizione" | null>(null);
@@ -436,6 +461,12 @@ export function OrdineFornitoreEditorModal({
       }
     }
 
+    if (identificaMeta?.fornitoreNeedsVerification && !fornitoreVerifiedByUser) {
+      submitLock.release();
+      gestToast.validation("Verifica o correggi il fornitore suggerito prima di salvare.");
+      return false;
+    }
+
     try {
       if (!isNew && initialRecord.status !== "bozza") {
         if (!statusDirty) return false;
@@ -465,6 +496,17 @@ export function OrdineFornitoreEditorModal({
       );
 
       if (isNew) {
+        if (identificaMeta?.saveContext) {
+          const res = await createOrdineFromIdentificaClient({
+            sourceSearchId: identificaMeta.saveContext.sourceSearchId,
+            sourceCandidateId: identificaMeta.saveContext.sourceCandidateId,
+            payload,
+          });
+          const detail = await ordiniFornitoriEntry.getDetail(res.ordineId);
+          gestToast.successOnce("ordine-save", "Ordine creato da identificazione ricambio.");
+          await Promise.resolve(onSaved(detail.success && detail.data ? { record: detail.data } : undefined));
+          return true;
+        }
         const res = await ordiniFornitoriEntry.create(payload);
         if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
         if (importMeta && res.data?.id && !importFinalizedRef.current) {
@@ -587,6 +629,19 @@ export function OrdineFornitoreEditorModal({
             {importMeta ? (
               <OrdineFornitoreImportQualityBanner level={importMeta.quality.level} />
             ) : null}
+            {identificaMeta?.fornitoreNeedsVerification ? (
+              <p className="rounded-lg border border-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,transparent)] px-3 py-2 text-sm text-[color:var(--cab-text)]">
+                Fornitore suggerito dall&apos;identificazione — verifica o correggi prima di inviare.
+              </p>
+            ) : null}
+            {identificaMeta?.prefillWarnings?.map((w) => (
+              <p
+                key={w}
+                className="rounded-lg border border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,transparent)] px-3 py-2 text-sm text-[color:var(--cab-text-muted)]"
+              >
+                {w}
+              </p>
+            ))}
             <GestionaleCollapsibleSection title="Dati ordine" defaultCollapsed={false} variant="form">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
                 <FormField label="Numero">
@@ -643,14 +698,23 @@ export function OrdineFornitoreEditorModal({
                     id="ordine-fornitore"
                     listKey="magazzino:fornitoriOrdine"
                     value={record.fornitoreLabel}
-                    onChange={(v) =>
+                    onChange={(v) => {
+                      setFornitoreVerifiedByUser(true);
                       setRecord((p) =>
                         applyFornitoreLabelToRecord(p, v, getFornitoreAnagraficaSettings(magazzinoMaster, v)),
-                      )
-                    }
+                      );
+                    }}
                     disabled={fieldsReadOnly}
                     required
+                    className={
+                      identificaMeta?.fornitoreNeedsVerification && !fornitoreVerifiedByUser
+                        ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-warning)_55%,transparent)] rounded-[var(--ds-radius-md)]"
+                        : undefined
+                    }
                   />
+                  {identificaMeta?.fornitoreNeedsVerification && !fornitoreVerifiedByUser ? (
+                    <p className="mt-1 text-xs font-medium text-[color:var(--cab-warning)]">Da verificare</p>
+                  ) : null}
                 </FormField>
                 <OrdineFornitoreFornitoreFields record={record} readOnly={fieldsReadOnly} onRecordChange={setRecord} />
               </div>
@@ -775,6 +839,11 @@ export function OrdineFornitoreEditorModal({
                               onChange={(e) => updateRigaOggetto(r.id, { prezzoUnitario: Number(e.target.value) || 0 })}
                               aria-label={`Prezzo riga ${idx + 1}`}
                             />
+                            {idx === 0 && identificaPrezzoHint ? (
+                              <p className="mt-0.5 text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
+                                {identificaPrezzoHint}
+                              </p>
+                            ) : null}
                           </td>
                           <td className={preventivoEditorTableTdClass}>
                             <input
@@ -995,6 +1064,7 @@ export function OrdineFornitoreEditorModal({
                 </div>
               </div>
             </GestionaleCollapsibleSection>
+            {!isNew ? <OrdineFornitoreComunicazioniSection ordineId={record.id} /> : null}
             {!isNew ? <OrdineFornitoreStoricoSection ordineId={record.id} /> : null}
           </div>
         </GestionaleModalScrollBody>
@@ -1018,7 +1088,7 @@ export function OrdineFornitoreEditorModal({
           }}
         />
         {!isNew ? (
-          <OrdineFornitoreSendEmailModal
+          <OrdineFornitoreEmailComposerModal
             ordineId={record.id}
             open={sendEmailOpen}
             onClose={() => setSendEmailOpen(false)}

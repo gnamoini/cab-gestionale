@@ -33,7 +33,10 @@ export function useGestionaleListSearch(
   const [searchApplied, setSearchApplied] = useState(initialSearch.trim());
   const flushPendingRef = useRef(false);
   const searchInputRef = useRef(searchInput);
-  searchInputRef.current = searchInput;
+
+  useEffect(() => {
+    searchInputRef.current = searchInput;
+  }, [searchInput]);
 
   const setSearchInputLive = useCallback((value: string) => {
     searchInputRef.current = value;

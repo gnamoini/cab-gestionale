@@ -12,7 +12,7 @@ import {
 } from "@/lib/selector-core/selector-post-apply-validator";
 import type {
   SelectorAbSimulationOutcome,
-  SelectorConfigProposal,
+
   SelectorValidationResult,
 } from "@/lib/selector-core/types";
 import type { SelectorOpenEvent } from "@/lib/selector-core/selector-telemetry";

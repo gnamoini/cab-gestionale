@@ -1,0 +1,12 @@
+diff --git a/scripts/audit-orphan-hotspots.ts b/scripts/audit-orphan-hotspots.ts
+index 0b1fcd32..d5424d77 100644
+--- a/scripts/audit-orphan-hotspots.ts
++++ b/scripts/audit-orphan-hotspots.ts
+@@ -13,7 +13,6 @@ import {
+ } from "./audit-orphan-taxonomy";
+ 
+ const ROOT = process.cwd();
+-const GRAPH_PATH = path.join(ROOT, "artifacts", "audit", "dependency-graph", "after.graph.json");
+ const KNIP_PATH = path.join(ROOT, "artifacts", "audit", "dead-code-baseline", "knip-baseline.json");
+ const OUT_PATH = path.join(ROOT, "artifacts", "audit", "dead-code-baseline", "orphan-hotspots.json");
+ 

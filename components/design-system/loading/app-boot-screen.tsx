@@ -62,9 +62,11 @@ export function AppBootScreen() {
     };
   }, []);
 
+   
   useEffect(() => {
     if (!ready) return;
     lazyMarkColdStart(CAB_COLD_START_MARK.appBootDismiss);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setVisible(false);
     const fadeTimerId = window.setTimeout(() => {
       removeStaticAppBootLayer();

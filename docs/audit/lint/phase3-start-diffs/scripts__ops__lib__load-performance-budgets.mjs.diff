@@ -1,0 +1,10 @@
+diff --git a/scripts/ops/lib/load-performance-budgets.mjs b/scripts/ops/lib/load-performance-budgets.mjs
+index 8fd4071e..53dde3a7 100644
+--- a/scripts/ops/lib/load-performance-budgets.mjs
++++ b/scripts/ops/lib/load-performance-budgets.mjs
+@@ -1,5 +1,4 @@
+ import { execFileSync } from "node:child_process";
+-import { join } from "node:path";
+ 
+ /** Load budgets from TypeScript SSOT via export CLI. */
+ export function loadPerformanceBudgets(cwd = process.cwd()) {

@@ -34,7 +34,7 @@ export function CaptureMezzoFieldConflictHints({
           <p className="text-xs text-[color:var(--cab-text-muted)]">
             Scansione: <span className="font-medium">{conflict.scannedValue || "—"}</span>
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <button
               type="button"
               className={`${dsBtnSoftOrange} ${dsFocus} text-xs`}

@@ -20,12 +20,15 @@ export function useClientPortalFiltersPersistence() {
   const [restoring, setRestoring] = useState(true);
 
   // ponytail: hydration client-only — useState lazy init causerebbe mismatch SSR
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- restore persisted filters after mount
   useEffect(() => {
     const initial = readFiltersSync();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore persisted filters after mount
     setFilters(initial);
+     
     setSearchInput(typeof initial.search === "string" ? initial.search : "");
+     
     setFiltersHydrated(true);
+     
     setRestoring(false);
   }, []);
 

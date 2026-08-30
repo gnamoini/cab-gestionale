@@ -1,0 +1,12 @@
+diff --git a/lib/lavorazioni/use-lavorazioni-list-v2.ts b/lib/lavorazioni/use-lavorazioni-list-v2.ts
+index 864f4d09..b22e3d88 100644
+--- a/lib/lavorazioni/use-lavorazioni-list-v2.ts
++++ b/lib/lavorazioni/use-lavorazioni-list-v2.ts
+@@ -82,6 +82,7 @@ export function useLavorazioniListV2(
+   const pages = query.data?.pages ?? EMPTY_PAGES;
+   const list = useMemo(
+     () => flattenLavorazioneListPages(pages) as LavorazioneListRow[],
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataUpdatedAt busts flatten after refetch
+     [pages, query.dataUpdatedAt],
+   );
+ 

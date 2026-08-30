@@ -2,7 +2,7 @@ import type {
   CatalogActivity,
   InterventoActivityOverride,
   TkbIntervento,
-  TkbProcedure,
+
   TkbPublishedSnapshot,
 } from "@/lib/domain/technical-knowledge-base/types";
 

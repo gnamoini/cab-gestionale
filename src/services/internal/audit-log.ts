@@ -87,6 +87,7 @@ export async function commitCriticalMutation<T>(
   return result;
 }
 
-export async function flushPendingModificaLogs(client: SupabaseClient): Promise<void> {
+export async function flushPendingModificaLogs(_client: SupabaseClient): Promise<void> {
+  void _client;
   await flushAllModificaLogs(flushModificaLog);
 }

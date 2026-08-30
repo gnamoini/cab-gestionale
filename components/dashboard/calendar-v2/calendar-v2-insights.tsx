@@ -148,7 +148,7 @@ export function CalendarV2InsightsBlock({
 
   return (
     <section className="min-w-0 space-y-2" aria-labelledby="calendar-v2-insights-title">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center justify-between gap-2 flex-nowrap sm:flex-wrap">
         <h3 id="calendar-v2-insights-title" className={`${dsTypoSmall} font-semibold text-[color:var(--cab-text)]`}>
           Insight
         </h3>

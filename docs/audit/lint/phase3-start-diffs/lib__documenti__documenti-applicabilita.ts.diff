@@ -1,0 +1,15 @@
+diff --git a/lib/documenti/documenti-applicabilita.ts b/lib/documenti/documenti-applicabilita.ts
+index 153b8100..01ffe423 100644
+--- a/lib/documenti/documenti-applicabilita.ts
++++ b/lib/documenti/documenti-applicabilita.ts
+@@ -2,9 +2,7 @@ import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
+ import type { DocumentoAssocRef, DocumentoGestionale, DocumentoApplicabilita } from "@/lib/types/gestionale";
+ 
+ /** Tutte le categorie supportano marca intera o modello specifico. */
+-export function allowedApplicabilitaForCategoria(
+-  _c: DocumentoGestionale["categoria"],
+-): DocumentoApplicabilita[] {
++export function allowedApplicabilitaForCategoria(): DocumentoApplicabilita[] {
+   return ["marca", "modello"];
+ }
+ 

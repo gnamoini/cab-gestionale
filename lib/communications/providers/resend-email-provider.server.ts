@@ -34,6 +34,8 @@ export function createResendEmailTransport(): EmailTransport | null {
         const { data, error } = await resend.emails.send({
           from,
           to: input.to,
+          cc: input.cc?.length ? input.cc : undefined,
+          bcc: input.bcc?.length ? input.bcc : undefined,
           replyTo: input.replyTo?.trim() || undefined,
           subject: input.subject,
           text: input.text,

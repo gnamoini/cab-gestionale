@@ -128,5 +128,6 @@ export function groupVisibleWidgetsBySection(
 
 /** Stato operativo sopra brief operativo (tutti i breakpoint). */
 export function resolveDashboardSectionOrder(_compactShell?: boolean): readonly DashboardWidgetSection[] {
+  void _compactShell;
   return DASHBOARD_SECTION_ORDER;
 }

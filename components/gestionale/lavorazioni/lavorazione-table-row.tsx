@@ -33,8 +33,8 @@ import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-dis
 import {
   lavorazioneAddettoId,
   lavorazioneCantiereLabel,
-  lavorazioneMacchinaLabel,
-  lavorazioneOggettoLabel,
+
+
   lavorazioneOggettoCellLines,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
@@ -58,7 +58,6 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { StatoLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 
 const lavTablePillFillClass = "w-full min-w-0";
@@ -146,10 +145,10 @@ function LavorazioneAttivaTableRowInner({
   statiOpts,
   statiRapidiPillOpts,
   prioritaPillOpts,
-  tablePillOptions,
+  tablePillOptions: _tablePillOptions,
   statoPillStyle,
   prioritaPillStyle,
-  addettoColors,
+  addettoColors: _addettoColors,
   addettiRecords,
   addetti,
   onStatoRow,
@@ -159,11 +158,12 @@ function LavorazioneAttivaTableRowInner({
   onOpenInfo,
   onOpenSchede,
 }: LavorazioneAttivaTableRowProps) {
+  void _tablePillOptions;
+  void _addettoColors;
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
   const macchina = oggettoLines.primary;
   const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
-  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
@@ -322,7 +322,6 @@ function LavorazioneArchivioTableRowInner({
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
-  const macchina = oggettoLines.primary;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
   const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore, addettoLogs));
 

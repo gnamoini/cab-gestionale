@@ -1,0 +1,13 @@
+diff --git a/lib/observability/overflow-root-cause-audit.ts b/lib/observability/overflow-root-cause-audit.ts
+index 635ef079..b87591bb 100644
+--- a/lib/observability/overflow-root-cause-audit.ts
++++ b/lib/observability/overflow-root-cause-audit.ts
+@@ -431,7 +431,7 @@ export function findRootCulpritsFromHits(
+ ): RootCulprit[] {
+   const map = new Map<string, RootCulprit>();
+ 
+-  for (const { element, hit } of hits) {
++  for (const { element } of hits) {
+     const { element: rootEl, score, reasons } = promoteToRootElement(element, main, ctx);
+     const raw = rawHitFromElement(rootEl, ctx);
+     if (!raw) continue;

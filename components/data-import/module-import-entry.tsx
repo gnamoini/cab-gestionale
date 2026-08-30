@@ -10,7 +10,7 @@ export function ModuleImportEntry({
   module,
   buttonLabel = "Importa",
   className = "",
-  onCompleted,
+  
 }: {
   entity: ImportEntity;
   module: GestionalePermissionModule;

@@ -1,5 +1,5 @@
 import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
-import type { AppRole, RequiredRbacContext } from "@/lib/auth/rbac";
+import type { AppRole } from "@/lib/auth/rbac";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { PilotSettingsState } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 import type { RbacEvaluationContext } from "@/lib/rbac";

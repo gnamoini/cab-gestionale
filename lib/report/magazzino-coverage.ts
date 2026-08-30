@@ -2,7 +2,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
-import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
+import { type DateRange } from "@/lib/report/date-ranges";
 
 export type CoperturaRicambioRow = {
   id: string;

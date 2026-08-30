@@ -14,7 +14,6 @@ import {
   recordLegacyBypassAttempt,
   runInsideBoundaryGate,
 } from "@/lib/form-ux-migration/form-ux-legacy-guard";
-import { getFormUxRegistryEntry } from "@/lib/form-ux-migration/form-ux-registry";
 import {
   routeBeginSubmitTransaction,
   routeFormSubmitPayload,

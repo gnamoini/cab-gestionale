@@ -1,0 +1,13 @@
+diff --git a/lib/magazzino/resolve-mezzi-liste-for-compat.test.ts b/lib/magazzino/resolve-mezzi-liste-for-compat.test.ts
+index 5c4c91e3..22191cde 100644
+--- a/lib/magazzino/resolve-mezzi-liste-for-compat.test.ts
++++ b/lib/magazzino/resolve-mezzi-liste-for-compat.test.ts
+@@ -7,7 +7,7 @@ import {
+   parseCompatInput,
+ } from "@/lib/magazzino/form";
+ import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
+-import { isCompatMarcaUniversalLine, marcaUniversalCompatLabel } from "@/lib/magazzino/ricambio-compat-resolver";
++import { isCompatMarcaUniversalLine } from "@/lib/magazzino/ricambio-compat-resolver";
+ 
+ const baseMezziListe: MezziListePrefs = {
+   clienti: [],

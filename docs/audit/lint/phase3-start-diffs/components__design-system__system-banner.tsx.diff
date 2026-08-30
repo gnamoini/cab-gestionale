@@ -1,0 +1,22 @@
+diff --git a/components/design-system/system-banner.tsx b/components/design-system/system-banner.tsx
+index 6b00a083..ce269d3d 100644
+--- a/components/design-system/system-banner.tsx
++++ b/components/design-system/system-banner.tsx
+@@ -77,7 +77,7 @@ export function SystemBannerChips({ items, ariaLabel }: { items: readonly string
+   if (items.length === 0) return null;
+ 
+   return (
+-    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={ariaLabel}>
++    <ul className="mt-2 flex gap-1.5 min-w-0 flex-nowrap sm:flex-wrap" aria-label={ariaLabel}>
+       {items.map((item) => (
+         <li key={item} className={dsSystemBannerChip}>
+           {item}
+@@ -119,7 +119,7 @@ export function SystemBannerLayout({
+         {media ? <div className={`shrink-0${pinMediaTop ? " self-start" : ""}`}>{media}</div> : null}
+ 
+         <div className={dsSystemBannerContent}>
+-          <div className="flex min-w-0 flex-wrap items-center gap-2">
++          <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
+             <p className={dsSystemBannerTitle}>{title}</p>
+             {titleExtra}
+           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { useDeterministicStockPipeline } from "@/lib/feature-flags/stock-pipeline";
+import { isDeterministicStockPipelineActive } from "@/lib/feature-flags/stock-pipeline";
 import {
   shouldSkipStockRealtimeInvalidate,
   tryMergeStockFromRealtimeGate,
@@ -28,7 +28,7 @@ export function tryMergeStockFromRealtime(
 ): boolean {
   if (!record && !movimentoMeta?.ricambioId) return false;
 
-  if (useDeterministicStockPipeline()) {
+  if (isDeterministicStockPipelineActive()) {
     return tryMergeStockFromRealtimeGate(qc, table, record ?? undefined);
   }
 
@@ -57,6 +57,6 @@ export function shouldSuppressStockRealtimeForTable(
   table: string,
   record: StockRealtimeRecord | null | undefined,
 ): boolean {
-  if (!useDeterministicStockPipeline()) return false;
+  if (!isDeterministicStockPipelineActive()) return false;
   return shouldSkipStockRealtimeInvalidate(table, record ?? undefined);
 }

@@ -23,7 +23,6 @@ import {
   getLastFallbackTrace,
   recordFallbackTrace,
   traceFallbackResolution,
-  type FallbackTraceInput,
 } from "@/lib/selector-core/selector-fallback-trace";
 import { getLastRuntimeContextSnapshot } from "@/lib/selector-core/selector-runtime-context-snapshot";
 import type { SelectorRuntimeContext } from "@/lib/selector-core/selector-runtime-context-snapshot";
@@ -331,6 +330,7 @@ export function getGcExplanationFromPlan(
   plan: GcPlan,
   _model?: UnifiedSelectorCausalModel,
 ): GcExplanation {
+  void _model;
   return {
     blocked: [...plan.blockedByDependency],
     temporalBlocked: plan.temporalBlocked ? [...plan.temporalBlocked] : undefined,

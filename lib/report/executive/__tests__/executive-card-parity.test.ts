@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createReportDatasetContext } from "@/lib/report/datasets/context";
 import { buildLavorazioniDataset } from "@/lib/report/datasets/builders/lavorazioni";
 import { buildMagazzinoDataset } from "@/lib/report/datasets/builders/magazzino";
-import { buildEconomicoDataset, economicoDatasetWarnings } from "@/lib/report/datasets/builders/economico";
+import { buildEconomicoDataset } from "@/lib/report/datasets/builders/economico";
 import { buildReportMetadataEnvelope } from "@/lib/report/datasets/metadata/build-report-metadata-envelope";
 import { defaultRequestedPeriod } from "@/lib/report/datasets/period";
 import { minimalDatasetSlices } from "@/lib/report/datasets/__tests__/test-helpers";

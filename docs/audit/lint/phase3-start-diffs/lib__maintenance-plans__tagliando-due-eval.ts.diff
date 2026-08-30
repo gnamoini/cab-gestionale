@@ -1,0 +1,13 @@
+diff --git a/lib/maintenance-plans/tagliando-due-eval.ts b/lib/maintenance-plans/tagliando-due-eval.ts
+index 89d133ea..73fd1093 100644
+--- a/lib/maintenance-plans/tagliando-due-eval.ts
++++ b/lib/maintenance-plans/tagliando-due-eval.ts
+@@ -87,7 +87,7 @@ export type TagliandoDueEvalResult = {
+   cliente: string;
+ };
+ 
+-export function isMezzoEligibleForTagliandoNotification(_mezzo: MezzoGestito | null | undefined): boolean {
++export function isMezzoEligibleForTagliandoNotification(): boolean {
+   // ponytail: v1 matrice/notifiche milestone disabilitate.
+   return false;
+ }

@@ -1,0 +1,13 @@
+diff --git a/src/hooks/view/use-operational-diary.ts b/src/hooks/view/use-operational-diary.ts
+index 56fbade4..2cad0362 100644
+--- a/src/hooks/view/use-operational-diary.ts
++++ b/src/hooks/view/use-operational-diary.ts
+@@ -23,7 +23,7 @@ export function useOperationalDiaryQuery(
+   );
+ }
+ 
+-export function useOperationalDiaryUpsertMutation(_fromYmd?: string, _toYmd?: string) {
++export function useOperationalDiaryUpsertMutation(__fromYmd?: string, _toYmd?: string) {
+   return useServiceMutation((payload: OperationalDiaryUpsert) => operationalDiaryEntry.upsert(payload), {
+     invalidateQueryKeys: [QK.operationalDiary],
+   });

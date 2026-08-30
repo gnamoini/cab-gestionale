@@ -9,11 +9,12 @@ const ids = plottable.map((p) => p.metricId).sort();
 
 assert.deepEqual(ids, [
   "cost-tot",
-  "eco_invoices",
+  "eco_fatturato",
+  "eco_incassato",
   "lav-chiusi",
   "lav-media-settimanale",
   "lav-periodo",
-  "ore_total",
+  "presence_hours_total",
   "ric-usati",
 ]);
 
@@ -24,7 +25,7 @@ assert.equal(lavPeriodo.month, true);
 assert.equal(lavPeriodo.indexed, true);
 assert.equal(lavPeriodo.absolute, true);
 
-const eco = plottable.find((p) => p.metricId === "eco_invoices")!;
+const eco = plottable.find((p) => p.metricId === "eco_fatturato")!;
 assert.equal(eco.day, false);
 assert.equal(eco.week, false);
 assert.equal(eco.month, true);
@@ -32,7 +33,7 @@ assert.equal(eco.month, true);
 const invalid = validateChartSelection(["lav-periodo"], "day", "indexed");
 assert.equal(invalid.ok, false);
 
-const badBucket = validateChartSelection(["lav-periodo", "eco_invoices"], "day", "indexed");
+const badBucket = validateChartSelection(["lav-periodo", "eco_fatturato"], "day", "indexed");
 assert.equal(badBucket.ok, false);
 
 const ok = validateChartSelection(["lav-periodo", "lav-chiusi"], "week", "indexed");

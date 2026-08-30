@@ -4,6 +4,7 @@ import {
 } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { isOperationalSessionWarmingUp } from "@/lib/sync/operational-session-warmup";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
+import { CAB_SYNC_TABLE_USER_PERMISSIONS } from "@/lib/sync/cab-sync-bus";
 import type { GestionaleActionSource } from "@/lib/sync/gestionale-sync-dispatch";
 import type { DirtyEntry, DirtyEntryType } from "@/lib/sync/gestionale-dirty-state";
 import {
@@ -28,7 +29,7 @@ export type ResolvedSyncEffects = {
 
 /** Tabelle sempre invalidate — nessun dirty signal. */
 export const ALWAYS_LIVE_TABLES = new Set([
-  "user_permissions",
+  CAB_SYNC_TABLE_USER_PERMISSIONS,
   "profiles",
   "log_modifiche",
 ]);

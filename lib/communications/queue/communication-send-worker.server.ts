@@ -19,14 +19,23 @@ type SendQueueRow = {
   id: string;
   log_id: string;
   payload: {
-    to?: string;
+    to?: string | string[];
+    cc?: string[];
+    bcc?: string[];
     subject?: string;
     text?: string;
+    from?: string;
     simulated?: boolean;
     attachments?: Array<{ filename: string; contentBase64: string }>;
   };
   attempts: number;
 };
+
+function resolveQueueRecipient(payload: SendQueueRow["payload"]): string {
+  const to = payload.to;
+  if (Array.isArray(to)) return to[0]?.trim() ?? "";
+  return to?.trim() ?? "";
+}
 
 export type CommunicationSendWorkerResult = {
   ok: boolean;
@@ -82,7 +91,7 @@ export async function runCommunicationSendWorker(input?: { limit?: number }): Pr
       continue;
     }
 
-    if (!transport || !payload.to?.trim()) {
+    if (!transport || !resolveQueueRecipient(payload)) {
       await client
         .from("communication_log")
         .update({ status: "failed", error_message: "transport_or_recipient_missing" })
@@ -103,7 +112,13 @@ export async function runCommunicationSendWorker(input?: { limit?: number }): Pr
     }));
 
     const envelope = resolveCommunicationEmailEnvelope(sendContext.commSettings, settingsRows);
-    if (!envelope) {
+    const composedFrom = payload.from?.trim();
+    const effectiveEnvelope = envelope
+      ? composedFrom
+        ? { ...envelope, from: composedFrom }
+        : envelope
+      : null;
+    if (!effectiveEnvelope) {
       await client
         .from("communication_log")
         .update({ status: "failed", error_message: "resend_from_missing" })
@@ -119,12 +134,14 @@ export async function runCommunicationSendWorker(input?: { limit?: number }): Pr
     }
 
     const sendInput = buildCommunicationSendEmailInput({
-      to: payload.to!,
+      to: resolveQueueRecipient(payload),
+      cc: payload.cc,
+      bcc: payload.bcc,
       subject: payload.subject ?? "",
       text: payload.text ?? "",
       commSettings: sendContext.commSettings,
       branding: sendContext.branding,
-      envelope,
+      envelope: effectiveEnvelope,
       attachments,
     });
 
@@ -154,8 +171,8 @@ export async function runCommunicationSendWorker(input?: { limit?: number }): Pr
       traceCommunicationEvent({
         event: "send",
         templateKey: "",
-        recipient: payload.to!,
-        actualRecipient: payload.to!,
+        recipient: resolveQueueRecipient(payload),
+        actualRecipient: resolveQueueRecipient(payload),
         mode: "sent",
         attachments: attachments.length,
         durationMs,

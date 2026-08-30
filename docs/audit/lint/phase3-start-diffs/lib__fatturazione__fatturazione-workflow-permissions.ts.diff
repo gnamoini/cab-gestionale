@@ -1,0 +1,12 @@
+diff --git a/lib/fatturazione/fatturazione-workflow-permissions.ts b/lib/fatturazione/fatturazione-workflow-permissions.ts
+index 61680d75..088e2920 100644
+--- a/lib/fatturazione/fatturazione-workflow-permissions.ts
++++ b/lib/fatturazione/fatturazione-workflow-permissions.ts
+@@ -10,6 +10,6 @@ export const FATTURAZIONE_WORKFLOW_ACTIONS = [
+ export type FatturazioneWorkflowAction = (typeof FATTURAZIONE_WORKFLOW_ACTIONS)[number];
+ 
+ /** Fase 1: write abilita tutte le azioni operative. */
+-export function canFatturazioneWorkflowAction(canWrite: boolean, _action: FatturazioneWorkflowAction): boolean {
++export function canFatturazioneWorkflowAction(canWrite: boolean): boolean {
+   return canWrite;
+ }

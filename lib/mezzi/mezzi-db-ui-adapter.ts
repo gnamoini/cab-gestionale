@@ -1,5 +1,5 @@
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
-import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 import {
   resolvePreventivoLegacyStato,
   resolvePreventivoStatoCliente,
@@ -18,7 +18,6 @@ import {
   type MezziLogEntryLike,
 } from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
-import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
 import type {
   DocumentoRow,
   LogModificaRow,
@@ -27,22 +26,15 @@ import type {
   PreventivoRow,
 } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   attrezzatureForMezzo,
-  composeMezzoGestitoFromRows,
+
   mezzoGestitoFromRow,
 } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
-import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 
 function str(v: string | null | undefined, fallback = "—"): string {
   const t = v?.trim();
   return t && t.length > 0 ? t : fallback;
-}
-
-function matricolaUi(v: string | null | undefined): string {
-  const t = v?.trim();
-  return t && t.length > 0 ? t : "Non assegnata";
 }
 
 export { mezzoGestitoFromRow };

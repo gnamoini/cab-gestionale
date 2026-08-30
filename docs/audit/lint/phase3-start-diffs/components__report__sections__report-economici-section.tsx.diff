@@ -1,0 +1,26 @@
+diff --git a/components/report/sections/report-economici-section.tsx b/components/report/sections/report-economici-section.tsx
+index 3830570c..fbd7ca89 100644
+--- a/components/report/sections/report-economici-section.tsx
++++ b/components/report/sections/report-economici-section.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useMemo, useState } from "react";
++import { useCallback, useMemo, useState } from "react";
+ import { KpiPerformanceEconomic } from "@/components/report/kpi-performance/kpi-performance-economic";
+ import { ReportArAgingChart } from "@/components/report/primitives/chart/ar-aging-chart";
+ import { ReportClienteAgingHeatmap } from "@/components/report/primitives/chart/cliente-aging-heatmap";
+@@ -74,11 +74,11 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
+   const loading = preventiviQ.isLoading || invoicesQ.isLoading || ddtQ.isLoading;
+   const isError = preventiviQ.isError || invoicesQ.isError || ddtQ.isError;
+ 
+-  const refetchAll = () => {
++  const refetchAll = useCallback(() => {
+     void preventiviQ.refetch();
+     void invoicesQ.refetch();
+     void ddtQ.refetch();
+-  };
++  }, [preventiviQ, invoicesQ, ddtQ]);
+ 
+   const derivedHints = useMemo(() => {
+     const op = derived.operational?.data;

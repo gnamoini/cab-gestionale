@@ -1,4 +1,4 @@
-export { GENERATOR_VERSION, INVENTORY_ENTITY_MAGAZZINO_RICAMBIO, DEFAULT_INCLUDE_BARCODE } from "@/lib/inventory-labels/domain/types";
+export { GENERATOR_VERSION, INVENTORY_ENTITY_MAGAZZINO_RICAMBIO } from "@/lib/inventory-labels/domain/types";
 export type {
   LabelFormat,
   LabelPayload,

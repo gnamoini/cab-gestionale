@@ -1,7 +1,7 @@
 import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import {
-  CONFIGURAZIONE_SECTION_LABELS,
+
   describeConfigurazioneSectionChanges,
   type ConfigurazioneSectionId,
 } from "@/lib/configurazione/settings-snapshot-log";

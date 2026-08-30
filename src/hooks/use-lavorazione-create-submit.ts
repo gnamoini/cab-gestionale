@@ -132,6 +132,7 @@ export function useLavorazioneCreateSubmit({
     [globalOpts.lavorazioni.prioritaDb],
   );
   const addettiOpts = globalOpts.lavorazioni.addetti;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
@@ -166,21 +167,27 @@ export function useLavorazioneCreateSubmit({
     readonly MezzoPermanentFieldKey[]
   >([]);
   const formInitRef = useRef(false);
-  const prelinkedMezzoIdRef = useRef<string | null>(null);
-  if (enabled) {
-    if (mezzoEntryOrigin === "catalog_selected" && prelinkedMezzoIdProp?.trim()) {
-      if (!prelinkedMezzoIdRef.current) {
-        prelinkedMezzoIdRef.current = prelinkedMezzoIdProp.trim();
-      }
+  const [prelinkedMezzoIdLocked, setPrelinkedMezzoIdLocked] = useState<string | null>(null);
+  useEffect(() => {
+    if (!enabled) {
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- lint phase2: preserve existing hook contract
+      setPrelinkedMezzoIdLocked(null);
+      return;
     }
-  } else {
-    prelinkedMezzoIdRef.current = null;
-  }
+    if (mezzoEntryOrigin === "catalog_selected" && prelinkedMezzoIdProp?.trim()) {
+      setPrelinkedMezzoIdLocked((prev) => prev ?? prelinkedMezzoIdProp.trim());
+    }
+  }, [enabled, mezzoEntryOrigin, prelinkedMezzoIdProp]);
   const defaultMezzoAppliedRef = useRef<string | null>(null);
   const createdLavorazioneIdRef = useRef<string | null>(null);
-  const idempotencyKeyRef = useRef(
-    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `lav-create-${Date.now()}`,
-  );
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (idempotencyKeyRef.current == null) {
+    idempotencyKeyRef.current =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+  // eslint-disable-next-line react-hooks/purity -- lint phase2: preserve existing hook contract
+        : `lav-create-${Date.now()}`;
+  }
   const partialSuccessRef = useRef(false);
 
   const { gateSubmit, dialog: unknownSettingsDialog } = useSchedaIngressoUnknownSettingsGate(globalOpts);
@@ -239,7 +246,7 @@ export function useLavorazioneCreateSubmit({
     preferredMezzoId: mezzoPrompt.preferredMezzoId,
     linkedOrigin: mezzoPrompt.linkOrigin,
     entryOrigin: mezzoEntryOrigin,
-    prelinkedMezzoId: prelinkedMezzoIdRef.current,
+    prelinkedMezzoId: prelinkedMezzoIdLocked,
   });
 
   const applyMezzoFromCapture = useCallback(
@@ -336,6 +343,7 @@ export function useLavorazioneCreateSubmit({
       formInitRef.current = false;
       defaultMezzoAppliedRef.current = null;
       baselineRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset modal state when closed
       setUnsavedExitOpen(false);
       setPartialCloseConfirmOpen(false);
       setSubmitError(null);
@@ -411,12 +419,14 @@ export function useLavorazioneCreateSubmit({
   useEffect(() => {
     if (!enabled || !defaultMezzoId) return;
     if (defaultMezzoAppliedRef.current === defaultMezzoId) return;
-    const m = mezziUi.find((x) => x.id === defaultMezzoId);
+    // ponytail: con sharedMezziCatalog la query locale è disabilitata → mezziUi resta []; usare mezziCatalog
+    const m = mezziCatalog.find((x) => x.id === defaultMezzoId);
     if (!m) return;
     defaultMezzoAppliedRef.current = defaultMezzoId;
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- lint phase2: preserve existing hook contract
     applyMezzo(m);
     queueMicrotask(() => syncBaseline());
-  }, [enabled, defaultMezzoId, mezziUi, applyMezzo, syncBaseline]);
+  }, [enabled, defaultMezzoId, mezziCatalog, applyMezzo, syncBaseline]);
 
   useEffect(() => {
     if (!enabled || prioritaOpts.length === 0) return;
@@ -524,7 +534,7 @@ export function useLavorazioneCreateSubmit({
             const { result: tx } = await executeInterventoWriteEntry(
               {
                 mode: "create",
-                idempotencyKey: idempotencyKeyRef.current,
+                idempotencyKey: idempotencyKeyRef.current ?? crypto.randomUUID(),
                 fields: gatedFields,
                 lavorazioneId: existingLavId,
                 mezziCatalog: catalog,
@@ -679,6 +689,7 @@ export function useLavorazioneCreateSubmit({
         setSubmitPending(false);
       }
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
     [
       runSubmit,
       gateSubmit,

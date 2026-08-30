@@ -42,7 +42,7 @@ export function PageActionMenuHeader({
             {submenuTitle}
           </span>
         ) : (
-          <span className="flex-1" aria-hidden />
+          <span className="flex-1 min-w-0" aria-hidden />
         )}
         <span className="w-[4.5rem] shrink-0" aria-hidden />
       </div>
@@ -77,7 +77,7 @@ export function PageActionMenuHeader({
       {showHeaderActions ? (
         <div className={pageActionMenuQuickActionsBarClass}>{headerActions}</div>
       ) : (
-        <span className="flex-1" aria-hidden />
+        <span className="flex-1 min-w-0" aria-hidden />
       )}
     </div>
   );

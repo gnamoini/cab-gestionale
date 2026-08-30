@@ -1,0 +1,31 @@
+diff --git a/components/document-capture/capture-field-review-grid.tsx b/components/document-capture/capture-field-review-grid.tsx
+index 2ac427ed..fde91972 100644
+--- a/components/document-capture/capture-field-review-grid.tsx
++++ b/components/document-capture/capture-field-review-grid.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
++
+ import { Badge } from "@/components/design-system/badge";
+ import {
+   captureCatalogWarningsByFieldKey,
+@@ -293,7 +295,9 @@ export function CaptureFieldReviewGrid({
+     }
+   }, [addettiRecords, captureId, runResolution]);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     void load();
+   }, [load]);
+ 
+@@ -422,7 +426,7 @@ export function CaptureFieldReviewGrid({
+               <div className="flex items-start justify-between gap-2">
+                 <span className={dsLabel}>{fieldLabel(f.field_key)}</span>
+                 {badges.length > 0 ? (
+-                  <div className="flex max-w-[55%] flex-wrap justify-end gap-1">
++                  <div className="flex max-w-[55%] justify-end gap-1 min-w-0 flex-nowrap sm:flex-wrap">
+                     {badges.map((badge) => (
+                       <Badge key={badge.label} tone={badge.tone}>
+                         {badge.label}

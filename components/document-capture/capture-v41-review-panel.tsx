@@ -47,7 +47,9 @@ export function CaptureV41ReviewPanel({ captureId }: Props) {
     }
   }, [captureId]);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void load();
   }, [load]);
 

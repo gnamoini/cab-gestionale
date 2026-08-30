@@ -68,7 +68,7 @@ export function PageAccessLevelCell({
 export function PageAccessLegend({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[color:var(--cab-text-muted)] ${className}`}
+      className={`flex items-center gap-x-4 gap-y-1 text-[11px] text-[color:var(--cab-text-muted)] ${className} min-w-0 flex-nowrap sm:flex-wrap`}
       aria-label="Legenda permessi"
     >
       <span className="inline-flex items-center gap-1.5">

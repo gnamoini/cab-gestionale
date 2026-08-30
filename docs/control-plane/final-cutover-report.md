@@ -34,6 +34,15 @@ CONTROL_PLANE_PREFLIGHT:
 
 Comando: `npm run control:cutover-preflight`
 
+### Release gate reconciliation (2026-08-29)
+
+- **RELEASE_READY contract:** [`docs/release-gate-contract.md`](../release-gate-contract.md) + machine-readable JSON
+- **Conformance gate:** `governance.release.contract` (84 controls)
+- **Legacy alignment:** `test:security:remediation` + `release-ready-contract` added to `release-gate.yml`
+- **CORE vs P0:** 278 vs 79 — documented, not assumed equivalent
+- **Shadow compare:** run `npm run control:shadow-compare` after next green CI cycle
+
+
 ---
 
 ## Fase 1 — Strict smoke CI

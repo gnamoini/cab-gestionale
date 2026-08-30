@@ -105,6 +105,7 @@ export function DipendentiInserimentoSection({
   const [localByDate, setLocalByDate] = useState<Map<string, TimesheetCellValue>>(new Map());
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLocalByDate(new Map());
   }, [monthKey, targetEmployee?.id]);
 

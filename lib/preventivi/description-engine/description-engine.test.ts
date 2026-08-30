@@ -4,7 +4,6 @@ import {
   generatePreventivoDescription,
   resetDescriptionEngineDevState,
 } from "@/lib/preventivi/description-engine/description-engine";
-import { descriptionEngineMetaSchema } from "@/lib/preventivi/description-engine/contracts/engine-meta.contract";
 
 const emptyCtx = {
   cliente: "",

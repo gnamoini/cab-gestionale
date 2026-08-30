@@ -4,7 +4,7 @@ import { generatePreventivoPdfBytes, preventivoPdfFileName } from "@/lib/prevent
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifact, openPdfArtifactFromUserClick } from "@/lib/pdf/client/pdf-viewer";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 /** Anteprima WYSIWYG dall'editor — sync submit dopo generazione bytes. */
@@ -44,5 +44,9 @@ export async function openPreventivoPdfInNewTab(
   deferredHandle?: DeferredPopupHandle | null,
 ): Promise<void> {
   if (typeof window === "undefined") return;
-  await openPdfArtifact("preventivo", { id: p.id, autore }, deferredHandle);
+  if (deferredHandle) {
+    await openPdfArtifact("preventivo", { id: p.id, autore }, deferredHandle);
+    return;
+  }
+  openPdfArtifactFromUserClick("preventivo", { id: p.id, autore });
 }

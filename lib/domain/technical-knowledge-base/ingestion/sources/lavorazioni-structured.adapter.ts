@@ -1,6 +1,5 @@
 import { LAVORAZIONI_COLUMNS } from "@/lib/db/table-select-columns";
 import { precedenceForSource } from "../../merge/source-precedence";
-import type { TkbIngestionContext } from "../adapter-types";
 import type { TkbSourceAdapter } from "../adapter-registry";
 import { registerTkbAdapter } from "../adapter-registry";
 import { tkbSlugFromLabel, activityIdFromText } from "../slug";

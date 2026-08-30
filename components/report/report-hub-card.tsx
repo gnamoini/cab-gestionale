@@ -28,7 +28,7 @@ export function ReportHubCard({ area }: { area: ReportHubAreaConfig }) {
         </span>
       </div>
       <span className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{area.label}</span>
-      <span className="mt-1.5 line-clamp-2 flex-1 text-xs leading-relaxed text-[color:var(--cab-text-muted)]">
+      <span className="mt-1.5 line-clamp-2 min-w-0 flex-1 text-xs leading-relaxed text-[color:var(--cab-text-muted)]">
         {area.description}
       </span>
     </Link>

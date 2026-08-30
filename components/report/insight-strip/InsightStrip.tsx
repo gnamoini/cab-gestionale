@@ -72,7 +72,7 @@ function InsightStripItem({ insight }: { insight: InsightDto }) {
       <div className={`absolute inset-y-0 left-0 w-1 ${meta.accent}`} aria-hidden />
       <div className="flex flex-col gap-3 p-3 pl-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap sm:flex-wrap">
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${meta.badge}`}>
               {meta.label}
             </span>

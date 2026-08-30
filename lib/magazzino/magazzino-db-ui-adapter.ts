@@ -29,8 +29,9 @@ function num(v: unknown, fallback = 0): number {
 export function magazzinoRowToRicambioUI(
   row: MagazzinoRicambioRow,
   autore = "Sistema",
-  mezziListe?: MezziListePrefs,
+  _mezziListe?: MezziListePrefs,
 ): RicambioMagazzino {
+  void _mezziListe;
   const meta = parseMagazzinoRicambioMeta(row.meta ?? {});
   const fromMeta = metaFieldsToRicambioUi(meta);
   const listino = num(row.costo, 0);
@@ -95,5 +96,7 @@ export function ricambioUiToMagazzinoInsert(
 export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino, mezziListe?: MezziListePrefs): MagazzinoUpdate {
   const insert = ricambioUiToMagazzinoInsert(r, mezziListe) as MagazzinoInsert & { id?: string };
   const { quantita: _quantita, id: _id, ...patch } = insert;
+  void _quantita;
+  void _id;
   return patch;
 }

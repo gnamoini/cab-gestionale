@@ -50,8 +50,17 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
   const { push: pushToast } = useToastContext();
   const [items, setItems] = useState<UploadFeedbackItem[]>([]);
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const trackUploadRef = useRef<
+    <T>(params: TrackUploadParams<T>) => Promise<{ ok: true; data: T } | { ok: false; error: string }>
+  >(async () => ({ ok: false, error: "Upload non inizializzato" }));
+  const runUploadRef = useRef<
+    <T>(params: RunUploadParams<T>) => Promise<{ ok: true; data: T } | { ok: false; error: string }>
+  >(async () => ({ ok: false, error: "Upload non inizializzato" }));
   const removeTimeoutsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     const timeouts = removeTimeoutsRef.current;
@@ -139,7 +148,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
       const retry = () => {
         const item = itemsRef.current.find((x) => x.id === id);
         const file = item?.file ?? params.file;
-        void trackUpload({ ...params, file });
+        void trackUploadRef.current({ ...params, file });
       };
 
       const item: UploadFeedbackItem = {
@@ -178,7 +187,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
       const label = params.label?.trim() || fileName;
 
       const retry = () => {
-        void runUpload(params);
+        void runUploadRef.current(params);
       };
 
       setItems((prev) => [
@@ -210,6 +219,11 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
     },
     [executeTracked],
   );
+
+  useEffect(() => {
+    trackUploadRef.current = trackUpload;
+    runUploadRef.current = runUpload;
+  }, [trackUpload, runUpload]);
 
   const activeCount = items.filter((x) => x.phase === "uploading" || x.phase === "selected").length;
   const isUploading = items.some((x) => x.phase === "uploading");

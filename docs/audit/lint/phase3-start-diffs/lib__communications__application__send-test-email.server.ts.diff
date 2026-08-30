@@ -1,0 +1,42 @@
+diff --git a/lib/communications/application/send-test-email.server.ts b/lib/communications/application/send-test-email.server.ts
+index eaf446f2..88139060 100644
+--- a/lib/communications/application/send-test-email.server.ts
++++ b/lib/communications/application/send-test-email.server.ts
+@@ -6,6 +6,7 @@ import {
+   loadAppSettingsRowsForCommunicationSend,
+   prepareCommunicationEmailSendInput,
+ } from "@/lib/communications/email/communication-email-envelope.server";
++import { resolveCommunicationEmailEnvelope, readCommunicationPrefsFromRows } from "@/lib/communications/email/communication-email-envelope";
+ import { createResendEmailTransport } from "@/lib/communications/providers/resend-email-provider.server";
+ import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+ import { isValidEmail } from "@/lib/validation/email";
+@@ -28,17 +29,25 @@ export async function sendCommunicationTestEmailServer(
+     );
+   }
+ 
+-  const subject = "Email di prova — Gestionale CAB";
++  const settingsRows = await loadAppSettingsRowsForCommunicationSend();
++  const commSettings = readCommunicationPrefsFromRows(settingsRows);
++  const envelope = resolveCommunicationEmailEnvelope(commSettings, settingsRows);
++  const displayName = envelope?.displayName?.trim() || "Gestionale CAB";
++
++  const subject = `Email di prova — ${displayName}`;
+   const text = [
+-    "Questa è un'email di prova dal Communication Engine.",
++    "Gentile utente,",
++    "",
++    "questa è un'email di prova dal sistema di comunicazioni del gestionale.",
+     "",
+     "Se ricevi questo messaggio, Resend e il dominio mittente sono configurati correttamente.",
+     "",
+     `Destinatario test: ${to}`,
+-    `Data: ${new Date().toISOString()}`,
++    "",
++    "Cordiali saluti,",
++    displayName,
+   ].join("\n");
+ 
+-  const settingsRows = await loadAppSettingsRowsForCommunicationSend();
+   const sendInput = await prepareCommunicationEmailSendInput({
+     to,
+     subject,

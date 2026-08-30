@@ -1,0 +1,36 @@
+diff --git a/components/gestionale/settings-color-picker-popover.tsx b/components/gestionale/settings-color-picker-popover.tsx
+index fcdf40fa..63517cf5 100644
+--- a/components/gestionale/settings-color-picker-popover.tsx
++++ b/components/gestionale/settings-color-picker-popover.tsx
+@@ -3,6 +3,7 @@
+ import { Tooltip } from "@/components/ui";
+ import { createPortal } from "react-dom";
+ import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
++import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
+ import { ADDETTO_COLOR_POOL } from "@/lib/lavorazioni/addetto-colors-assign";
+ import { normalizeHex } from "@/lib/lavorazioni/color-utils";
+ import { CloseButton } from "@/components/design-system";
+@@ -67,7 +68,7 @@ export function SettingsColorPickerPopover({
+ }) {
+   const panelRef = useRef<HTMLDivElement>(null);
+   const hexInputRef = useRef<HTMLInputElement>(null);
+-  const [mounted, setMounted] = useState(false);
++  const mounted = useClientHydrated();
+   const hex = normalizeHex(value) ?? "#52525b";
+   const [hexDraft, setHexDraft] = useState(hex);
+ 
+@@ -81,12 +82,10 @@ export function SettingsColorPickerPopover({
+     maxHeight: COLOR_PICKER_PANEL_MAX_HEIGHT,
+   });
+ 
+-  useEffect(() => {
+-    setMounted(true);
+-  }, []);
+-
++   
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setHexDraft(hex);
+   }, [hex, open]);
+ 

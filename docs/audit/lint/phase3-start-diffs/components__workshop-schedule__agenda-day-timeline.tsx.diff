@@ -1,0 +1,12 @@
+diff --git a/components/workshop-schedule/agenda-day-timeline.tsx b/components/workshop-schedule/agenda-day-timeline.tsx
+index 53550e9a..43dffeb6 100644
+--- a/components/workshop-schedule/agenda-day-timeline.tsx
++++ b/components/workshop-schedule/agenda-day-timeline.tsx
+@@ -41,6 +41,7 @@ export function AgendaDayTimeline({
+     [sessions, dayYmd],
+   );
+ 
++  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
+   const rowVirtualizer = useVirtualizer({
+     count: slotCount,
+     getScrollElement: () => parentRef.current,

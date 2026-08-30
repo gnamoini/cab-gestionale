@@ -1,0 +1,13 @@
+diff --git a/lib/selector-interaction/use-selector-listbox-keyboard.ts b/lib/selector-interaction/use-selector-listbox-keyboard.ts
+index fefc0527..c509e60f 100644
+--- a/lib/selector-interaction/use-selector-listbox-keyboard.ts
++++ b/lib/selector-interaction/use-selector-listbox-keyboard.ts
+@@ -16,7 +16,7 @@ export type UseSelectorListboxKeyboardParams = {
+ export function useSelectorListboxKeyboard({
+   open,
+   totalNavigableOptions,
+-  activeIndex,
++  activeIndex: 
+   setOpen,
+   setActiveIndex,
+   onEscape,

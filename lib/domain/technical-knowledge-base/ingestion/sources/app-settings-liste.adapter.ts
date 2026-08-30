@@ -2,7 +2,6 @@ import { APP_SETTINGS_COLUMNS } from "@/lib/db/table-select-columns";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import { resolveCabAppSettingsFromRows } from "@/src/lib/app-settings/resolve-from-rows";
 import { precedenceForSource } from "../../merge/source-precedence";
-import type { TkbIngestionContext } from "../adapter-types";
 import type { TkbSourceAdapter } from "../adapter-registry";
 import { registerTkbAdapter } from "../adapter-registry";
 import { tkbSlugFromLabel } from "../slug";

@@ -1,0 +1,9 @@
+diff --git a/lib/import-files/import-file-access.server.ts b/lib/import-files/import-file-access.server.ts
+index 7169309a..4057894c 100644
+--- a/lib/import-files/import-file-access.server.ts
++++ b/lib/import-files/import-file-access.server.ts
+@@ -1,3 +1,4 @@
++/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
+ import "server-only";
+ 
+ import {

@@ -1,0 +1,12 @@
+diff --git a/src/services/maintenance-plans.service.ts b/src/services/maintenance-plans.service.ts
+index 5242332e..bd4c3e5f 100644
+--- a/src/services/maintenance-plans.service.ts
++++ b/src/services/maintenance-plans.service.ts
+@@ -22,7 +22,6 @@ import {
+   buildSyntheticTagliandoHistoryViews,
+   parseIngressoMeterFromSchedaContenuto,
+ } from "@/lib/maintenance-plans/synthesize-tagliando-lavorazioni";
+-import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
+ import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
+ import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
+ import type {

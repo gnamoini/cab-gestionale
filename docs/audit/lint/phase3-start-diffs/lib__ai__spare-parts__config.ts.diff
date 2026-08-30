@@ -1,0 +1,37 @@
+diff --git a/lib/ai/spare-parts/config.ts b/lib/ai/spare-parts/config.ts
+index 2d84140f..bb112fca 100644
+--- a/lib/ai/spare-parts/config.ts
++++ b/lib/ai/spare-parts/config.ts
+@@ -45,3 +45,32 @@ export function readMaxConcurrentPartSearch(): number {
+   return 2;
+ }
+ 
++/** Store Gemini File Search riutilizzabile (evita create ad ogni job). */
++export function readSparePartsListinoPagesPerChunkMin(): number {
++  const raw = readRuntimeSecret("AI_SPARE_PARTS_LISTINO_PAGES_PER_CHUNK");
++  const n = Number.parseInt(raw ?? "", 10);
++  if (Number.isFinite(n) && n >= 12 && n <= 80) return n;
++  return 40;
++}
++
++/** Pausa tra blocchi listino Ricambi AI — riduce 429 su piano free. */
++export function readSparePartsListinoChunkDelayMs(): number {
++  const raw = readRuntimeSecret("AI_SPARE_PARTS_LISTINO_CHUNK_DELAY_MS");
++  const n = Number.parseInt(raw ?? "", 10);
++  if (Number.isFinite(n) && n >= 5_000 && n <= 120_000) return n;
++  return 45_000;
++}
++
++export function readFileSearchStoreName(): string | null {
++  const fromEnv = readRuntimeSecret("GEMINI_FILE_SEARCH_STORE_NAME")?.trim();
++  return fromEnv || null;
++}
++
++/** Attesa massima polling upload File Search (ms). Default 8 min. */
++export function readFileSearchUploadTimeoutMs(): number {
++  const raw = readRuntimeSecret("GEMINI_FILE_SEARCH_UPLOAD_TIMEOUT_MS");
++  const n = Number.parseInt(raw ?? "", 10);
++  if (Number.isFinite(n) && n >= 60_000 && n <= 900_000) return n;
++  return 480_000;
++}
++

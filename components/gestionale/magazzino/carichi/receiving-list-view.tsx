@@ -46,7 +46,7 @@ export function ReceivingListView() {
 
   const load = useCallback(async () => {
     try {
-      const [_, pendingItems] = await Promise.all([listQuery.refetch(), fetchInventoryReceivingPending()]);
+      const [, pendingItems] = await Promise.all([listQuery.refetch(), fetchInventoryReceivingPending()]);
       setPending(pendingItems);
     } catch {
       /* refetch errors surfaced by query */
@@ -54,6 +54,7 @@ export function ReceivingListView() {
   }, [listQuery]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void load();
   }, [load]);
 
@@ -61,7 +62,7 @@ export function ReceivingListView() {
     <GestionaleSectionGate module="magazzino_carichi">
       <div className={layoutPageRoot}>
         {perm.canWrite ? (
-          <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+          <div className="mb-2 flex items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <div className={gestionalePageToolbarActionsClass}>
               <MagazzinoCarichiCaptureLauncher size="md" className="h-11 shrink-0" />
             </div>

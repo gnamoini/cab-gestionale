@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CaptureRicambioCodiceField } from "@/components/document-capture/capture-ricambio-codice-field";
 import { RicambioMagazzinoInlineHint } from "@/components/document-capture/ricambio-magazzino-inline-hint";
 import {
@@ -18,6 +18,7 @@ import type { SchedaRicambiFormOpts } from "@/components/lavorazioni/schede/sche
 import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda-fields-types";
 import { SchedaDayField, SchedaMezzoIdentificazioneReadonly, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
 import { GestionaleQuantityField } from "@/components/gestionale/gestionale-quantity-field";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { RicambioRowAutocompletePortal } from "@/lib/selector-core/legacy-selector-adapters";
 import { newRigaId } from "@/lib/schede/schede-ui";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -36,6 +37,7 @@ import {
   dsTableRow,
   dsTableWrap,
   dsScrollbar,
+  gestionaleTextareaMaxHeightCompact,
 } from "@/lib/ui/design-system";
 import type { RigaRicambioScheda, SchedaRicambiFields } from "@/types/schede";
 
@@ -82,42 +84,19 @@ function RicambioDescrizioneField({
   onChange: (v: string) => void;
   readOnly?: boolean;
 }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const syncHeight = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "0px";
-    const styles = getComputedStyle(el);
-    const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
-    const padding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
-    const border = Number.parseFloat(styles.borderTopWidth) + Number.parseFloat(styles.borderBottomWidth);
-    const singleLine = lineHeight + padding + border;
-    const maxHeight = singleLine * 3;
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, singleLine), maxHeight)}px`;
-  }, []);
-
-  useLayoutEffect(() => {
-    syncHeight();
-  }, [value, syncHeight]);
-
   if (readOnly) {
     return <span className="text-sm leading-snug text-[color:var(--cab-text)]">{value || "—"}</span>;
   }
 
   return (
-    <textarea
-      ref={ref}
+    <GestionaleTextarea
       className={RICAMBIO_DESCRIZIONE_INPUT}
+      size="sm"
       rows={1}
-      spellCheck={false}
+      maxHeight={gestionaleTextareaMaxHeightCompact}
       autoComplete="off"
-      autoCorrect="off"
       value={value}
-      onChange={(e) => {
-        onChange(e.target.value);
-        syncHeight();
-      }}
+      onChange={onChange}
       placeholder="Descrizione ricambio"
       aria-label="Descrizione ricambio"
     />

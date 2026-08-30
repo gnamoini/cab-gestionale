@@ -27,6 +27,6 @@ export async function GET(_request: Request, context: RouteContext) {
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (data.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { created_by: _owner, ...payload } = data;
+  const { ...payload } = data;
   return NextResponse.json(payload);
 }

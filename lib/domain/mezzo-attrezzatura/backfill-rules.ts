@@ -53,8 +53,9 @@ export function mapLegacyMezzoToAttrezzatura(row: LegacyMezzoBackfillInput): Att
 
 export function mapMetaToMezzoTelaioPatch(
   meta: MezzoAnagraficaMeta,
-  targa: string | null,
+  _targa: string | null,
 ): MezzoTelaioBackfillPatch {
+  void _targa;
   return {
     marca_telaio: trimOrNull(meta.marcaTelaio),
     modello_telaio: trimOrNull(meta.modelloTelaio),

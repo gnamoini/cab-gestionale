@@ -204,7 +204,7 @@ export function GlobalFixedListPillSelect({
           role="option"
           aria-selected={active}
           style={optStyle}
-          className={`w-full ${touchMinH} cursor-pointer rounded-md border px-2 ${touchPy} text-center ${fixedListPillTextClass} transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] ${dsFocus} ${
+          className={`w-full min-w-0 ${touchMinH} cursor-pointer rounded-md border px-2 ${touchPy} text-center ${fixedListPillTextClass} transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] ${dsFocus} ${
             active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
           }${highlighted && !active ? " ring-2 ring-inset ring-white/20" : ""}${sheetTap ? " touch-pan-y" : ""}`}
           onMouseEnter={() => setActiveIndex(idx)}
@@ -287,7 +287,7 @@ export function GlobalFixedListPillSelect({
         ref={shellRef}
         role="listbox"
         aria-label={ariaLabel}
-        className={`flex w-full min-w-0 flex-wrap gap-1.5 ${sizeShellClass[size]} items-stretch`}
+        className={`flex w-full min-w-0 gap-1.5 ${sizeShellClass[size]} items-stretch flex-nowrap sm:flex-wrap`}
       >
         {options.map((opt) => {
           const active = opt.value === value;
@@ -301,7 +301,6 @@ export function GlobalFixedListPillSelect({
               aria-label={opt.label}
               disabled={disabled}
               style={optStyle}
-              title={title ? `${title}: ${opt.label}` : opt.label}
               className={`min-w-0 flex-1 cursor-pointer truncate rounded-lg border px-2 text-center ${textClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${pillShell} ${
                 active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
               }`}

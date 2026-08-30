@@ -23,8 +23,14 @@ export function ReportEconomiaRevenueTrendChart() {
   const { canReadPage, isLoading: rbacLoading } = useRbac();
   const canFatturazione = canReadPage("fatturazione");
   const invoicesQ = useInvoicesQuery(canFatturazione);
-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
-  const payments = invoicesQ.isError ? [] : invoicesQ.payments;
+  const invoices = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
+    [invoicesQ.isError, invoicesQ.invoices],
+  );
+  const payments = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.payments),
+    [invoicesQ.isError, invoicesQ.payments],
+  );
 
   const revenueSeries = useMemo(
     () => buildRevenueCollectionMonthlySeries(invoices, payments, range),
@@ -54,7 +60,10 @@ export function ReportEconomiaArAgingChart() {
   const { canReadPage, isLoading: rbacLoading } = useRbac();
   const canFatturazione = canReadPage("fatturazione");
   const invoicesQ = useInvoicesQuery(canFatturazione);
-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
+  const invoices = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
+    [invoicesQ.isError, invoicesQ.invoices],
+  );
 
   const arAgingPoints = useMemo(() => buildInvoiceArAgingPoints(invoices, anchor), [invoices, anchor]);
 
@@ -74,7 +83,10 @@ export function ReportEconomiaClienteHeatmap() {
   const { canReadPage, isLoading: rbacLoading } = useRbac();
   const canFatturazione = canReadPage("fatturazione");
   const invoicesQ = useInvoicesQuery(canFatturazione);
-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
+  const invoices = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
+    [invoicesQ.isError, invoicesQ.invoices],
+  );
   const snapshotLabel = formatSnapshotDate(anchor);
 
   const agingHeatmap = useMemo(() => buildClienteAgingHeatmap(invoices, anchor), [invoices, anchor]);

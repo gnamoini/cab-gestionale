@@ -65,7 +65,9 @@ export function DashboardPromemoriaCalendar({
   const [navDir, setNavDir] = useState<-1 | 0 | 1>(0);
   const prevMonthKeyRef = useRef(viewMonthKey);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setMounted(true);
     setTodayYmd(toYmd(new Date()));
   }, []);

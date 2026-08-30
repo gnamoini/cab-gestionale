@@ -1,0 +1,13 @@
+diff --git a/lib/global-list/build-lavorazioni-pill-options.ts b/lib/global-list/build-lavorazioni-pill-options.ts
+index 17347522..142f577d 100644
+--- a/lib/global-list/build-lavorazioni-pill-options.ts
++++ b/lib/global-list/build-lavorazioni-pill-options.ts
+@@ -1,6 +1,6 @@
+ import {
+-  addettoColorKey,
+-  addettoDisplayName,
++
++
+   type AddettoRecord,
+ } from "@/lib/lavorazioni/addetto-model";
+ import {

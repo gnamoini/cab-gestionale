@@ -1,0 +1,12 @@
+diff --git a/lib/regression/tooltip-contract-api.test.ts b/lib/regression/tooltip-contract-api.test.ts
+index 4a13271e..3bbefc83 100644
+--- a/lib/regression/tooltip-contract-api.test.ts
++++ b/lib/regression/tooltip-contract-api.test.ts
+@@ -23,7 +23,6 @@ assert.equal(TOOLTIP_CONTRACT.consumerImportPath, "@/components/ui");
+ assert.ok(UI_PRIMITIVE_VERSIONS.Tooltip);
+ 
+ // API stabile: content su TooltipProps, no trigger compositional
+-type _ContentRequired = Pick<TooltipProps, "content" | "children">;
+ type _NoTrigger = "trigger" extends keyof TooltipProps ? never : true;
+ const _apiCheck: _NoTrigger = true;
+ void _apiCheck;

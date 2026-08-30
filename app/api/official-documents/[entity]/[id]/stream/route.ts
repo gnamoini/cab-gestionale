@@ -1,5 +1,4 @@
 import { streamOfficialDdtPdfServer, streamOfficialPreventivoPdfServer } from "@/lib/official-documents/official-pdf-stream.server";
-import { streamOfficialPdfByTokenServer } from "@/lib/official-documents/official-pdf-token-stream.server";
 import { pdfArtifactResponseHeaders } from "@/lib/pdf/pdf-artifact-response";
 import { NextResponse } from "next/server";
 

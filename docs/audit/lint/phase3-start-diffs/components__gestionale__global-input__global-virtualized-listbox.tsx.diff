@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/global-input/global-virtualized-listbox.tsx b/components/gestionale/global-input/global-virtualized-listbox.tsx
+index efe3e744..e1ab9155 100644
+--- a/components/gestionale/global-input/global-virtualized-listbox.tsx
++++ b/components/gestionale/global-input/global-virtualized-listbox.tsx
+@@ -54,6 +54,7 @@ export function GlobalVirtualizedListbox({
+   const useVirtual = rowCount > GLOBAL_LISTBOX_VIRTUALIZE_THRESHOLD;
+   const [externalMeasureReady, setExternalMeasureReady] = useState(!hostIsExternal);
+ 
++  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
+   const virtualizer = useVirtualizer({
+     count: rowCount,
+     getScrollElement: () => scrollRef.current,

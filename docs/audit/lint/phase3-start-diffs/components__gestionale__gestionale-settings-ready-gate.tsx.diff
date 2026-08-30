@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/gestionale-settings-ready-gate.tsx b/components/gestionale/gestionale-settings-ready-gate.tsx
+index 4203e221..6b10112f 100644
+--- a/components/gestionale/gestionale-settings-ready-gate.tsx
++++ b/components/gestionale/gestionale-settings-ready-gate.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
++
+ import { useCallback, useEffect, useRef, useState } from "react";
+ import { useAuth } from "@/context/auth-context";
+ import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";

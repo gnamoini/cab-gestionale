@@ -17,6 +17,9 @@ const STEPS: { label: string; cmd: string; args: string[]; env?: NodeJS.ProcessE
     args: ["run", "ci:build"],
     env: { ...process.env, NODE_ENV: "production" },
   },
+  { label: "test:rbac", cmd: "npm", args: ["run", "test:rbac"] },
+  { label: "test:rbac:hardening", cmd: "npm", args: ["run", "test:rbac:hardening"] },
+  { label: "test:security:remediation", cmd: "npm", args: ["run", "test:security:remediation"] },
   { label: "ux:enforce", cmd: "npm", args: ["run", "ux:enforce"] },
   { label: "audit:ui", cmd: "npm", args: ["run", "audit:ui"] },
   { label: "ux:mobile-gate", cmd: "npm", args: ["run", "ux:mobile-gate"] },
@@ -59,6 +62,11 @@ const STEPS: { label: string; cmd: string; args: string[]; env?: NodeJS.ProcessE
   { label: "flex:eslint:gate", cmd: "npm", args: ["run", "flex:eslint:gate"] },
   { label: "audit:dead-code:delta", cmd: "npm", args: ["run", "audit:dead-code:delta"] },
   { label: "flex:freeze:gate", cmd: "npm", args: ["run", "flex:freeze:gate"] },
+  {
+    label: "release-ready-contract",
+    cmd: "npx",
+    args: ["tsx", "lib/control/release-ready-contract.test.ts"],
+  },
 ];
 
 function hasSupabaseSecrets(): boolean {
@@ -90,6 +98,9 @@ function runStep(step: (typeof STEPS)[number]): { ok: boolean; status: GateStatu
 }
 
 function main() {
+  console.warn(
+    "DEPRECATED: release:gate is NOT merge authority. Use `npm run control:local` for pre-push checks. DO NOT USE FOR RELEASE.\n",
+  );
   console.log("RELEASE GATE — sequential checks (local advisory; does not authorize production deploy)\n");
 
   const results: { label: string; status: StepStatus }[] = [];

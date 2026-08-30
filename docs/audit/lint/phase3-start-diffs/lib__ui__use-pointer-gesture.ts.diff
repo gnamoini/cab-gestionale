@@ -1,0 +1,21 @@
+diff --git a/lib/ui/use-pointer-gesture.ts b/lib/ui/use-pointer-gesture.ts
+index 7ca21c6a..3ca6b8dd 100644
+--- a/lib/ui/use-pointer-gesture.ts
++++ b/lib/ui/use-pointer-gesture.ts
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
++
+ import { useCallback, useEffect, useRef } from "react";
+ 
+ const DEDUP_MS = 50;
+@@ -95,7 +97,7 @@ export function usePointerGesture({
+       resetGesture();
+     }
+ 
+-    function onTouchStart(e: TouchEvent) {
++    function onTouchStart() {
+       const now = Date.now();
+       if (now - lastTouchTimeRef.current < DEDUP_MS && activePointerIdRef.current != null) return;
+       lastTouchTimeRef.current = now;

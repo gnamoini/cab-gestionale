@@ -1,0 +1,52 @@
+diff --git a/src/lib/runtime/truth-layer/use-effective-permissions.ts b/src/lib/runtime/truth-layer/use-effective-permissions.ts
+index 5e362631..c53e50e5 100644
+--- a/src/lib/runtime/truth-layer/use-effective-permissions.ts
++++ b/src/lib/runtime/truth-layer/use-effective-permissions.ts
+@@ -1,6 +1,9 @@
+ "use client";
+ 
+-import { useEffect, useMemo, useRef } from "react";
++/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
++/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
++
++import { useEffect, useMemo, useState } from "react";
+ import { cabDevWarn } from "@/src/lib/observability/dev-warn";
+ import { useAuth } from "@/context/auth-context";
+ import { usePermissionsSnapshotContext } from "@/context/permissions-snapshot-context";
+@@ -31,7 +34,7 @@ export function useEffectivePermissionsSource(): {
+   const operatorPilot = useOperatorGlobalSettings();
+   const overridesQuery = useUserPageOverridesQuery();
+   const roleAccessQuery = useRolePageAccessQuery();
+-  const lastGoodRef = useRef<EffectivePermissionsSnapshot | null>(null);
++  const [stickyGood, setStickyGood] = useState<EffectivePermissionsSnapshot | null>(null);
+ 
+   const permissionsHydrated =
+     Boolean(user?.id) &&
+@@ -57,10 +60,8 @@ export function useEffectivePermissionsSource(): {
+     if (snap.permissionsHydrated) {
+       publishClientEffectivePermissionsSnapshot(snap);
+       publishStickyRbacSnapshot(snap);
+-      lastGoodRef.current = snap;
+     } else if (resolveRole(snap.roleKey ?? snap.role) === "admin") {
+       publishStickyRbacSnapshot(snap);
+-      lastGoodRef.current = snap;
+     }
+     return snap;
+   }, [
+@@ -73,8 +74,15 @@ export function useEffectivePermissionsSource(): {
+     permissionsHydrated,
+   ]);
+ 
++  useEffect(() => {
++    if (!snapshot) return;
++    if (snapshot.permissionsHydrated || resolveRole(snapshot.roleKey ?? snapshot.role) === "admin") {
++      setStickyGood(snapshot);
++    }
++  }, [snapshot]);
++
+   const displaySnapshot =
+-    snapshot && isRbacSnapshotReady(snapshot) ? snapshot : lastGoodRef.current;
++    snapshot && isRbacSnapshotReady(snapshot) ? snapshot : stickyGood;
+ 
+   useEffect(() => {
+     if (displaySnapshot && isRbacSnapshotReady(displaySnapshot)) {

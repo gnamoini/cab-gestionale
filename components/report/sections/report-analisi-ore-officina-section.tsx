@@ -13,7 +13,7 @@ import { reportContentPanelClass } from "@/components/report/report-ui-tokens";
 import { useReportTimesheetKpi } from "@/src/hooks/use-report-timesheet-kpi";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { addettiEmployeeMappingService } from "@/src/services/addetti-employee-mapping.service";
+import { addettiEmployeeMappingEntry } from "@/lib/domain/addetti-employee-mapping-entry";
 import { QK } from "@/src/lib/react-query/query-keys";
 import type { ReportDomainMetric } from "@/lib/report/report-domain-types";
 
@@ -36,7 +36,7 @@ export default function ReportAnalisiOreOfficinaSectionView(props: DomainReportS
   const timesheet = useReportTimesheetKpi(props.range);
   const preventiviQ = usePreventiviRecordsQuery(props.fetchEnabled);
   const mappingsQ = useServiceQuery([...QK.dipendentiTimesheetEmployees, "addetti-mapping"], () =>
-    addettiEmployeeMappingService.getAll(),
+    addettiEmployeeMappingEntry.getAll(),
   );
 
   const schedeInterventiRows = useMemo(() => {

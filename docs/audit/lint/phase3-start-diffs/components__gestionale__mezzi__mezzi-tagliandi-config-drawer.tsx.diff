@@ -1,0 +1,29 @@
+diff --git a/components/gestionale/mezzi/mezzi-tagliandi-config-drawer.tsx b/components/gestionale/mezzi/mezzi-tagliandi-config-drawer.tsx
+index f0b39afa..adcc48e8 100644
+--- a/components/gestionale/mezzi/mezzi-tagliandi-config-drawer.tsx
++++ b/components/gestionale/mezzi/mezzi-tagliandi-config-drawer.tsx
+@@ -104,6 +104,7 @@ export function MezziTagliandiConfigDrawer({
+ 
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setPresetId(config?.presetId ?? "");
+     setSavePresetToo(false);
+     if (config?.presetId && plansQ.data) {
+@@ -120,6 +121,7 @@ export function MezziTagliandiConfigDrawer({
+ 
+   useEffect(() => {
+     if (!open || config || !selectedPlan) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setTriggersDraft(triggersFromPlan(selectedPlan));
+     setPartsDraft(planPartsToDraft(selectedPlan.parts));
+   }, [open, config, selectedPlan]);
+@@ -216,7 +218,7 @@ export function MezziTagliandiConfigDrawer({
+       modalSize="formLarge"
+       layerClassName={cabModalZStacked}
+       footer={
+-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
++        <div className="flex w-full items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+           <button type="button" className={dsBtnNeutral} onClick={onClose}>
+             Annulla
+           </button>

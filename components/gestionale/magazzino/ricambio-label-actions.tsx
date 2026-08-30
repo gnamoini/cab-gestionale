@@ -78,7 +78,6 @@ export function RicambioLabelActions({
     const sp = new URLSearchParams({
       format,
       preset,
-      includeBarcode: "false",
       clienteLabel: clienteLabel ? "true" : "false",
     });
     if (format === "pdf" && quantity > 1) sp.set("quantity", String(quantity));
@@ -281,7 +280,7 @@ export function RicambioLabelActions({
           ) : null}
 
           {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- blob label preview URL
             <img src={previewUrl} alt="Anteprima etichetta" className="mx-auto max-h-40 border border-zinc-200 dark:border-zinc-700" />
           ) : null}
 

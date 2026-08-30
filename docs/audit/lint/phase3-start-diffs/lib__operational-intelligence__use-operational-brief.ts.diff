@@ -1,0 +1,12 @@
+diff --git a/lib/operational-intelligence/use-operational-brief.ts b/lib/operational-intelligence/use-operational-brief.ts
+index 7aee30fd..3c98cd00 100644
+--- a/lib/operational-intelligence/use-operational-brief.ts
++++ b/lib/operational-intelligence/use-operational-brief.ts
+@@ -74,6 +74,7 @@ export function useOperationalBrief(input: UseOperationalBriefInput): UseOperati
+   }, [enabled, periodKey]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setData(null);
+     setError(null);
+     setCorrelationId(null);

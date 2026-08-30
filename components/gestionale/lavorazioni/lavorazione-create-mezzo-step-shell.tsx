@@ -69,7 +69,7 @@ export function LavorazioneCreateMezzoStepShell({
         />
       }
     >
-      <GestionaleModalScrollBody containScroll className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <GestionaleModalScrollBody containScroll className="flex min-h-0 flex-1 flex-col overflow-hidden min-w-0">
         <MezzoSelectionPanel
           catalog={catalog}
           catalogLoading={catalogLoading}

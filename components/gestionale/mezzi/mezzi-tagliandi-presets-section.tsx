@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconActionButton, LoadingErrorState, PageToolbarResultCount } from "@/components/design-system";
+import { OptionalTooltip } from "@/components/ui";
 import { HubIconAssignMezzi, HubIconPencil, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
@@ -110,6 +111,7 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
   const [deleteTarget, setDeleteTarget] = useState<MaintenancePresetSummary | null>(null);
   const [assignPreset, setAssignPreset] = useState<MaintenancePresetSummary | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const allPresets = presetsQ.data ?? [];
   const searchActive = search.trim().length > 0;
   const filtersActive = Boolean(statusFilter);
@@ -155,7 +157,7 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
             aria-label="Cerca preset"
             wrapperClassName="min-w-0 flex-1"
           />
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3 flex-nowrap sm:flex-wrap">
             <div className="w-full min-w-[10.5rem] sm:w-[11.5rem]">
               <GlobalSelect
                 variant="filter"
@@ -189,9 +191,9 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-[color:var(--cab-text-muted)]" title={READONLY_PERMISSION_HINT}>
-                Solo lettura
-              </span>
+              <OptionalTooltip content={READONLY_PERMISSION_HINT}>
+                <span className="text-xs text-[color:var(--cab-text-muted)]">Solo lettura</span>
+              </OptionalTooltip>
             )}
           </div>
         </div>

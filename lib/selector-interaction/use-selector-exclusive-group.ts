@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import {
   closeOtherSelectorsInExclusiveGroup,
   registerSelectorExclusiveGroup,
@@ -15,7 +15,10 @@ export function useSelectorExclusiveGroup(
 ): { notifyOpening: () => void } {
   const memberIdRef = useRef<symbol>(Symbol("selector-exclusive-group"));
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!groupId) return;

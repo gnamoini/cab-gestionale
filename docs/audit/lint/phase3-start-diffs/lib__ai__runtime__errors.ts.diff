@@ -1,0 +1,14 @@
+diff --git a/lib/ai/runtime/errors.ts b/lib/ai/runtime/errors.ts
+index fccbed0a..5f1de3fb 100644
+--- a/lib/ai/runtime/errors.ts
++++ b/lib/ai/runtime/errors.ts
+@@ -17,7 +17,8 @@ const MESSAGES: Record<AiErrorCode, string> = {
+     "Servizio AI non configurato. Aggiungi una chiave in Impostazioni → AI Providers o contatta l'amministratore.",
+   AI_KEY_INVALID: "Chiave API rifiutata dal provider. Verifica o ruota la chiave in Impostazioni → AI Providers.",
+   AI_RATE_LIMIT: "Limite richieste raggiunto. Attendi qualche minuto e riprova.",
+-  AI_QUOTA_EXCEEDED: "Quota provider esaurita. Riprova più tardi o usa una chiave alternativa.",
++  AI_QUOTA_EXCEEDED:
++    "Quota API Gemini esaurita (piano free: limite basso su PDF multipagina). Attendi 1–2 minuti e riprova, verifica utilizzo su aistudio.google.com/usage, oppure importa il listino via Excel in Magazzino.",
+   AI_PROVIDER_DOWN: "Provider AI temporaneamente non raggiungibile. Riprova tra poco.",
+   AI_TIMEOUT: "Timeout durante l'analisi AI. Riduci il documento o riprova.",
+   AI_SCHEMA_VALIDATION: "Risposta AI non conforme allo schema atteso. Riprova con un documento più nitido.",

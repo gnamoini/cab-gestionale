@@ -14,7 +14,6 @@ import { useMagazzinoListQuery, useMezziListQuery, useMovimentiListQuery } from 
 import { useReportLavorazioniQuery, useReportLavorazioniArchivioQuery, useReportManualEntriesQuery } from "@/src/hooks/gestionale/use-report-queries";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
-import type { ReportSectionId } from "@/components/report/report-sections-config";
 
 export type ReportLiveDataOptions = {
   enableMezzi?: boolean;
@@ -27,7 +26,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
   const viewOpts = useReportViewQueryOpts();
   const readyLoggedRef = useRef(false);
   const errorLoggedRef = useRef(false);
-  const loadStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
+  const loadStartRef = useRef(0);
   const lastCompatAuditFingerprintRef = useRef<string | null>(null);
 
   const scheduleRefresh = useCallback(() => {
@@ -47,6 +46,10 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const mezziListe = settingsPayload.data?.resolved?.mezziListe;
   const manualQuery = useReportManualEntriesQuery({ enabled: enableManual });
+
+  useEffect(() => {
+    loadStartRef.current = performance.now();
+  }, []);
 
   useEffect(() => {
     const unsub = subscribeReportDataRefresh(scheduleRefresh);

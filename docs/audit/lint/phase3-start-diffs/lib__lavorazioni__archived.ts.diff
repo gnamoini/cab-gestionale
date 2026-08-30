@@ -1,0 +1,9 @@
+diff --git a/lib/lavorazioni/archived.ts b/lib/lavorazioni/archived.ts
+index 66dd9bf2..fff34fa4 100644
+--- a/lib/lavorazioni/archived.ts
++++ b/lib/lavorazioni/archived.ts
+@@ -1,4 +1,3 @@
+-import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+ import type { LavorazioneRow } from "@/src/types/supabase-tables";
+ 
+ /** True se la lavorazione è stata archiviata manualmente (portale / storico). */

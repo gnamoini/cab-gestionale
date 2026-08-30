@@ -29,7 +29,7 @@ export function CalendarV2KpiCards({ summary }: { summary: CalendarDaySummary })
           sub="Proxy officina"
         />
       </div>
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
+      <div className={`flex items-center gap-x-3 gap-y-1 ${dsTypoSmall} text-[color:var(--cab-text-muted)] min-w-0 flex-nowrap sm:flex-wrap`}>
         {kpis.averageDwellTime != null ? (
           <span>Permanenza media: {kpis.averageDwellTime} gg</span>
         ) : null}

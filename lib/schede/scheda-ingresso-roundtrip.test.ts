@@ -6,12 +6,7 @@ import { bundleToSchedaPayloads } from "@/lib/schede/schede-db-mapper";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { TEXT_EXTRA } from "@/lib/validation/text-field-limits";
-import {
-  applySchedaIngressoTypedFields,
-  copySchedaIngressoFieldFromClient,
-  isSchedaIngressoFieldEmpty,
-  type SchedaIngressoStringKey,
-} from "@/lib/schede/scheda-ingresso-typed-fields";
+import { applySchedaIngressoTypedFields, type SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import type { LavorazioneSchedeBundle, SchedaIngressoFields } from "@/types/schede";
 
 const MULTILINE_ANOMALIA = "Riga 1\nRiga 2\n\nRiga 4 àèù & < > \" '";

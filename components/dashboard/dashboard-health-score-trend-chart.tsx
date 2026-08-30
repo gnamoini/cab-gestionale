@@ -508,7 +508,7 @@ export function HealthScoreWeeklyTrendChart({
   );
 
   if (embedded) {
-    return <div className="flex min-h-40 w-full flex-col xl:min-h-0 xl:flex-1 xl:basis-0">{chartBody}</div>;
+    return <div className="flex min-h-40 w-full flex-col xl:min-h-0 xl:flex-1 xl:basis-0 min-w-0">{chartBody}</div>;
   }
 
   return (

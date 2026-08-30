@@ -1,0 +1,12 @@
+diff --git a/lib/ordini-fornitori/import/map-extraction-to-ordine-record.ts b/lib/ordini-fornitori/import/map-extraction-to-ordine-record.ts
+index 6cad0f5f..b3e4d902 100644
+--- a/lib/ordini-fornitori/import/map-extraction-to-ordine-record.ts
++++ b/lib/ordini-fornitori/import/map-extraction-to-ordine-record.ts
+@@ -10,7 +10,6 @@ import { ordineFornitoreLogisticaToRecord } from "@/lib/ordini-fornitori/ordine-
+ import { defaultOrdineRigaMeta, patchRigaMeta } from "@/lib/ordini-fornitori/ordine-fornitore-riga-meta";
+ import {
+   buildEmptyOrdineSpesaVariaRiga,
+-  ORDINE_RIGA_META_SPESA_VARIA,
+ } from "@/lib/ordini-fornitori/ordine-fornitore-spesa-varia";
+ import { calcolaTotaliOrdineFornitore, totaleNettoRigaOrdine } from "@/lib/ordini-fornitori/ordine-fornitore-totals";
+ import type { OrdineFornitoreRecord, OrdineFornitoreRiga } from "@/lib/ordini-fornitori/types";

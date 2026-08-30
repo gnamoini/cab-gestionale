@@ -1,5 +1,4 @@
-import { buildGestionaleNav, type GestionaleNavHref } from "@/components/gestionale/gestionale-nav-config";
-import { GESTIONALE_PAGES } from "@/src/lib/permissions/gestionale-pages";
+import { buildGestionaleNav } from "@/components/gestionale/gestionale-nav-config";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   ACCESS_DENIED_PATH,
@@ -25,6 +24,15 @@ function stagingBlocksRedirect(path: string): boolean {
   if (!isStagingPublicSlice()) return false;
   const pathOnly = path.split("?")[0] ?? path;
   return isStagingBlockedPathname(pathOnly);
+}
+
+/** Entrypoint QR mezzi — consentito post-login per tutti i ruoli autenticati. */
+export function isMezzoQrEntryPath(path: string): boolean {
+  const pathOnly = path.split("?")[0] ?? path;
+  if (!pathOnly.startsWith("/m/q/")) return false;
+  if (pathOnly === "/m/q/errore" || pathOnly.startsWith("/m/q/errore/")) return false;
+  const segment = pathOnly.slice("/m/q/".length);
+  return segment.length > 0;
 }
 
 /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
@@ -55,13 +63,16 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
 
   if (isClienteRole(input.user)) {
     const requested = sanitizePostLoginRequestedPath(input.requestedPath);
-    if (
-      requested &&
-      !stagingBlocksRedirect(requested) &&
-      (requested === CLIENTE_HOME_PATH || requested.startsWith(`${CLIENTE_HOME_PATH}/`)) &&
-      (!input.navAccess || input.navAccess.canAccessRoute(requested))
-    ) {
-      return requested;
+    if (requested && !stagingBlocksRedirect(requested)) {
+      if (isMezzoQrEntryPath(requested)) {
+        return requested;
+      }
+      if (
+        (requested === CLIENTE_HOME_PATH || requested.startsWith(`${CLIENTE_HOME_PATH}/`)) &&
+        (!input.navAccess || input.navAccess.canAccessRoute(requested))
+      ) {
+        return requested;
+      }
     }
     return CLIENTE_HOME_PATH;
   }

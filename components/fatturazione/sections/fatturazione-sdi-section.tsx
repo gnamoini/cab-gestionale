@@ -25,7 +25,7 @@ export function FatturazioneSdiSection({
       <p className={`${dsTypoSmall} mt-1`}>Stato invio per fatture emesse. Adapter HTTP pluggable via `fe-sdi`.</p>
       <ul className={`mt-4 ${LIST_DIVIDER_UL}`}>
         {feInvoices.slice(0, 50).map((inv) => (
-          <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+          <li key={inv.id} className="flex items-center justify-between gap-2 py-3 min-w-0 flex-nowrap sm:flex-wrap">
             <div>
               <p className="font-medium">{invoiceDisplayNumber(inv)} · {inv.cliente_label}</p>
               <p className={dsTypoSmall}>

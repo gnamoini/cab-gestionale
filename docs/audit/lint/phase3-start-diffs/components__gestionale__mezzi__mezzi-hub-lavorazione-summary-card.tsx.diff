@@ -1,0 +1,22 @@
+diff --git a/components/gestionale/mezzi/mezzi-hub-lavorazione-summary-card.tsx b/components/gestionale/mezzi/mezzi-hub-lavorazione-summary-card.tsx
+index 98dbf37f..b157ee0e 100644
+--- a/components/gestionale/mezzi/mezzi-hub-lavorazione-summary-card.tsx
++++ b/components/gestionale/mezzi/mezzi-hub-lavorazione-summary-card.tsx
+@@ -103,7 +103,7 @@ export function MezziHubLavorazioneSummaryCard({
+         style={{ backgroundColor: statoColor }}
+       />
+       <div className="relative min-w-0 flex-1 space-y-1.5">
+-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
++        <div className="flex min-w-0 items-center gap-1.5 flex-nowrap sm:flex-wrap">
+           <h4 className="shrink-0 text-[15px] font-bold leading-none tracking-tight text-[color:var(--cab-text)]">
+             Lavorazione{" "}
+             <span className="font-mono tabular-nums">{codice}</span>
+@@ -121,7 +121,7 @@ export function MezziHubLavorazioneSummaryCard({
+         </div>
+ 
+         <p
+-          className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs leading-relaxed text-[color:var(--cab-text-muted)]"
++          className="flex min-w-0 items-baseline gap-x-2 gap-y-0.5 text-xs leading-relaxed text-[color:var(--cab-text-muted)] flex-nowrap sm:flex-wrap"
+           title={hasNote(note) ? note : undefined}
+         >
+           <span>

@@ -21,7 +21,6 @@ export async function GET(request: Request, context: RouteContext) {
   const parsed = renderLabelQuerySchema.safeParse({
     format: url.searchParams.get("format") ?? undefined,
     preset: url.searchParams.get("preset") ?? undefined,
-    includeBarcode: url.searchParams.get("includeBarcode") ?? undefined,
     clienteLabel: url.searchParams.get("clienteLabel") ?? undefined,
     quantity: url.searchParams.get("quantity") ?? undefined,
   });
@@ -29,7 +28,6 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
   }
   const { format, preset, clienteLabel, quantity } = parsed.data;
-  const includeBarcode = false;
 
   const { data: row, error } = await auth.sb
     .from("magazzino_ricambi")
@@ -50,7 +48,6 @@ export async function GET(request: Request, context: RouteContext) {
       token: tokenRow.token,
       preset,
       format,
-      includeBarcode,
       clienteLabel,
       quantity: format === "pdf" ? quantity : 1,
       origin: requestOrigin(request),

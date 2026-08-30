@@ -56,7 +56,6 @@ export function evaluateRenderDecision(input: {
 }): UIOsRenderDecision {
   const { pageId, schema, mode, root = null } = input;
   const effectiveMode = mode ?? getPageUIMode(pageId);
-  const suggestedSchema = schema ?? { toolbar: "legacy", table: "legacy", layout: "legacy" };
   const shadowReport = buildShadowReport(pageId, root ?? null);
   const matchScore = schemaMatchScore(shadowReport.detectedSchema, shadowReport.suggestedSchema);
   const pipelineErrors: string[] = [];

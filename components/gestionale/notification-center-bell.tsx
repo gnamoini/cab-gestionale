@@ -9,8 +9,8 @@ import {
   NotificationBellTrigger,
   NotificationCountBadge,
   NotificationRowDismiss,
-  Tooltip,
 } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
 import {
   GestionaleLogEmpty,
   GestionaleLogList,
@@ -79,12 +79,12 @@ function NotificationPanelSettingsButton({
   onClick: () => void;
 }) {
   return (
+    <Tooltip content="Impostazioni notifiche">
     <button
       ref={buttonRef}
       type="button"
       className={`${dsShellNavIconBtn} ${dsFocus}`}
       aria-label="Impostazioni notifiche"
-      title="Impostazioni notifiche"
       onClick={onClick}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[1.125rem] w-[1.125rem]" aria-hidden>
@@ -92,6 +92,7 @@ function NotificationPanelSettingsButton({
         <circle cx="12" cy="12" r="3" />
       </svg>
     </button>
+    </Tooltip>
   );
 }
 
@@ -352,11 +353,13 @@ export function NotificationCenterBell({
   }, [onOpenInbox]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (openSignal > 0) setOpen(true);
   }, [openSignal]);
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDesktopPermissionState(getDesktopNotificationPermissionState());
   }, [open]);
 

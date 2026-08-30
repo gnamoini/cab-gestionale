@@ -88,6 +88,7 @@ export type TagliandoDueEvalResult = {
 };
 
 export function isMezzoEligibleForTagliandoNotification(_mezzo: MezzoGestito | null | undefined): boolean {
+  void _mezzo;
   // ponytail: v1 matrice/notifiche milestone disabilitate.
   return false;
 }

@@ -1,0 +1,12 @@
+diff --git a/scripts/form-ux-map-export-telemetry.ts b/scripts/form-ux-map-export-telemetry.ts
+index 85a9d023..f51e1cd4 100644
+--- a/scripts/form-ux-map-export-telemetry.ts
++++ b/scripts/form-ux-map-export-telemetry.ts
+@@ -9,7 +9,6 @@
+  *   type map\\telemetry-export.json | npx tsx scripts/form-ux-map-export-telemetry.ts
+  */
+ import fs from "node:fs";
+-import path from "node:path";
+ import {
+   writeTelemetrySnapshot,
+   type MapTelemetryDailySnapshot,

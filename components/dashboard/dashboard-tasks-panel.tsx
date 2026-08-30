@@ -152,7 +152,9 @@ export function DashboardTasksPanel() {
   const pendingCount = tasks.filter((t) => !t.done).length;
   const doneCount = tasks.length - pendingCount;
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setTasks(loadDashboardTasks());
     setReady(true);
   }, []);

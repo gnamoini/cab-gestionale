@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable cab-rbac/no-auth-in-services -- lint phase2: legacy service layer; domain entry migration deferred */
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { fetchEnrichedLavorazioneListRow } from "@/lib/lavorazioni/fetch-enriched-lavorazione-row";
 import { lavorazioneMatchesClienteScope } from "@/src/lib/auth/cliente-portal-scope";

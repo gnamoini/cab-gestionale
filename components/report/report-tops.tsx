@@ -98,7 +98,7 @@ export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioRepor
   useEffect(() => {
     resetPage();
   }, [rows, sortColumn, sortPhase, pageSize, resetPage]);
-  const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
+  const paged = useMemo(() => sliceItems(data), [data, sliceItems]);
 
   const colSpan = showCompare ? 7 : 6;
 
@@ -194,7 +194,7 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
   useEffect(() => {
     resetPage();
   }, [rows, sortColumn, sortPhase, pageSize, resetPage]);
-  const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
+  const paged = useMemo(() => sliceItems(data), [data, sliceItems]);
 
   const colSpan = showCompare ? 6 : 5;
 
@@ -365,7 +365,7 @@ export function ReportTopClienti({
   useEffect(() => {
     resetPage();
   }, [rows, sortColumn, sortPhase, pageSize, resetPage]);
-  const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
+  const paged = useMemo(() => sliceItems(data), [data, sliceItems]);
 
   const maxInterventi = useMemo(() => Math.max(1, ...data.map((r) => r.interventi)), [data]);
   const totalInterventi = useMemo(() => data.reduce((s, r) => s + r.interventi, 0), [data]);

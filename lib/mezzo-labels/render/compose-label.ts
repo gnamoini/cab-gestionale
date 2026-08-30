@@ -86,7 +86,6 @@ export function composeMezzoLabel(
   const whiteMargin = template.cutBorderMm;
   const pad = template.innerPaddingMm;
   const leftPad = template.leftColumnPadMm;
-  const innerW = template.widthMm - whiteMargin * 2;
   const innerH = template.heightMm - whiteMargin * 2;
   const gutter = template.columnGutterMm;
 
@@ -99,7 +98,6 @@ export function composeMezzoLabel(
   const qrMaxByHeight = qrAreaBottom - qrAreaTop;
   const qrSize = Math.min(template.qr.maxSizeMm, qrMaxByHeight);
 
-  const leftColW = qrSize + leftPad + pad;
 
   const qrX = whiteMargin + pad + leftPad;
   const qrY = qrAreaTop + (qrMaxByHeight - qrSize) / 2;

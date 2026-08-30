@@ -1,0 +1,13 @@
+diff --git a/lib/ui/body-scroll-lock-manager.test.ts b/lib/ui/body-scroll-lock-manager.test.ts
+index 997679a4..b5732d8a 100644
+--- a/lib/ui/body-scroll-lock-manager.test.ts
++++ b/lib/ui/body-scroll-lock-manager.test.ts
+@@ -50,7 +50,7 @@ function mountShellDom(gutter: "auto" | "stable" = "auto") {
+   const main = document.querySelector("main.gestionale-scroll-y") as HTMLElement;
+   assert.ok(main);
+ 
+-  let clientWidth = 385;
++  const clientWidth = 385;
+   Object.defineProperty(main, "offsetWidth", { get: () => 400, configurable: true });
+   Object.defineProperty(main, "clientWidth", {
+     get: () => (main.style.overflow === "hidden" ? 400 : clientWidth),

@@ -4,7 +4,7 @@ import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-fi
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import type { ReportAnalyticsSourceBundle } from "@/lib/report/analytics-engine/source-bundle";
 import type { ReportDrillDownRow } from "@/lib/report/drilldown/types";
-import type { InvoiceRow, InvoicePaymentRow } from "@/src/types/supabase-tables";
+import type { InvoiceRow } from "@/src/types/supabase-tables";
 
 function isEmittedInvoice(inv: InvoiceRow): boolean {
   return inv.status !== "annullata" && inv.status !== "bozza" && inv.status !== "da_verificare";

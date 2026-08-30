@@ -89,7 +89,7 @@ function ReportLavorazioniTemporalSectionInner({
 
   const body = (
     <>
-      <div className={`flex min-w-0 max-w-full flex-wrap items-end justify-between gap-3 ${showKpiChart || showTable ? "mb-4" : ""}`}>
+      <div className={`flex min-w-0 max-w-full items-end justify-between gap-3 ${showKpiChart || showTable ? "mb-4" : ""} flex-nowrap sm:flex-wrap`}>
         <div>
           <label htmlFor={yearSelectId} className={`mb-1 block ${dsTypoCaption}`}>
             Anno

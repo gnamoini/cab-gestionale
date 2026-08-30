@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-calendar-analytics.ts b/src/hooks/use-calendar-analytics.ts
+index 67e1cd72..82e5c7fa 100644
+--- a/src/hooks/use-calendar-analytics.ts
++++ b/src/hooks/use-calendar-analytics.ts
+@@ -127,7 +127,6 @@ export function useCalendarAnalytics(
+       live.magLog,
+       live.magazzino,
+       live.integrityView.queryMeta,
+-      live.snapshotFingerprint,
+     ],
+   );
+ 

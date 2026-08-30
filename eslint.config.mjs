@@ -89,6 +89,12 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": "off",
     },
   },
+  {
+    files: ["e2e/**/*.{ts,tsx}"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -96,6 +102,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/sw.js",
   ]),
 ]);
 

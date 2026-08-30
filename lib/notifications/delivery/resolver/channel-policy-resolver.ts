@@ -58,7 +58,7 @@ export function resolveChannels(
     channels = channels.filter((c) => c !== "push" && c !== "email" && c !== "sms");
   }
 
-  let scheduledAt = now.toISOString();
+  const scheduledAt = now.toISOString();
   if (
     priority !== "CRITICAL" &&
     isQuietHours(now, ctx.preferences.quietHoursStart, ctx.preferences.quietHoursEnd)

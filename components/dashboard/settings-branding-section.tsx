@@ -290,7 +290,7 @@ export function SettingsBrandingSection({
               })}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[color:var(--cab-border)] pt-4">
+            <div className="mt-4 flex items-center gap-x-3 gap-y-2 border-t border-[color:var(--cab-border)] pt-4 min-w-0 flex-nowrap sm:flex-wrap">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
                 Personalizza
               </span>
@@ -336,14 +336,14 @@ export function SettingsBrandingSection({
                 void handleFile(file);
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview; not optimizable via next/image */}
               <img
                 src={displayLogoSrc}
                 alt="Anteprima logo"
                 className="max-h-16 w-auto max-w-full object-contain"
                 style={{ aspectRatio: String(CAB_LOGO_ASPECT) }}
               />
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                 <button
                   type="button"
                   className={`${dsBtnPrimary} min-h-11 px-4 py-2 text-sm`}

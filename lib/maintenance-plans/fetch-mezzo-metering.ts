@@ -76,7 +76,7 @@ export async function resolveCurrentMezzoMeteringBatch(
   );
   const mileageActive = isAssetLifecycleSubFlagActive(lifecycleFlags, "mileage_history");
 
-  let latestKmByMezzo = new Map<string, number>();
+  const latestKmByMezzo = new Map<string, number>();
   if (mileageActive) {
     const { data: readings } = await client
       .from("asset_mileage_readings")

@@ -1,0 +1,12 @@
+diff --git a/scripts/bench/bundle-dependency-ranking.ts b/scripts/bench/bundle-dependency-ranking.ts
+index d9528825..55ca251d 100644
+--- a/scripts/bench/bundle-dependency-ranking.ts
++++ b/scripts/bench/bundle-dependency-ranking.ts
+@@ -12,7 +12,6 @@ import {
+   computeGlobalReach,
+   effectiveReachForScope,
+   inferReachScope,
+-  type ReachScope,
+ } from "@/lib/performance/bundle-ranking-types";
+ 
+ const ROOT = process.cwd();

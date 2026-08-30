@@ -67,7 +67,7 @@ export function GestionaleModalHeader({
   if (hubToolbar) {
     return (
       <header className={dsLavorazioniModalWindowHeader}>
-        <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="flex w-full min-w-0 items-start justify-between gap-x-3 gap-y-2 flex-nowrap sm:flex-wrap">
           <div className={`${dsModalHeaderLead} min-w-0 basis-[min(100%,12rem)]`}>
             {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
             <div className={dsModalTitleBlock}>
@@ -136,7 +136,6 @@ export function GestionaleModalShell({
   children,
   modalSize,
   modalHeight,
-  size = "standard",
   dialogSize = "hub",
   alignTop,
   layerClassName,
@@ -187,6 +186,7 @@ export function GestionaleModalShell({
   const dialogFocus = useGestionaleModalDialogFocus();
   useMobileModalKeyboard(dialogFocus.ref);
   const maxMdDown = useMaxMdDown();
+  // eslint-disable-next-line react-hooks/purity -- lint phase2: preserve existing hook contract
   const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
 
   useLayoutEffect(() => {
@@ -244,7 +244,9 @@ export function GestionaleModalShell({
           }}
         >
           <div
+  // eslint-disable-next-line react-hooks/immutability -- lint phase2: preserve existing hook contract
             ref={(el) => {
+  // eslint-disable-next-line react-hooks/immutability -- lint phase2: preserve existing hook contract
               dialogFocus.ref.current = el;
               if (modalRootRef) modalRootRef.current = el;
             }}

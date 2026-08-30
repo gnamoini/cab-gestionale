@@ -20,10 +20,10 @@ export function capHeightMm(fontPt: number, dpi: number): number {
   return lineMetrics(fontPt, dpi).fontHeightMm * CAP_HEIGHT_RATIO;
 }
 
-/** Baseline riga fornitore/codice alt — alzata rispetto al fondo barcode (caps, no discendenti visibili). */
-export function supplierCapBaselineMm(barcodeBottomMm: number, fontPt: number, dpi: number): number {
+/** Baseline riga fornitore/codice alt — alzata rispetto al fondo etichetta (caps, no discendenti visibili). */
+export function supplierCapBaselineMm(labelBottomMm: number, fontPt: number, dpi: number): number {
   const liftMm = Math.max(0.35, lineMetrics(fontPt, dpi).fontHeightMm * 0.14);
-  return barcodeBottomMm - liftMm;
+  return labelBottomMm - liftMm;
 }
 
 export function blockHeightMm(lineCount: number, fontPt: number, dpi: number): number {

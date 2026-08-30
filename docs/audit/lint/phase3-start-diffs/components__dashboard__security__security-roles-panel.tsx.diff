@@ -1,0 +1,20 @@
+diff --git a/components/dashboard/security/security-roles-panel.tsx b/components/dashboard/security/security-roles-panel.tsx
+index 5e95aa11..5f8fa192 100644
+--- a/components/dashboard/security/security-roles-panel.tsx
++++ b/components/dashboard/security/security-roles-panel.tsx
+@@ -55,6 +55,7 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
+     [matrixQ.data],
+   );
+ 
++   
+   useEffect(() => {
+     if (!matrixQ.data) return;
+     const initial = new Map<string, PageAccessLevel>();
+@@ -63,6 +64,7 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
+         initial.set(cellKey(row.role.key, cell.pageKey), cell.level);
+       }
+     }
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDraft(initial);
+     setSaved(new Map(initial));
+   }, [matrixQ.data]);

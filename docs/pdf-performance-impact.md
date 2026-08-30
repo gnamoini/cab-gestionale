@@ -9,35 +9,26 @@
 | Repeat export | Full regeneration every time |
 | Delivery | `POST /api/pdf/preview` pass-through blob (no cache) |
 
-## After (server artifacts)
+## After (server artifacts + cache-first metadata)
 
 | Metric | Behavior |
 |--------|----------|
-| Client CPU | **Eliminated** for migrated types — `window.open(GET)` only |
-| Server generation | One DTO fetch + jsPDF per cache miss |
-| Repeat export | **~100% cache hit** when data hash unchanged (storage + CDN headers) |
-| Delivery | `GET /api/pdf/artifacts/:type` with `Cache-Control: immutable` |
+| Client CPU | **Eliminated** for migrated types — sync anchor `GET` |
+| Server HIT | Metadata leggera + storage (no full DTO, no jsPDF, no `resolvePdfAutore`) |
+| Server MISS | Full fetch + jsPDF + best-effort upload |
+| Browser cache | `ETag` + `private, max-age=300` + `304` (see `docs/pdf-http-cache-audit.md`) |
 
 ## Instrumentation
 
-Artifact route response headers:
-
 | Header | Meaning |
 |--------|---------|
-| `X-Cache-Status` | `HIT` (storage) or `MISS` (generated) |
-| `X-PDF-Generate-Ms` | Wall time for resolve + fetch/generate path |
-| `X-PDF-Data-Hash` | Content hash used in storage path |
+| `X-Cache-Status` | `HIT` / `MISS` |
+| `X-PDF-Generate-Ms` | Total wall time |
+| `X-PDF-Phase-*-Ms` | auth, data, hash, storage, generate, upload |
+| `Server-Timing` | Same phases |
 
-Server logs: search Vercel function logs for artifact type + `X-PDF-Generate-Ms` on misses.
-
-## Targets (indicative)
-
-| Artifact | Target |
-|----------|--------|
-| `lavorazioni-in-corso` | 0 client DB queries; repeat export = storage HIT |
-| `report-bundle` | Single server REPORT prefetch; hash excludes `generatedAt` |
-| Document types | Hash bumps on record `updatedAt` / content change only |
+Benchmark: `npm run benchmark:pdf-subsystem` (labels offline; artifacts via `PDF_BENCH_BASE_URL`).
 
 ## Invalidation
 
-`POST /api/pdf/artifacts/invalidate` (admin) removes objects under `type/scopeId/`. Domain mutations should call invalidate or rely on hash input changes.
+Hash input changes on record update. Label QR: `qrToken` in fingerprint + purge on `QR_REGENERATED`.

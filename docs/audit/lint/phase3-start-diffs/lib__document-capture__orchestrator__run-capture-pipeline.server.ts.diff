@@ -1,0 +1,13 @@
+diff --git a/lib/document-capture/orchestrator/run-capture-pipeline.server.ts b/lib/document-capture/orchestrator/run-capture-pipeline.server.ts
+index 79c31b41..61172632 100644
+--- a/lib/document-capture/orchestrator/run-capture-pipeline.server.ts
++++ b/lib/document-capture/orchestrator/run-capture-pipeline.server.ts
+@@ -30,7 +30,7 @@ import {
+ } from "@/lib/document-capture/orchestrator/pipeline-telemetry.server";
+ import { buildCapturePipelineError } from "@/lib/document-capture/capture-pipeline-error";
+ import {
+-  buildPipelineIdempotencyKey,
++
+   runPipelinePhase,
+   type PipelineOrchestratorDeps,
+ } from "@/lib/document-capture/orchestrator/pipeline-orchestrator";

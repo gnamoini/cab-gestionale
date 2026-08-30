@@ -1,0 +1,130 @@
+diff --git a/docs/gate-matrix.md b/docs/gate-matrix.md
+index b0d6c86b..fc9b007e 100644
+--- a/docs/gate-matrix.md
++++ b/docs/gate-matrix.md
+@@ -1,7 +1,8 @@
+ # Gate matrix — CI/CD release (SSOT)
+ 
+-**Data:** 2026-06-08  
+-**Autorità merge/deploy:** [`release-gate`](.github/workflows/release-gate.yml) su PR e push `main`.
++**Data:** 2026-08-29  
++**Autorità merge/deploy:** [`release-gate`](.github/workflows/release-gate.yml) su PR e push `main`.  
++**Contratto:** [`release-gate-contract.md`](./release-gate-contract.md)
+ 
+ ---
+ 
+@@ -9,63 +10,46 @@
+ 
+ | Tier | Workflow | Trigger | Blocking | Target duration |
+ |------|----------|---------|----------|-----------------|
+-| **1 — PR** | `release-gate` | PR + push `main` | Sì | 10–14 min (cap 30) |
+-| **2 — Cert** | `release-gate-cert` | push `main`, weekly Mon 03:00 UTC, dispatch | Sì su `main` (branch protection) | 25–40 min (cap 45) |
+-| **3 — Nightly** | `release-gate-nightly` | daily 02:00 UTC, dispatch | No | 60+ min |
++| **1 — PR** | `release-gate` | PR + push `main` | Sì | 15–25 min |
++| **1b — PR shadow** | `control-pr` | PR | No (conforming) | 20–40 min |
++| **2 — Cert** | `release-gate-cert` + `control-cert` | push `main`, weekly | Sì su `main` | 25–45 min |
++| **3 — Nightly** | `release-gate-nightly` + `control-observe` | daily 02:00 UTC | No | 60+ min |
+ 
+ ---
+ 
+-## Distribuzione test
+-
+-| Suite | PR | Cert | Nightly |
+-|-------|----|------|---------|
+-| `ci:tsc`, `ci:build`, `ux:*`, `ios:check` | blocking | — | — |
+-| `production:check` | blocking | — | — |
+-| `ci:supabase:publication` (sanity) | blocking* | — | — |
+-| `ci:supabase:publication:full` | — | blocking | — |
+-| `smoke:structural` + `smoke:regression:core` | blocking | — | — |
+-| `smoke:regression:extended` | — | blocking | advisory |
+-| `flex:eslint:gate` + `flex:freeze:gate` | blocking | — | — |
+-| `ci:smoke:preflight` (creds + DB fail-fast) | blocking | blocking | — |
+-| `smoke:playwright` (spec 01–12) | blocking | — | — |
+-| `smoke:playwright:scheda-smoke` (spec 13 desktop full flow) | blocking | — | — |
+-| `smoke:playwright:ricambio:smoke` (spec 14) | blocking | — | — |
+-| `smoke:playwright:ios-smoke` / cert (spec 13 iOS combobox) | — | blocking | — |
+-| `smoke:playwright:ricambio:cert` | — | blocking | — |
+-| `smoke:cleanup` (post-Playwright, apply) | blocking | blocking | — |
+-| `audit:smoke:residues` (advisory; strict opzionale) | — | advisory* | — |
+-| `ops:long-session-soak:threshold` | — | blocking | — |
+-| `ops:long-session-soak` (full) | — | — | advisory |
+-| `npm run lint` | — | — | advisory |
+-
+-\* `ci:supabase:publication` richiede `SUPABASE_DB_URL` per check live; con `PUBLICATION_CHECK_STRICT=0` passa con warning se URL assente (static SSOT).
+-
+-\* `audit:smoke:residues`: advisory di default (`continue-on-error`). Soglia operativa default **5** entità (`SMOKE_RESIDUE_OPERATIVE_THRESHOLD`). Con `SMOKE_RESIDUE_STRICT=1` il job cert fallisce se il totale operativo supera la soglia. `log_modifiche` è informativo e non entra nel totale.
++## Distribuzione test (PR tier 1)
++
++| Suite | PR `release-gate` | `control-pr` | Cert | Nightly |
++|-------|-------------------|--------------|------|---------|
++| `ci:tsc`, `ci:build` | blocking | blocking | — | — |
++| `test:rbac` + `test:rbac:hardening` | blocking | via suites | — | — |
++| `test:security:remediation` | blocking | blocking | — | — |
++| `production:check` | blocking | blocking | — | — |
++| `ci:supabase:publication` (sanity) | blocking | blocking | — | — |
++| `smoke:structural` + `smoke:regression:core` (278) | blocking | P0 only (79) | — | — |
++| `flex:eslint:gate` + `flex:freeze:gate` | blocking | blocking | — | — |
++| `release-ready-contract` | blocking | via governance | — | — |
++| `ci:smoke:preflight` | blocking | — | blocking | — |
++| `smoke:playwright` (spec 01–12) | blocking | skipped (`SMOKE_SKIP`) | — | — |
++| Spec 13/14 E2E | — | — | blocking | — |
++| `npm run lint` (full) | — | blocking | — | advisory |
++| `smoke:regression:extended` | — | — | blocking | advisory |
++| `ci:supabase:publication:full` | — | — | blocking | — |
++| `ops:long-session-soak:threshold` | — | — | blocking | — |
++| `smoke:cleanup` (apply) | blocking | — | blocking | — |
+ 
+ ---
+ 
+-## Certificazione livello A (Production Certified)
++## Regression counts (2026-08-29)
+ 
+-Requisiti oggettivi:
++| List | Count |
++|------|-------|
++| `REGRESSION_CORE` | 278 |
++| `REGRESSION_EXTENDED` | ~210 |
++| `REGRESSION_P0` | 79 |
++| Control Plane controls | 84 |
+ 
+-1. `release-gate` green su `main` per almeno **2 run consecutive** post-consolidamento.
+-2. `release-gate-cert` green incluso `smoke:playwright:cert` (iOS combobox).
+-3. `audit:smoke:residues` con totale operativo **≤ 5** dopo cleanup (default soglia).
+-4. Nessun blind spot **P0** aperto (iOS combobox cert stabile o ripristinato in PR con fix product).
+-
+-Stato attuale validazione: **B — Conditionally Stable** (vedi [`audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md)).
+-
+-Piano uplift 82→90+: [`uplift-production-readiness-82-to-90.md`](./uplift-production-readiness-82-to-90.md).
+-
+-## Gap residui — chiusura
+-
+-| Gap | PR | Cert | Nightly |
+-|-----|----|------|---------|
+-| Spec 13 iOS combobox E2E | — (cert-only) | `smoke:playwright:cert` | — |
+-| Spec 13 desktop full flow | `smoke:playwright:scheda-smoke` | — | — |
+-| Nuovo Ricambio E2E | spec 14 in `smoke:playwright` | `smoke:playwright:ricambio:cert` | — |
+-| Publication drift | `ci:supabase:publication` | `ci:supabase:publication:full` | — |
+-| Long-session soak | — | `ops:long-session-soak:threshold` | `ops:long-session-soak` |
++CORE ≠ P0. Relationship documented in release contract.
+ 
+ ---
+ 
+@@ -75,14 +59,14 @@ Piano uplift 82→90+: [`uplift-production-readiness-82-to-90.md`](./uplift-prod
+ |--------|-----|
+ | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | DB readiness, Playwright |
+ | `SMOKE_ADMIN_*`, `SMOKE_OPERATOR_*`, `SMOKE_DOCUMENTI_LAVORAZIONE_ID` | E2E |
+-| `SUPABASE_DB_URL` (opzionale) | Publication live (`pg_publication_tables`) |
++| `SUPABASE_DB_URL` (opzionale) | Publication live |
+ 
+ ---
+ 
+-## Branch protection (governance)
++## Branch protection
+ 
+ 1. **Required:** `release-gate` su PR verso `main`.
+-2. **Required su `main`:** `release-gate-cert` dopo merge (push main) o come second check settimanale.
++2. **Required su `main`:** `release-gate-cert` dopo merge.
+ 3. Vercel: solo `next build` dopo Deployment Protection.
+ 
+-Vedi anche [`release-gate.md`](./release-gate.md), [`audit-release-gate.md`](./audit-release-gate.md).
++Vedi [`release-gate.md`](./release-gate.md), [`release-gate-contract.md`](./release-gate-contract.md).

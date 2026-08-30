@@ -4,7 +4,7 @@ import { createLanguageModel } from "@/lib/ai/runtime/client-factory";
 import { readMasterEncryptionKeyEnv, readRuntimeModelForProvider, readRuntimeProviderDefault } from "@/lib/ai/runtime/env-reader";
 import { normalizeGoogleModelId } from "@/lib/ai/runtime/providers/google";
 import { loadActiveKeys, listProviderKeysMasked } from "@/lib/ai/runtime/config-store";
-import { selectBestKey } from "@/lib/ai/runtime/key-manager";
+import { selectBestKey, buildNoSelectableKeyError } from "@/lib/ai/runtime/key-manager";
 import type { AiProviderId } from "@/lib/ai/runtime/types";
 import { PrerequisitesAnalyzeError } from "@/lib/document-capture/analyze-errors";
 import { probeTesseractAvailability } from "@/lib/document-capture/extraction/tesseract-probe.server";
@@ -38,9 +38,7 @@ export async function validateRuntimePrerequisites(options?: {
   const { keys } = await loadActiveKeys(provider, { skipCache: true });
   const best = selectBestKey(keys);
   if (requireGemini && !best) {
-    throw new PrerequisitesAnalyzeError(
-      "Nessuna chiave API AI selezionabile. Verifica Impostazioni → AI Providers o variabili env.",
-    );
+    throw new PrerequisitesAnalyzeError(buildNoSelectableKeyError(keys).message);
   }
 
   if (best) {

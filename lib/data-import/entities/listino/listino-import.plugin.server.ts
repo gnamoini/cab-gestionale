@@ -3,7 +3,7 @@ import "server-only";
 import type { ImportEntityPlugin } from "@/lib/data-import/core/import-plugin";
 import { generateImportTemplateXlsx } from "@/lib/data-import/core/template-generator.server";
 import {
-  MAGAZZINO_FIELD_PATTERNS,
+
   MAGAZZINO_IMPORT_FIELDS,
 } from "@/lib/data-import/entities/magazzino/magazzino-import-schema";
 import {

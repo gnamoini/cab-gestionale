@@ -20,7 +20,7 @@ const listSkeleton = read("components/gestionale/lavorazioni/lavorazioni-page-st
 const scrollCss = read("components/gestionale/global-table/gestionale-list-layout.css");
 const listSurfaceResolver = read("lib/ui/resolve-list-surface.ts");
 const filters = read("components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx");
-const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
+const schedaFormUtils = read("components/lavorazioni/schede/scheda-form-utils.tsx");
 const filterDrawer = read("components/gestionale/mobile-filter-drawer.tsx");
 const ingressoForm = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 const anagrafica = read("components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx");
@@ -53,9 +53,9 @@ assert.match(filters, /GlobalFilterDateField/);
 assert.doesNotMatch(filters, /type="date"/);
 assert.doesNotMatch(filters, /<select\b/);
 
-assert.doesNotMatch(schedeModal, /<datalist\b/);
-assert.match(schedeModal, /GlobalSettingsListSelect/);
-assert.match(schedeModal, /GlobalDatePicker/);
+assert.doesNotMatch(read("components/lavorazioni/schede/schede-lavorazione-modal.tsx"), /<datalist\b/);
+assert.match(anagrafica, /GlobalSettingsListSelect/);
+assert.match(schedaFormUtils, /GlobalDatePicker/);
 
 assert.match(filterDrawer, /CAB_MODAL_ROOT_ATTR/);
 assert.match(filterDrawer, /CAB_MODAL_SCROLL_ATTR/);

@@ -1,0 +1,16 @@
+diff --git a/lib/pdf/preventivo-pdf-body.test.ts b/lib/pdf/preventivo-pdf-body.test.ts
+index 68bd76eb..3df9ea58 100644
+--- a/lib/pdf/preventivo-pdf-body.test.ts
++++ b/lib/pdf/preventivo-pdf-body.test.ts
+@@ -1,10 +1,9 @@
+ import assert from "node:assert/strict";
+ import {
+-  buildPreventivoAttrezzaturaPdfFields,
++
+   buildPreventivoOggettoInterventoPdfFields,
+   buildPreventivoSchedaIngressoAttrezzaturaPdfFields,
+   buildPreventivoSchedaIngressoTelaioPdfFields,
+-  buildPreventivoTelaioMezzoPdfFields,
+ } from "@/lib/pdf/preventivo-pdf-layout";
+ import { compactFieldRowCount, compactOggettoInterventoColumnStyles, padPdfFieldsToEqualRows, tripleFieldRowCount } from "@/lib/pdf/gestionale-section-table";
+ import {

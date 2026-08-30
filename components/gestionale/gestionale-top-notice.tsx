@@ -156,6 +156,7 @@ export function useGestionaleTopNotice(id: string, options: UseGestionaleTopNoti
 
   useEffect(() => {
     if (!visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setDelayedVisible(false);
       return;
     }

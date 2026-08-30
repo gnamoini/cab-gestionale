@@ -1,0 +1,51 @@
+{
+  "repositoryCommit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "date": "2026-08-29",
+  "node": "v24.15.0",
+  "packageManager": "npm@11.12.1",
+  "contractVersion": "1.0.0",
+  "controlRegistryVersion": "1.0.0",
+  "controlCount": 84,
+  "regression": {
+    "core": 278,
+    "extended": 210,
+    "all": 488,
+    "p0": 79,
+    "p1": 201,
+    "p2": 27,
+    "p3": 175
+  },
+  "gateVersions": {
+    "release-gate-contract": "1.0.0",
+    "control-contract": "1.0.0",
+    "control-registry": "1.0.0"
+  },
+  "results": {
+    "ci:tsc": { "status": "FAIL", "failureType": "REAL_FAILURE" },
+    "ci:build": { "status": "FAIL", "failureType": "ENVIRONMENT_FAILURE", "note": "missing VERCEL_GIT_COMMIT_SHA locally" },
+    "test:rbac": { "status": "PASS" },
+    "test:rbac:hardening": { "status": "FAIL", "failureType": "REAL_FAILURE" },
+    "test:security:remediation": { "status": "PASS", "note": "after authz baseline update" },
+    "ux:enforce": { "status": "PASS" },
+    "audit:ui": { "status": "FAIL", "failureType": "REAL_FAILURE" },
+    "ux:mobile-gate": { "status": "PASS" },
+    "ios:check": { "status": "PASS" },
+    "smoke:structural": { "status": "FAIL", "failureType": "STALE_ASSERTION" },
+    "flex:eslint:gate": { "status": "FAIL", "failureType": "REAL_FAILURE" },
+    "flex:freeze:gate": { "status": "FAIL", "failureType": "REAL_FAILURE" },
+    "governance.control.review": { "status": "PASS" },
+    "governance.registry.parity": { "status": "PASS" },
+    "governance.regression.classification": { "status": "PASS", "note": "after duplicate fix + P0_MAX=95" },
+    "governance.release.contract": { "status": "PASS" },
+    "smoke:playwright": { "status": "BLOCKED", "failureType": "ENVIRONMENT_FAILURE" },
+    "production:check": { "status": "BLOCKED", "failureType": "ENVIRONMENT_FAILURE" }
+  },
+  "releaseReady": false,
+  "releaseReadyBlockers": [
+    "ci:tsc",
+    "audit:ui",
+    "flex:eslint:gate",
+    "smoke:structural",
+    "test:rbac:hardening"
+  ]
+}

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 

@@ -22,9 +22,9 @@ export function LavorazionePlanningPanel({ lavorazioneId }: { lavorazioneId: str
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-2 flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Pianificazione</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
           <Link href={buildAgendaFromLavorazioneHref(lavorazioneId)} className={erpBtnNeutral}>
             Apri Agenda →
           </Link>
@@ -40,7 +40,7 @@ export function LavorazionePlanningPanel({ lavorazioneId }: { lavorazioneId: str
           {sessions.map((s) => (
             <li
               key={s.id}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-2 last:border-0 dark:border-zinc-800"
+              className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 last:border-0 dark:border-zinc-800 min-w-0 flex-nowrap sm:flex-wrap"
             >
               <span>
                 {localDateTimeLabel(s.startAt)} – {localDateTimeLabel(s.endAt)}

@@ -1,0 +1,12 @@
+diff --git a/lib/selector-core/selector-bundle-registry-consistency-check.ts b/lib/selector-core/selector-bundle-registry-consistency-check.ts
+index 6816a1b6..c7bd5f3c 100644
+--- a/lib/selector-core/selector-bundle-registry-consistency-check.ts
++++ b/lib/selector-core/selector-bundle-registry-consistency-check.ts
+@@ -150,7 +150,6 @@ export function checkBundleRegistryConsistency(
+   const bundledSet = new Set(
+     options.bundledVersions ?? listBundleFiles(generatedSnapshotsDir),
+   );
+-  const bundleVersions = [...bundledSet].sort();
+   const registryKeys = parseRegistryKeys(registryGeneratedPath);
+   const registryKeySet = new Set(registryKeys);
+ 

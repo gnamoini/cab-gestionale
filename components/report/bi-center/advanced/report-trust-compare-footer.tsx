@@ -30,7 +30,7 @@ export function ReportMetricDeltaRow({
       : formatReportMetricValue(envelope.metric.value, reg.formatter ?? reg.unit);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[color:var(--cab-border)] px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-md border border-[color:var(--cab-border)] px-3 py-2 flex-nowrap sm:flex-wrap">
       <div className="min-w-0">
         <p className="text-xs font-medium text-[color:var(--cab-text-muted)]">{reg.label}</p>
         <p className="text-sm font-semibold tabular-nums">{value}</p>

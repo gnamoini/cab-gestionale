@@ -22,7 +22,7 @@ import {
 /** Header collapsible SSOT — stesso trigger di ShellCard Lavorazioni. */
 export function GestionaleCollapsibleHeader({
   panelId,
-  titleId,
+  
   expanded,
   toggleLabel,
   onToggle,

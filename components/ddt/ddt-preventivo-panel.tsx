@@ -34,7 +34,7 @@ export function DdtPreventivoPanel({
 
   return (
     <div className="space-y-2" aria-label="DDT">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         {activeDdt ? (
           <>
             <LoadingButton type="button" className={preventivoEditorActionBtn} loading={busy} onClick={onOpenDrawer}>
@@ -66,7 +66,7 @@ export function DdtPreventivoPanel({
         <p className={preventivoEditorHint}>Caricamento DDT…</p>
       ) : activeDdt ? (
         <div className={`${preventivoEditorPanelClass} p-3`}>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <p className={`font-mono ${preventivoEditorBody} font-semibold`}>{ddtDisplayNumber(activeDdt)}</p>
           </div>
           <p className={`mt-1 ${preventivoEditorHint}`}>Data documento: {formatDdtDate(activeDdt.data_documento)}</p>

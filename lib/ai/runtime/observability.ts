@@ -5,7 +5,8 @@ type AiObsEvent =
   | "AI_RESPONSE"
   | "AI_FAILURE"
   | "AI_FAILOVER"
-  | "AI_CONFIG_CHECK";
+  | "AI_CONFIG_CHECK"
+  | "AI_ERROR";
 
 export function logAiObs(
   event: AiObsEvent,

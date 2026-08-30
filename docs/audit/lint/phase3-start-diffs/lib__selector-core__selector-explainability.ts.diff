@@ -1,0 +1,12 @@
+diff --git a/lib/selector-core/selector-explainability.ts b/lib/selector-core/selector-explainability.ts
+index fe2e3711..6c537bfb 100644
+--- a/lib/selector-core/selector-explainability.ts
++++ b/lib/selector-core/selector-explainability.ts
+@@ -23,7 +23,6 @@ import {
+   getLastFallbackTrace,
+   recordFallbackTrace,
+   traceFallbackResolution,
+-  type FallbackTraceInput,
+ } from "@/lib/selector-core/selector-fallback-trace";
+ import { getLastRuntimeContextSnapshot } from "@/lib/selector-core/selector-runtime-context-snapshot";
+ import type { SelectorRuntimeContext } from "@/lib/selector-core/selector-runtime-context-snapshot";

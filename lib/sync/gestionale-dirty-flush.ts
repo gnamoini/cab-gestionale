@@ -1,6 +1,5 @@
 "use client";
 
-import { invalidateGestionaleTables } from "@/lib/realtime/gestionale-realtime-config";
 import {
   markGestionaleDirty,
 } from "@/lib/sync/gestionale-dirty-state";

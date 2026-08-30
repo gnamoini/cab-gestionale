@@ -1,0 +1,13 @@
+diff --git a/src/services/maintenance-engine-v2.service.ts b/src/services/maintenance-engine-v2.service.ts
+index 68af67a1..06026a6e 100644
+--- a/src/services/maintenance-engine-v2.service.ts
++++ b/src/services/maintenance-engine-v2.service.ts
+@@ -801,7 +801,7 @@ export const maintenanceEngineV2Service = {
+     return success(
+       (res.data ?? [])
+         .filter((m) => !m.hasActivePreset)
+-        .map(({ hasActivePreset: _hasActivePreset, ...row }) => row),
++        .map(({ hasActivePreset: __hasActivePreset, ...row }) => row),
+     );
+   },
+ 

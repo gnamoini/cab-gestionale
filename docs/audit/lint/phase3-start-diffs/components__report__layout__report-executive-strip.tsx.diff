@@ -1,0 +1,22 @@
+diff --git a/components/report/layout/report-executive-strip.tsx b/components/report/layout/report-executive-strip.tsx
+index acba4898..6f7c09a1 100644
+--- a/components/report/layout/report-executive-strip.tsx
++++ b/components/report/layout/report-executive-strip.tsx
+@@ -42,7 +42,7 @@ export function ReportExecutiveStrip({
+ 
+   return (
+     <div className={reportExecutiveStripClass} role="status">
+-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
++      <div className="flex min-w-0 items-start justify-between gap-3 flex-nowrap sm:flex-wrap">
+         <div className="min-w-0 flex-1">
+           <p className="font-medium text-[color:var(--cab-text)]">{summaryLine}</p>
+           {compareActive ? (
+@@ -53,7 +53,7 @@ export function ReportExecutiveStrip({
+         </div>
+ 
+         {health ? (
+-          <ul className="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5" aria-label="Indicatori salute sistema">
++          <ul className="flex min-w-0 shrink-0 items-center gap-1.5 flex-nowrap sm:flex-wrap" aria-label="Indicatori salute sistema">
+             <li>
+               <Tooltip content={dispMinTitle}><span className={`${reportHealthChipClass}${dispLow ? ` ${reportHealthChipWarningClass}` : ""}`}>
+                 <span className="text-[color:var(--cab-text-muted)]">Disp. min</span>

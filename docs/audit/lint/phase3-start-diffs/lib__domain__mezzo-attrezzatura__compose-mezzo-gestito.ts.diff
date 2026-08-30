@@ -1,0 +1,16 @@
+diff --git a/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts b/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts
+index fcd8736a..983085e7 100644
+--- a/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts
++++ b/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts
+@@ -8,11 +8,6 @@ function str(v: string | null | undefined, fallback = "—"): string {
+   return t && t.length > 0 ? t : fallback;
+ }
+ 
+-function matricolaUi(v: string | null | undefined): string {
+-  const t = v?.trim();
+-  return t && t.length > 0 ? t : "Non assegnata";
+-}
+-
+ /** Compone `MezzoGestito` da mezzo (telaio) + attrezzatura primaria opzionale. */
+ export function composeMezzoGestitoFromRows(
+   mezzo: MezzoRow,

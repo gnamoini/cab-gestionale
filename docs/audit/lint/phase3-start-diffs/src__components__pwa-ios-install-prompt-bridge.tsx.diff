@@ -1,0 +1,12 @@
+diff --git a/src/components/pwa-ios-install-prompt-bridge.tsx b/src/components/pwa-ios-install-prompt-bridge.tsx
+index a1be75b4..751d7997 100644
+--- a/src/components/pwa-ios-install-prompt-bridge.tsx
++++ b/src/components/pwa-ios-install-prompt-bridge.tsx
+@@ -16,6 +16,7 @@ export function PwaIosInstallPromptBridge() {
+     } catch {
+       /* ignore */
+     }
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setVisible(true);
+   }, []);
+ 

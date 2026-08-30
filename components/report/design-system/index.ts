@@ -9,7 +9,7 @@ export { ReportDomainMetricsGrid } from "@/components/report/design-system/layou
 export { ReportMetricRenderer } from "@/components/report/report-metric-renderer";
 export { ReportDataTable } from "@/components/report/design-system/primitives/data-table/data-table";
 export { ReportLineChart, ReportBarChart } from "@/components/report/design-system/primitives/chart/chart";
-export { ReportMultiSeriesLineChart } from "@/components/report/design-system/primitives/chart/multi-series-line-chart";
+export { ReportMultiSeriesLineChart, KPI_CHART_SERIES_COLORS } from "@/components/report/design-system/primitives/chart/multi-series-line-chart";
 export { ReportMatrix } from "@/components/report/design-system/primitives/matrix/matrix";
 export { ReportNarrativeBlock } from "@/components/report/design-system/primitives/narrative/narrative-block";
 export { StatusBadge } from "@/components/report/design-system/primitives/status/status-badge";

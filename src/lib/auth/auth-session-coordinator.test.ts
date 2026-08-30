@@ -72,7 +72,7 @@ void (async () => {
       };
     },
   });
-  const invalid = await reconcileSession(sbInvalid, { reason: "manual" });
+  const invalid = await reconcileSession(sbInvalid);
   assert.equal(invalid.verdict, "invalid");
   assert.equal(getUserCalls, 1);
 
@@ -83,7 +83,7 @@ void (async () => {
       error: { message: "Failed to fetch" },
     }),
   });
-  const pending = await reconcileSession(sbPending, { reason: "manual" });
+  const pending = await reconcileSession(sbPending);
   assert.equal(pending.verdict, "pending");
 
   assert.equal(isReconcileInFlight(), false);

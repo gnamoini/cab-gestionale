@@ -26,7 +26,6 @@ import {
   isAllowedLegacyImporter,
   isLegacyShimModule,
   normalizeModuleSegment,
-  type ConvergenceSeverity,
   type PolicyRuntimeConvergenceResult,
 } from "@/lib/selector-core/selector-enforcement-ruleset";
 import {

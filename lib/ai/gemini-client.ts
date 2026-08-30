@@ -5,7 +5,7 @@ import type { LanguageModel } from "ai";
 import {
   resolveGeminiApiKeysFromEnv,
   resolvePrimaryGeminiEnvSource,
-  isGeminiApiKeyFormatValid,
+
   inspectGeminiKeyFormat,
   readRuntimeEnvVar,
   normalizeGeminiReportModelId,

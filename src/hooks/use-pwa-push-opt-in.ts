@@ -55,9 +55,9 @@ function subscribePermission(onStoreChange: () => void) {
 
 export function usePwaPushOptIn() {
   const [engagementElapsed, setEngagementElapsed] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [subscriptionRevoked, setSubscriptionRevoked] = useState(() => readRevokedFlag());
+  const [, setDismissed] = useState(() => isPushOptInDismissedInStorage(Date.now()));
   const [busy, setBusy] = useState(false);
 
   const notificationPermission = useSyncExternalStore(

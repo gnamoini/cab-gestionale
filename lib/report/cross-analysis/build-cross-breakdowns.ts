@@ -1,6 +1,5 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { computeLavorazioneCosto } from "@/lib/lavorazioni/lavorazione-costo";
-import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { topMezziByEstimatedCost } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";

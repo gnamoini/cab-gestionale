@@ -14,7 +14,10 @@ export function ReportPreventiviAccettazioneChart() {
   const { canReadPage, isLoading: rbacLoading } = useRbac();
   const canPreventivi = canReadPage("preventivi");
   const preventiviQ = usePreventiviRecordsQuery(canPreventivi);
-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
+  const preventivi = useMemo(
+    () => (preventiviQ.isError ? [] : preventiviQ.records),
+    [preventiviQ.isError, preventiviQ.records],
+  );
 
   const funnelRows = useMemo(() => buildPreventiviFunnel(preventivi, range), [preventivi, range]);
 

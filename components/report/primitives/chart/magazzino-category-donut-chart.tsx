@@ -21,7 +21,9 @@ function MagazzinoCategoryDonutChartInner({ slices }: { slices: MagazzinoCategor
   }
 
   let angle = -Math.PI / 2;
-  const arcs = top.map((s, i) => {
+  const arcs: Array<{ d: string; fill: string; s: MagazzinoCategoryStockSlice }> = [];
+  for (let i = 0; i < top.length; i++) {
+    const s = top[i]!;
     const sweep = (s.pct / 100) * Math.PI * 2;
     const x1 = cx + r * Math.cos(angle);
     const y1 = cy + r * Math.sin(angle);
@@ -34,8 +36,8 @@ function MagazzinoCategoryDonutChartInner({ slices }: { slices: MagazzinoCategor
     const large = sweep > Math.PI ? 1 : 0;
     const d = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${ir} ${ir} 0 ${large} 0 ${ix2} ${iy2} Z`;
     angle += sweep;
-    return { d, fill: PALETTE[i % PALETTE.length]!, s };
-  });
+    arcs.push({ d, fill: PALETTE[i % PALETTE.length]!, s });
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center">

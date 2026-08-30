@@ -1,0 +1,40 @@
+diff --git a/lib/selector-core/selector-build-orchestrator.ts b/lib/selector-core/selector-build-orchestrator.ts
+index f3037be4..632c6088 100644
+--- a/lib/selector-core/selector-build-orchestrator.ts
++++ b/lib/selector-core/selector-build-orchestrator.ts
+@@ -255,7 +255,7 @@ export function validatePhase(
+ }
+ 
+ export function unifiedPolicyCheckPhase(
+-  options: BuildOrchestratorOptions = {},
++  _options: BuildOrchestratorOptions = {},
+ ): BuildPhaseResult<{ report: UnifiedPolicyCheckResult }> {
+   try {
+     const report = runUnifiedPolicyCheck({ mode: resolveEnforcerMode() });
+@@ -429,7 +429,7 @@ function executeBuildPipeline(
+   const skipPhase = (phase: BuildPhaseName): boolean =>
+     resume && isPhaseCompleteInCheckpoint(phase, fingerprint, checkpoint);
+ 
+-  let validate = skipPhase("validate")
++  const validate = skipPhase("validate")
+     ? { ok: true, phase: "validate" as const, retryable: true }
+     : validatePhase(options);
+   if (!skipPhase("validate")) {
+@@ -443,7 +443,7 @@ function executeBuildPipeline(
+     throw new Error("validatePhase failed: missing classification");
+   }
+ 
+-  let build = skipPhase("build")
++  const build = skipPhase("build")
+     ? { ok: true, phase: "build" as const, retryable: true, result: { published: false } }
+     : buildPhase(options);
+   if (!skipPhase("build")) {
+@@ -473,7 +473,7 @@ function executeBuildPipeline(
+     throw new Error(`verifyPhase failed: ${verify.error}`);
+   }
+ 
+-  let unifiedPolicy = skipPhase("unifiedPolicyCheck")
++  const unifiedPolicy = skipPhase("unifiedPolicyCheck")
+     ? { ok: true, phase: "unifiedPolicyCheck" as const, retryable: true }
+     : unifiedPolicyCheckPhase(options);
+   if (!skipPhase("unifiedPolicyCheck")) {

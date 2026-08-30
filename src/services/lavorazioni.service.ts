@@ -208,7 +208,7 @@ export const lavorazioniService = {
   },
 
   /** Conclude e archivia: stato completata, archived=true, archived_at e data_uscita. Idempotente se già archiviata. */
-  async conclude(id: string): Promise<ServiceResult<LavorazioneRow>> {
+  async conclude(id: string, completionYmd?: string): Promise<ServiceResult<LavorazioneRow>> {
     try {
       const sb = await c();
       const userId = await authUserId(sb);
@@ -218,13 +218,29 @@ export const lavorazioniService = {
       const b = before as LavorazioneRow;
       if (b.archived === true) return success(b);
 
-      const now = new Date().toISOString();
+      let archivedAt: string;
+      let dataUscita: string;
+      if (completionYmd) {
+        const fieldsRes = lavorazioneCompletamentoFieldsFromYmd(completionYmd);
+        if (!fieldsRes.ok) return err("Data completamento non valida.");
+        const ingressoYmd = b.data_ingresso?.trim().slice(0, 10);
+        if (ingressoYmd && fieldsRes.fields.data_uscita < ingressoYmd) {
+          return err("La data di completamento non può essere precedente alla data di ingresso.");
+        }
+        archivedAt = fieldsRes.fields.archived_at;
+        dataUscita = fieldsRes.fields.data_uscita;
+      } else {
+        const now = new Date().toISOString();
+        archivedAt = now;
+        dataUscita = b.data_uscita?.trim() ? b.data_uscita : now;
+      }
+
       const patch = withRowUpdatedBy(
         {
           stato: "completata" as StatoLavorazione,
           archived: true,
-          archived_at: now,
-          data_uscita: b.data_uscita?.trim() ? b.data_uscita : now,
+          archived_at: archivedAt,
+          data_uscita: dataUscita,
         },
         userId,
       );

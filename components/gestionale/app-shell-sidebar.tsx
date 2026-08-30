@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -226,6 +228,7 @@ function MobileNavDrawer({
   const { restoreFocus } = useDropdownFocusRestore(focusTrapActive);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (flags.state === "OPEN") setAnnouncement("Menu principale aperto");
     if (!flags.mounted && flags.state === "CLOSED") setAnnouncement("Menu principale chiuso");
   }, [flags.mounted, flags.state]);

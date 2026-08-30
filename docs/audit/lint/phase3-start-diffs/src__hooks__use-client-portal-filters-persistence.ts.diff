@@ -1,0 +1,21 @@
+diff --git a/src/hooks/use-client-portal-filters-persistence.ts b/src/hooks/use-client-portal-filters-persistence.ts
+index c97515cf..70f5e42e 100644
+--- a/src/hooks/use-client-portal-filters-persistence.ts
++++ b/src/hooks/use-client-portal-filters-persistence.ts
+@@ -20,12 +20,15 @@ export function useClientPortalFiltersPersistence() {
+   const [restoring, setRestoring] = useState(true);
+ 
+   // ponytail: hydration client-only — useState lazy init causerebbe mismatch SSR
+-  // eslint-disable-next-line react-hooks/set-state-in-effect -- restore persisted filters after mount
+   useEffect(() => {
+     const initial = readFiltersSync();
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore persisted filters after mount
+     setFilters(initial);
++     
+     setSearchInput(typeof initial.search === "string" ? initial.search : "");
++     
+     setFiltersHydrated(true);
++     
+     setRestoring(false);
+   }, []);
+ 

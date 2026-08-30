@@ -1,0 +1,12 @@
+diff --git a/lib/render/render-path-orchestrator.ts b/lib/render/render-path-orchestrator.ts
+index f7361caf..d23a3510 100644
+--- a/lib/render/render-path-orchestrator.ts
++++ b/lib/render/render-path-orchestrator.ts
+@@ -9,7 +9,6 @@ import {
+   CLIENT_PORTAL_ARCHIVIO_FILTERS,
+   CLIENT_PORTAL_INCORSO_FILTERS,
+ } from "@/lib/lavorazioni/client-portal-prefetch-filters";
+-import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
+ import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
+ import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
+ import {

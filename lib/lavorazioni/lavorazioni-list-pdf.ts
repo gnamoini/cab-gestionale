@@ -18,9 +18,6 @@ export { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-
  * Export PDF lista lavorazioni in corso — server artifact (DTO + storage cache).
  * I parametri `rows` / `autore` sono ignorati: i dati sono caricati lato server.
  */
-export function openLavorazioniInCorsoPdfInNewTab(
-  _rows?: readonly LavorazioniInCorsoPdfRow[],
-  _autore?: string,
-): void {
+export function openLavorazioniInCorsoPdfInNewTab(): void {
   openPdfArtifactFromUserClick("lavorazioni-in-corso");
 }

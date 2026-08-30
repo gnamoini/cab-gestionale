@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { canonicalSiteOriginString } from "@/lib/core/site-origin";
+import { buildClientPortalMezzoQrHref } from "@/lib/lavorazioni/client-portal-access";
 import { buildMezzoQrUrl } from "@/lib/mezzo-labels/domain/tokens";
 import {
   buildNuovaLavorazioneWithMezzoTokenHref,
@@ -49,6 +50,9 @@ withEnv({ NEXT_PUBLIC_SITE_URL: "https://cab-gestionale.vercel.app" }, () => {
   assert.equal(url.searchParams.get(Q_MEZZO_QR_TOKEN), token);
   assert.equal(url.searchParams.get(Q_MEZZO_ENTRY_SOURCE), "qr");
   assert.equal(url.searchParams.get("mezzoId"), null);
+
+  const clientHref = buildClientPortalMezzoQrHref(token);
+  assert.equal(clientHref, `/lavorazioni-clienti?mezzoToken=${encodeURIComponent(token)}`);
 });
 
 console.log("mezzo-labels/qr/redirect-flow.test.ts OK");

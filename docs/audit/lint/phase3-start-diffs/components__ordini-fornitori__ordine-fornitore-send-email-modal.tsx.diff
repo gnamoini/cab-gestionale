@@ -1,0 +1,12 @@
+diff --git a/components/ordini-fornitori/ordine-fornitore-send-email-modal.tsx b/components/ordini-fornitori/ordine-fornitore-send-email-modal.tsx
+index 6d0df25e..3473ab94 100644
+--- a/components/ordini-fornitori/ordine-fornitore-send-email-modal.tsx
++++ b/components/ordini-fornitori/ordine-fornitore-send-email-modal.tsx
+@@ -29,6 +29,7 @@ export function OrdineFornitoreSendEmailModal({
+ 
+   useEffect(() => {
+     if (!open || !ordineId) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setLoading(true);
+     fetch(`/api/ordini-fornitori/${ordineId}/send-preview`)
+       .then(async (res) => {

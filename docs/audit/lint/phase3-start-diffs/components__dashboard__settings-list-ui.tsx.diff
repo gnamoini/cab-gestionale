@@ -1,0 +1,13 @@
+diff --git a/components/dashboard/settings-list-ui.tsx b/components/dashboard/settings-list-ui.tsx
+index 0c2a3314..55fa0c08 100644
+--- a/components/dashboard/settings-list-ui.tsx
++++ b/components/dashboard/settings-list-ui.tsx
+@@ -720,7 +720,7 @@ export function SettingsEditableStringRow({
+ 
+   return (
+     <li ref={rowRef} className={footer ? `${rowClass} !block !py-0` : rowClass}>
+-      <div className="flex min-h-11 min-w-0 w-full flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:gap-x-3">
++      <div className="flex min-h-11 min-w-0 w-full items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:gap-x-3 sm:flex-wrap">
+         <div className="flex min-w-0 flex-1 items-center">
+         {isEditing ? (
+           <input

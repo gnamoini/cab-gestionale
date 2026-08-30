@@ -61,7 +61,6 @@ const fp1 = computeLabelFingerprint({
   templateVersion: template.version,
   generatorVersion: GENERATOR_VERSION,
   preset: template.id,
-  includeBarcode: false,
   canonicalOrigin: "https://example.test",
 });
 const fp2 = computeLabelFingerprint({
@@ -70,7 +69,6 @@ const fp2 = computeLabelFingerprint({
   templateVersion: "9.9.9",
   generatorVersion: GENERATOR_VERSION,
   preset: template.id,
-  includeBarcode: false,
   canonicalOrigin: "https://example.test",
 });
 assert.notEqual(fp1, fp2, "template version bump invalidates cache");

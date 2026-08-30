@@ -25,7 +25,7 @@ function onScopeKeyDown(e: KeyboardEvent) {
 }
 
 /** Capture: drain batch React; combobox flush centralizzato in prepareFormSubmitAsync post-guard. */
-function onScopeSubmitCapture(_e: FormEvent<HTMLFormElement>) {
+function onScopeSubmitCapture() {
   flushSync(() => {});
 }
 

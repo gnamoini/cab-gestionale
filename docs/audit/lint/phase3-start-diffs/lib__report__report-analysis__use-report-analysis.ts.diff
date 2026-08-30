@@ -1,0 +1,12 @@
+diff --git a/lib/report/report-analysis/use-report-analysis.ts b/lib/report/report-analysis/use-report-analysis.ts
+index 09161d36..e27362a9 100644
+--- a/lib/report/report-analysis/use-report-analysis.ts
++++ b/lib/report/report-analysis/use-report-analysis.ts
+@@ -95,6 +95,7 @@ export function useReportAnalysis(input: UseReportAnalysisInput) {
+ 
+     const cached = readReportAnalysisCache(cacheKey);
+     if (cached) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setData(cached);
+       setStatus("success");
+       setError(null);

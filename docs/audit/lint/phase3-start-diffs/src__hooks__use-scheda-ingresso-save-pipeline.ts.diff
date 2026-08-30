@@ -1,0 +1,36 @@
+diff --git a/src/hooks/use-scheda-ingresso-save-pipeline.ts b/src/hooks/use-scheda-ingresso-save-pipeline.ts
+index ceb0fcd6..cc44a806 100644
+--- a/src/hooks/use-scheda-ingresso-save-pipeline.ts
++++ b/src/hooks/use-scheda-ingresso-save-pipeline.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useMemo, useRef, useState } from "react";
++import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+ import { createSubmitLock, type FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
+ import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+ import type { MezzoGestito } from "@/lib/mezzi/types";
+@@ -32,15 +32,18 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
+   const lock = opts.submitLock ?? internalLock;
+   const [isPending, setIsPending] = useState(false);
+   const commitRef = useRef(opts.commit);
+-  commitRef.current = opts.commit;
+   const gateSubmitRef = useRef(opts.gateSubmit);
+-  gateSubmitRef.current = opts.gateSubmit;
+   const gateSaveRef = useRef(opts.gateSave);
+-  gateSaveRef.current = opts.gateSave;
+   const gateMezzoLinkRef = useRef(opts.gateMezzoLink);
+-  gateMezzoLinkRef.current = opts.gateMezzoLink;
+   const mezziCatalogRef = useRef(opts.mezziCatalog);
+-  mezziCatalogRef.current = opts.mezziCatalog;
++
++  useLayoutEffect(() => {
++    commitRef.current = opts.commit;
++    gateSubmitRef.current = opts.gateSubmit;
++    gateSaveRef.current = opts.gateSave;
++    gateMezzoLinkRef.current = opts.gateMezzoLink;
++    mezziCatalogRef.current = opts.mezziCatalog;
++  }, [opts.commit, opts.gateSubmit, opts.gateSave, opts.gateMezzoLink, opts.mezziCatalog]);
+ 
+   const run = useCallback(
+     async (input: {

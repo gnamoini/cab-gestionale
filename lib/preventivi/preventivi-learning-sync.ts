@@ -3,7 +3,7 @@
 import { PREVENTIVI_LEARNING_STORAGE_KEY } from "@/lib/preventivi/constants";
 import {
   loadPreventiviLearning,
-  savePreventiviLearning,
+
   type PreventivoLearningStore,
 } from "@/lib/preventivi/preventivi-learning-storage";
 import { settingsService } from "@/src/services/settings.service";

@@ -62,7 +62,6 @@ function printAuditReport(report: ReturnType<typeof auditUiConsistencyRepo>, fin
 
   const blockers = findings.filter((f) => f.severity === "BLOCKER");
   const warnings = findings.filter((f) => f.severity === "WARN");
-  const infos = findings.filter((f) => f.severity === "INFO");
 
   for (const f of [...blockers, ...warnings].slice(0, 50)) {
     console.log(`Category:  ${f.category}`);

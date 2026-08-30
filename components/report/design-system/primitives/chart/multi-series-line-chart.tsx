@@ -173,7 +173,7 @@ function ReportMultiSeriesLineChartInner({
         )}
       </svg>
 
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[color:var(--cab-text)]">
+      <ul className="flex gap-x-4 gap-y-1 text-sm text-[color:var(--cab-text)] flex-nowrap sm:flex-wrap">
         {series.map((s) => (
           <li key={s.id} className="inline-flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} aria-hidden />

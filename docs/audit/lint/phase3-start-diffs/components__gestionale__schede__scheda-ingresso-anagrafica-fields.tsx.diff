@@ -1,0 +1,21 @@
+diff --git a/components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx b/components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx
+index 7ca1805b..baf84b8d 100644
+--- a/components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx
++++ b/components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx
+@@ -91,7 +91,7 @@ function SchedaIngressoAnagraficaFieldsInner({
+   onDismissMezzoHint,
+   onDismissAmbiguousHint,
+   onSelectAmbiguousCandidate,
+-  onVerifyMezzoConflict,
++  
+   clienteRequired = false,
+   marcaAttrezzaturaRequired = false,
+   mezzoLinked = false,
+@@ -182,6 +182,7 @@ function SchedaIngressoAnagraficaFieldsInner({
+ 
+   useEffect(() => {
+     if (!mezzoId.trim()) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setAttrezzature([]);
+       return;
+     }

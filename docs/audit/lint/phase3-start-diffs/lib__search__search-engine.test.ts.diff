@@ -1,0 +1,13 @@
+diff --git a/lib/search/search-engine.test.ts b/lib/search/search-engine.test.ts
+index 9f7a6135..6f948d9f 100644
+--- a/lib/search/search-engine.test.ts
++++ b/lib/search/search-engine.test.ts
+@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
+ import { buildSearchDocumentFromFields } from "@/lib/search/build-document";
+ import { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
+ import { collapseSearchKey } from "@/lib/search/field-token";
+-import { matchSearchQuery, matchSearchString } from "@/lib/search/match";
++import { matchSearchString } from "@/lib/search/match";
+ import { normalizeSearchText } from "@/lib/search/normalize";
+ import { parseSearchQuery } from "@/lib/search/parse-query";
+ import { scoreTokenAgainstHaystack } from "@/lib/search/rank";

@@ -56,7 +56,9 @@ export function SettingsComunicazioniSection() {
   const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDraft(parseCommunicationSettings(commRow?.value));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   }, [commRow?.updated_at]);
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export function SettingsComunicazioniSection() {
   }, [gestToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (subTab === "storico") void loadLogs();
   }, [subTab, loadLogs]);
 
@@ -145,6 +148,14 @@ export function SettingsComunicazioniSection() {
     }
     if (draft.replyToEmail.trim() && !isValidEmail(draft.replyToEmail)) {
       gestToast.validation("Email di risposta non valida.");
+      return;
+    }
+    if (draft.supplierOrderSender.fromEmail.trim() && !isValidEmail(draft.supplierOrderSender.fromEmail)) {
+      gestToast.validation("Email mittente ordini fornitori non valida.");
+      return;
+    }
+    if (draft.supplierOrderSender.replyToEmail.trim() && !isValidEmail(draft.supplierOrderSender.replyToEmail)) {
+      gestToast.validation("Reply-To ordini fornitori non valida.");
       return;
     }
     setSaving(true);
@@ -215,6 +226,7 @@ export function SettingsComunicazioniSection() {
           <fieldset className="space-y-3 rounded-lg border border-[color:var(--cab-border)] p-4">
             <legend className="text-sm font-medium text-[color:var(--cab-text)]">Mittente email</legend>
             <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- branding logo URL from settings (not a static import) */}
               <img
                 src={logoUrl}
                 alt=""
@@ -276,6 +288,62 @@ export function SettingsComunicazioniSection() {
                 </>
               ) : null}
             </p>
+          </fieldset>
+          <fieldset className="space-y-3 rounded-lg border border-[color:var(--cab-border)] p-4">
+            <legend className="text-sm font-medium text-[color:var(--cab-text)]">Mittente ordini ai fornitori</legend>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Nome mittente</span>
+              <input
+                className={dsInput}
+                value={draft.supplierOrderSender.displayName}
+                maxLength={TEXT_SHORT}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    supplierOrderSender: {
+                      ...d.supplierOrderSender,
+                      displayName: sliceInputValue(e.target.value, TEXT_SHORT),
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Email mittente (From)</span>
+              <input
+                className={dsInput}
+                type="email"
+                value={draft.supplierOrderSender.fromEmail}
+                maxLength={TEXT_SHORT}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    supplierOrderSender: {
+                      ...d.supplierOrderSender,
+                      fromEmail: sliceInputValue(e.target.value, TEXT_SHORT),
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Reply-To ordini fornitori</span>
+              <input
+                className={dsInput}
+                type="email"
+                value={draft.supplierOrderSender.replyToEmail}
+                maxLength={TEXT_SHORT}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    supplierOrderSender: {
+                      ...d.supplierOrderSender,
+                      replyToEmail: sliceInputValue(e.target.value, TEXT_SHORT),
+                    },
+                  }))
+                }
+              />
+            </label>
           </fieldset>
           <label className="flex items-center justify-between gap-4">
             <span className="text-sm">Modalità Test</span>

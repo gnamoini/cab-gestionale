@@ -1,0 +1,13 @@
+diff --git a/lib/dipendenti/pdf/dipendenti-pdf-sections.ts b/lib/dipendenti/pdf/dipendenti-pdf-sections.ts
+index 6b08a7a4..a6fdd2da 100644
+--- a/lib/dipendenti/pdf/dipendenti-pdf-sections.ts
++++ b/lib/dipendenti/pdf/dipendenti-pdf-sections.ts
+@@ -32,7 +32,7 @@ import {
+   drawGestionalePdfHeader,
+   drawPdfPageFooters,
+   pdfAdvanceAfterDocumentHeader,
+-  pdfAdvanceSection,
++
+   pdfContentWidth,
+ } from "@/lib/pdf/core/pdf-base-template";
+ 

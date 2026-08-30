@@ -1,0 +1,15 @@
+diff --git a/lib/pwa/pwa-installed-detection.test.ts b/lib/pwa/pwa-installed-detection.test.ts
+index 7da77938..51becac6 100644
+--- a/lib/pwa/pwa-installed-detection.test.ts
++++ b/lib/pwa/pwa-installed-detection.test.ts
+@@ -6,8 +6,8 @@ import {
+   isPwaAppInstalledOnDeviceSync,
+   readPwaDisplayModeInBrowser,
+ } from "@/lib/pwa/pwa-installed-detection";
+-import { clearPwaInstallCompleted, markPwaInstallCompleted } from "@/lib/pwa/pwa-install-state";
+-import { clearPwaInstallRuntimeInstalled, markPwaInstallRuntimeInstalled, resetPwaInstallRuntimeForTests } from "@/lib/pwa/pwa-install-runtime";
++import { markPwaInstallCompleted } from "@/lib/pwa/pwa-install-state";
++import { markPwaInstallRuntimeInstalled, resetPwaInstallRuntimeForTests } from "@/lib/pwa/pwa-install-runtime";
+ 
+ const ROOT = process.cwd();
+ 

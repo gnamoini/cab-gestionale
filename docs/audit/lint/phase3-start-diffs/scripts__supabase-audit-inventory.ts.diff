@@ -1,0 +1,13 @@
+diff --git a/scripts/supabase-audit-inventory.ts b/scripts/supabase-audit-inventory.ts
+index 877ca3f1..ddb475c8 100644
+--- a/scripts/supabase-audit-inventory.ts
++++ b/scripts/supabase-audit-inventory.ts
+@@ -293,7 +293,7 @@ function buildInventory(): Inventory {
+   const rlsTables = new Set<string>();
+   for (const m of migrations) {
+     for (const t of m.tables) rlsTables.add(t);
+-    for (const p of m.policies) {
++    for (const _p of m.policies) {
+       /* policies reference tables via ON public.table — re-scan raw */
+     }
+   }

@@ -1,0 +1,13 @@
+diff --git a/lib/dipendenti/timesheet-month.ts b/lib/dipendenti/timesheet-month.ts
+index f4960733..88702ce4 100644
+--- a/lib/dipendenti/timesheet-month.ts
++++ b/lib/dipendenti/timesheet-month.ts
+@@ -124,7 +124,7 @@ export function yearOptions(count = 5, anchor: Date = new Date()): { value: numb
+   return out;
+ }
+ 
+-export function monthOptionsForYear(year: number): { value: number; label: string }[] {
++export function monthOptionsForYear(): { value: number; label: string }[] {
+   return MONTH_NAMES_IT.map((label, i) => ({ value: i + 1, label }));
+ }
+ 

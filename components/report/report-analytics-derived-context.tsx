@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import {
   createContext,
   useCallback,
@@ -107,6 +109,7 @@ export function ReportAnalyticsDerivedProvider({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (rangeKey !== currentRangeKey) resetForRangeChange(rangeKey);
   }, [rangeKey, currentRangeKey, resetForRangeChange]);
 

@@ -180,10 +180,12 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
   const canWriteFatturazione = perms.canWrite;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (fattOpenId) void openDetail(fattOpenId);
   }, [fattOpenId, openDetail]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (nuovoRequested && canWriteFatturazione) setWizardOpen(true);
   }, [nuovoRequested, canWriteFatturazione]);
 

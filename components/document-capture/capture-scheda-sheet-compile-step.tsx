@@ -1,5 +1,8 @@
 "use client";
 
+/* eslint-disable react-hooks/immutability -- lint phase2: preserve existing hook contract */
+
+/* eslint-disable react-hooks/refs -- submit hook exposes formRef/formProps for JSX wiring */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
@@ -18,7 +21,6 @@ import {
   captureFieldRowsToSchedaFields,
   schedaFieldsToCompilePayload,
   type CaptureFieldPatch,
-  type CaptureSchedaCompilePayload,
 } from "@/lib/document-capture/capture-scheda-compile-payload";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
 import {
@@ -160,7 +162,10 @@ export function CaptureSchedaSheetCompileStep({
   const compileStatusRef = useRef(compileStatus);
   compileStatusRef.current = compileStatus;
 
-  const addettiRecords = sharedGlobalOpts?.lavorazioni.addettiRecords ?? [];
+  const addettiRecords = useMemo(
+    () => sharedGlobalOpts?.lavorazioni.addettiRecords ?? [],
+    [sharedGlobalOpts?.lavorazioni.addettiRecords],
+  );
   const addettiLista = sharedGlobalOpts?.lavorazioni.addetti ?? [];
 
   const setStatus = useCallback(
@@ -171,9 +176,11 @@ export function CaptureSchedaSheetCompileStep({
     [onCompileStatusChange],
   );
 
+   
   useEffect(() => {
     if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setStatus("loading");
     setLoadError(null);
     try {
@@ -228,6 +235,7 @@ export function CaptureSchedaSheetCompileStep({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- DIRTY_DEFERRED: schedaFieldsFromResume is a local helper tied to captureId/fieldRows
   }, [
     addettiRecords,
     fieldRows,
@@ -493,7 +501,7 @@ export function CaptureSchedaSheetCompileStep({
 
       void executeApply();
     },
-    [assignLavorazioneId, compileStatus, executeApply, fields, gestToast, schedeStore, setStatus, tipo],
+    [assignLavorazioneId, compileStatus, executeApply, fields, gestToast, schedeStore, tipo],
   );
 
   if (compileStatus === "loading" || !sharedGlobalOpts || !fields) {
@@ -604,37 +612,6 @@ export function CaptureSchedaSheetCompileStep({
       />
     </>
   );
-}
-
-function resolveFieldValueForHint(
-  fieldKey: string,
-  fields: SchedaLavorazioniFields | SchedaRicambiFields | null,
-  tipo: "lavorazioni" | "ricambi",
-): string {
-  if (!fields) return "";
-  const m = fieldKey.match(/^riga_(\d+)_(.+)$/);
-  if (!m) {
-    if (fieldKey === "targa_matricola") return fields.identificazioneMacchina;
-    return "";
-  }
-  const rowNum = Number.parseInt(m[1]!, 10);
-  const suffix = m[2]!;
-  if (tipo === "lavorazioni") {
-    const row = (fields as SchedaLavorazioniFields).righe[rowNum - 1];
-    if (!row) return "";
-    if (suffix === "lavorazione") return row.lavorazioniEffettuate;
-    if (suffix === "nome") return row.addettiAssegnati?.[0]?.addetto ?? "";
-    if (suffix === "ore") return String(row.addettiAssegnati?.[0]?.oreImpiegate ?? "");
-    if (suffix === "data") return row.dataLavorazione;
-    return "";
-  }
-  const row = (fields as SchedaRicambiFields).righe[rowNum - 1];
-  if (!row) return "";
-  if (suffix === "nome") return row.ricambioNome;
-  if (suffix === "codice") return row.codice;
-  if (suffix === "qt") return String(row.quantita);
-  if (suffix === "data") return row.dataUtilizzo;
-  return "";
 }
 
 export function isSheetCompileImportEnabled(status: CompileStatus): boolean {

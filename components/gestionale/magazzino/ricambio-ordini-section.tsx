@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { LoadingFormSkeleton } from "@/components/design-system";
+import { TruncatedTextTooltip } from "@/components/ui";
 import { fetchOrdiniFornitoriRigheByRicambioId } from "@/lib/ordini-fornitori/ordine-fornitore-by-ricambio-fetch";
 
 function formatDataOrdine(iso: string): string {
@@ -56,8 +57,8 @@ export function RicambioOrdiniSection({ ricambioId }: { ricambioId: string }) {
                     </Link>
                   </td>
                   <td className="whitespace-nowrap py-1.5 pe-2 tabular-nums">{formatDataOrdine(r.dataOrdine)}</td>
-                  <td className="max-w-[10rem] truncate py-1.5 pe-2" title={r.fornitoreLabel}>
-                    {r.fornitoreLabel || "—"}
+                  <td className="max-w-[10rem] truncate py-1.5 pe-2">
+                    <TruncatedTextTooltip text={r.fornitoreLabel || "—"} className="truncate" />
                   </td>
                   <td className="whitespace-nowrap py-1.5 pe-2 font-mono tabular-nums">{r.quantita}</td>
                   <td className="whitespace-nowrap py-1.5 capitalize">{r.status || "—"}</td>

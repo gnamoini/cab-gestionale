@@ -254,11 +254,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    const timersMap = timers.current;
+    const exitTimersMap = exitTimers.current;
     return () => {
-      timers.current.forEach((t) => clearTimeout(t));
-      timers.current.clear();
-      exitTimers.current.forEach((t) => clearTimeout(t));
-      exitTimers.current.clear();
+      timersMap.forEach((t) => clearTimeout(t));
+      timersMap.clear();
+      exitTimersMap.forEach((t) => clearTimeout(t));
+      exitTimersMap.clear();
     };
   }, []);
 

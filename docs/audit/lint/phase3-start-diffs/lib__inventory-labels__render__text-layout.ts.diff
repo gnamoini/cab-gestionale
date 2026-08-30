@@ -1,0 +1,117 @@
+diff --git a/lib/inventory-labels/render/text-layout.ts b/lib/inventory-labels/render/text-layout.ts
+index 622907e1..f817da83 100644
+--- a/lib/inventory-labels/render/text-layout.ts
++++ b/lib/inventory-labels/render/text-layout.ts
+@@ -21,7 +21,7 @@ import {
+   lineMetrics,
+   maxLinesForZoneMm,
+   nextRowBaselineMm,
+-  stackBottomMmFrom,
++  _stackBottomMmFrom,
+   supplierCapBaselineMm,
+ } from "@/lib/inventory-labels/render/text-metrics";
+ 
+@@ -50,10 +50,8 @@ function textEl(
+   return el;
+ }
+ 
+-function barcodeEl(els: LabelTemplateElement[]) {
+-  const el = els.find((e) => e.type === "barcode");
+-  if (!el || el.type !== "barcode") throw new Error("Elemento barcode mancante");
+-  return el;
++function isClienteTemplate(template: LabelTemplateDefinition): boolean {
++  return template.id.endsWith("-cliente");
+ }
+ 
+ function wrapBlock(
+@@ -104,7 +102,7 @@ function assignPositions(
+   return placed;
+ }
+ 
+-/** Gruppo fornitore: baseline inferiore sul fondo barcode (caps, no descender). */
++/** Gruppo fornitore: baseline inferiore sul fondo etichetta (caps, no descender). */
+ function assignBottomBaselines(
+   textX: number,
+   anchorBottomMm: number,
+@@ -161,10 +159,12 @@ function buildInventoryTopBlocks(
+   const marcaLine = dualMarca
+     ? formatLabelMarcaCombinedLine(payload.marca, payload.marcaSecondaria)
+     : formatLabelMarcaLine(payload.marca);
+-  const codiceLine = formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca);
++  const codiceOpts = { ricambioMarca: payload.marca, multipleMarche: dualMarca };
++  const codiceLine = formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca, codiceOpts);
+   const codiceSecondarioLine = formatLabelCodiceLine(
+     fieldValue(payload, "codiceSecondario"),
+     payload.marcaSecondaria,
++    codiceOpts,
+   );
+ 
+   const blocks: Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> = [];
+@@ -435,7 +435,7 @@ function topGapAfter(field: keyof LabelPayload, next?: keyof LabelPayload): numb
+ 
+ /**
+  * Alto: marca (combinata se doppia) → descrizione → codice → codice secondario.
+- * Basso: fornitore/codice alt ancorati al bordo inferiore barcode.
++ * Basso: fornitore/codice alt ancorati al fondo etichetta.
+  * Font fisso dal template — solo wrap, nessuno shrink.
+  */
+ export function resolveLabelTextLayout(
+@@ -448,7 +448,7 @@ export function resolveLabelTextLayout(
+   if (template.layoutMode === "manual-centered") {
+     return resolveManualLabelTextLayout(template, payload);
+   }
+-  if (!template.elements.some((e) => e.type === "barcode")) {
++  if (isClienteTemplate(template)) {
+     return resolveClienteLabelTextLayout(template, payload);
+   }
+ 
+@@ -457,7 +457,6 @@ export function resolveLabelTextLayout(
+   const codiceEl = textEl(template.elements, "codice");
+   const altFornEl = textEl(template.elements, "fornitoreAlternativo");
+   const altCodEl = textEl(template.elements, "codiceAlternativo");
+-  const barcode = barcodeEl(template.elements);
+   const dpi = template.dpi;
+   const supplierLayout = template.supplierLayout ?? "inline-slash";
+   const typographyBold = template.typography?.weight === "bold";
+@@ -465,9 +464,9 @@ export function resolveLabelTextLayout(
+   const textX = marcaEl.xMm;
+   const textW = marcaEl.maxWidthMm ?? template.widthMm - textX - 2;
+   const top = marcaEl.yMm;
+-  const barcodeBottom = barcode.yMm + barcode.heightMm;
+-  const topGroupBottom = marcaEl.zoneBottomMm ?? barcode.yMm;
+-  const supplierTop = altFornEl.yMm ?? barcode.yMm;
++  const labelBottomMm = template.heightMm - template.marginsMm;
++  const topGroupBottom = marcaEl.zoneBottomMm ?? labelBottomMm;
++  const supplierTop = altFornEl.yMm ?? labelBottomMm;
+ 
+   const supplierBlock = resolveSupplierBlock(payload.fornitoriAlternativi ?? [], supplierLayout);
+   const altFornitore = supplierBlock.fornitoreLines.join("\n") || fieldValue(payload, "fornitoreAlternativo");
+@@ -476,11 +475,11 @@ export function resolveLabelTextLayout(
+   const primaryPt = Math.max(marcaEl.fontPt, descEl.fontPt, codiceEl.fontPt);
+   const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
+ 
+-  const supplierBandH = Math.max(lineMetrics(altFornEl.fontPt, dpi).lineStepMm, barcodeBottom - supplierTop);
++  const supplierBandH = Math.max(lineMetrics(altFornEl.fontPt, dpi).lineStepMm, labelBottomMm - supplierTop);
+ 
+   const bottomBlocks: StackBlock[] = [];
+-  let altFornPt = altFornEl.fontPt;
+-  let altCodPt = altCodEl.fontPt;
++  const altFornPt = altFornEl.fontPt;
++  const altCodPt = altCodEl.fontPt;
+   if (altCodice) {
+     const maxLines = Math.max(1, maxLinesForZoneMm(supplierBandH * 0.55, altCodPt, dpi));
+     const res = wrapBlock(altCodice, altCodPt, textW, maxLines, "mono", "chars");
+@@ -508,10 +507,10 @@ export function resolveLabelTextLayout(
+   }
+ 
+   const supplierAnchorBottom = altCodice
+-    ? supplierCapBaselineMm(barcodeBottom, altCodPt, dpi)
++    ? supplierCapBaselineMm(labelBottomMm, altCodPt, dpi)
+     : altFornitore
+-      ? supplierCapBaselineMm(barcodeBottom, altFornPt, dpi)
+-      : barcodeBottom;
++      ? supplierCapBaselineMm(labelBottomMm, altFornPt, dpi)
++      : labelBottomMm;
+ 
+   const supplierInkTop = bottomBlocks.length
+     ? supplierInkTopMm(bottomBlocks, supplierAnchorBottom, dpi)

@@ -1,0 +1,12 @@
+diff --git a/lib/browser/popup-guard.test.ts b/lib/browser/popup-guard.test.ts
+index 4cb7e363..bc717b4b 100644
+--- a/lib/browser/popup-guard.test.ts
++++ b/lib/browser/popup-guard.test.ts
+@@ -7,7 +7,6 @@ import {
+   openSafePopup,
+   registerPopupBlockedDialogHandler,
+   resolvePopupRetrySessionUrl,
+-  retryPopupFromSession,
+ } from "@/lib/browser/popup-guard";
+ import {
+   clearPopupRetrySession,

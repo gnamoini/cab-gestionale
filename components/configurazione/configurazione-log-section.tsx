@@ -8,7 +8,7 @@ import {
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
-import { appSettingsAuditService } from "@/src/services/app-settings-audit.service";
+import { appSettingsAuditEntry } from "@/lib/domain/app-settings-audit-entry";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { buildGestionaleLogViewModelFromAppSettingsAuditRow } from "@/lib/configurazione/app-settings-audit-log";
 import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
@@ -29,7 +29,7 @@ export function ConfigurazioneLogSection({
 
   useEffect(() => {
     let cancelled = false;
-    void appSettingsAuditService.list({ limit: 500 }).then((res) => {
+    void appSettingsAuditEntry.list({ limit: 500 }).then((res) => {
       if (cancelled) return;
       setRows(res.success ? (res.data ?? []) : []);
       setLoading(false);
@@ -88,7 +88,7 @@ export function ConfigurazioneLogSection({
 
   return (
     <section
-      className={`flex min-h-0 flex-1 flex-col gap-2 ${className ?? ""}`}
+      className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2 ${className ?? ""}`}
       aria-label="Storico configurazione"
     >
       {list}

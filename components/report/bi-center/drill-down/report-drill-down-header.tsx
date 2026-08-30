@@ -7,7 +7,7 @@ import type { ReportDrillDownHeader, ReportDrillDownCompositionComponent } from 
 export function ReportDrillDownHeaderView({ header }: { header: ReportDrillDownHeader }) {
   return (
     <div className="space-y-2 pb-1">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 flex-nowrap sm:flex-wrap">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-[color:var(--cab-text)]">{header.title}</h2>
           <p className="text-sm text-[color:var(--cab-text-muted)]">{header.periodLabel}</p>
@@ -54,7 +54,7 @@ export function ReportDrillDownCompositionView({
             key={c.id}
             className="rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)]/40 p-3"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-nowrap sm:flex-wrap">
               <span className="font-medium text-[color:var(--cab-text)]">{c.label}</span>
               <ReportTrustBadge trust={c.trust} />
             </div>

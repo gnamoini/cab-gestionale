@@ -1,0 +1,13 @@
+diff --git a/lib/preventivi/preventivi-db-mapper.ts b/lib/preventivi/preventivi-db-mapper.ts
+index eea49366..ac6551ca 100644
+--- a/lib/preventivi/preventivi-db-mapper.ts
++++ b/lib/preventivi/preventivi-db-mapper.ts
+@@ -14,7 +14,7 @@ export function isPreventivoUuid(id: string): boolean {
+ }
+ 
+ function recordToDettagli(record: PreventivoRecord): Record<string, unknown> {
+-  const { id: _id, ...rest } = record;
++  const { ...rest } = record;
+   return { ...rest, version: 1 };
+ }
+ 

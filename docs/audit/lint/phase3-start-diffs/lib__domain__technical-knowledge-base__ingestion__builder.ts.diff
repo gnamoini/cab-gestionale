@@ -1,0 +1,12 @@
+diff --git a/lib/domain/technical-knowledge-base/ingestion/builder.ts b/lib/domain/technical-knowledge-base/ingestion/builder.ts
+index ac635a06..0e2d1d47 100644
+--- a/lib/domain/technical-knowledge-base/ingestion/builder.ts
++++ b/lib/domain/technical-knowledge-base/ingestion/builder.ts
+@@ -1,6 +1,6 @@
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ import { TKB_BUILDER_VERSION, TKB_PIPELINE_VERSION } from "../versions";
+-import { countActivities, emptyDraftBundle, mergeFragments, patchDraftFromFragments } from "../merge/merge-engine";
++import { countActivities, mergeFragments, patchDraftFromFragments } from "../merge/merge-engine";
+ import { collectFromAllAdapters, listTkbAdapters } from "./adapter-registry";
+ import { createIngestionContext } from "./adapter-types";
+ import { buildSearchIndex } from "./search-index-builder";

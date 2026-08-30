@@ -8,7 +8,7 @@ import {
   mergeRolePageAccessWithSeed,
 } from "@/src/lib/rbac/load-rbac-data";
 import { resolveRole } from "@/lib/auth/rbac";
-import { err, success, type ServiceResult } from "@/src/services/service-result";
+import { success, type ServiceResult } from "@/src/services/service-result";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 

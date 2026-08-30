@@ -1,0 +1,13 @@
+diff --git a/components/fatturazione/fatturazione-pagamenti-section.tsx b/components/fatturazione/fatturazione-pagamenti-section.tsx
+index 09f8d6f8..17147d32 100644
+--- a/components/fatturazione/fatturazione-pagamenti-section.tsx
++++ b/components/fatturazione/fatturazione-pagamenti-section.tsx
+@@ -26,7 +26,7 @@ export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?:
+   return (
+     <div className="space-y-4">
+       <ShellCard>
+-        <div className="flex flex-wrap items-center justify-between gap-2">
++        <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+           <h2 className={dsTypoSectionTitle}>Pagamenti da allocare ({unallocated.length})</h2>
+           {canWrite ? (
+             <button type="button" className={dsPageToolbarBtn} onClick={() => setMultiOpen(true)}>

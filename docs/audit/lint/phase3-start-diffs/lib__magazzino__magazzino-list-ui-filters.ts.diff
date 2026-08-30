@@ -1,0 +1,13 @@
+diff --git a/lib/magazzino/magazzino-list-ui-filters.ts b/lib/magazzino/magazzino-list-ui-filters.ts
+index 2a860fe1..58970a2b 100644
+--- a/lib/magazzino/magazzino-list-ui-filters.ts
++++ b/lib/magazzino/magazzino-list-ui-filters.ts
+@@ -45,7 +45,7 @@ export function magazzinoRowMatchesPageFilters(
+   if (filters.soloSottoScorta && !(row.scorta < row.scortaMinima)) return false;
+   if (filters.nascondiScortaZero && row.scorta <= 0) return false;
+   if (!magazzinoRowMatchesGlobalSearch(row, filters.search, listePrefs)) return false;
+-  const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
++  const { ...advanced } = filters;
+   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
+ }
+ 

@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { assertRouteProtection } from "@/lib/regression/assert-route-protection";
 import { assertPermissionConsistency } from "@/lib/regression/assert-permission-consistency";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";

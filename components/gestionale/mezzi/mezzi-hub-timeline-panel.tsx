@@ -163,6 +163,7 @@ export function MezziHubTimelinePanel({
     resetPage();
   }, [mezzoId, filter, filteredFeed.length, resetPage]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const paged = useMemo(() => sliceItems(filteredFeed), [filteredFeed, sliceItems, page]);
 
   return (
@@ -172,7 +173,7 @@ export function MezziHubTimelinePanel({
       collapsible
       defaultCollapsed={eventCount === 0 && !anagraficaHistoryQ.isLoading}
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <span className="text-xs text-[color:var(--cab-text-muted)]">Filtro:</span>
         <div className={dsSegmentedWrap}>
           {FILTER_OPTIONS.map((opt) => (

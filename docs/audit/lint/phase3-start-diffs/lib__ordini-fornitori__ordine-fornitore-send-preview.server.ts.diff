@@ -1,0 +1,21 @@
+diff --git a/lib/ordini-fornitori/ordine-fornitore-send-preview.server.ts b/lib/ordini-fornitori/ordine-fornitore-send-preview.server.ts
+index 26eaa510..f2b7b8b1 100644
+--- a/lib/ordini-fornitori/ordine-fornitore-send-preview.server.ts
++++ b/lib/ordini-fornitori/ordine-fornitore-send-preview.server.ts
+@@ -2,7 +2,7 @@ import "server-only";
+ 
+ import { findPoliciesForDomainEvent } from "@/lib/communications/policy/communication-policy-catalog";
+ import { resolveRecipientForPolicy } from "@/lib/communications/recipients/recipient-resolver.server";
+-import { readCommunicationSettingsFromRows } from "@/lib/communications/settings/communication-settings";
++ "@/lib/communications/settings/communication-settings";
+ import {
+   getDefaultTemplates,
+   renderCommunicationTemplate,
+@@ -36,7 +36,6 @@ export async function buildOrdineFornitoreSendPreviewServer(
+   const client = createCommunicationAdminClient();
+   const { data: settingsData } = await client.from("app_settings").select(APP_SETTINGS_COLUMNS);
+   const settingsRows = (settingsData ?? []) as AppSettingRow[];
+-  const settings = readCommunicationSettingsFromRows(settingsRows);
+ 
+   const policies = findPoliciesForDomainEvent("supplier_order.send_requested", {});
+   const policy = policies.find((p) => p.templateKey === "supplier_order.sent");

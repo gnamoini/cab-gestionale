@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-08-30T18:06:35.835Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "remediationPass": true,
+  "releaseReady": false,
+  "certification": "NOT_CERTIFIED",
+  "blockingFailures": [
+    "smoke:regression:core",
+    "ci:build",
+    "data.supabase.connection",
+    "data.production.readiness",
+    "data.publication.sanity",
+    "smoke:playwright",
+    "control:pr"
+  ],
+  "rcSnapshot": {
+    "generatedAt": "2026-08-30T17:58:11.597Z",
+    "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+    "workingTree": {
+      "knownDirtyFiles": 856,
+      "knownPreexistingChanges": 745,
+      "knownPhase4Changes": 111,
+      "unknownChanges": 0,
+      "untrackedUnknown": 0
+    },
+    "lint": "PASS_WITH_WARNINGS",
+    "lintDetail": {
+      "errors": 0,
+      "warnings": 5
+    },
+    "typescript": "PASS",
+    "rbac": "PASS",
+    "contract": "PASS",
+    "certifiableTree": true,
+    "remediationPass": true
+  },
+  "matrixPath": "F:/Projects/gestionale-cab/docs/audit/full-regression-matrix-2026-08-30.md",
+  "reportPath": "F:/Projects/gestionale-cab/docs/audit/full-regression-report-2026-08-30.md"
+}

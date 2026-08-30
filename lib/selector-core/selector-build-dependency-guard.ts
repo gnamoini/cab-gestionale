@@ -3,7 +3,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { readPointer, DEFAULT_POINTER_PATH } from "@/lib/selector-core/selector-snapshot-atomic-switch";
+import { DEFAULT_POINTER_PATH } from "@/lib/selector-core/selector-snapshot-atomic-switch";
 import {
   DEFAULT_BUNDLE_MANIFEST_PATH,
   DEFAULT_GENERATED_SNAPSHOTS_DIR,

@@ -1,0 +1,15 @@
+diff --git a/components/dashboard/admin-notifications-bell.tsx b/components/dashboard/admin-notifications-bell.tsx
+index 8bbc6fa9..5c76ec04 100644
+--- a/components/dashboard/admin-notifications-bell.tsx
++++ b/components/dashboard/admin-notifications-bell.tsx
+@@ -241,8 +241,10 @@ export function AdminNotificationsBell() {
+   const close = useCallback(() => setOpen(false), []);
+   const toggle = useCallback(() => setOpen((v) => !v), []);
+ 
++   
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDesktopPermissionState(getDesktopNotificationPermissionState());
+   }, [open]);
+ 

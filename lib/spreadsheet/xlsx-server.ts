@@ -21,7 +21,7 @@ export function assertSpreadsheetUploadAllowed(bytes: Uint8Array, fileName: stri
 }
 
 function loadXlsxModule(): typeof import("@e965/xlsx") {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy server-only xlsx load
   return require("@e965/xlsx") as typeof import("@e965/xlsx");
 }
 

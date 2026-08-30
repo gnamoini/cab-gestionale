@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/persist-mezzo-form.ts b/lib/mezzi/persist-mezzo-form.ts
+index 0126231c..cd8c970e 100644
+--- a/lib/mezzi/persist-mezzo-form.ts
++++ b/lib/mezzi/persist-mezzo-form.ts
+@@ -19,7 +19,7 @@ function formToMezzoTelaioPayload(f: MezzoFormState): MezzoInsert {
+ 
+ function formToMezzoUpdateWithoutAssociation(f: MezzoFormState): MezzoUpdate {
+   const full = formToMezzoTelaioPayload(f);
+-  const { cliente: _c, utilizzatore: _u, meta, ...rest } = full;
++  const { meta, ...rest } = full;
+   const metaObj =
+     meta && typeof meta === "object" && !Array.isArray(meta)
+       ? { ...(meta as Record<string, unknown>) }

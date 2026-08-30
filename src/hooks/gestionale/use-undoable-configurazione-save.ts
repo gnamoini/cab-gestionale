@@ -23,6 +23,7 @@ export function useUndoableConfigurazioneSave(options?: { enabled?: boolean }) {
   const undoable = useMemo(() => {
     if (!enabled) return null;
     return latestUndoableConfigurazioneSave(user?.id, sessionId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revision bumps after undo refresh event
   }, [enabled, user?.id, sessionId, revision]);
 
   return { undoable, sessionId, userId: user?.id ?? null };

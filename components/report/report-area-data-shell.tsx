@@ -59,6 +59,7 @@ export function ReportAreaDataShell({
 
   const magManualRevision = useMemo(
     () => revisionMagazzinoManualMonthMap(loadMagazzinoManualMonthMap()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- histRev bumps local manual-month revision
     [histRev],
   );
 
@@ -80,7 +81,6 @@ export function ReportAreaDataShell({
       live.magLog,
       live.magazzino,
       live.integrityView.queryMeta,
-      live.snapshotFingerprint,
       magManualRevision,
     ],
   );

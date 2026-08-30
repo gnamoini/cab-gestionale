@@ -164,7 +164,9 @@ function AssenzaSettingsRow({
   const abbrevInputRef = useRef<HTMLInputElement>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setAbbrev(tipo.abbrev);
     setLabel(tipo.label);
   }, [tipo.abbrev, tipo.id, tipo.label]);

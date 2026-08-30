@@ -127,7 +127,6 @@ export function useCalendarAnalytics(
       live.magLog,
       live.magazzino,
       live.integrityView.queryMeta,
-      live.snapshotFingerprint,
     ],
   );
 

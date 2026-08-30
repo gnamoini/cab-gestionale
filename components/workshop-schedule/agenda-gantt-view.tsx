@@ -22,6 +22,7 @@ export function AgendaGanttView({
   onSelectSession?: (sessionId: string) => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
@@ -62,21 +63,33 @@ export function AgendaGanttView({
                 className="absolute left-0 flex w-full items-center gap-2 border-b border-[color:var(--cab-border)] px-2"
                 style={{ height: vi.size, transform: `translateY(${vi.start}px)` }}
               >
-                <Tooltip content={row.label}><div className="w-36 shrink-0 truncate text-xs font-medium text-[color:var(--cab-text)]">
-                  {row.label}
-                </div></Tooltip>
+                <Tooltip content={row.label}>
+                  <div className="w-36 shrink-0 truncate text-xs font-medium text-[color:var(--cab-text)]">
+                    {row.label}
+                  </div>
+                </Tooltip>
                 <div className="relative h-7 min-w-0 flex-1 rounded bg-[var(--cab-surface-2)]">
                   {row.sessions.map((bar) => {
                     const { leftPct, widthPct } = sessionToBarOffsets(bar.startAt, bar.endAt, axis);
                     const selected = selectedSessionId === bar.sessionId;
                     return (
-                      <Tooltip content={`${bar.title} · ${localTimeLabel(bar.startAt)}–${localTimeLabel(bar.endAt)}`}><button key={bar.sessionId} type="button" className={`absolute top-0.5 h-6 rounded text-[10px] font-semibold text-white ${bar.hasOverlap ? "ring-2 ring-red-500" : ""} ${selected ? "ring-2 ring-[color:var(--cab-primary)]" : ""} ${bar.planningStatus === "cancelled"
+                      <Tooltip
+                        key={bar.sessionId}
+                        content={`${bar.title} · ${localTimeLabel(bar.startAt)}–${localTimeLabel(bar.endAt)}`}
+                      >
+                        <button
+                          type="button"
+                          className={`absolute top-0.5 h-6 rounded text-[10px] font-semibold text-white ${bar.hasOverlap ? "ring-2 ring-red-500" : ""} ${selected ? "ring-2 ring-[color:var(--cab-primary)]" : ""} ${bar.planningStatus === "cancelled"
         ? "bg-zinc-400"
         : bar.hasOverlap
             ? "bg-red-500/90"
-            : "bg-blue-500/85"}`} style={{ left: `${leftPct}%`, width: `${widthPct}%` }} onClick={() => onSelectSession?.(bar.sessionId)}>
-                        <span className="block truncate px-1">{bar.title}</span>
-                      </button></Tooltip>
+            : "bg-blue-500/85"}`}
+                          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                          onClick={() => onSelectSession?.(bar.sessionId)}
+                        >
+                          <span className="block truncate px-1">{bar.title}</span>
+                        </button>
+                      </Tooltip>
                     );
                   })}
                 </div>

@@ -28,8 +28,9 @@ export function ReportRevenueMixDonut({
   const r = 72;
   const ir = 44;
   let angle = -Math.PI / 2;
-
-  const arcs = slices.map((slice, i) => {
+  const arcs: Array<{ slice: RevenueMixSlice; d: string; color: string; pct: number }> = [];
+  for (let i = 0; i < slices.length; i++) {
+    const slice = slices[i]!;
     const frac = slice.value / total;
     const sweep = frac * Math.PI * 2;
     const x1 = cx + r * Math.cos(angle);
@@ -43,8 +44,8 @@ export function ReportRevenueMixDonut({
     const iy2 = cy + ir * Math.sin(angle);
     const large = sweep > Math.PI ? 1 : 0;
     const d = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${ir} ${ir} 0 ${large} 0 ${ix1} ${iy1} Z`;
-    return { slice, d, color: COLORS[i % COLORS.length]!, pct: Math.round(frac * 1000) / 10 };
-  });
+    arcs.push({ slice, d, color: COLORS[i % COLORS.length]!, pct: Math.round(frac * 1000) / 10 });
+  }
 
   return (
     <ReportVisualization title={title}>

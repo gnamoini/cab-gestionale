@@ -4,7 +4,7 @@ import { validateTkbDraftBundle } from "../tkb-snapshot-builder";
 import { runTdeBenchmark } from "../benchmark/run-benchmark";
 import { kbStatsFromBuildReport } from "../ingestion/builder";
 import { loadQualityGateThresholds } from "./thresholds";
-import type { BenchmarkReport, TkbBuildReport, TkbDraftBundle, TkbKbStats } from "../types";
+import type { BenchmarkReport, TkbDraftBundle, TkbKbStats } from "../types";
 
 export type QualityGateResult =
   | { ok: true; benchmark: BenchmarkReport; kbStats: TkbKbStats }

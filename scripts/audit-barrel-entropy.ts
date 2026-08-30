@@ -27,10 +27,6 @@ const TARGET_BARRELS: BarrelConfig[] = [
 
 const EXPORT_RE = /export\s+(?:type\s+)?(?:\{([^}]+)\}|(\w+))/g;
 
-function posix(p: string): string {
-  return p.split(path.sep).join("/");
-}
-
 function parseExports(barrelPath: string): string[] {
   const content = fs.readFileSync(path.join(ROOT, barrelPath), "utf8");
   const names = new Set<string>();

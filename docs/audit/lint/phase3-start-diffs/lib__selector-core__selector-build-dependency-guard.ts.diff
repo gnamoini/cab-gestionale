@@ -1,0 +1,13 @@
+diff --git a/lib/selector-core/selector-build-dependency-guard.ts b/lib/selector-core/selector-build-dependency-guard.ts
+index b1a25479..a1bbc36f 100644
+--- a/lib/selector-core/selector-build-dependency-guard.ts
++++ b/lib/selector-core/selector-build-dependency-guard.ts
+@@ -3,7 +3,7 @@
+  */
+ import fs from "node:fs";
+ import path from "node:path";
+-import { readPointer, DEFAULT_POINTER_PATH } from "@/lib/selector-core/selector-snapshot-atomic-switch";
++import { DEFAULT_POINTER_PATH } from "@/lib/selector-core/selector-snapshot-atomic-switch";
+ import {
+   DEFAULT_BUNDLE_MANIFEST_PATH,
+   DEFAULT_GENERATED_SNAPSHOTS_DIR,

@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   useDropdownOutsideDismiss,
@@ -15,6 +23,7 @@ import {
   type SchedaIngressoIdentField,
 } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import {
   globalAutocompleteAddBtnClass,
   globalAutocompleteDropdownPortalPanel,
@@ -38,7 +47,8 @@ function identPlaceholder(field: SchedaIngressoIdentField): string {
 }
 
 function normalizeIdentInput(field: SchedaIngressoIdentField, raw: string): string {
-  return field === "vin" ? raw.trim().toUpperCase() : raw;
+  if (field === "vin") return normalizeVin(raw) ?? "";
+  return raw;
 }
 
 export function SchedaIngressoIdentAutocompleteField({
@@ -91,7 +101,10 @@ export function SchedaIngressoIdentAutocompleteField({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [sheetQuery, setSheetQuery] = useState("");
-  sheetQueryRef.current = sheetQuery;
+
+  useEffect(() => {
+    sheetQueryRef.current = sheetQuery;
+  }, [sheetQuery]);
 
   const { restoreFocus, captureFocus } = useDropdownFocusRestore(open);
 
@@ -198,6 +211,14 @@ export function SchedaIngressoIdentAutocompleteField({
     [identPreview, onChange, onExactMezzoMatch, resetUi],
   );
 
+  const pickMezzoFromSuggestion = useCallback(
+    (mezzo: MezzoGestito) => {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      pickMezzo(mezzo);
+    },
+    [pickMezzo],
+  );
+
   const tryExactMatchOnBlur = useCallback(() => {
     if (skipBlurMatch.current) {
       skipBlurMatch.current = false;
@@ -218,56 +239,19 @@ export function SchedaIngressoIdentAutocompleteField({
     setOpen(true);
   }, [captureFocus, captureTriggerFocus, disabled, notifyOpening, open, readOnly]);
 
-  const renderSuggestion = (mezzo: MezzoGestito, idx: number, variant: "dropdown" | "sheet") => {
-    const active = idx === activeIndex;
-    const ident = identPreview(mezzo);
-    const query = variant === "sheet" ? sheetQuery : value;
-    const touchClass = variant === "sheet" ? "min-h-11 touch-pan-y py-2.5 sm:min-h-0 sm:py-1.5" : "";
-    const sheetTap =
-      variant === "sheet"
-        ? createSelectorSheetTapSelectHandlers(() => {
-            if (blurTimer.current) clearTimeout(blurTimer.current);
-            pickMezzo(mezzo);
-          })
-        : null;
-    return (
-      <li key={mezzo.id} role="presentation" className={variant === "sheet" ? "px-2 py-0.5" : "py-0.5"}>
-        <button
-          type="button"
-          role="option"
-          aria-selected={active}
-          className={`${globalAutocompleteOptionClass(active)} ${touchClass}`.trim()}
-          onPointerDown={
-            sheetTap
-              ? sheetTap.onPointerDown
-              : (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (blurTimer.current) clearTimeout(blurTimer.current);
-                  pickMezzo(mezzo);
-                }
-          }
-          onPointerMove={sheetTap?.onPointerMove}
-          onPointerUp={sheetTap?.onPointerUp}
-          onPointerCancel={sheetTap?.onPointerCancel}
-          onClick={(e) => {
-            if (variant === "sheet") {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
-          onMouseEnter={() => setActiveIndex(idx)}
-        >
-          <span className="block font-medium text-[color:var(--cab-text)]">
-            <HighlightSearchMatch text={ident} query={query} />
-          </span>
-          <span className="mt-0.5 block text-[10px] font-normal text-[color:var(--cab-text-muted)]">
-            {mezzoIngressoSuggestSecondaryLabel(mezzo, field)}
-          </span>
-        </button>
-      </li>
-    );
-  };
+  const renderSuggestion = (mezzo: MezzoGestito, idx: number, variant: "dropdown" | "sheet") => (
+    <SchedaIngressoIdentSuggestionItem
+      key={mezzo.id}
+      mezzo={mezzo}
+      variant={variant}
+      active={idx === activeIndex}
+      ident={identPreview(mezzo)}
+      query={variant === "sheet" ? sheetQuery : value}
+      field={field}
+      onPick={pickMezzoFromSuggestion}
+      onHover={() => setActiveIndex(idx)}
+    />
+  );
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (useMobileSheet) return;
@@ -481,5 +465,66 @@ export function SchedaIngressoIdentAutocompleteField({
         </GestionaleSearchableSheetSelect>
       </div>
     </label>
+  );
+}
+
+function SchedaIngressoIdentSuggestionItem({
+  mezzo,
+  variant,
+  active,
+  ident,
+  query,
+  field,
+  onPick,
+  onHover,
+}: {
+  mezzo: MezzoGestito;
+  variant: "dropdown" | "sheet";
+  active: boolean;
+  ident: string;
+  query: string;
+  field: SchedaIngressoIdentField;
+  onPick: (mezzo: MezzoGestito) => void;
+  onHover: () => void;
+}) {
+  const touchClass = variant === "sheet" ? "min-h-11 touch-pan-y py-2.5 sm:min-h-0 sm:py-1.5" : "";
+  const sheetTap =
+    variant === "sheet" ? createSelectorSheetTapSelectHandlers(() => onPick(mezzo)) : null;
+
+  return (
+    <li role="presentation" className={variant === "sheet" ? "px-2 py-0.5" : "py-0.5"}>
+      <button
+        type="button"
+        role="option"
+        aria-selected={active}
+        className={`${globalAutocompleteOptionClass(active)} ${touchClass}`.trim()}
+        onPointerDown={
+          sheetTap
+            ? sheetTap.onPointerDown
+            : (e: PointerEvent<HTMLButtonElement>) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onPick(mezzo);
+              }
+        }
+        onPointerMove={sheetTap?.onPointerMove}
+        onPointerUp={sheetTap?.onPointerUp}
+        onPointerCancel={sheetTap?.onPointerCancel}
+        onClick={(e) => {
+          if (variant === "sheet") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        onMouseEnter={onHover}
+      >
+        <span className="block font-medium text-[color:var(--cab-text)]">
+          <HighlightSearchMatch text={ident} query={query} />
+        </span>
+        <span className="mt-0.5 block text-[10px] font-normal text-[color:var(--cab-text-muted)]">
+          {mezzoIngressoSuggestSecondaryLabel(mezzo, field)}
+        </span>
+      </button>
+    </li>
   );
 }

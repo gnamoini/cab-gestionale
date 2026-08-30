@@ -43,6 +43,7 @@ export function notificationsV2ReadsDb(mode: NotificationsV2Mode): boolean {
 }
 
 export function notificationsV2WritesLegacy(_mode: NotificationsV2Mode): boolean {
+  void _mode;
   return false;
 }
 

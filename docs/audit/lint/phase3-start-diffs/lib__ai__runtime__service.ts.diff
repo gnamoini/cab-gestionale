@@ -1,0 +1,47 @@
+diff --git a/lib/ai/runtime/service.ts b/lib/ai/runtime/service.ts
+index 4ba40be9..2a385db0 100644
+--- a/lib/ai/runtime/service.ts
++++ b/lib/ai/runtime/service.ts
+@@ -23,6 +23,7 @@ import {
+   mapErrorToKeyStatus,
+   orderKeysForFailover,
+   selectBestKey,
++  buildNoSelectableKeyError,
+ } from "@/lib/ai/runtime/key-manager";
+ import {
+   readRuntimeProviderDefault,
+@@ -79,7 +80,7 @@ async function runWithFailover<T>(input: {
+   const { keys, degradedMode } = await resolveKeys(provider);
+   const first = selectBestKey(keys);
+   if (!first) {
+-    throw new AiRuntimeError("AI_CONFIG_MISSING", aiErrorMessage("AI_CONFIG_MISSING"));
++    throw buildNoSelectableKeyError(keys);
+   }
+ 
+   const ordered = orderKeysForFailover(keys, first);
+@@ -185,7 +186,8 @@ export const aiService = {
+     const { keys } = await resolveKeys(provider);
+     const first = selectBestKey(keys);
+     if (!first) {
+-      return { ok: false, code: "AI_CONFIG_MISSING", message: aiErrorMessage("AI_CONFIG_MISSING") };
++      const err = buildNoSelectableKeyError(keys);
++      return { ok: false, code: err.code, message: err.message };
+     }
+ 
+     const ordered = orderKeysForFailover(keys, first);
+@@ -285,6 +287,7 @@ export const aiService = {
+     operation?: string;
+     provider?: AiProviderId;
+     timeoutMs?: number;
++    maxRetries?: number;
+     tools?: Record<string, unknown>;
+   }): Promise<AiServiceResult<{ object: T; usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }; response?: unknown }>> {
+     try {
+@@ -297,6 +300,7 @@ export const aiService = {
+             schema: input.schema,
+             system: input.system,
+             temperature: input.temperature,
++            maxRetries: input.maxRetries,
+             ...(input.tools ? { tools: input.tools as never } : {}),
+             abortSignal: AbortSignal.timeout(input.timeoutMs ?? readRuntimeTimeoutMs()),
+           };

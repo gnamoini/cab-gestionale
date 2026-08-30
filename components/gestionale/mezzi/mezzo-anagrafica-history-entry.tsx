@@ -23,7 +23,7 @@ export function MezzoAnagraficaHistoryEntry({
 
   const content = (
     <>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[color:var(--cab-text-muted)]">
+      <div className="flex items-center gap-x-2 gap-y-1 text-xs text-[color:var(--cab-text-muted)] min-w-0 flex-nowrap sm:flex-wrap">
         <span>{fmtMezziHubDt(entry.created_at)}</span>
         <span aria-hidden>·</span>
         <span>{entry.origine.replace(/_/g, " ")}</span>

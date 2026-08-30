@@ -1,15 +1,15 @@
-import type { ReportDataPrimitiveKind } from "@/components/report/design-system/contracts/primitive-contract";
+import type { ReportDataPrimitiveKind, ReportPrimitiveKind } from "@/components/report/design-system/contracts/primitive-contract";
 
 /** Primitive dichiarate per sezione — coverage AST (declared ⊆ actual ⊆ declared). */
 export const REPORT_SECTION_PRIMITIVE_CONTRACT = {
   lavorazioni: ["metric-card", "chart", "matrix", "data-table"] as const,
-  dati_economici: ["metric-card", "chart", "data-table"] as const,
-  analisi_incrociate: ["metric-card"] as const,
-  magazzino_ricambi: ["metric-card", "chart", "data-table", "matrix"] as const,
-  clienti_mezzi: ["metric-card", "chart", "data-table"] as const,
-  ore_lavorate: ["metric-card", "embedded"] as const,
+  dati_economici: ["data-table"] as const,
+  analisi_incrociate: ["chart", "matrix", "data-table"] as const,
+  magazzino_ricambi: ["data-table", "matrix"] as const,
+  clienti_mezzi: ["metric-card", "embedded"] as const,
+  ore_lavorate: ["metric-card", "chart", "data-table", "embedded"] as const,
   analisi_ai: ["narrative", "embedded"] as const,
-} as const satisfies Record<string, readonly ReportDataPrimitiveKind[] | readonly ("metric-card" | "narrative" | "embedded")[]>;
+} as const satisfies Record<string, readonly ReportPrimitiveKind[]>;
 
 export type ReportSectionPrimitiveContractKey = keyof typeof REPORT_SECTION_PRIMITIVE_CONTRACT;
 
@@ -29,3 +29,18 @@ export const REPORT_SECTION_FILE_TO_CONTRACT_KEY: Record<string, ReportSectionPr
  * Vuoto quando enforcement pieno attivo.
  */
 export const COVERAGE_MIGRATION_ALLOWLIST: readonly ReportSectionPrimitiveContractKey[] = [] as const;
+
+/** Metric primitives rendered via layout delegate (hub v2). */
+export const REPORT_SECTION_PRIMITIVE_LAYOUT_DELEGATES: Record<
+  string,
+  { layoutFile: string; primitives: readonly ReportDataPrimitiveKind[] }
+> = {
+  "report-economici-section.tsx": {
+    layoutFile: "components/report/sections/report-economic-metrics-layout.tsx",
+    primitives: ["metric-card"],
+  },
+  "report-magazzino-section.tsx": {
+    layoutFile: "components/report/layout/report-magazzino-hero-kpi-section.tsx",
+    primitives: ["metric-card"],
+  },
+};

@@ -1,0 +1,188 @@
+diff --git a/components/lavorazioni-clienti/client-lavorazioni-view.tsx b/components/lavorazioni-clienti/client-lavorazioni-view.tsx
+index b2e78f0d..5919bfce 100644
+--- a/components/lavorazioni-clienti/client-lavorazioni-view.tsx
++++ b/components/lavorazioni-clienti/client-lavorazioni-view.tsx
+@@ -3,7 +3,8 @@
+ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
+ import dynamic from "next/dynamic";
+ import Link from "next/link";
+-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
++import { useSearchParams } from "next/navigation";
++import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+ import { useAuth } from "@/context/auth-context";
+ import {
+   collapsibleExpandedBoolPref,
+@@ -67,14 +68,14 @@ import {
+   type ClientPortalRowBundle,
+ } from "@/lib/lavorazioni/client-portal-list-filters";
+ import { groupLavorazioniLogsById, buildClientPortalLogAutoreByLavorazioneId } from "@/lib/lavorazioni/client-portal-ui";
+-import { clientLavorazioniDetailPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
++import { clientLavorazioniDetailPath } from "@/lib/lavorazioni/client-portal-access";
++import { Q_MEZZO_QR_TOKEN } from "@/lib/navigation/dashboard-log-links";
+ import { dsTableActionGlyph } from "@/lib/ui/design-system";
+ import {
+   filterClientPortalStatiOptions,
+   resolveClientPortalStatoId,
+ } from "@/lib/lavorazioni/client-portal-stati";
+ import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
+-import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+ import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+ import {
+   GestionaleListTable,
+@@ -372,7 +373,7 @@ function MobileCards({
+   statiOpts,
+   addettoColors,
+   addettiRecords,
+-  schedeStore,
++  
+   emptyMessage,
+   onIngresso,
+   onQr,
+@@ -575,6 +576,60 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
+ 
+   const { filters, searchInput, setSearchInput, patchFilters, resetFilters } = persistence;
+   const l0 = contract.l0;
++  const searchParams = useSearchParams();
++  const mezzoTokenParam = searchParams.get(Q_MEZZO_QR_TOKEN)?.trim() ?? "";
++  const [mezzoFilterId, setMezzoFilterId] = useState<string | null>(null);
++  const [mezzoQrDenied, setMezzoQrDenied] = useState(false);
++  const mezzoQrResolvedRef = useRef<string | null>(null);
++
++  useEffect(() => {
++    if (!mezzoTokenParam) {
++      setMezzoFilterId(null);
++      setMezzoQrDenied(false);
++      mezzoQrResolvedRef.current = null;
++      return;
++    }
++    if (!canRender || mezzoQrResolvedRef.current === mezzoTokenParam) return;
++    mezzoQrResolvedRef.current = mezzoTokenParam;
++    let cancelled = false;
++
++    void (async () => {
++      try {
++        const res = await fetch(
++          `/api/mezzo-labels/resolve?token=${encodeURIComponent(mezzoTokenParam)}`,
++        );
++        if (cancelled) return;
++        if (res.status === 403) {
++          setMezzoQrDenied(true);
++          setMezzoFilterId(null);
++          return;
++        }
++        if (!res.ok) {
++          setMezzoQrDenied(true);
++          setMezzoFilterId(null);
++          return;
++        }
++        const data = (await res.json()) as { mezzoId?: string };
++        if (data.mezzoId) {
++          setMezzoFilterId(data.mezzoId);
++          setMezzoQrDenied(false);
++        } else {
++          setMezzoQrDenied(true);
++          setMezzoFilterId(null);
++        }
++      } catch {
++        if (!cancelled) {
++          setMezzoQrDenied(true);
++          setMezzoFilterId(null);
++        }
++      }
++    })();
++
++    return () => {
++      cancelled = true;
++    };
++  }, [canRender, mezzoTokenParam]);
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const schedeStore = contract.l1?.schedeStore ?? {};
+ 
+   const statiOpts = useMemo(
+@@ -582,7 +637,9 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
+     [l0?.statiOpts],
+   );
+   const statoOrderIds = useMemo(() => statiOpts.map((s) => s.id), [statiOpts]);
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const addettiGlobali = l0?.addettiGlobali ?? [];
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const addettiRecords = l0?.addettiRecords ?? [];
+   const colStyles = useLavorazioniListTableColStyles(statiOpts, [], addettiGlobali);
+   const addettoColors = l0?.addettoColors ?? {};
+@@ -621,14 +678,37 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
+ 
+   const filtersActive = clientPortalFiltersActive(filters);
+ 
++  const scopedInCorsoRows = useMemo(() => {
++    const rows = l0?.inCorsoRows ?? [];
++    if (!mezzoFilterId) return rows;
++    return rows.filter((row) => row.mezzo?.id === mezzoFilterId);
++  }, [l0?.inCorsoRows, mezzoFilterId]);
++
++  const scopedArchivioRows = useMemo(() => {
++    const rows = l0?.archivioRows ?? [];
++    if (!mezzoFilterId) return rows;
++    return rows.filter((row) => row.mezzo?.id === mezzoFilterId);
++  }, [l0?.archivioRows, mezzoFilterId]);
++
++  const mezzoFilterLabel = useMemo(() => {
++    if (!mezzoFilterId) return null;
++    const sample =
++      scopedInCorsoRows.find((row) => row.mezzo?.id === mezzoFilterId) ??
++      scopedArchivioRows.find((row) => row.mezzo?.id === mezzoFilterId);
++    const mezzo = sample?.mezzo;
++    if (!mezzo) return "Mezzo selezionato";
++    const parts = [mezzo.targa?.trim(), mezzo.matricola?.trim()].filter(Boolean);
++    return parts.length > 0 ? parts.join(" · ") : "Mezzo selezionato";
++  }, [mezzoFilterId, scopedArchivioRows, scopedInCorsoRows]);
++
+   const allInCorsoBundles = useMemo(
+-    () => buildRowBundles(l0?.inCorsoRows ?? [], schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
+-    [l0?.inCorsoRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
++    () => buildRowBundles(scopedInCorsoRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
++    [scopedInCorsoRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
+   );
+ 
+   const allArchivioBundles = useMemo(
+-    () => buildRowBundles(l0?.archivioRows ?? [], schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
+-    [l0?.archivioRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
++    () => buildRowBundles(scopedArchivioRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
++    [scopedArchivioRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
+   );
+ 
+   const filterCatalog = useMemo(() => {
+@@ -770,6 +850,7 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
+   const resetFiltri = useCallback(() => {
+     resetFilters();
+     setFiltriEspansi(false);
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   }, [resetFilters]);
+ 
+   if (accessDenied) {
+@@ -890,6 +971,26 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
+                 </p>
+               </ShellCard>
+             ) : null}
++            {mezzoQrDenied ? (
++              <ShellCard>
++                <p className="text-sm text-[color:var(--cab-text)]">
++                  Mezzo non accessibile. Verifica di aver effettuato l&apos;accesso con l&apos;account corretto.
++                </p>
++              </ShellCard>
++            ) : null}
++            {mezzoFilterId && mezzoFilterLabel && !mezzoQrDenied ? (
++              <ShellCard>
++                <p className="text-sm text-[color:var(--cab-text)]">
++                  Lavorazioni per mezzo: <span className="font-medium">{mezzoFilterLabel}</span>
++                </p>
++                <Link
++                  href={CLIENTE_HOME_PATH}
++                  className="mt-2 inline-block text-sm font-medium text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
++                >
++                  Mostra tutte le lavorazioni
++                </Link>
++              </ShellCard>
++            ) : null}
+             <ShellCard>
+               <section aria-label="Azioni e filtri lavorazioni clienti">
+                 <PageToolbar

@@ -11,7 +11,6 @@ export type TermsAndConditionsSection = {
 
 const bodyClass = dsTypoBody;
 const listClass = `${bodyClass} list-disc space-y-1 pl-5`;
-const subTitleClass = "text-sm font-semibold text-[color:var(--cab-text)]";
 
 function P({ children }: { children: ReactNode }) {
   return <p className={bodyClass}>{children}</p>;

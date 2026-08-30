@@ -71,7 +71,7 @@ export function useAddettiPickerOptions(storedId?: string | null, mode: AddettiP
       });
     }
     return { options: items, records: addettiForColor, colorMap, dipendentiRecords: records };
-  }, [records, colorMap, storedId, dipendentiRecords, global.lavorazioni.addettiRecords, mode]);
+  }, [records, colorMap, storedId, dipendentiRecords, global.lavorazioni.addettiRecords]);
 }
 
 export function buildAddettoPickerOptionsFromRecords(

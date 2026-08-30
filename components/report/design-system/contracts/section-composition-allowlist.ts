@@ -16,6 +16,7 @@ export const REPORT_SECTION_COMPOSITION_ALLOWLIST = [
   "ReportDataTable",
   "ReportLineChart",
   "ReportMultiSeriesLineChart",
+  "KPI_CHART_SERIES_COLORS",
   "ReportBarChart",
   "ReportMatrix",
   "ReportNarrativeBlock",

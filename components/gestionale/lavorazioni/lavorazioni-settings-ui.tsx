@@ -6,8 +6,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardE
 import { SettingsColorPickerPopover } from "@/components/gestionale/settings-color-picker-popover";
 import { IconActionButton } from "@/components/design-system/icon-action-button";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
+import { addettoColorKey } from "@/lib/lavorazioni/addetto-model";
 import { addettoDisplayColorById } from "@/lib/lavorazioni/addetto-colors-assign";
-import { addettoColorKey, sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   dipendenteDisplayName,
   type DipendenteRecord,
@@ -57,10 +57,6 @@ const ADDETTI_VIEW_CELL_CLASS = `flex min-h-11 min-w-0 w-full items-center round
 export const ADDETTI_SETTINGS_PANEL_CLASS = "w-full min-w-0 overflow-x-auto";
 
 const ADDETTI_DRAFT_ROW_KEY = "__addetti-draft__";
-
-function addettoSearchLabel(rec: AddettoRecord): string {
-  return [rec.nome, rec.cognome].filter(Boolean).join(" ").trim();
-}
 
 function filterDipendentiRecords(
   records: readonly DipendenteRecord[],
@@ -194,7 +190,7 @@ export function AddettiSettingsSection({
 
   const toolbar = (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex gap-1 min-w-0 flex-nowrap sm:flex-wrap">
         {(["all", "ADDETTO", "ALTRO"] as const).map((key) => (
           <button
             key={key}
@@ -545,6 +541,7 @@ const StatoSettingsRow = memo(function StatoSettingsRow({
   const pillLabel = (editing ? label : stato.label || stato.id).trim() || "—";
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLabel(stato.label);
   }, [stato.id, stato.label]);
 
@@ -863,6 +860,7 @@ function AddettoSettingsRow({
   const cognomeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setNome(record.nome);
     setCognome(record.cognome ?? "");
   }, [record.nome, record.cognome, record.id]);

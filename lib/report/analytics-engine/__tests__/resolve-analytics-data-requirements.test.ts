@@ -16,4 +16,8 @@ const schedeOnly = resolveAnalyticsDataRequirements(["actual_labor_hours_total"]
 assert.equal(schedeOnly.schede, true);
 assert.equal(schedeOnly.invoices, false);
 
+const costTot = resolveAnalyticsDataRequirements(["cost-tot"]);
+assert.equal(costTot.schede, true);
+assert.equal(costTot.invoices, false);
+
 console.log("resolve-analytics-data-requirements.test.ts OK");

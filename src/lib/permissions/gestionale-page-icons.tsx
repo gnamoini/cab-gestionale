@@ -151,9 +151,10 @@ export function IconNavOrdiniFornitori(props: SVGProps<SVGSVGElement>) {
 export function IconNavIdentificaRicambio(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
-      <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
-      <path d="M5 19h14" />
-      <path d="M8 16h8v3H8z" />
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M15 15l5 5" />
+      <path d="M10.5 7.5l2.25 1.25v2.5L10.5 12.5 8.25 11.25V8.75L10.5 7.5z" />
+      <circle cx="10.5" cy="10.5" r="0.9" fill="currentColor" stroke="none" />
     </SvgIcon>
   );
 }

@@ -1,0 +1,14 @@
+diff --git a/components/dashboard/dashboard-tasks-panel.tsx b/components/dashboard/dashboard-tasks-panel.tsx
+index bf2f1843..950fe7c8 100644
+--- a/components/dashboard/dashboard-tasks-panel.tsx
++++ b/components/dashboard/dashboard-tasks-panel.tsx
+@@ -152,7 +152,9 @@ export function DashboardTasksPanel() {
+   const pendingCount = tasks.filter((t) => !t.done).length;
+   const doneCount = tasks.length - pendingCount;
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setTasks(loadDashboardTasks());
+     setReady(true);
+   }, []);

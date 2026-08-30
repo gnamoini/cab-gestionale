@@ -1,0 +1,36 @@
+diff --git a/components/dashboard/settings/settings-officina-profilo-section.tsx b/components/dashboard/settings/settings-officina-profilo-section.tsx
+index f5de6778..f2254276 100644
+--- a/components/dashboard/settings/settings-officina-profilo-section.tsx
++++ b/components/dashboard/settings/settings-officina-profilo-section.tsx
+@@ -90,6 +90,7 @@ function SettingsOfficinaSedeBlock({
+ 
+   useEffect(() => {
+     const parsed = parseOfficinaSede(row?.value);
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setSede(parsed);
+     latestRef.current = parsed;
+   }, [row?.value]);
+@@ -188,6 +189,7 @@ function SettingsOfficinaDestinatarioOrdiniAnagraficaBlock({
+ 
+   useEffect(() => {
+     const parsed = parseOfficinaDestinatarioOrdiniSettings(row?.value);
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setAnagrafica(parsed);
+     latestRef.current = parsed;
+   }, [row?.value]);
+@@ -300,6 +302,7 @@ function SettingsOfficinaBancheOrdiniBlock({
+ 
+   useEffect(() => {
+     const parsed = parseOfficinaBancheOrdiniSettings(row?.value);
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setBanche(parsed);
+     latestRef.current = parsed;
+   }, [row?.value]);
+@@ -428,6 +431,7 @@ export function SettingsOfficinaProfiloSection() {
+   const [pending, setPending] = useState(false);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setValue(parseOfficinaProfiloOperativo(row?.value));
+   }, [row?.value]);
+ 

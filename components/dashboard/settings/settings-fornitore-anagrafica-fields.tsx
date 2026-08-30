@@ -1,8 +1,9 @@
 "use client";
 
 import type { FornitoreAnagraficaSettings } from "@/lib/magazzino/fornitore-anagrafica";
+import { FORNITORE_EMAIL_AGGIUNTIVE_MAX as EMAIL_MAX } from "@/lib/magazzino/fornitore-anagrafica";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_LONG, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 
 export function SettingsFornitoreAnagraficaFields({
@@ -71,6 +72,59 @@ export function SettingsFornitoreAnagraficaFields({
           onChange={(e) => onChange({ codiceFiscale: sliceInputValue(e.target.value, TEXT_SHORT) })}
         />
       </label>
+      <label className="block space-y-1 sm:col-span-2">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          Email principale
+        </span>
+        <input
+          className={dsInput}
+          type="email"
+          value={anagrafica.email}
+          disabled={disabled}
+          maxLength={TEXT_SHORT}
+          placeholder="ordini@fornitore.it"
+          onChange={(e) => onChange({ email: sliceInputValue(e.target.value, TEXT_SHORT) })}
+        />
+      </label>
+      <div className="space-y-2 sm:col-span-2">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          Email aggiuntive (max {EMAIL_MAX})
+        </span>
+        {anagrafica.emailAggiuntive.map((em, idx) => (
+          <div key={`${em}-${idx}`} className="flex gap-2">
+            <input
+              className={dsInput}
+              type="email"
+              value={em}
+              disabled={disabled}
+              maxLength={TEXT_SHORT}
+              onChange={(e) => {
+                const next = [...anagrafica.emailAggiuntive];
+                next[idx] = sliceInputValue(e.target.value, TEXT_SHORT);
+                onChange({ emailAggiuntive: next });
+              }}
+            />
+            <button
+              type="button"
+              className={dsBtnNeutralForm}
+              disabled={disabled}
+              onClick={() => onChange({ emailAggiuntive: anagrafica.emailAggiuntive.filter((_, i) => i !== idx) })}
+            >
+              Rimuovi
+            </button>
+          </div>
+        ))}
+        {anagrafica.emailAggiuntive.length < EMAIL_MAX ? (
+          <button
+            type="button"
+            className={dsBtnNeutralForm}
+            disabled={disabled}
+            onClick={() => onChange({ emailAggiuntive: [...anagrafica.emailAggiuntive, ""] })}
+          >
+            Aggiungi email
+          </button>
+        ) : null}
+      </div>
       <label className="block space-y-1 sm:col-span-2">
         <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Telefono

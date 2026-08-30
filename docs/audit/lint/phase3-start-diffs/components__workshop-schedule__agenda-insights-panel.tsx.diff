@@ -1,0 +1,22 @@
+diff --git a/components/workshop-schedule/agenda-insights-panel.tsx b/components/workshop-schedule/agenda-insights-panel.tsx
+index 6ef7e9a1..f1a252c2 100644
+--- a/components/workshop-schedule/agenda-insights-panel.tsx
++++ b/components/workshop-schedule/agenda-insights-panel.tsx
+@@ -9,7 +9,7 @@ import {
+   INSIGHT_SEVERITY_LABELS,
+   INSIGHT_TYPE_LABELS,
+ } from "@/lib/workshop-schedule/agenda-ui-labels";
+-import { dsBtnGhost, dsFocus, dsTypoCaption } from "@/lib/ui/design-system";
++import { dsBtnGhost, dsFocus } from "@/lib/ui/design-system";
+ 
+ const SEVERITY_PANEL_CLASS: Record<PlannerInsight["severity"], string> = {
+   high: "border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))]",
+@@ -41,7 +41,7 @@ export function AgendaInsightsPanel({
+             key={`${insight.type}-${i}`}
+             className={`rounded-[var(--ds-radius-lg)] border p-3 text-xs shadow-[var(--cab-shadow-sm)] ${SEVERITY_PANEL_CLASS[insight.severity]}`}
+           >
+-            <div className="flex min-w-0 flex-wrap items-center gap-2">
++            <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
+               <span className="font-semibold text-[color:var(--cab-text)]">
+                 {INSIGHT_TYPE_LABELS[insight.type]}
+               </span>

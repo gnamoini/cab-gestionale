@@ -1,0 +1,22 @@
+diff --git a/src/services/movimenti.service.ts b/src/services/movimenti.service.ts
+index 315a6d5c..93089543 100644
+--- a/src/services/movimenti.service.ts
++++ b/src/services/movimenti.service.ts
+@@ -10,7 +10,7 @@ import {
+ } from "@/lib/magazzino/movimenti-stock-pipeline";
+ import type { StockMovementOrigin } from "@/lib/magazzino/stock-movement-origin";
+ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+-import { auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
++import { auditDiff, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
+ import { err, success, type ServiceResult } from "@/src/services/service-result";
+ import type { MagazzinoRicambioRow, MovimentoRicambioRow, TipoMovimentoRicambio } from "@/src/types/supabase-tables";
+ import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+@@ -270,7 +270,7 @@ export const movimentiService = {
+   },
+ 
+   /** @deprecated R-18: solo rollback tecnico — non esporre in UI. */
+-  async remove(id: string): Promise<ServiceResult<null>> {
++  async remove(): Promise<ServiceResult<null>> {
+     return err("Eliminazione movimento non consentita. Usa storno.");
+   },
+ };

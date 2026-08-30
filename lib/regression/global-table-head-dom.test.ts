@@ -1,6 +1,7 @@
 /**
  * Global table head — valid HTML nesting (thead > tr > th, no th-in-th / tr-in-tr).
  */
+/* eslint-disable react/no-children-prop -- regression tests pass children to table head helpers */
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

@@ -1,0 +1,91 @@
+diff --git a/components/dashboard/security/security-users-permissions-panel.tsx b/components/dashboard/security/security-users-permissions-panel.tsx
+index 23b38032..5f4f67ff 100644
+--- a/components/dashboard/security/security-users-permissions-panel.tsx
++++ b/components/dashboard/security/security-users-permissions-panel.tsx
+@@ -1,7 +1,9 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
++
+ import { Tooltip } from "@/components/ui";
+-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
++import { useCallback, useEffect, useMemo, useState } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { useAuth } from "@/context/auth-context";
+ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+@@ -17,7 +19,6 @@ import { ShellCard } from "@/components/gestionale/shell-card";
+ import { SecurityCreateUserModalLazy, SecurityUserDetailDrawerLazy } from "@/components/dashboard/security/security-tab-loaders";
+ import {
+   buildInitialPageDraft,
+-  SecurityUserPagePermissionsEditor,
+ } from "@/components/dashboard/security/security-user-page-permissions-editor";
+ import { SecurityClienteAuditPanel } from "@/components/dashboard/security/security-cliente-audit-panel";
+ import {
+@@ -43,7 +44,6 @@ import {
+ import { buildKnownClientiSet, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
+ import { useGlobalOptions } from "@/src/hooks/use-global-options";
+ import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
+-import { resolveRole, type AppRole } from "@/lib/auth/rbac";
+ import {
+   SecurityInlineNotice,
+   securitySubsectionShellClass,
+@@ -108,7 +108,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ,
+   const [pageDrafts, setPageDrafts] = useState<Record<string, PagePermissionDraftRow[]>>({});
+   const [savedPageSnapshots, setSavedPageSnapshots] = useState<Record<string, string>>({});
+   const [saving, setSaving] = useState(false);
+-  const hydratedRef = useRef(false);
++  const [hydrated, setHydrated] = useState(false);
+ 
+   const internalUsersQ = useSecurityUsersPermissionsQuery(!sharedUsersQ);
+   const usersQ = sharedUsersQ ?? internalUsersQ;
+@@ -122,13 +122,13 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ,
+   );
+ 
+   useEffect(() => {
+-    if (!usersQ.isSuccess || hydratedRef.current) return;
++    if (!usersQ.isSuccess || hydrated) return;
+     setDraftRows(serverUsers);
+     setSavedSnapshot(rowsSnapshot(serverUsers));
+     setPageDrafts(buildPageDrafts(serverUsers, userPageOverrideRows, rolePageAccessByRole));
+     setSavedPageSnapshots(buildPageSnapshots(serverUsers, userPageOverrideRows, rolePageAccessByRole));
+-    hydratedRef.current = true;
+-  }, [usersQ.isSuccess, serverUsers, userPageOverrideRows, rolePageAccessByRole]);
++    setHydrated(true);
++  }, [usersQ.isSuccess, serverUsers, userPageOverrideRows, rolePageAccessByRole, hydrated]);
+ 
+   const syncFromServer = useCallback(
+     (
+@@ -145,12 +145,12 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ,
+   );
+ 
+   const isTableDirty = useMemo(() => {
+-    if (!hydratedRef.current || savedSnapshot == null) return false;
++    if (!hydrated || savedSnapshot == null) return false;
+     return rowsSnapshot(draftRows) !== savedSnapshot;
+-  }, [draftRows, savedSnapshot]);
++  }, [draftRows, savedSnapshot, hydrated]);
+ 
+   const isPageDirty = useMemo(() => {
+-    if (!hydratedRef.current) return false;
++    if (!hydrated) return false;
+     for (const row of draftRows) {
+       const saved = savedPageSnapshots[row.id];
+       const draft = pageDrafts[row.id];
+@@ -158,7 +158,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ,
+       if (snapshotPageDraft(draft) !== saved) return true;
+     }
+     return false;
+-  }, [draftRows, pageDrafts, savedPageSnapshots]);
++  }, [draftRows, pageDrafts, savedPageSnapshots, hydrated]);
+ 
+   const isDirty = isTableDirty || isPageDirty;
+   usePwaUpdateGuard(
+@@ -422,7 +422,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ,
+           open
+           onClose={() => {
+             setCreateOpen(false);
+-            hydratedRef.current = false;
++            setHydrated(false);
+             void invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
+           }}
+         />

@@ -8,8 +8,8 @@ import {
   resolveAddettoRecord,
 } from "@/lib/lavorazioni/addetto-display";
 import {
-  findAddettoById,
-  findAddettoByStoredName,
+
+
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
 import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";

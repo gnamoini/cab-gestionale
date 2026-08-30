@@ -109,6 +109,15 @@ export const sparePartIdentificationResultSchema = z.object({
       webCount: z.number().int().optional(),
     }),
   ),
+  retrievalMetrics: z
+    .object({
+      structured_hits: z.number().int(),
+      file_search_hits: z.number().int(),
+      structured_only: z.number().int(),
+      file_search_rescued: z.number().int(),
+      both: z.number().int(),
+    })
+    .optional(),
 });
 
 export type SparePartIdentificationResult = z.infer<typeof sparePartIdentificationResultSchema>;
@@ -132,6 +141,8 @@ export const partExtractionSchema = z.object({
       partNumberCandidate: z.string().optional(),
       partNumberVerified: z.string().optional(),
       description: z.string().optional(),
+      listPrice: z.number().finite().positive().optional(),
+      priceCurrency: z.string().min(1).optional(),
       quantity: z.string().optional(),
       source: z.enum(["table", "diagram", "both", "visual"]).default("table"),
     }),

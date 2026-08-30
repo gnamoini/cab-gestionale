@@ -1,0 +1,18 @@
+diff --git a/src/hooks/use-client-portal-data-contract.ts b/src/hooks/use-client-portal-data-contract.ts
+index 12173e4c..dccf4621 100644
+--- a/src/hooks/use-client-portal-data-contract.ts
++++ b/src/hooks/use-client-portal-data-contract.ts
+@@ -68,8 +68,11 @@ export function useClientPortalDataContract(
+   else if (l0Error) l0Status = "error";
+   else if (l0HasData) l0Status = "success";
+ 
+-  const inCorsoRows = inCorsoQ.data ?? [];
+-  const archivioRows = archivioListEnabled ? (archivioQ.data ?? []) : [];
++  const inCorsoRows = useMemo(() => inCorsoQ.data ?? [], [inCorsoQ.data]);
++  const archivioRows = useMemo(
++    () => (archivioListEnabled ? (archivioQ.data ?? []) : []),
++    [archivioListEnabled, archivioQ.data],
++  );
+   const ids = useMemo(
+     () => [...inCorsoRows, ...archivioRows].map((r) => r.id),
+     [inCorsoRows, archivioRows],

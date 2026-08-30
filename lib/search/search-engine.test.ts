@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { buildSearchDocumentFromFields } from "@/lib/search/build-document";
 import { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
 import { collapseSearchKey } from "@/lib/search/field-token";
-import { matchSearchQuery, matchSearchString } from "@/lib/search/match";
+import { matchSearchString } from "@/lib/search/match";
 import { normalizeSearchText } from "@/lib/search/normalize";
 import { parseSearchQuery } from "@/lib/search/parse-query";
 import { scoreTokenAgainstHaystack } from "@/lib/search/rank";

@@ -45,7 +45,7 @@ export function magazzinoRowMatchesPageFilters(
   if (filters.soloSottoScorta && !(row.scorta < row.scortaMinima)) return false;
   if (filters.nascondiScortaZero && row.scorta <= 0) return false;
   if (!magazzinoRowMatchesGlobalSearch(row, filters.search, listePrefs)) return false;
-  const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
+  const { ...advanced } = filters;
   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
 }
 

@@ -10,7 +10,7 @@ import {
 } from "@/lib/db/table-select-columns";
 import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { err, success, type ServiceResult } from "@/src/services/service-result";
+import { err, type ServiceResult } from "@/src/services/service-result";
 import type { DdtListPayload } from "@/lib/ddt/types";
 
 export const fetchDdtListPayloadServer = cache(async (): Promise<ServiceResult<DdtListPayload>> => {

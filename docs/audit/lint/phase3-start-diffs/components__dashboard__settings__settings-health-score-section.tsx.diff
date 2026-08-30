@@ -1,0 +1,15 @@
+diff --git a/components/dashboard/settings/settings-health-score-section.tsx b/components/dashboard/settings/settings-health-score-section.tsx
+index 5fac463c..edb4e498 100644
+--- a/components/dashboard/settings/settings-health-score-section.tsx
++++ b/components/dashboard/settings/settings-health-score-section.tsx
+@@ -53,8 +53,10 @@ export function SettingsHealthScoreSection({ layout = "flat" }: { layout?: Setti
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+ 
++   
+   useEffect(() => {
+     let cancelled = false;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setLoading(true);
+     void fetchHealthScoreCalculation()
+       .then((value) => {

@@ -6,8 +6,8 @@ import {
   LogEntry,
   NotificationBellTrigger,
   NotificationOpenLink,
-  Tooltip,
 } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
 import {
   GestionaleLogEmpty,
   GestionaleLogList,

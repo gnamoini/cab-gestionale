@@ -1,8 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { ComponentType, ReactNode } from "react";
-import { ReportAreaDataShell } from "@/components/report/report-area-data-shell";
+import { ReportPageStructure } from "@/components/report/report-page-structure";
 import type { ReportHubAreaId } from "@/lib/report/report-hub-areas-config";
+
+const ReportAreaDataShell = dynamic(
+  () => import("@/components/report/report-area-data-shell").then((m) => ({ default: m.ReportAreaDataShell })),
+  { loading: () => <ReportPageStructure mode="skeleton" scope="content" /> },
+);
 
 export function ReportAreaPage({
   areaId,

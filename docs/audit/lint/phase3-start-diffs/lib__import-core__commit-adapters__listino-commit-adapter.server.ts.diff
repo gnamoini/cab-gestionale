@@ -1,0 +1,13 @@
+diff --git a/lib/import-core/commit-adapters/listino-commit-adapter.server.ts b/lib/import-core/commit-adapters/listino-commit-adapter.server.ts
+index 3eddf977..027c1ba9 100644
+--- a/lib/import-core/commit-adapters/listino-commit-adapter.server.ts
++++ b/lib/import-core/commit-adapters/listino-commit-adapter.server.ts
+@@ -1,7 +1,7 @@
+ import "server-only";
+ 
+ import type { ImportCommitAdapter } from "@/lib/import-core/import-commit-adapter";
+-import type { CommitResult, ImportCommitContext } from "@/lib/import-core/types";
++import type { CommitResult } from "@/lib/import-core/types";
+ 
+ export type ListinoCommitPayload = {
+   batchId: string;

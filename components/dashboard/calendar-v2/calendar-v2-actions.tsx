@@ -39,7 +39,7 @@ export function CalendarV2Actions({
   const reportHref = `/report?preset=${deepLink.preset}&from=${deepLink.customFrom}&to=${deepLink.customTo}&compare=prev_period`;
 
   return (
-    <div className="flex min-w-0 flex-wrap gap-2">
+    <div className="flex min-w-0 gap-2 flex-nowrap sm:flex-wrap">
       <Link
         href={reportHref}
         className={`${dsBtnPrimary} no-underline`}

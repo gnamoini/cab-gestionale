@@ -25,8 +25,14 @@ export function ReportCrossCatenaChart() {
     includeSeries: false,
   });
 
-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
+  const invoices = useMemo(
+    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
+    [invoicesQ.isError, invoicesQ.invoices],
+  );
+  const preventivi = useMemo(
+    () => (preventiviQ.isError ? [] : preventiviQ.records),
+    [preventiviQ.isError, preventiviQ.records],
+  );
 
   const catenaValore = useMemo(
     () =>

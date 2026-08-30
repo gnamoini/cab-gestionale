@@ -1,0 +1,21 @@
+diff --git a/src/services/settings-rename-engine.service.ts b/src/services/settings-rename-engine.service.ts
+index e363ea86..fcbe4f95 100644
+--- a/src/services/settings-rename-engine.service.ts
++++ b/src/services/settings-rename-engine.service.ts
+@@ -35,7 +35,7 @@ function renameErrorMessage(message: string, correlationId: string): string {
+   return `${message} [correlation=${correlationId}]`;
+ }
+ 
+-function resolvePropagationMode(executionMode: RenameExecutionMode, propagate: boolean): PropagationStatus {
++function _resolvePropagationMode(executionMode: RenameExecutionMode, propagate: boolean): PropagationStatus {
+   if (!propagate || executionMode === "configuration_only") return "configuration_only";
+   return "propagated";
+ }
+@@ -93,7 +93,6 @@ export const settingsRenameEngineService = {
+   > {
+     const started = Date.now();
+     const executionMode = normalizeExecutionMode(input.executionMode, input.propagate);
+-    const propagationStatus = resolvePropagationMode(executionMode, input.propagate);
+ 
+     try {
+       const previewRes = await this.previewRename(input.plan, {

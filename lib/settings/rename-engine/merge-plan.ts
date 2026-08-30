@@ -19,5 +19,6 @@ export function buildMergePlan(_input: {
   canonicalLabel: string;
   absorbedLabel: string;
 }): never {
+  void _input;
   throw new Error("Merge Engine non ancora implementato. Usare Rename solo per stessa entità.");
 }

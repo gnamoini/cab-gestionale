@@ -10,7 +10,7 @@ import {
   parseMonthKey,
   setMonthKeyParts,
   shiftDayDate,
-  shiftMonthKey,
+
   shiftWeekAnchor,
   type TimesheetPeriodMode,
 } from "@/lib/dipendenti/timesheet-month";
@@ -224,7 +224,7 @@ export function TimesheetHeader({
               </div>
             </ToolbarGroupPrimaryRow>
             <ToolbarGroupMetaRow className="gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
                 <PageToolbarResultCount
                   count={filteredCount}
                   filtersActive={filtersActive}

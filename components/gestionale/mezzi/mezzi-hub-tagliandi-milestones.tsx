@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { IconActionButton } from "@/components/design-system";
+import { OptionalTooltip } from "@/components/ui";
 import { HubIconOpen } from "@/components/design-system/hub-table-action-icons";
 import {
   GestionaleListTable,
@@ -121,17 +122,18 @@ function MezziHubTagliandiNoPresetPlaceholder({
           Configura piano tagliandi
         </td>
         <td className={`${gestionaleListTableTdCenter} py-3`}>
-          <input
-            type="checkbox"
-            className={dsCheckboxInput}
-            checked={false}
-            disabled={!canEdit}
-            title={!canEdit ? READONLY_PERMISSION_HINT : "Associa un piano tagliandi a questo mezzo"}
-            aria-label="Configura piano tagliandi"
-            onChange={() => {
-              if (canEdit) onRequestAssignPreset?.();
-            }}
-          />
+          <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : "Associa un piano tagliandi a questo mezzo"}>
+            <input
+              type="checkbox"
+              className={dsCheckboxInput}
+              checked={false}
+              disabled={!canEdit}
+              aria-label="Configura piano tagliandi"
+              onChange={() => {
+                if (canEdit) onRequestAssignPreset?.();
+              }}
+            />
+          </OptionalTooltip>
         </td>
       </tr>
     </GestionaleListTable>
@@ -198,6 +200,7 @@ function MezziHubTagliandiScaglioniTable({
         currentValue,
         executions,
       }),
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- lint phase2: preserve existing hook contract
     [plan.milestone.interval, currentValue, executions],
   );
 
@@ -315,15 +318,16 @@ function MezziHubTagliandiScaglioniTable({
                 {sogliaDate ? <div className={sogliaDateClass}>{sogliaDate}</div> : null}
               </td>
               <td className={`${gestionaleListTableTdCenter} py-3`}>
-                <input
-                  type="checkbox"
-                  className={dsCheckboxInput}
-                  checked={milestone.done}
-                  disabled={disabled}
-                  title={lockedDone ? "Registrato da lavorazione" : undefined}
-                  aria-label={`Tagliando ${sogliaLabel} ${milestone.done ? "eseguito" : "da eseguire"}`}
-                  onChange={(e) => void handleToggle(milestone, e.target.checked)}
-                />
+                <OptionalTooltip content={lockedDone ? "Registrato da lavorazione" : undefined}>
+                  <input
+                    type="checkbox"
+                    className={dsCheckboxInput}
+                    checked={milestone.done}
+                    disabled={disabled}
+                    aria-label={`Tagliando ${sogliaLabel} ${milestone.done ? "eseguito" : "da eseguire"}`}
+                    onChange={(e) => void handleToggle(milestone, e.target.checked)}
+                  />
+                </OptionalTooltip>
               </td>
               <td className={`${gestionaleListTableTdCenter} py-3 text-xs text-[color:var(--cab-text)]`}>
                 {milestone.done ? originLabel(historyRow) : "—"}
@@ -427,7 +431,7 @@ export function MezziHubTagliandiStoricoPanel({
   history,
   canEdit,
   onToggled,
-  listPageSize,
+  
 }: {
   mezzo: MezzoGestito;
   plans: MezziHubTagliandiStoricoPlan[];

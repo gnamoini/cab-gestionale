@@ -1,0 +1,12 @@
+diff --git a/scripts/generate-ui-final-stability-manifest.ts b/scripts/generate-ui-final-stability-manifest.ts
+index 3251f1bd..ecccbaf5 100644
+--- a/scripts/generate-ui-final-stability-manifest.ts
++++ b/scripts/generate-ui-final-stability-manifest.ts
+@@ -26,7 +26,6 @@ function main(): void {
+   }
+ 
+   const update = process.argv.includes("--update");
+-  const live = buildUiFinalStabilityManifest();
+ 
+   if (update || !fs.existsSync(MANIFEST_PATH)) {
+     if (update && !isUiFinalStabilityUpdateApproved()) {

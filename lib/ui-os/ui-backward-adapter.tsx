@@ -58,6 +58,7 @@ export function UIPageAdapter(props: UIPageAdapterProps) {
 
   useEffect(() => {
     if (!eligible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setDecision(null);
       return;
     }

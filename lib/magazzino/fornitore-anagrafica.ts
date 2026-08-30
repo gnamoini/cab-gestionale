@@ -3,31 +3,62 @@ import { normFornitoreAlternativoKey } from "@/lib/magazzino/fornitore-alternati
 import type { OrdineFornitoreFornitoreSnapshot } from "@/lib/ordini-fornitori/fornitore-snapshot";
 import { ORDINE_FORNITORE_TELEFONO_DEFAULT } from "@/lib/ordini-fornitori/fornitore-snapshot";
 
+import { isValidEmail } from "@/lib/validation/email";
+
+export const FORNITORE_EMAIL_AGGIUNTIVE_MAX = 5;
+
 export type FornitoreAnagraficaSettings = {
   ragioneSociale: string;
   indirizzo: string;
   partitaIva: string;
   codiceFiscale: string;
   telefono: string;
+  email: string;
+  emailAggiuntive: string[];
 };
 
 export function emptyFornitoreAnagraficaSettings(): FornitoreAnagraficaSettings {
-  return { ragioneSociale: "", indirizzo: "", partitaIva: "", codiceFiscale: "", telefono: "" };
+  return {
+    ragioneSociale: "",
+    indirizzo: "",
+    partitaIva: "",
+    codiceFiscale: "",
+    telefono: "",
+    email: "",
+    emailAggiuntive: [],
+  };
 }
 
 function strField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+export function parseFornitoreEmailAggiuntive(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (!trimmed || !isValidEmail(trimmed)) continue;
+    if (out.includes(trimmed)) continue;
+    out.push(trimmed);
+    if (out.length >= FORNITORE_EMAIL_AGGIUNTIVE_MAX) break;
+  }
+  return out;
+}
+
 export function parseFornitoreAnagraficaSettings(raw: unknown): FornitoreAnagraficaSettings {
   if (!raw || typeof raw !== "object") return emptyFornitoreAnagraficaSettings();
   const o = raw as Record<string, unknown>;
+  const email = strField(o.email ?? o.email_fornitore).trim();
   return {
     ragioneSociale: strField(o.ragioneSociale ?? o.ragione_sociale),
     indirizzo: strField(o.indirizzo),
     partitaIva: strField(o.partitaIva ?? o.partita_iva),
     codiceFiscale: strField(o.codiceFiscale ?? o.codice_fiscale),
     telefono: strField(o.telefono),
+    email: isValidEmail(email) ? email : "",
+    emailAggiuntive: parseFornitoreEmailAggiuntive(o.emailAggiuntive ?? o.email_aggiuntive),
   };
 }
 
@@ -107,6 +138,8 @@ export function fornitoreAnagraficaToOrdineSnapshot(
     partitaIva: anagrafica.partitaIva.trim(),
     codiceFiscale: anagrafica.codiceFiscale.trim(),
     telefono: anagrafica.telefono.trim() || ORDINE_FORNITORE_TELEFONO_DEFAULT,
+    email: anagrafica.email.trim(),
+    emailAggiuntive: [...anagrafica.emailAggiuntive],
   };
 }
 
@@ -116,6 +149,8 @@ export function isFornitoreAnagraficaConfigured(anagrafica: FornitoreAnagraficaS
       anagrafica.indirizzo.trim() ||
       anagrafica.partitaIva.trim() ||
       anagrafica.codiceFiscale.trim() ||
-      anagrafica.telefono.trim(),
+      anagrafica.telefono.trim() ||
+      anagrafica.email.trim() ||
+      anagrafica.emailAggiuntive.length > 0,
   );
 }

@@ -1,4 +1,3 @@
-import type { EffectivePart } from "@/lib/maintenance-plans/resolve-effective-preset";
 
 export type MaintenanceStockReservationResult = {
   stockTransactionIds: string[];

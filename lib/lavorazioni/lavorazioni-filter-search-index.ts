@@ -30,6 +30,6 @@ export function lavRowMatchesPageFiltersIndexed(
     const hay = lavHaystackForRow(row, haystackById, schedeStore);
     if (!matchSearchStringWithPrepared(prepared, hay).matches) return false;
   }
-  const { search: _s, ...advanced } = filters;
+  const { ...advanced } = filters;
   return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
 }

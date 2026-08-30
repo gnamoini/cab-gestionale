@@ -14,7 +14,7 @@ import {
   drawPdfPageFooters,
   measureGestionalePdfHeaderEndY,
   pdfAdvanceAfterDocumentHeader,
-  pdfAdvanceSection,
+
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
 import { drawPreventivoPdfBody } from "@/lib/pdf/preventivo-pdf-body";
@@ -62,14 +62,15 @@ function buildPreventivoDoc(
   const importoIva = Math.round(totaleNetto * (PDF_PREVENTIVO_IVA_PERCENT / 100) * 100) / 100;
   const totaleConIva = Math.round((totaleNetto + importoIva) * 100) / 100;
 
-  let y = drawGestionalePdfHeader(doc, pageW, "PREVENTIVO", {
-    numero: p.numero,
-    data: "01/06/2026",
-    operatore: "Test",
-    logoDataUrl,
-  });
-  y = pdfAdvanceAfterDocumentHeader(y);
-  y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
+  const y = pdfAdvanceAfterDocumentHeader(
+    drawGestionalePdfHeader(doc, pageW, "PREVENTIVO", {
+      numero: p.numero,
+      data: "01/06/2026",
+      operatore: "Test",
+      logoDataUrl,
+    }),
+  );
+  drawPreventivoPdfBody(doc, pageW, y, p, righe, {
     totaleRicambi: p.totaleRicambi,
     totaleManodopera: p.totaleManodopera,
     totaleSmaltimento: p.totaleSmaltimento ?? 0,

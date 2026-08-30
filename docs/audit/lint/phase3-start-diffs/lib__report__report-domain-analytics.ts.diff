@@ -1,0 +1,50 @@
+diff --git a/lib/report/report-domain-analytics.ts b/lib/report/report-domain-analytics.ts
+index 83eed78e..7e5de188 100644
+--- a/lib/report/report-domain-analytics.ts
++++ b/lib/report/report-domain-analytics.ts
+@@ -199,7 +199,7 @@ export type WarehouseAnalyticsBuildInput = AnalyticsPublishBase & {
+ };
+ 
+ export function buildWarehouseAnalytics(input: WarehouseAnalyticsBuildInput): WarehouseAnalyticsDto {
+-  const { range, compareRange, compareMode, magLog, magazzino, magazzinoRows, ordini = [] } = input;
++  const { range, compareRange, compareMode, magLog, magazzino, ordini = [] } = input;
+   const cmpCtx: CompareCtx = { range, compareRange, compareMode };
+   const agg = aggregateMagazzinoQtyByProductInRange(magLog, range);
+   let partsUsedQty = 0;
+@@ -212,13 +212,12 @@ export function buildWarehouseAnalytics(input: WarehouseAnalyticsBuildInput): Wa
+   }
+ 
+   const prevRange = compareRange ?? null;
+-  let partsUsedQtyPrev: number | null = null;
++  let _partsUsedQtyPrev: number | null = null;
+   let movementValuePrev: number | null = null;
+   let ordersCountPrev: number | null = null;
+   if (prevRange) {
+     const aggPrev = aggregateMagazzinoQtyByProductInRange(magLog, prevRange);
+-    partsUsedQtyPrev = 0;
+-    for (const v of aggPrev.values()) partsUsedQtyPrev += v.uscite;
++    _partsUsedQtyPrev = 0;
+     movementValuePrev = sumRicambiCostFromMagLog(magLog, magazzino, prevRange);
+     ordersCountPrev = 0;
+     for (const o of ordini) {
+@@ -460,20 +459,6 @@ function countPreventiviInRange(preventivi: readonly PreventivoRecord[], range:
+   return { count, value };
+ }
+ 
+-function countPreventiviApprovatiInRange(
+-  preventivi: readonly PreventivoRecord[],
+-  range: DateRange,
+-): number {
+-  let count = 0;
+-  for (const p of preventivi) {
+-    if (!isPreventivoCountedInEconomicStats(p)) continue;
+-    const at = p.dataCreazione || p.aggiornatoAt;
+-    if (!isoInRange(at, range)) continue;
+-    count += 1;
+-  }
+-  return count;
+-}
+-
+ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): EconomicAnalyticsDto {
+   const {
+     range,

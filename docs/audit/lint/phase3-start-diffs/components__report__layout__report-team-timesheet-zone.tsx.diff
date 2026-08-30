@@ -1,0 +1,13 @@
+diff --git a/components/report/layout/report-team-timesheet-zone.tsx b/components/report/layout/report-team-timesheet-zone.tsx
+index 0a045bab..b4ce2c47 100644
+--- a/components/report/layout/report-team-timesheet-zone.tsx
++++ b/components/report/layout/report-team-timesheet-zone.tsx
+@@ -38,7 +38,7 @@ export function ReportTeamTimesheetZone({
+         />
+       )}
+ 
+-      <div className="mt-4 flex flex-wrap gap-2">
++      <div className="mt-4 flex gap-2 flex-nowrap sm:flex-wrap">
+         <Link href="/dipendenti" className={`${dsBtnNeutral} inline-flex text-sm no-underline`}>
+           Apri timesheet dipendenti
+         </Link>

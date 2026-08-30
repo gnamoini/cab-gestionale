@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-08-30T17:58:11.597Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "workingTree": {
+    "knownDirtyFiles": 856,
+    "knownPreexistingChanges": 745,
+    "knownPhase4Changes": 111,
+    "unknownChanges": 0,
+    "untrackedUnknown": 0
+  },
+  "lint": "PASS_WITH_WARNINGS",
+  "lintDetail": {
+    "errors": 0,
+    "warnings": 5
+  },
+  "typescript": "PASS",
+  "rbac": "PASS",
+  "contract": "PASS",
+  "certifiableTree": true,
+  "remediationPass": true
+}

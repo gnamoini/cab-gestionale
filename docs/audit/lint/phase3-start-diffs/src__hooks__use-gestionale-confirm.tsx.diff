@@ -1,0 +1,24 @@
+diff --git a/src/hooks/use-gestionale-confirm.tsx b/src/hooks/use-gestionale-confirm.tsx
+index 7024f1a5..97aaa880 100644
+--- a/src/hooks/use-gestionale-confirm.tsx
++++ b/src/hooks/use-gestionale-confirm.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useMemo, useRef, useState } from "react";
++import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
+ 
+ export type GestionaleConfirmOptions = {
+@@ -22,7 +22,10 @@ type PendingConfirm = GestionaleConfirmOptions & {
+ export function useGestionaleConfirm() {
+   const [pending, setPending] = useState<PendingConfirm | null>(null);
+   const pendingRef = useRef<PendingConfirm | null>(null);
+-  pendingRef.current = pending;
++
++  useEffect(() => {
++    pendingRef.current = pending;
++  }, [pending]);
+ 
+   const confirm = useCallback((options: GestionaleConfirmOptions): Promise<boolean> => {
+     return new Promise((resolve) => {

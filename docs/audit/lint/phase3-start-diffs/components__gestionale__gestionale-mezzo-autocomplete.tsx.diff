@@ -1,0 +1,21 @@
+diff --git a/components/gestionale/gestionale-mezzo-autocomplete.tsx b/components/gestionale/gestionale-mezzo-autocomplete.tsx
+index 7fd626ef..5fb46698 100644
+--- a/components/gestionale/gestionale-mezzo-autocomplete.tsx
++++ b/components/gestionale/gestionale-mezzo-autocomplete.tsx
+@@ -12,7 +12,7 @@ import {
+ } from "@/components/gestionale/global-input/use-global-dropdown-portal";
+ import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
+ import type { MezzoGestito } from "@/lib/mezzi/types";
+-import { dsBtnNeutral, dsLabel } from "@/lib/ui/design-system";
++import { dsLabel } from "@/lib/ui/design-system";
+ import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
+ import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+ import { debugSelectOptions } from "@/src/shared/selectors";
+@@ -106,6 +106,7 @@ export function GestionaleMezzoAutocomplete({
+               <button
+                 type="button"
+                 role="option"
++                aria-selected={false}
+                 className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)]"
+                 onMouseDown={(e) => e.preventDefault()}
+                 onClick={() => {

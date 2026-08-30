@@ -1,0 +1,13 @@
+diff --git a/components/report/bi-center/report-primary-trend-section.tsx b/components/report/bi-center/report-primary-trend-section.tsx
+index 2cca0812..780002e2 100644
+--- a/components/report/bi-center/report-primary-trend-section.tsx
++++ b/components/report/bi-center/report-primary-trend-section.tsx
+@@ -217,7 +217,7 @@ export function ReportPrimaryTrendContent() {
+         </div>
+ 
+         {!isLoading && envelope ? (
+-          <div className="flex flex-wrap items-end justify-between gap-3">
++          <div className="flex items-end justify-between gap-3 flex-nowrap sm:flex-wrap">
+             <div className="min-w-0">
+               <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                 Totale periodo

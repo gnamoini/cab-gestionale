@@ -88,7 +88,7 @@ function AttivitaEventRow({
               : ""
         }`}
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
           <p
             className={`min-w-0 uppercase tracking-wide ${
               isStato

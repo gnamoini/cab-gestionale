@@ -17,10 +17,7 @@ export function PermissionsSnapshotProvider({
   value: EffectivePermissionsValue;
   children: ReactNode;
 }) {
-  const stable = useMemo(
-    () => value,
-    [value.snapshot, value.isLoading],
-  );
+  const stable = useMemo(() => value, [value]);
   return (
     <PermissionsSnapshotContext.Provider value={stable}>
       {children}

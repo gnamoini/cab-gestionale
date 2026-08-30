@@ -48,7 +48,7 @@ export function ReportAskPanel() {
       <div className="flex h-full min-h-0 flex-col">
         <div
           ref={scrollRef}
-          className="gestionale-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-2"
+          className="gestionale-scrollbar min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto px-1 py-2"
         >
           {messages.length === 0 && !loading ? (
             <ReportAskEmptyState prompts={QUICK_PROMPTS} onSelect={(p) => void sendMessage(p)} />

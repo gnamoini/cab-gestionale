@@ -60,7 +60,7 @@ export function AgendaSessionBlock({
               {localTimeLabel(session.startAt)}–{localTimeLabel(session.endAt)}
             </span>
           </div>
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1">
+          <div className="mt-1.5 flex min-w-0 items-center gap-1 flex-nowrap sm:flex-wrap">
             <span className={PLANNING_STATUS_BADGE_CLASS[session.planningStatus]}>
               {PLANNING_STATUS_LABELS[session.planningStatus]}
             </span>

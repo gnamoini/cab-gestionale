@@ -21,6 +21,9 @@ export function isStockPipelineEmergencyFallback(): boolean {
 }
 
 /** Percorso ufficiale v4 attivo su client. */
-export function useDeterministicStockPipeline(): boolean {
+export function isDeterministicStockPipelineActive(): boolean {
   return isStockPipelineClientEnabled() && !isStockPipelineEmergencyFallback();
 }
+
+/** @deprecated use isDeterministicStockPipelineActive — non è un React hook */
+export const useDeterministicStockPipeline = isDeterministicStockPipelineActive;

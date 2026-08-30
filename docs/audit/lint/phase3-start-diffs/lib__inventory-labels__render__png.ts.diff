@@ -1,0 +1,31 @@
+diff --git a/lib/inventory-labels/render/png.ts b/lib/inventory-labels/render/png.ts
+index 354b204c..59823802 100644
+--- a/lib/inventory-labels/render/png.ts
++++ b/lib/inventory-labels/render/png.ts
+@@ -16,7 +16,7 @@ export async function renderLabelPng(
+   const svg = await renderLabelSvg(template, payload, qrUrl, {
+     textAsPaths: v2,
+     embedFonts: !v2,
+-    includeBarcode: renderOptions?.includeBarcode,
++    labelKind: renderOptions?.labelKind,
+   });
+   const { widthPx, heightPx } = templateDimensionsPx(template);
+   return sharp(Buffer.from(svg)).png().resize(widthPx, heightPx, { fit: "fill" }).toBuffer();
+@@ -31,7 +31,7 @@ export async function renderLabelPngFallback(
+ ): Promise<Buffer> {
+   const svg = await renderLabelSvg(template, payload, qrUrl, {
+     textAsPaths: true,
+-    includeBarcode: renderOptions?.includeBarcode,
++    labelKind: renderOptions?.labelKind,
+   });
+   const widthPx = Math.round((template.widthMm / 25.4) * FALLBACK_DPI);
+   const heightPx = Math.round((template.heightMm / 25.4) * FALLBACK_DPI);
+@@ -49,7 +49,7 @@ export async function renderLabelSvgBytes(
+ ): Promise<Buffer> {
+   const svg = await renderLabelSvg(template, payload, qrUrl, {
+     textAsPaths: true,
+-    includeBarcode: renderOptions?.includeBarcode,
++    labelKind: renderOptions?.labelKind,
+   });
+   return Buffer.from(svg);
+ }

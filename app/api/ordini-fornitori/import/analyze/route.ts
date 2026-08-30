@@ -136,7 +136,6 @@ export async function POST(request: Request) {
         { status: httpStatusForOrdineFornitoreImportError(error.code), headers: importCorrelationHeaders(correlationId) },
       );
     }
-    const message = error instanceof Error ? error.message : "Analisi import non riuscita.";
     traceOrdineFornitoreImportOperation({
       operation: "analyze",
       importFileId,

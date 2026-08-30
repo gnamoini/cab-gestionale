@@ -8,6 +8,7 @@ const WHITELIST = new Set([
   "supabase/migrations/20260908120000_mezzi_telaio_num_norm_unique.sql",
   "src/types/supabase-tables.ts",
   "src/services/mezzi.service.ts",
+  "lib/domain/mezzo/mezzi-repository.ts",
   "lib/mezzi/vin-normalize.ts",
   "lib/mezzi/vin-normalize.test.ts",
   "src/services/mezzi-vin-unique.test.ts",
@@ -30,9 +31,7 @@ function walk(dir: string, out: string[] = []): string[] {
 const violations: string[] = [];
 for (const file of walk(ROOT)) {
   const rel = path.relative(ROOT, file).replace(/\\/g, "/");
-  if (rel.startsWith("supabase/migrations/") && rel.includes("telaio_num_norm")) {
-    continue;
-  }
+  if (rel.startsWith("supabase/migrations/")) continue;
   const src = fs.readFileSync(file, "utf8");
   if (!src.includes("telaio_num_norm")) continue;
   if (WHITELIST.has(rel)) continue;

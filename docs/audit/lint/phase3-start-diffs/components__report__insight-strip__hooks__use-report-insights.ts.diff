@@ -1,0 +1,20 @@
+diff --git a/components/report/insight-strip/hooks/use-report-insights.ts b/components/report/insight-strip/hooks/use-report-insights.ts
+index 2c75eda6..fdbc5bca 100644
+--- a/components/report/insight-strip/hooks/use-report-insights.ts
++++ b/components/report/insight-strip/hooks/use-report-insights.ts
+@@ -40,6 +40,7 @@ export function useReportInsights(
+ 
+   useEffect(() => {
+     if (!range) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setInsights(null);
+       setLoading(false);
+       setError(null);
+@@ -78,6 +79,7 @@ export function useReportInsights(
+     })();
+ 
+     return () => controller.abort();
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   }, [range?.start.getTime(), range?.end.getTime(), compareMode]);
+ 
+   return { insights, loading, error };

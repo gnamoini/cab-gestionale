@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDeterministicStockPipeline } from "@/lib/feature-flags/stock-pipeline";
+import { isDeterministicStockPipelineActive } from "@/lib/feature-flags/stock-pipeline";
 import {
   getStockQueueState,
   subscribeStockQueueState,
@@ -56,7 +56,7 @@ function useDeterministicStockAdjustMutation() {
 }
 
 export function useStockAdjustMutation() {
-  const v4 = useDeterministicStockPipeline();
+  const v4 = isDeterministicStockPipelineActive();
   const deterministic = useDeterministicStockAdjustMutation();
   const legacy = useEmergencyLegacyStockAdjustMutation();
   return v4 ? deterministic : legacy;

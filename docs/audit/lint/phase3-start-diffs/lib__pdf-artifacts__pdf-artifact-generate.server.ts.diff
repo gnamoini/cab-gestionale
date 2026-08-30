@@ -1,0 +1,520 @@
+diff --git a/lib/pdf-artifacts/pdf-artifact-generate.server.ts b/lib/pdf-artifacts/pdf-artifact-generate.server.ts
+index 36b64f05..1f091c6c 100644
+--- a/lib/pdf-artifacts/pdf-artifact-generate.server.ts
++++ b/lib/pdf-artifacts/pdf-artifact-generate.server.ts
+@@ -19,7 +19,20 @@ import {
+   LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION,
+   mapLavorazioniListRowsToPdfRows,
+ } from "@/lib/lavorazioni/lavorazioni-pdf-map";
++import { createPdfPhaseTimer, type PdfDeliveryPhases } from "@/lib/pdf/core/pdf-delivery-phases";
+ import { stableHashPayload, type PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
++import {
++  buildDdtPdfHashInput,
++  buildPreventivoPdfHashInput,
++  fatturaPdfFileNameFromMeta,
++  fetchDdtPdfHashMetaServer,
++  fetchFatturaPdfHashMetaServer,
++  fetchOrdineFornitorePdfHashMetaServer,
++  fetchPreventivoPdfHashMetaServer,
++  fetchSchedaPdfHashMetaServer,
++  ordineFornitorePdfFileNameFromMeta,
++  resolveClienteAnagUpdatedAt,
++} from "@/lib/pdf-artifacts/pdf-artifact-metadata.server";
+ import {
+   getCachedPdfArtifactBytes,
+   resolvePdfArtifactRef,
+@@ -31,16 +44,18 @@ import { generateInvoicePdfBytes, invoicePdfFileName } from "@/lib/fatturazione/
+ import { fetchClienteAnagraficaByLabelServer } from "@/lib/clienti/clienti-anagrafica-fetch.server";
+ import { fetchDdtDetailServer } from "@/lib/ddt/ddt-fetch-server";
+ import { ddtPdfFileName, generateDdtPdfBytes } from "@/lib/ddt/ddt-pdf-generate";
++import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
+ import { fetchOrdineFornitoreRecordServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
+ import {
+   generateOrdineFornitorePdfBytes,
+   ordineFornitorePdfFileName,
+ } from "@/lib/ordini-fornitori/ordine-fornitore-pdf-generate";
++import { buildPreventivoPdfDownloadFileName } from "@/lib/preventivi/preventivo-pdf-filename";
+ import { fetchPreventivoRecordServer } from "@/lib/preventivi/preventivi-fetch-server";
+ import {
+   generatePreventivoPdfBytes,
+-  preventivoPdfFileName,
+ } from "@/lib/preventivi/preventivo-pdf-generate";
++import type { PreventivoRecord } from "@/lib/preventivi/types";
+ import { fetchReportPdfDataSnapshot } from "@/lib/report/report-pdf-data.server";
+ import {
+   buildReportBundlePdfFileName,
+@@ -63,6 +78,7 @@ export type PdfArtifactDelivery = {
+   generateMs: number;
+   dataHash: string;
+   scopeId: string;
++  phases: PdfDeliveryPhases;
+ };
+ 
+ export type PdfArtifactQuery = {
+@@ -89,7 +105,8 @@ async function resolvePdfAutore(override?: string): Promise<string> {
+ }
+ 
+ function reportHashInput(snapshot: Awaited<ReturnType<typeof fetchReportPdfDataSnapshot>>) {
+-  const { generatedAt: _omit, ...rest } = snapshot;
++  const { generatedAt: _generatedAt, ...rest } = snapshot;
++  void _generatedAt;
+   return rest;
+ }
+ 
+@@ -99,6 +116,34 @@ function codiciMapFromLavorazioneRows(rows: readonly LavorazioneListRow[]): Reco
+   return out;
+ }
+ 
++function ddtPdfFileNameFromMeta(meta: {
++  clienteLabel: string;
++  numero: number | null;
++  anno: number;
++}): string {
++  const safe = meta.clienteLabel.replace(/[^\w\-]+/g, "_").slice(0, 40);
++  const display = ddtDisplayNumber({ numero: meta.numero, anno: meta.anno });
++  return `DDT_${display.replace("/", "-")}_${safe}.pdf`;
++}
++
++function preventivoFileNameFromMeta(meta: {
++  numero: string;
++  cliente: string;
++  dataCreazione: string;
++  tipoDocumento: PreventivoRecord["tipoDocumento"];
++}): string {
++  return buildPreventivoPdfDownloadFileName({
++    numero: meta.numero,
++    cliente: meta.cliente,
++    dataCreazione: meta.dataCreazione,
++    tipoDocumento: meta.tipoDocumento,
++  } as PreventivoRecord);
++}
++
++async function loadStorageArtifact(objectPath: string): Promise<Uint8Array | null> {
++  return getCachedPdfArtifactBytes(objectPath);
++}
++
+ export async function deliverPdfArtifact(
+   type: PdfArtifactType,
+   query: PdfArtifactQuery,
+@@ -115,16 +160,15 @@ async function deliverPdfArtifactInner(
+   type: PdfArtifactType,
+   query: PdfArtifactQuery,
+ ): Promise<ServiceResult<PdfArtifactDelivery>> {
++  const phases = createPdfPhaseTimer();
++
+   const allowed = query.skipRbac === true || (await verifyPdfArtifactReadAccess(type));
+   if (!allowed) return err("Permesso richiesto.");
++  phases.markAuthEnd();
+ 
+-  const autore = await resolvePdfAutore(query.autore);
+   let scopeId = "global";
+   let dataHash = "";
+   let fileName = "documento.pdf";
+-  let objectPath = "";
+-
+-  const t0 = performance.now();
+   let cacheStatus: "HIT" | "MISS" = "MISS";
+   let bytes: Uint8Array | null = null;
+ 
+@@ -134,6 +178,7 @@ async function deliverPdfArtifactInner(
+         fetchLavorazioniListAuthorizedServer(LAVORAZIONI_ATTIVE_LIGHT_FILTERS),
+         fetchCabAppSettingsPayloadServer(),
+       ]);
++      phases.markDataFetchEnd();
+       if (!lavRes.success) return err(lavRes.error ?? "Errore caricamento lavorazioni");
+       const lavRows = lavRes.data ?? [];
+       const schedeRes =
+@@ -146,145 +191,181 @@ async function deliverPdfArtifactInner(
+         addettiRecords: settingsPayload.resolved.lavorazioni.addettiRecords,
+       });
+       dataHash = stableHashPayload({ v: LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION, rows: pdfRows });
++      phases.markHashEnd();
+       scopeId = "global";
+       fileName = buildLavorazioniInCorsoPdfFileName();
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = generateLavorazioniInCorsoPdfBytes(pdfRows, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "report-bundle": {
+       const snapshot = await fetchReportPdfDataSnapshot();
++      phases.markDataFetchEnd();
+       dataHash = stableHashPayload(reportHashInput(snapshot));
++      phases.markHashEnd();
+       scopeId = "global";
+       fileName = buildReportBundlePdfFileName();
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = generateReportBundlePdfBytes(snapshot, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "preventivo": {
+       const id = query.id?.trim();
+       if (!id) return err("Parametro id mancante");
+-      const prevRes = await fetchPreventivoRecordServer(id);
+-      if (!prevRes.success || !prevRes.data) return err(prevRes.error ?? "Preventivo non trovato");
+-      const p = prevRes.data;
+-      const clienteAnag = await fetchClienteAnagraficaByLabelServer(p.cliente);
+-      dataHash = stableHashPayload({
+-        id: p.id,
+-        updatedAt: p.aggiornatoAt ?? p.dataCreazione,
+-        totale: p.totaleFinale,
+-        righeCount: p.righeRicambi.length,
+-        anagUpdatedAt: clienteAnag?.updatedAt ?? null,
+-        descrizioneLavorazioniCliente: p.descrizioneLavorazioniCliente,
+-        noteFinali: p.noteFinali,
+-        collaudoPrezzo: p.collaudoPrezzo,
+-        manodopera: p.manodopera,
+-      });
++      const meta = await fetchPreventivoPdfHashMetaServer(id);
++      if (!meta) return err("Preventivo non trovato");
++      const anagUpdatedAt = await resolveClienteAnagUpdatedAt(meta.cliente);
++      phases.markDataFetchEnd();
++      dataHash = stableHashPayload(buildPreventivoPdfHashInput(meta, anagUpdatedAt));
++      phases.markHashEnd();
+       scopeId = id;
+-      fileName = preventivoPdfFileName(p);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      fileName = preventivoFileNameFromMeta(meta);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+-      const logo = await loadBrandingLogoDataUrlServer();
++      const [autore, prevRes, logo] = await Promise.all([
++        resolvePdfAutore(query.autore),
++        fetchPreventivoRecordServer(id),
++        loadBrandingLogoDataUrlServer(),
++      ]);
++      if (!prevRes.success || !prevRes.data) return err(prevRes.error ?? "Preventivo non trovato");
++      const p = prevRes.data;
++      const clienteAnag = await fetchClienteAnagraficaByLabelServer(p.cliente);
+       bytes = generatePreventivoPdfBytes(p, autore, logo, {
+         clienteAnagrafica: clienteAnag?.anagrafica ?? null,
+         codiceFiscale: clienteAnag?.codiceFiscale,
+       });
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "fattura": {
+       const id = query.id?.trim();
+       if (!id) return err("Parametro id mancante");
+-      const invRes = await fetchInvoiceDetailServer(id);
+-      if (!invRes.success || !invRes.data) return err(invRes.error ?? "Fattura non trovata");
+-      const detail = invRes.data;
++      const meta = await fetchFatturaPdfHashMetaServer(id);
++      if (!meta) return err("Fattura non trovata");
++      phases.markDataFetchEnd();
+       dataHash = stableHashPayload({
+-        id: detail.invoice.id,
+-        updatedAt: detail.invoice.updated_at,
+-        totale: detail.invoice.totale,
+-        status: detail.invoice.status,
++        id: meta.id,
++        updatedAt: meta.updatedAt,
++        totale: meta.totale,
++        status: meta.status,
+       });
++      phases.markHashEnd();
+       scopeId = id;
+-      fileName = invoicePdfFileName(detail);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      fileName = fatturaPdfFileNameFromMeta(meta);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
++      const invRes = await fetchInvoiceDetailServer(id);
++      if (!invRes.success || !invRes.data) return err(invRes.error ?? "Fattura non trovata");
++      const detail = invRes.data;
++      fileName = invoicePdfFileName(detail);
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = generateInvoicePdfBytes(detail, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "ddt": {
+       const id = query.id?.trim();
+       if (!id) return err("Parametro id mancante");
+-      const detail = await fetchDdtDetailServer(id);
+-      if (!detail) return err("DDT non trovato");
+-      const clienteAnag = await fetchClienteAnagraficaByLabelServer(detail.document.cliente_label);
+-      dataHash = stableHashPayload({
+-        id: detail.document.id,
+-        updatedAt: detail.document.updated_at,
+-        status: detail.document.status,
+-        anagUpdatedAt: clienteAnag?.updatedAt ?? null,
+-      });
++      const meta = await fetchDdtPdfHashMetaServer(id);
++      if (!meta) return err("DDT non trovato");
++      const anagUpdatedAt = await resolveClienteAnagUpdatedAt(meta.clienteLabel);
++      phases.markDataFetchEnd();
++      dataHash = stableHashPayload(buildDdtPdfHashInput(meta, anagUpdatedAt));
++      phases.markHashEnd();
+       scopeId = id;
+-      fileName = ddtPdfFileName(detail);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      fileName = ddtPdfFileNameFromMeta({
++        clienteLabel: meta.clienteLabel,
++        numero: meta.numero,
++        anno: meta.anno,
++      });
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+-      const logo = await loadBrandingLogoDataUrlServer();
++      const detail = await fetchDdtDetailServer(id);
++      if (!detail) return err("DDT non trovato");
++      fileName = ddtPdfFileName(detail);
++      const [clienteAnag, logo] = await Promise.all([
++        fetchClienteAnagraficaByLabelServer(detail.document.cliente_label),
++        loadBrandingLogoDataUrlServer(),
++      ]);
+       bytes = generateDdtPdfBytes(detail, logo, {
+         clienteAnagrafica: clienteAnag?.anagrafica ?? null,
+         codiceFiscale: clienteAnag?.codiceFiscale,
+       });
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "ordine-fornitore": {
+       const id = query.id?.trim();
+       if (!id) return err("Parametro id mancante");
+-      const record = await fetchOrdineFornitoreRecordServer(id);
+-      if (!record) return err("Ordine non trovato");
++      const meta = await fetchOrdineFornitorePdfHashMetaServer(id);
++      if (!meta) return err("Ordine non trovato");
++      phases.markDataFetchEnd();
+       dataHash = stableHashPayload({
+-        id: record.id,
+-        updatedAt: record.updatedAt,
+-        status: record.status,
+-        totale: record.totale,
+-        righeCount: record.righe.length,
++        id: meta.id,
++        updatedAt: meta.updatedAt,
++        status: meta.status,
++        totale: meta.totale,
++        righeCount: meta.righeCount,
+       });
++      phases.markHashEnd();
+       scopeId = id;
+-      fileName = ordineFornitorePdfFileName(record);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      fileName = ordineFornitorePdfFileNameFromMeta(meta);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
++      const record = await fetchOrdineFornitoreRecordServer(id);
++      if (!record) return err("Ordine non trovato");
++      fileName = ordineFornitorePdfFileName(record);
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = generateOrdineFornitorePdfBytes(record, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "scheda-ingresso":
+@@ -294,28 +375,44 @@ async function deliverPdfArtifactInner(
+       if (!lavorazioneId) return err("Parametro lavorazioneId mancante");
+       const kind =
+         type === "scheda-ingresso" ? "ingresso" : type === "scheda-lavorazioni" ? "lavorazioni" : "ricambi";
+-      const schedaRes = await fetchSchedaPdfPayloadServer(lavorazioneId, kind);
+-      if (!schedaRes.success || !schedaRes.data) return err(schedaRes.error ?? "Scheda non disponibile");
+-      const payload = schedaRes.data;
++      const hashMeta = await fetchSchedaPdfHashMetaServer(lavorazioneId, kind);
++      if (!hashMeta) return err("Scheda non disponibile");
++      phases.markDataFetchEnd();
+       dataHash = stableHashPayload({
+         lavorazioneId,
+         kind,
+-        updatedAt: payload.doc.updatedAt ?? payload.doc.createdAt,
+-        tipo: payload.doc.tipo,
++        updatedAt: hashMeta.updatedAt,
++        tipo: hashMeta.tipo,
+       });
++      phases.markHashEnd();
+       scopeId = lavorazioneId;
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
++      if (bytes) {
++        cacheStatus = "HIT";
++        const schedaRes = await fetchSchedaPdfPayloadServer(lavorazioneId, kind);
++        if (schedaRes.success && schedaRes.data) {
++          fileName = schedaPdfFileName({
++            doc: schedaRes.data.doc,
++            bundle: schedaRes.data.bundle,
++            titoloScheda: schedaRes.data.titoloScheda,
++          });
++        }
++        break;
++      }
++      const schedaRes = await fetchSchedaPdfPayloadServer(lavorazioneId, kind);
++      if (!schedaRes.success || !schedaRes.data) return err(schedaRes.error ?? "Scheda non disponibile");
++      const payload = schedaRes.data;
+       fileName = schedaPdfFileName({
+         doc: payload.doc,
+         bundle: payload.bundle,
+         titoloScheda: payload.titoloScheda,
+       });
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
+-      if (bytes) {
+-        cacheStatus = "HIT";
+-        break;
+-      }
+-      const logo = await loadBrandingLogoDataUrlServer();
++      const [autore, logo] = await Promise.all([
++        resolvePdfAutore(query.autore),
++        loadBrandingLogoDataUrlServer(),
++      ]);
+       bytes = generateSchedaPdfBytes({
+         titoloScheda: payload.titoloScheda,
+         identificazioneLine: payload.identificazioneLine,
+@@ -326,13 +423,16 @@ async function deliverPdfArtifactInner(
+         lavorazioneRow: payload.lavorazioneRow,
+         mezzoRow: payload.mezzoRow,
+       });
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "dipendenti-aziendale": {
+       const month = query.month?.trim() as TimesheetMonthKey | undefined;
+       if (!month) return err("Parametro month mancante");
+       const ctxRes = await fetchDipendentiPdfContextServer(month);
++      phases.markDataFetchEnd();
+       if (!ctxRes.success || !ctxRes.data) return err(ctxRes.error ?? "Dati timesheet non disponibili");
+       const ctx = ctxRes.data;
+       if (ctx.employees.length === 0) return err("Nessun dipendente da esportare");
+@@ -349,17 +449,21 @@ async function deliverPdfArtifactInner(
+           tipo_assenza_id: e.tipo_assenza_id,
+         })),
+       });
++      phases.markHashEnd();
+       scopeId = month;
+       fileName = dipendentiComplessivoFileName(ctx);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = await generateDipendentiComplessivoPdfBytes(ctx, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     case "dipendenti-dipendente": {
+@@ -367,6 +471,7 @@ async function deliverPdfArtifactInner(
+       const employeeId = query.employeeId?.trim();
+       if (!month || !employeeId) return err("Parametri month e employeeId richiesti");
+       const ctxRes = await fetchDipendentiPdfContextServer(month);
++      phases.markDataFetchEnd();
+       if (!ctxRes.success || !ctxRes.data) return err(ctxRes.error ?? "Dati timesheet non disponibili");
+       const ctx = ctxRes.data;
+       const employee = ctx.employees.find((e) => e.id === employeeId);
+@@ -385,17 +490,21 @@ async function deliverPdfArtifactInner(
+             tipo_assenza_id: e.tipo_assenza_id,
+           })),
+       });
++      phases.markHashEnd();
+       scopeId = `${month}/${employeeId}`;
+       fileName = dipendentiDipendenteFileName(ctx, employee);
+-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
+-      bytes = await getCachedPdfArtifactBytes(objectPath);
++      const objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
++      bytes = await loadStorageArtifact(objectPath);
++      phases.markStorageEnd();
+       if (bytes) {
+         cacheStatus = "HIT";
+         break;
+       }
+       const logo = await loadBrandingLogoDataUrlServer();
+       bytes = await generateDipendentiDipendentePdfBytes(ctx, employee, logo);
++      phases.markGenerateEnd();
+       await uploadPdfArtifactBestEffort(objectPath, bytes);
++      phases.markUploadEnd();
+       break;
+     }
+     default: {
+@@ -404,7 +513,8 @@ async function deliverPdfArtifactInner(
+     }
+   }
+ 
+-  const generateMs = Math.round(performance.now() - t0);
++  const finishedPhases = phases.finish();
++  const generateMs = finishedPhases.totalMs;
+   if (!bytes) return err("Generazione PDF non riuscita");
+ 
+   traceRuntimeCoordinationServer({
+@@ -413,7 +523,7 @@ async function deliverPdfArtifactInner(
+     entityId: scopeId,
+     scope: "pdf",
+     layer: "pdf",
+-    meta: { pdfType: type, generateMs, dataHash },
++    meta: { pdfType: type, generateMs, dataHash, phases: finishedPhases },
+   });
+   if (cacheStatus === "MISS") {
+     traceRuntimeCoordinationServer({
+@@ -436,5 +546,5 @@ async function deliverPdfArtifactInner(
+     meta: { pdfType: type, dataHash },
+   });
+ 
+-  return success({ bytes, fileName, cacheStatus, generateMs, dataHash, scopeId });
++  return success({ bytes, fileName, cacheStatus, generateMs, dataHash, scopeId, phases: finishedPhases });
+ }

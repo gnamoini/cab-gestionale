@@ -1,0 +1,20 @@
+diff --git a/components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx b/components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx
+index a3591fc9..6c48f040 100644
+--- a/components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx
++++ b/components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx
+@@ -93,6 +93,7 @@ export function DashboardPromemoriaFormModal({
+     const nextTime = promemoriaEventTimeInputValue(editing?.event_time);
+     const nextTitle = editing?.title ?? "";
+     const nextDescription = editing?.description ?? "";
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setEventDate(nextDate);
+     setEventTime(nextTime);
+     setTitle(nextTitle);
+@@ -117,6 +118,7 @@ export function DashboardPromemoriaFormModal({
+ 
+   useEffect(() => {
+     if (!repeatEnabled || editing) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setUntilYmd((prev) => {
+       if (prev && prev >= eventDate) return prev;
+       return maxRecurrenceUntilYmd(eventDate);

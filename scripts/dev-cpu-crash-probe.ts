@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   let readyCount = 0;
   let compileCount = 0;
   let firstReadyAt: number | null = null;
-  let errorLines: string[] = [];
+  const errorLines: string[] = [];
   const stdoutBuf: string[] = [];
 
   const onChunk = (chunk: Buffer, stream: "stdout" | "stderr"): void => {

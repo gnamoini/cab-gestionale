@@ -43,10 +43,17 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
     (showMonthDelta && previousMonthQuery.isPending);
   const isError = employeesQuery.isError || entriesQuery.isError;
 
-  const rawEntries = (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[];
-  const rawPreviousEntries = showMonthDelta
-    ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
-    : [];
+  const rawEntries = useMemo(
+    () => (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[],
+    [entriesQuery.data],
+  );
+  const rawPreviousEntries = useMemo(
+    () =>
+      showMonthDelta
+        ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
+        : [],
+    [showMonthDelta, previousMonthQuery.data],
+  );
 
   const entries = useMemo(
     () => filterEntriesForReportTimesheetKpi(rawEntries, tipiAssenza),

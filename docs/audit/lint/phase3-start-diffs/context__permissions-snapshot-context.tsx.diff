@@ -1,0 +1,16 @@
+diff --git a/context/permissions-snapshot-context.tsx b/context/permissions-snapshot-context.tsx
+index 45a29407..2ee453fb 100644
+--- a/context/permissions-snapshot-context.tsx
++++ b/context/permissions-snapshot-context.tsx
+@@ -17,10 +17,7 @@ export function PermissionsSnapshotProvider({
+   value: EffectivePermissionsValue;
+   children: ReactNode;
+ }) {
+-  const stable = useMemo(
+-    () => value,
+-    [value.snapshot, value.isLoading],
+-  );
++  const stable = useMemo(() => value, [value]);
+   return (
+     <PermissionsSnapshotContext.Provider value={stable}>
+       {children}

@@ -1,0 +1,67 @@
+diff --git a/src/hooks/use-scheda-ingresso-mezzo-prompt.ts b/src/hooks/use-scheda-ingresso-mezzo-prompt.ts
+index d24b555d..022ee0af 100644
+--- a/src/hooks/use-scheda-ingresso-mezzo-prompt.ts
++++ b/src/hooks/use-scheda-ingresso-mezzo-prompt.ts
+@@ -1,15 +1,13 @@
+ "use client";
+ 
+-import { useCallback, useRef, useState } from "react";
++import { useCallback, useState } from "react";
+ import { copyLastSchedaIngresso } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
+-import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
+ import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
+ import {
+   canPrefillSchedaFromMezzo,
+   type MezzoPrefillPolicy,
+ } from "@/lib/schede/scheda-ingresso-mezzo-prefill-policy";
+ import {
+-  createLinkedMezzoSnapshot,
+   createLinkedMezzoSnapshotFromFields,
+   emptySchedaIngressoMezzoLinkState,
+   listLinkedMezzoFieldConflicts,
+@@ -50,16 +48,22 @@ export function useSchedaIngressoMezzoLink({
+   const [pendingMatchKind, setPendingMatchKind] = useState<SchedaIngressoIdentMatchKind | null>(null);
+   const [ambiguousCandidates, setAmbiguousCandidates] = useState<MezzoGestito[] | null>(null);
+   const [dismissedMezzoIds, setDismissedMezzoIds] = useState<Set<string>>(() => new Set());
+-  const userEditedPermanentRef = useRef<Set<MezzoPermanentFieldKey>>(new Set());
++  const [userEditedPermanent, setUserEditedPermanent] = useState<Set<MezzoPermanentFieldKey>>(
++    () => new Set(),
++  );
+ 
+   const resetUserPermanentEdits = useCallback(() => {
+-    userEditedPermanentRef.current = new Set();
++    setUserEditedPermanent(new Set());
+   }, []);
+ 
+   const notifyPermanentFieldUserEdit = useCallback(
+     (key: MezzoPermanentFieldKey | readonly MezzoPermanentFieldKey[]) => {
+       const keys = Array.isArray(key) ? key : [key];
+-      for (const k of keys) userEditedPermanentRef.current.add(k);
++      setUserEditedPermanent((prev) => {
++        const next = new Set(prev);
++        for (const k of keys) next.add(k);
++        return next;
++      });
+     },
+     [],
+   );
+@@ -273,9 +277,7 @@ export function useSchedaIngressoMezzoLink({
+   );
+ 
+   const conflictFields = listLinkedMezzoFieldConflicts(fields, linkState.linkedSnapshot);
+-  const userEditedConflictFields = conflictFields.filter((key) =>
+-    userEditedPermanentRef.current.has(key),
+-  );
++  const userEditedConflictFields = conflictFields.filter((key) => userEditedPermanent.has(key));
+   const hasConflict = userEditedConflictFields.length > 0;
+   const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
+   const prefillPolicy = resolvePrefillPolicyFromLinkState(linkState);
+@@ -305,7 +307,7 @@ export function useSchedaIngressoMezzoLink({
+     preferredMezzoId,
+     prefillPolicy,
+     resolverDisabled,
+-    editedPermanentFields: [...userEditedPermanentRef.current],
++    editedPermanentFields: [...userEditedPermanent],
+     linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
+     pendingMezzo: linkState.pendingMezzo,
+     linkOrigin: linkState.linkOrigin ?? linkState.linkedSnapshot?.linkOrigin ?? null,

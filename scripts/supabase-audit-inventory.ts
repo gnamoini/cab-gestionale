@@ -293,9 +293,7 @@ function buildInventory(): Inventory {
   const rlsTables = new Set<string>();
   for (const m of migrations) {
     for (const t of m.tables) rlsTables.add(t);
-    for (const p of m.policies) {
-      /* policies reference tables via ON public.table — re-scan raw */
-    }
+    void m.policies;
   }
   for (const file of migrationFiles) {
     const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");

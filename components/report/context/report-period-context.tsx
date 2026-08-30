@@ -43,18 +43,24 @@ export function ReportPeriodContextProvider({
   value: ReportPeriodContextValue;
   children: ReactNode;
 }) {
+  const anchorMs = value.anchor.getTime();
+  const rangeStartMs = value.range.start.getTime();
+  const rangeEndMs = value.range.end.getTime();
+  const compareStartMs = value.compareRange?.start.getTime();
+  const compareEndMs = value.compareRange?.end.getTime();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stabilize context value by primitive deps
   const stable = useMemo(() => value, [
-    value.anchor.getTime(),
+    anchorMs,
     value.preset,
     value.customFrom,
     value.customTo,
     value.compareMode,
     value.compareCustomFrom,
     value.compareCustomTo,
-    value.range.start.getTime(),
-    value.range.end.getTime(),
-    value.compareRange?.start.getTime(),
-    value.compareRange?.end.getTime(),
+    rangeStartMs,
+    rangeEndMs,
+    compareStartMs,
+    compareEndMs,
     value.rangeKey,
     value.showCompare,
     value.setPreset,

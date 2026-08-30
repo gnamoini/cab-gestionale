@@ -8,7 +8,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DEPRECATED_FALLBACK_REGISTRY } from "@/lib/observability/deprecated-fallback-registry";
-import { LEGACY_SYSTEM_REGISTRY } from "@/lib/observability/legacy-system-registry";
 
 const ROOT = process.cwd();
 const DEFAULT_OUT = path.join(ROOT, "artifacts", "audit", "dead-code-baseline", "debt-score.json");

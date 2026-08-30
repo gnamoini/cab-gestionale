@@ -1,0 +1,15 @@
+diff --git a/components/dashboard/security/security-edit-name-modal.tsx b/components/dashboard/security/security-edit-name-modal.tsx
+index dceb6ee4..3a7a5644 100644
+--- a/components/dashboard/security/security-edit-name-modal.tsx
++++ b/components/dashboard/security/security-edit-name-modal.tsx
+@@ -61,8 +61,10 @@ export function SecurityEditNameModal({
+   const [username, setUsername] = useState(initialUsername);
+   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+ 
++   
+   useEffect(() => {
+     if (open) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setNome(initialNome);
+       setCognome(initialCognome ?? "");
+       setUsername(initialUsername);

@@ -1,0 +1,20 @@
+diff --git a/components/gestionale/documenti/documenti-helpers.ts b/components/gestionale/documenti/documenti-helpers.ts
+index e0798f45..58cdb6e5 100644
+--- a/components/gestionale/documenti/documenti-helpers.ts
++++ b/components/gestionale/documenti/documenti-helpers.ts
+@@ -199,7 +199,6 @@ function sameModello(a: string, b: string, marcaName?: string): boolean {
+ export function documentoCollocatoInCatalogo(
+   doc: DocumentoGestionale,
+   catalog: CatalogMarca[],
+-  _mezzi: MezzoGestito[],
+ ): boolean {
+   if (documentoSenzaMarca(doc)) return false;
+   const r = resolveDocumentoApplicazione(doc);
+@@ -296,7 +295,6 @@ export function documentoFileUnavailableLabel(doc: DocumentoGestionale): string
+ /** Apre il file via proxy server (RBAC + cache) o blob locale pre-save. */
+ export async function openDocumentoFile(
+   doc: DocumentoGestionale,
+-  _row?: Pick<DocumentoRow, "url_file">,
+ ): Promise<DocumentoFileOpenResult> {
+   const access = getDocumentoFileAccessState(doc);
+   if (access.hasLocalBlob && doc.urlBlob?.trim()) {

@@ -35,7 +35,7 @@ export function useSchedeBundlesQuery(enabled = true, options?: SchedeBundlesQue
   const realtimeConnected = gestionale === "connected";
   const viewLayer = options?.viewLayer === true;
   const clientPortal = options?.clientPortal === true;
-  const lavorazioneIds = options?.lavorazioneIds ?? [];
+  const lavorazioneIds = useMemo(() => options?.lavorazioneIds ?? [], [options?.lavorazioneIds]);
   const ensureKey = useMemo(
     () => schedeEnsureQueryKey(lavorazioneIds, clientPortal),
     [lavorazioneIds, clientPortal],

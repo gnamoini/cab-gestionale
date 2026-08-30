@@ -111,7 +111,7 @@ export function docRowMatchesPageFilters(
     ? docRowMatchesGlobalSearchHaystack(searchHaystackById.get(doc.id) ?? "", filters.search)
     : docRowMatchesGlobalSearch(doc, catalog, filters.search);
   if (!searchOk) return false;
-  const { search: _s, ...advanced } = filters;
+  const { ...advanced } = filters;
   return documentoRowMatchesAdvancedFilters(doc, advanced);
 }
 
@@ -140,7 +140,7 @@ export function buildDocumentiFilteredView(
   conMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
 
   const tree = buildDocumentiViewTree(catalog, mezziSnap, conMarca, sortColumn, sortPhase);
-  const senzaCollocazione = conMarca.filter((d) => !documentoCollocatoInCatalogo(d, catalog, mezziSnap));
+  const senzaCollocazione = conMarca.filter((d) => !documentoCollocatoInCatalogo(d, catalog));
 
   return {
     senzaMarca,

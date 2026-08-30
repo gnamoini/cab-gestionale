@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { NOTIFICATION_EVENT_CATALOG } from "@/lib/notifications/notification-event-catalog";
-import { NOTIFICATION_POLICIES, getNotificationPolicy } from "@/lib/notifications/application/policies/notification-policies";
+import { getNotificationPolicy } from "@/lib/notifications/application/policies/notification-policies";
 import { NOTIFICATION_TEMPLATE_REGISTRY } from "@/lib/notifications/templates/notification-template-registry";
 import { NOTIFICATION_TYPES, type NotificationType } from "@/lib/notifications/notification-types";
 

@@ -1,11 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { reportHubAreasSorted } from "@/lib/report/report-hub-areas-config";
 import { ReportHubCard } from "@/components/report/report-hub-card";
 import { dsStackPage, dsTypoSmall } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-import { useReportPdfWarmup } from "@/lib/observability/asset-cache-warmup";
+import { useReportPdfWarmup } from "@/lib/observability/use-deferred-pdf-warmup";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
+import { reportTypographySectionDescClass, reportTypographySectionTitleClass } from "@/components/report/design-system/typography/report-typography";
+
+const ReportHubMiniDashboard = dynamic(() =>
+  import("@/components/report/hub/report-hub-mini-dashboard").then((m) => m.ReportHubMiniDashboard),
+);
 
 const hubHeaderClass =
   "relative overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:color-mix(in_srgb,var(--cab-primary)_20%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-4 py-4 shadow-[var(--cab-shadow-sm)] sm:px-5 sm:py-5";
@@ -35,18 +41,27 @@ export function ReportHubView() {
           <div className="min-w-0 space-y-1.5">
             <h2 className="text-lg font-semibold tracking-tight text-[color:var(--cab-text)]">Centro analisi</h2>
             <p className={`${dsTypoSmall} max-w-3xl leading-relaxed`}>
-              Scegli un&apos;area per esplorare KPI, grafici, trend e confronti. Ogni sezione raccoglie tutte le analisi
-              dell&apos;ambito selezionato.
+              Una fotografia del periodo. Sotto, scegli un&apos;area per il dettaglio.
             </p>
           </div>
         </div>
       </header>
 
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        {areas.map((area) => (
-          <ReportHubCard key={area.id} area={area} />
-        ))}
-      </div>
+      <ReportHubMiniDashboard />
+
+      <section className="min-w-0 space-y-3" aria-labelledby="report-hub-areas-title">
+        <div>
+          <h3 id="report-hub-areas-title" className={reportTypographySectionTitleClass}>
+            Approfondisci per area
+          </h3>
+          <p className={reportTypographySectionDescClass}>Scegli un ambito per entrare nel dettaglio.</p>
+        </div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {areas.map((area) => (
+            <ReportHubCard key={area.id} area={area} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

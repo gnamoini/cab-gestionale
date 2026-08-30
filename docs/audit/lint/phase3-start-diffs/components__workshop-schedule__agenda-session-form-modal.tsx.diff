@@ -1,0 +1,22 @@
+diff --git a/components/workshop-schedule/agenda-session-form-modal.tsx b/components/workshop-schedule/agenda-session-form-modal.tsx
+index a46cc118..43f860f2 100644
+--- a/components/workshop-schedule/agenda-session-form-modal.tsx
++++ b/components/workshop-schedule/agenda-session-form-modal.tsx
+@@ -262,7 +262,7 @@ function AgendaSessionFormBody({
+         </label>
+       </GestionaleModalScrollBody>
+ 
+-      <div className="flex min-w-0 shrink-0 flex-wrap justify-between gap-2 border-t border-[color:var(--cab-border)] p-3">
++      <div className="flex min-w-0 shrink-0 justify-between gap-2 border-t border-[color:var(--cab-border)] p-3 flex-nowrap sm:flex-wrap">
+         <div>
+           {initial?.id && onDelete && canWrite ? (
+             <button type="button" className={dsBtnDanger} disabled={saving} onClick={() => onDelete(initial.id)}>
+@@ -270,7 +270,7 @@ function AgendaSessionFormBody({
+             </button>
+           ) : null}
+         </div>
+-        <div className="flex min-w-0 flex-wrap gap-2">
++        <div className="flex min-w-0 gap-2 flex-nowrap sm:flex-wrap">
+           <button type="button" className={dsBtnNeutral} onClick={onClose}>
+             Chiudi
+           </button>

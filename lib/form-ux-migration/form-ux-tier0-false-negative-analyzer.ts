@@ -2,7 +2,6 @@ import {
   classifyAllFields,
   classifyMigrationField,
   classifyMigrationFieldLegacy,
-  type MigrationRiskProfile,
 } from "@/lib/form-ux-migration/form-ux-migration-classifier";
 import {
   scanMigrationInventory,

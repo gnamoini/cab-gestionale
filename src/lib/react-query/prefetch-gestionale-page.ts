@@ -7,18 +7,13 @@ import {
   LAVORAZIONI_CHIUSE_COUNT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
-import {
-  getLavorazioniReportLightServer,
-} from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
 import { getPrefetchCachePolicyHint } from "@/lib/decision/prefetch-cache-hint";
-import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
+import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
-import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
-import { getMezziListLightServer, getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
-import { getMovimentiListServer } from "@/lib/movimenti/movimenti-list-fetch-server";
+import { getMezziListLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
 import { buildDashboardHealthScoreApiPayloadServer } from "@/lib/health-score/dashboard-health-score-api-payload.server";
 import { fetchDashboardDataDTOServer } from "@/lib/bff/dashboard-data-fetch-server";
 import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
@@ -36,7 +31,6 @@ import { fetchMezziPageDTOServer } from "@/lib/bff/mezzi-page-fetch-server";
 import { fetchDipendentiPageDTOServer } from "@/lib/bff/dipendenti-page-fetch-server";
 import { fetchSicurezzaPageDTOServer } from "@/lib/bff/sicurezza-page-fetch-server";
 import { fetchAgendaPageDefaultRangeServer } from "@/lib/bff/agenda-page-fetch-server";
-import { getReportManualEntriesServer } from "@/lib/report/report-manual-entries-fetch-server";
 import { SCHEde_BUNDLES_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import {
   documentiListQueryKey,
@@ -54,11 +48,10 @@ import {
   GESTIONALE_REPORT_GC_MS,
   GESTIONALE_REPORT_STALE_MS,
   GESTIONALE_VIEW_GC_MS,
-  GESTIONALE_VIEW_STALE_MS,
 } from "@/lib/react-query/query-layer-policies";
+import { markPrefetchedQueryMeta } from "@/lib/react-query/prefetched-query-meta";
 import { GESTIONALE_SEMI_GC_MS, GESTIONALE_SEMI_STALE_MS, GESTIONALE_STATIC_GC_MS, GESTIONALE_STATIC_STALE_MS } from "@/lib/react-query/data-cache-tiers";
 import { PWA_QUERY_CLIENT_DEFAULTS } from "@/lib/pwa/pwa-query-policy";
-import { markPrefetchedQueryMeta } from "@/lib/react-query/prefetched-query-meta";
 import { resolveCabAppSettingsFallbackServer } from "@/lib/app-settings/settings-fallback-server";
 import type { CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-settings-queries";
 import type { ServiceResult } from "@/src/services/service-result";
@@ -130,7 +123,7 @@ export async function prefetchGestionalePage(
   const parallelSafe = PAGE_PREFETCH_CONFIG[page]?.parallelPrefetchSafe ?? false;
 
   if (includeDeferred) {
-    const { includeDeferred: _omit, ...deferredOpts } = options ?? {};
+    const { ...deferredOpts } = options ?? {};
     if (parallelSafe) {
       await Promise.all([
         prefetchCriticalPage(qc, page),
@@ -303,7 +296,6 @@ export async function prefetchDeferredPage(
       return;
     }
     case "mezzi": {
-      const mezzi = resolveInitialLoad({ scopeKey: "mezzi.list" });
       const dto = await fetchMezziPageDTOServer();
       await seedPrefetchedData(
         qc,

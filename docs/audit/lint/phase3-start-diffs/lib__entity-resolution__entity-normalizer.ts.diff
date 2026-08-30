@@ -1,0 +1,22 @@
+diff --git a/lib/entity-resolution/entity-normalizer.ts b/lib/entity-resolution/entity-normalizer.ts
+index 7e21fa58..c1b5b24b 100644
+--- a/lib/entity-resolution/entity-normalizer.ts
++++ b/lib/entity-resolution/entity-normalizer.ts
+@@ -2,7 +2,7 @@ import { stripDictionaryTokens } from "@/lib/entity-resolution/dictionary-tokens
+ import { LEGAL_SUFFIX_REPLACERS } from "@/lib/entity-resolution/legal-suffix";
+ import {
+   entityAutocompleteKey,
+-  normalizeEntityString,
++
+   type NormalizeEntityStringOptions,
+ } from "@/lib/validation/global-entity-validation";
+ 
+@@ -15,7 +15,7 @@ export type EntityNormalizeOptions = {
+ };
+ 
+ function baseNormalize(value: string, options?: EntityNormalizeOptions): string {
+-  const opts: NormalizeEntityStringOptions = {
++  const _opts: NormalizeEntityStringOptions = {
+     standardizeLegalSuffix: options?.stripLegalSuffix ?? false,
+   };
+   let s = value.trim();

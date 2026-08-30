@@ -133,7 +133,7 @@ export function LoginForgotPasswordModal({ formId, initialEmail, onClose }: Logi
                 {resetError}
               </p>
             ) : null}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-2 pt-1 min-w-0 flex-nowrap sm:flex-wrap">
               <button type="button" className={dsBtnNeutral} onClick={onClose} disabled={resetPending}>
                 Annulla
               </button>

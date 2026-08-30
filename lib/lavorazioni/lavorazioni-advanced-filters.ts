@@ -340,7 +340,7 @@ export function loadGestionaleAdvancedFiltersPersisted(): LavorazioniAdvancedFil
 export function saveGestionaleAdvancedFiltersPersisted(f: LavorazioniAdvancedFilters): void {
   if (typeof window === "undefined") return;
   try {
-    const { section: _s, ...rest } = f;
+    const { ...rest } = f;
     window.sessionStorage.setItem(GESTIONALE_STORAGE_KEY, JSON.stringify(rest));
   } catch {
     /* ignore */

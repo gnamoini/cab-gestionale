@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/global-input/calendar-month-year-picker.tsx b/components/gestionale/global-input/calendar-month-year-picker.tsx
+index d1d7af21..e0c97bfb 100644
+--- a/components/gestionale/global-input/calendar-month-year-picker.tsx
++++ b/components/gestionale/global-input/calendar-month-year-picker.tsx
+@@ -64,6 +64,7 @@ export function CalendarMonthYearPicker({
+ 
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDraftYear(viewYear);
+     setDraftMonth(viewMonth);
+   }, [open, viewYear, viewMonth]);

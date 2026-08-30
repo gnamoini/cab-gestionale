@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
 import { GestionaleTextarea, type GestionaleTextareaProps } from "@/components/gestionale/gestionale-textarea";
 import { GlobalDatePicker } from "@/components/gestionale/global-input";

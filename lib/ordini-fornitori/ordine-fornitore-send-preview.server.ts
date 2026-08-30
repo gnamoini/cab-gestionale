@@ -36,7 +36,7 @@ export async function buildOrdineFornitoreSendPreviewServer(
   const client = createCommunicationAdminClient();
   const { data: settingsData } = await client.from("app_settings").select(APP_SETTINGS_COLUMNS);
   const settingsRows = (settingsData ?? []) as AppSettingRow[];
-  const settings = readCommunicationSettingsFromRows(settingsRows);
+  void readCommunicationSettingsFromRows(settingsRows);
 
   const policies = findPoliciesForDomainEvent("supplier_order.send_requested", {});
   const policy = policies.find((p) => p.templateKey === "supplier_order.sent");

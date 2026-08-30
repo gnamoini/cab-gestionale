@@ -61,6 +61,7 @@ export function useNotificationOptIn(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync opt-in state from storage on mount
     syncState();
     const onStorage = () => syncState();
     window.addEventListener("storage", onStorage);

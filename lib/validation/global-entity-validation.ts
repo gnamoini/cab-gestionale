@@ -262,7 +262,7 @@ export function findSimilarEntityInPool(
   pool: readonly string[],
   options?: FuzzyMatchEntityOptions,
 ): string | null {
-  const { exclude: _exclude, ...matchOptions } = options ?? {};
+  const { ...matchOptions } = options ?? {};
   if (findExactEntityInPool(candidate, pool, matchOptions)) return null;
   return fuzzyMatchEntity(candidate, pool, options)?.entity ?? null;
 }

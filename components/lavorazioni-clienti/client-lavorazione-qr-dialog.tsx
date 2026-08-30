@@ -34,17 +34,15 @@ export function ClientLavorazioneQrDialog({
 }) {
   const gestToast = useGestionaleToast();
   const [dataUrl, setDataUrl] = useState<string | null>(null);
-  const [url, setUrl] = useState("");
+  const url = open ? clientLavorazioniPublicUrl(lavorazioneId) : "";
 
   useEffect(() => {
-    if (!open) return;
-    const target = clientLavorazioniPublicUrl(lavorazioneId);
-    setUrl(target);
+    if (!open || !url) return;
     let cancelled = false;
     void (async () => {
       try {
         const QRCode = (await import("qrcode")).default;
-        const png = await QRCode.toDataURL(target, { margin: 2, width: 256, errorCorrectionLevel: "M" });
+        const png = await QRCode.toDataURL(url, { margin: 2, width: 256, errorCorrectionLevel: "M" });
         if (!cancelled) setDataUrl(png);
       } catch {
         if (!cancelled) setDataUrl(null);
@@ -52,9 +50,8 @@ export function ClientLavorazioneQrDialog({
     })();
     return () => {
       cancelled = true;
-      setDataUrl(null);
     };
-  }, [open, lavorazioneId]);
+  }, [open, url]);
 
   if (!open) return null;
 
@@ -113,7 +110,7 @@ export function ClientLavorazioneQrDialog({
     <LavorazioniModalShell modalSize="info" modalHeight="standard" onRequestClose={onClose} title="QR lavorazione">
       <GestionaleModalScrollBody className="flex flex-col items-center gap-4">
         {dataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // eslint-disable-next-line @next/next/no-img-element -- client QR data URL preview
           <img
             src={dataUrl}
             alt={`QR code lavorazione ${refLabel}`}

@@ -1,0 +1,12 @@
+diff --git a/lib/lavorazioni/use-lavorazioni-report-slice.ts b/lib/lavorazioni/use-lavorazioni-report-slice.ts
+index db35a216..89cd5d18 100644
+--- a/lib/lavorazioni/use-lavorazioni-report-slice.ts
++++ b/lib/lavorazioni/use-lavorazioni-report-slice.ts
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
++
+ import { useMemo } from "react";
+ import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
+ import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";

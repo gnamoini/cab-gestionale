@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ImportCommitAdapter } from "@/lib/import-core/import-commit-adapter";
-import type { CommitResult, ImportCommitContext } from "@/lib/import-core/types";
+import type { CommitResult } from "@/lib/import-core/types";
 
 export type OrdineFornitoreCommitPayload = {
   ordineId: string;

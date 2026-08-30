@@ -9,7 +9,7 @@ import { SECURITY_HOME_PATH } from "@/lib/auth/rbac";
 import { ProductionReadinessPageStructure } from "@/components/dashboard/security/production-readiness-page-structure";
 import {
   dsBtnPrimary,
-  dsPageToolbarBtn,
+
   dsStackPage,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
@@ -66,7 +66,9 @@ export function ProductionReadinessView() {
     setReport(res.report);
   }, []);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void runCheck();
   }, [runCheck]);
 
@@ -100,7 +102,7 @@ export function ProductionReadinessView() {
       {report && !error ? (
         <>
           <ShellCard title="Esito">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3 flex-nowrap sm:flex-wrap">
               <span
                 className={`inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-bold ${
                   ready

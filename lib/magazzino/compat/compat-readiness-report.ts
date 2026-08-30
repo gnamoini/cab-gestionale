@@ -84,21 +84,6 @@ const AUDIT_FIXTURE_SAMPLES = [
   },
 ];
 
-function severityPenalty(severity: CompatScanSeverity): number {
-  switch (severity) {
-    case "critical":
-      return 25;
-    case "high":
-      return 15;
-    case "medium":
-      return 8;
-    case "low":
-      return 3;
-    default:
-      return 5;
-  }
-}
-
 function hitsByRule(scan: CompatSsotScanResult, ruleId: string): CompatSsotScanHit[] {
   return scan.hits.filter((h) => h.ruleId === ruleId);
 }
@@ -231,7 +216,7 @@ export function buildCompatReadinessReport(repoRoot = process.cwd()): CompatRead
   crossPageCoherence -= hitsByRule(scan, "direct-magazzino-row-adapter").length * 20;
   crossPageCoherence -= hitsByRule(scan, "direct-resolve-compat").length * 10;
 
-  let searchReliability = searchWired ? 95 : 60;
+  const searchReliability = searchWired ? 95 : 60;
 
   let cacheCorrectness = cacheSanitizeWired && singleRowHelper ? 95 : 75;
   cacheCorrectness -= hitsByRule(scan, "map-ui-without-liste").length * 8;

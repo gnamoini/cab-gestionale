@@ -30,7 +30,7 @@ import {
 } from "@/lib/document-capture/orchestrator/pipeline-telemetry.server";
 import { buildCapturePipelineError } from "@/lib/document-capture/capture-pipeline-error";
 import {
-  buildPipelineIdempotencyKey,
+
   runPipelinePhase,
   type PipelineOrchestratorDeps,
 } from "@/lib/document-capture/orchestrator/pipeline-orchestrator";

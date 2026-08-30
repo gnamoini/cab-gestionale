@@ -1,0 +1,15 @@
+diff --git a/components/dashboard/security-create-user-modal.tsx b/components/dashboard/security-create-user-modal.tsx
+index 7117dc3a..27df60dc 100644
+--- a/components/dashboard/security-create-user-modal.tsx
++++ b/components/dashboard/security-create-user-modal.tsx
+@@ -54,8 +54,10 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
+     ruolo === "cliente" ? validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti) : null;
+   const submitLock = useSubmitLock();
+ 
++   
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setNome("");
+     setCognome("");
+     setUsername("");

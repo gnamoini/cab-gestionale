@@ -44,9 +44,12 @@ export function usePublishWhenReady(
   const requestRef = useRef(0);
   const publishRef = useRef(publish);
   const lastDepsKeyRef = useRef<string | null>(null);
-  publishRef.current = publish;
 
   const depsKey = publishWhenReadyDepsKey(deps);
+
+  useEffect(() => {
+    publishRef.current = publish;
+  }, [publish]);
 
   useEffect(() => {
     if (!enabled) {

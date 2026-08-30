@@ -1,0 +1,12 @@
+diff --git a/e2e/fixtures/auth.ts b/e2e/fixtures/auth.ts
+index 13c1020a..6c66a111 100644
+--- a/e2e/fixtures/auth.ts
++++ b/e2e/fixtures/auth.ts
+@@ -83,6 +83,7 @@ export async function logoutViaUi(page: Page): Promise<void> {
+ }
+ 
+ export const test = base.extend<{ adminCreds: SmokeCredentials }>({
++   
+   adminCreds: async ({}, use) => {
+     await use(adminCredentials());
+   },

@@ -1,0 +1,34 @@
+diff --git a/components/gestionale/dipendenti/dipendenti-storico-section.tsx b/components/gestionale/dipendenti/dipendenti-storico-section.tsx
+index 168f9a3c..ab3663c4 100644
+--- a/components/gestionale/dipendenti/dipendenti-storico-section.tsx
++++ b/components/gestionale/dipendenti/dipendenti-storico-section.tsx
+@@ -62,7 +62,7 @@ export function DipendentiStoricoSection({
+ 
+   return (
+     <div className="space-y-4">
+-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
++      <div className="flex min-w-0 items-center justify-between gap-2 flex-nowrap sm:flex-wrap">
+         <p className="text-sm text-[color:var(--cab-text)]">
+           <strong>{employee.display_name}</strong> — riepilogo anno {year}
+         </p>
+@@ -90,12 +90,14 @@ export function DipendentiStoricoSection({
+           {months.map((m) => {
+             const h = m.totaleLavorato > 0 ? Math.max(8, (m.totaleLavorato / maxLavorato) * 100) : 4;
+             return (
+-              <Tooltip content={`${m.monthLabel}: ${m.totaleLavorato} h`}><div key={m.monthKey} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+-                <div className="w-full rounded-t bg-[color:var(--cab-primary)] opacity-80" style={{ height: `${h}%` }}/>
+-                <span className="text-[9px] tabular-nums text-[color:var(--cab-text-muted)]">
+-                  {String(m.month).padStart(2, "0")}
+-                </span>
+-              </div></Tooltip>
++              <Tooltip key={m.monthKey} content={`${m.monthLabel}: ${m.totaleLavorato} h`}>
++                <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
++                  <div className="w-full rounded-t bg-[color:var(--cab-primary)] opacity-80" style={{ height: `${h}%` }} />
++                  <span className="text-[9px] tabular-nums text-[color:var(--cab-text-muted)]">
++                    {String(m.month).padStart(2, "0")}
++                  </span>
++                </div>
++              </Tooltip>
+             );
+           })}
+         </div>

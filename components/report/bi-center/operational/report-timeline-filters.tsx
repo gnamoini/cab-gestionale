@@ -20,7 +20,7 @@ export function ReportTimelineFilters({
   onChange: (v: OperationalTimelineFilter) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtri timeline">
+    <div className="flex gap-2 flex-nowrap sm:flex-wrap" role="tablist" aria-label="Filtri timeline">
       {FILTERS.map((f) => (
         <button
           key={f.id}

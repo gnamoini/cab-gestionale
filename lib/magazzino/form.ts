@@ -450,8 +450,6 @@ export function ricambioFromFormLenient(
   compatExpand?: RicambioCompatExpandOptions,
 ): RicambioMagazzino {
   const expanded = resolveCompatibilitaMezziForSave(f, compatExpand);
-  let compat: string[];
-  let compatRefs: import("@/lib/magazzino/ricambio-compat-resolver").RicambioCompatRef[] | undefined;
 
   const built = writeCompatibilitaRicambio(
     { compatibilitaMezzi: expanded, compatibilitaRefs: undefined, ricambioId: id },
@@ -459,8 +457,8 @@ export function ricambioFromFormLenient(
     "form.ricambioFromFormLenient",
     { prefsListe: compatExpand?.mezziListePrefs },
   );
-  compat = built.compatibilitaMezzi ?? [];
-  compatRefs = built.compatibilitaRefs;
+  const compat = built.compatibilitaMezzi ?? [];
+  const compatRefs = built.compatibilitaRefs;
   const ts = new Date().toISOString();
   const listino = Math.max(0, parseFloat(f.prezzoFornitoreOriginale) || 0);
   const markupBase = resolveListinoMarkupBase(listino, fornitoriAlternativiFromFormRows(f.fornitoriAlternativi));

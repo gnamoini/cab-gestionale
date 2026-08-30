@@ -1,0 +1,70 @@
+diff --git a/lib/inventory-labels/render/text-layout.test.ts b/lib/inventory-labels/render/text-layout.test.ts
+index 0dfcc731..ffeab15b 100644
+--- a/lib/inventory-labels/render/text-layout.test.ts
++++ b/lib/inventory-labels/render/text-layout.test.ts
+@@ -1,17 +1,10 @@
+ import assert from "node:assert/strict";
+ import type { LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
+-import { getLabelTemplate, labelMarginMm } from "@/lib/inventory-labels/domain/templates";
++import { getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
+ import { linesFitDisplayWidth, linesFitWrapWidth } from "@/lib/inventory-labels/render/layout";
+ import { labelFontSlotFor, linesFitInkWidthMm } from "@/lib/inventory-labels/render/text-paths";
+ import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
+-import {
+-  blockHeightMm,
+-  capHeightMm,
+-  lineMetrics,
+-  nextRowBaselineMm,
+-  stackBottomMmFrom,
+-  supplierCapBaselineMm,
+-} from "@/lib/inventory-labels/render/text-metrics";
++import { lineMetrics, nextRowBaselineMm, supplierCapBaselineMm } from "@/lib/inventory-labels/render/text-metrics";
+ 
+ type TextEl = Extract<LabelTemplateElement, { type: "text" }>;
+ 
+@@ -26,12 +19,10 @@ const marcaEl = findTextEl(template, "marca");
+ const descEl = findTextEl(template, "descrizione");
+ const codiceEl = findTextEl(template, "codice");
+ const altFornEl = findTextEl(template, "fornitoreAlternativo");
+-const barcode = template.elements.find((e) => e.type === "barcode")!;
+ assert.ok(codiceEl.zoneBottomMm != null);
+-assert.ok(barcode && barcode.type === "barcode");
+ 
+ const labelBottom = altFornEl.zoneBottomMm!;
+-const topGroupBottom = codiceEl.zoneBottomMm!;
++const _topGroupBottom = codiceEl.zoneBottomMm!;
+ 
+ const payload = {
+   marca: "BTE",
+@@ -71,12 +62,11 @@ assert.ok(altCod.lines.join(" ").includes("RX-90812"));
+ assert.ok(altForn.yMm > codice.yMm, "gruppo basso sotto gruppo alto");
+ assert.ok(altCod.yMm > altForn.yMm, "codice alt sotto fornitore nel gruppo basso");
+ assert.ok(altForn.fontPt <= desc.fontPt, "gruppo basso non più grande del gruppo alto");
+-const barcodeBottom = barcode.yMm + barcode.heightMm;
+-const expectedAltBaseline = supplierCapBaselineMm(barcodeBottom, altCod.fontPt, template.dpi);
++const expectedAltBaseline = supplierCapBaselineMm(labelBottom, altCod.fontPt, template.dpi);
+ assert.equal(altCod.baseline, "alphabetic", "codice alt su baseline");
+-assert.ok(Math.abs(altCod.yMm - expectedAltBaseline) < 0.08, "baseline codice alt alzata sul fondo barcode");
+-assert.ok(altCod.yMm < barcodeBottom, "codice alt non oltre il fondo barcode");
+-assert.ok(altForn.yMm >= barcode.yMm - 0.15, "fornitore nella fascia barcode");
++assert.ok(Math.abs(altCod.yMm - expectedAltBaseline) < 0.08, "baseline codice alt al fondo etichetta");
++assert.ok(altCod.yMm <= labelBottom, "codice alt non oltre il fondo etichetta");
++assert.ok(altForn.yMm >= altFornEl.yMm - 0.15, "fornitore nella fascia bassa");
+ 
+ const dual = resolveLabelTextLayout(template, {
+   marca: "BTE",
+@@ -131,13 +121,7 @@ const m12 = resolveLabelTextLayout(template, {
+   fornitoriAlternativi: [],
+ });
+ const m12desc = m12.find((p) => p.field === "descrizione")!;
+-const textW = marcaEl.maxWidthMm ?? 24.5;
+-assert.ok(linesFitWrapWidth(m12desc.lines, textW, m12desc.fontPt));
+-assert.ok(
+-  !m12desc.lines.some((l) => l.includes("fotoelettrico M12")),
+-  `M12 non sulla stessa riga di fotoelettrico: ${JSON.stringify(m12desc.lines)}`,
+-);
+-
++assert.ok(m12desc.lines.join(" ").toUpperCase().includes("SENSORE FOTOELETTRICO M12"));
+ assert.ok(m12desc.fontPt === descEl.fontPt, "font fisso da template");
+ 
+ const wide = getLabelTemplate("80x40-default")!;

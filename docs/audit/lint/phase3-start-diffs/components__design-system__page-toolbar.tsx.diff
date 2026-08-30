@@ -1,0 +1,22 @@
+diff --git a/components/design-system/page-toolbar.tsx b/components/design-system/page-toolbar.tsx
+index d04a0381..aa660797 100644
+--- a/components/design-system/page-toolbar.tsx
++++ b/components/design-system/page-toolbar.tsx
+@@ -141,7 +141,7 @@ export function PageToolbar({
+           )}
+           {meta || overflowActions ? (
+             <ToolbarGroupMetaRow>
+-              {meta ? <div className="flex min-w-0 w-full flex-1 flex-wrap items-center gap-2">{meta}</div> : null}
++              {meta ? <div className="flex min-w-0 w-full flex-1 items-center gap-2 flex-nowrap sm:flex-wrap">{meta}</div> : null}
+               {overflowActions ? (
+                 <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex sm:flex-wrap">
+                   {overflowActions}
+@@ -195,7 +195,7 @@ function PageToolbarPlusIcon() {
+       stroke="currentColor"
+       strokeWidth={2.25}
+       strokeLinecap="round"
+-      className={`${pageToolbarCtaPlusIconClass} block`}
++      className={`${pageToolbarCtaPlusIconClass} block min-w-0`}
+       aria-hidden
+     >
+       <path d="M12 5v14M5 12h14" />

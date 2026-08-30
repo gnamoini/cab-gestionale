@@ -1,0 +1,13 @@
+diff --git a/lib/data-import/core/snapshot-provider.ts b/lib/data-import/core/snapshot-provider.ts
+index c18a2cd6..4de087d5 100644
+--- a/lib/data-import/core/snapshot-provider.ts
++++ b/lib/data-import/core/snapshot-provider.ts
+@@ -36,7 +36,7 @@ export function recordsToNormalizedSheet(
+   const rows: NormalizedRow[] = records.map((rec, i) => {
+     const cells: NormalizedRow["cells"] = {};
+     for (const f of fields) {
+-      let raw = rec[f.key];
++      const raw = rec[f.key];
+       let parsed = raw;
+       if (f.key.endsWith("_at") || f.key.includes("date")) {
+         parsed = normalizeDateToIso(raw);

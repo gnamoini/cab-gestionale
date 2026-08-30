@@ -74,10 +74,6 @@ export type GlobalDropdownCoords = {
   placement: GlobalDropdownPlacement;
 };
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(Math.max(n, min), max);
-}
-
 /** Classe `transform-origin` per animazione apertura coerente con il lato del menu. */
 export function globalDropdownPlacementOriginClass(placement: string): string {
   return placement.startsWith("top") ? "origin-bottom" : "origin-top";

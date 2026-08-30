@@ -19,7 +19,7 @@ type MezzoQrLabelActionsProps = {
 
 export function MezzoQrLabelActions({
   mezzoId,
-  targa,
+  
   canRead,
   canWrite,
   compact = false,
@@ -123,7 +123,7 @@ export function MezzoQrLabelActions({
 
       {previewUrl ? (
         <div className="flex justify-center rounded border border-[color:var(--cab-border)] bg-white p-2">
-          {/* eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image */}
+          {/* eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- inline QR PNG data URL */}
           <img
             src={previewUrl}
             alt="Anteprima etichetta QR mezzo"

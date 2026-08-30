@@ -1,0 +1,16 @@
+diff --git a/components/document-capture/lavorazioni-digital-capture-launcher.tsx b/components/document-capture/lavorazioni-digital-capture-launcher.tsx
+index 5a03ffc6..a9c20599 100644
+--- a/components/document-capture/lavorazioni-digital-capture-launcher.tsx
++++ b/components/document-capture/lavorazioni-digital-capture-launcher.tsx
+@@ -682,10 +682,9 @@ export function LavorazioniDigitalCaptureLauncher({
+       finalizeCaptureImportSuccess,
+       gestToast,
+       linkCaptureToLavorazione,
+-      onLavorazioneCreated,
+       openSchedeEditor,
+       pendingSchedaTipo,
+-      resetFlow,
++      persistAcquisitionDraft,
+       schedeStore,
+     ],
+   );

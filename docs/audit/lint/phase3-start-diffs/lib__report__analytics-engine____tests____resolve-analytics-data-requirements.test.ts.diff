@@ -1,0 +1,13 @@
+diff --git a/lib/report/analytics-engine/__tests__/resolve-analytics-data-requirements.test.ts b/lib/report/analytics-engine/__tests__/resolve-analytics-data-requirements.test.ts
+index c91648c2..caab5103 100644
+--- a/lib/report/analytics-engine/__tests__/resolve-analytics-data-requirements.test.ts
++++ b/lib/report/analytics-engine/__tests__/resolve-analytics-data-requirements.test.ts
+@@ -16,4 +16,8 @@ const schedeOnly = resolveAnalyticsDataRequirements(["actual_labor_hours_total"]
+ assert.equal(schedeOnly.schede, true);
+ assert.equal(schedeOnly.invoices, false);
+ 
++const costTot = resolveAnalyticsDataRequirements(["cost-tot"]);
++assert.equal(costTot.schede, true);
++assert.equal(costTot.invoices, false);
++
+ console.log("resolve-analytics-data-requirements.test.ts OK");

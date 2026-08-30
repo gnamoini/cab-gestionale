@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
@@ -145,13 +145,14 @@ export function SecurityDashboardView({ listSurface: serverListSurface, listTier
   );
 
   const usersRefetchRef = useRef(usersQ.refetch);
-  usersRefetchRef.current = usersQ.refetch;
-
   const runControlCenterCheckRef = useRef(runControlCenterCheck);
-  runControlCenterCheckRef.current = runControlCenterCheck;
-
   const isAdminRef = useRef(isAdmin);
-  isAdminRef.current = isAdmin;
+
+  useLayoutEffect(() => {
+    usersRefetchRef.current = usersQ.refetch;
+    runControlCenterCheckRef.current = runControlCenterCheck;
+    isAdminRef.current = isAdmin;
+  }, [usersQ.refetch, runControlCenterCheck, isAdmin]);
 
   useCabSyncListener("settings", () => {
     if (!isAdminRef.current) return;

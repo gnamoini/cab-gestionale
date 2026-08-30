@@ -1,6 +1,5 @@
 export { agendaPageMetadata as metadata } from "@/lib/site/app-page-metadata";
 
-import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
 import { AgendaOfficinaViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";

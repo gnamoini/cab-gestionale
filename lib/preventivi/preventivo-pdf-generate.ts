@@ -35,7 +35,7 @@ export function generatePreventivoPdfBytes(
   });
   y = pdfAdvanceAfterDocumentHeader(y, 0.5);
 
-  y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
+  drawPreventivoPdfBody(doc, pageW, y, p, righe, {
     totaleRicambi: p.totaleRicambi,
     totaleManodopera: p.totaleManodopera,
     totaleSmaltimento: p.totaleSmaltimento ?? 0,

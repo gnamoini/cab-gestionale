@@ -5,11 +5,10 @@ import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { RicambioFormCompatSection } from "@/components/gestionale/magazzino/ricambio-form-compat-section";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioFornitoriAlternativiEditor } from "@/components/gestionale/magazzino/ricambio-fornitori-alternativi-editor";
-import { RicambioCollapsibleSection, ricambioSectionTitleClass, ricambioSectionTitleClassName, type RicambioSectionTitleTone } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import { RicambioCollapsibleSection, ricambioSectionTitleClassName } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { ricambioPrezziLineariVisible } from "@/lib/magazzino/ricambio-prezzi-lineari-visible";
 import { RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA, RICAMBIO_LENIENT_PLACEHOLDER_MARCA, type RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import {
   clampMarkupPercentuale,
   fornitoriAlternativiFromFormRows,
@@ -33,7 +32,7 @@ import { isDecimalInputDraft } from "@/lib/core/decimal-input";
 import { commitScortaDraft } from "@/lib/core/numeric-input-commit";
 import { GestionaleRequiredMark } from "@/components/gestionale/schede/gestionale-form-section";
 import { CloseButton } from "@/components/design-system";
-import { dsBtnNeutralForm, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsBtnNeutralForm, dsBtnPrimary, dsFocus, dsInput, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap } from "@/lib/ui/design-system";
 import { resolveGestionaleInputClassName } from "@/lib/ui/global-input";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
@@ -54,25 +53,6 @@ const RICAMBIO_MARCA_PLACEHOLDER = "Cerca o seleziona marca…";
 const RICAMBIO_MARCA_ALTERNATIVA_PLACEHOLDER = "Cerca o seleziona marca alternativa…";
 const RICAMBIO_MARCA_ARIA = "Marca ricambio";
 const RICAMBIO_MARCA_ALTERNATIVA_ARIA = "Marca alternativa ricambio";
-
-function RicambioSectionTitle({
-  children,
-  tone = "primary",
-  className = "",
-}: {
-  children: React.ReactNode;
-  tone?: RicambioSectionTitleTone;
-  className?: string;
-}) {
-  return (
-    <p
-      {...{ [CAB_FOCUS_SCROLL_TITLE_ATTR]: "" }}
-      className={`${ricambioSectionTitleClass(tone)} ${className}`}
-    >
-      {children}
-    </p>
-  );
-}
 
 type RicambioFieldTone = "required" | "operational" | "optional";
 
@@ -236,7 +216,6 @@ export function RicambioFormFields({
   formMode = "create",
   codiceOriginaleAvvisoDuplicato,
   relaxHtmlValidation = false,
-  listFieldForceInvalid = false,
 }: {
   form: RicambioFormState;
   setForm: SetForm;
@@ -253,6 +232,7 @@ export function RicambioFormFields({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setShowCodiceSecondario(
       Boolean(form.codiceFornitoreOriginaleSecondario.trim() || form.marcaOriginaleSecondaria.trim()),
     );

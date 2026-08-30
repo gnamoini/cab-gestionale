@@ -95,6 +95,7 @@ export function useReportAnalysis(input: UseReportAnalysisInput) {
 
     const cached = readReportAnalysisCache(cacheKey);
     if (cached) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setData(cached);
       setStatus("success");
       setError(null);

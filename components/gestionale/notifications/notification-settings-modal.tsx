@@ -134,6 +134,7 @@ export function NotificationSettingsModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void reload({ silent: hasContent });
     // Solo all'apertura: non ritriggerare su hasContent dopo patch ottimistico.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open-driven fetch

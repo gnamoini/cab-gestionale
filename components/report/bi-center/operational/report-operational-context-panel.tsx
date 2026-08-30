@@ -98,7 +98,7 @@ function ContextItem({
 export function ReportOperationalContextEvents() {
   const { data, isLoading, isError } = useReportOperationalContextSummaryQuery(true);
   const drill = useOptionalReportDrillDown();
-  const items = data?.summaryEvents ?? [];
+  const items = useMemo(() => data?.summaryEvents ?? [], [data?.summaryEvents]);
 
   const visibleItems = useMemo(() => {
     const seen = new Set<string>();

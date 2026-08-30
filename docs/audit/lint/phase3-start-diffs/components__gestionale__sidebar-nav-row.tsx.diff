@@ -1,0 +1,31 @@
+diff --git a/components/gestionale/sidebar-nav-row.tsx b/components/gestionale/sidebar-nav-row.tsx
+index 43fa257a..a2b91434 100644
+--- a/components/gestionale/sidebar-nav-row.tsx
++++ b/components/gestionale/sidebar-nav-row.tsx
+@@ -178,7 +178,7 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
+   const contentProps = { icon, label, trailing, active, disabled, collapsed, open, iconShellClass };
+ 
+   if (as === "button") {
+-    const { as: _a, ...buttonRest } = rest as SidebarNavRowAsButton;
++    const { ...buttonRest } = rest as SidebarNavRowAsButton;
+     return wrapRailTooltip(
+       <button
+         ref={ref as React.Ref<HTMLButtonElement>}
+@@ -196,7 +196,7 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
+   }
+ 
+   if (as === "div") {
+-    const { as: _a, ...divRest } = rest as SidebarNavRowAsDiv;
++    const { ...divRest } = rest as SidebarNavRowAsDiv;
+     return wrapRailTooltip(
+       <div
+         ref={ref as React.Ref<HTMLDivElement>}
+@@ -213,7 +213,7 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
+     );
+   }
+ 
+-  const { as: _a, href = "#", ...linkRest } = rest as SidebarNavRowAsLink;
++  const { href = "#", ...linkRest } = rest as SidebarNavRowAsLink;
+   if (disabled) {
+     return wrapRailTooltip(
+       <div ref={ref as React.Ref<HTMLDivElement>} role="link" aria-disabled="true" className={rowClassNames(props)}>

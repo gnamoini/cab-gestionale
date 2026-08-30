@@ -1,0 +1,12 @@
+diff --git a/lib/preventivi/generate-preventivo-from-lavorazione.ts b/lib/preventivi/generate-preventivo-from-lavorazione.ts
+index 13e77bcb..0066360d 100644
+--- a/lib/preventivi/generate-preventivo-from-lavorazione.ts
++++ b/lib/preventivi/generate-preventivo-from-lavorazione.ts
+@@ -7,7 +7,6 @@ import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+ import { nextPreventivoNumeroForLavorazione } from "@/lib/preventivi/preventivo-numero-lavorazione";
+ import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
+ import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";
+-import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
+ import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
+ import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
+ import {

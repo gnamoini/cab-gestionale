@@ -83,6 +83,7 @@ export async function logoutViaUi(page: Page): Promise<void> {
 }
 
 export const test = base.extend<{ adminCreds: SmokeCredentials }>({
+   
   adminCreds: async ({}, use) => {
     await use(adminCredentials());
   },

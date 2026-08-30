@@ -39,10 +39,12 @@ export function FatturaMultiPaymentModal({
   const [metodo, setMetodo] = useState<InvoicePaymentMetodo>("bonifico");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+   
   useEffect(() => {
     const total = debits
       .filter((d) => selected.has(d.id))
       .reduce((s, d) => s + openItemAbsRemaining(d), 0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (total > 0 && !importo) setImporto(String(total.toFixed(2)));
   }, [debits, importo, selected]);
 

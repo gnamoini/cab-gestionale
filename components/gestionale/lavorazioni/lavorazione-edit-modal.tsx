@@ -26,7 +26,7 @@ import {
   GestionaleModalFooterDeleteButton,
   GestionaleModalFooterSaveButton,
 } from "@/components/design-system";
-import { dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { dsInput, dsLabel } from "@/lib/ui/design-system";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";

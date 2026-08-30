@@ -16,13 +16,13 @@ import { revokeUserSessionsAdmin } from "@/lib/auth/revoke-user-sessions.server"
 import {
   resolvePasswordResetOriginFromEnv,
   resolvePasswordResetRedirectUrl,
-  sendPasswordResetEmail,
 } from "@/lib/auth/password-reset";
+import { sendBrandedPasswordResetEmail } from "@/lib/auth/password-reset-email.server";
 import { writeSecurityAuditLog, SecurityAuditLogError } from "@/lib/security/security-audit-log";
-import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import { normalizeClienteRef, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti";
+import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { validateCreateUserInput } from "@/lib/validation/admin-user-validation";
 import {
   validateDeleteUserByAdminInput,
@@ -444,9 +444,11 @@ export async function sendPasswordResetByAdminAction(userId: string): Promise<Se
     return { ok: true };
   }
 
-  const sbUser = await createSupabaseServerUserClient();
   const redirectTo = resolvePasswordResetRedirectUrl(origin);
-  const res = await sendPasswordResetEmail(sbUser, authLookup.data.user.email, redirectTo);
+  const res = await sendBrandedPasswordResetEmail({
+    email: authLookup.data.user.email,
+    redirectTo,
+  });
 
   await writeSecurityAuditLog(admin, {
     actorUserId: caller.callerId,

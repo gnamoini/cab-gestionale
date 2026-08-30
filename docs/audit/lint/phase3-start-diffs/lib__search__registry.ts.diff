@@ -1,0 +1,13 @@
+diff --git a/lib/search/registry.ts b/lib/search/registry.ts
+index 53f24199..11a25e7d 100644
+--- a/lib/search/registry.ts
++++ b/lib/search/registry.ts
+@@ -5,7 +5,7 @@ import { preventiviSearchConfig } from "@/lib/search/domains/preventivi.config";
+ import { securityUsersSearchConfig } from "@/lib/search/domains/security-users.config";
+ import type { SearchDomainConfig, SearchDomainId, SearchExecutionMode } from "@/lib/search/types";
+ 
+-const REGISTRY: Record<SearchDomainId, SearchDomainConfig<any, any>> = {
++const REGISTRY: Record<SearchDomainId, SearchDomainConfig<unknown, unknown>> = {
+   lavorazioni: lavorazioniSearchConfig,
+   preventivi: preventiviSearchConfig,
+   magazzino: magazzinoSearchConfig,

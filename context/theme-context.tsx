@@ -41,21 +41,23 @@ function ThemePrefsController() {
     [],
   );
 
-  toggleLightDarkRef.current = () => {
-    const next: PersistedThemeMode = getThemeRuntimeState().resolved === "dark" ? "light" : "dark";
-    optimisticThemeRef.current = next;
-    applyResolved(next);
+  useEffect(() => {
+    toggleLightDarkRef.current = () => {
+      const next: PersistedThemeMode = getThemeRuntimeState().resolved === "dark" ? "light" : "dark";
+      optimisticThemeRef.current = next;
+      applyResolved(next);
 
-    if (!userId) return;
+      if (!userId) return;
 
-    patchThemeRuntimeState({ themeSaving: true });
-    themeMutation.mutate(next, {
-      onSettled: () => {
-        optimisticThemeRef.current = null;
-        patchThemeRuntimeState({ themeSaving: false });
-      },
-    });
-  };
+      patchThemeRuntimeState({ themeSaving: true });
+      themeMutation.mutate(next, {
+        onSettled: () => {
+          optimisticThemeRef.current = null;
+          patchThemeRuntimeState({ themeSaving: false });
+        },
+      });
+    };
+  }, [applyResolved, userId, themeMutation]);
 
   useEffect(() => {
     const boot = resolveBootThemeMode();

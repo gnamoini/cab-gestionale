@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { buildGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
@@ -12,6 +14,9 @@ import { useGestionaleShellContentWidth } from "@/lib/ui/use-gestionale-shell-co
 import { GestionaleShellTierProvider } from "@/context/gestionale-shell-layout-context";
 import { MobileNavShellProvider } from "@/context/mobile-nav-shell-context";
 import { AppShellSidebar } from "@/components/gestionale/app-shell-sidebar";
+export { SidebarNavSkeleton } from "@/components/gestionale/sidebar-nav-skeleton";
+
+/** Layout SSOT: shellTopBarClass · cab-nav-drawer-panel · gestionale-scrollbar (AppShellSidebar / AppShellMain). */
 import { AppShellMain } from "@/components/gestionale/app-shell-main";
 import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";

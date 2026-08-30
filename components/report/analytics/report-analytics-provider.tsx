@@ -68,11 +68,7 @@ function mergeRegistrations(regs: Map<string, AnalyticsRegistration>): {
 
 export function ReportAnalyticsProvider({ children }: { children: ReactNode }) {
   const periodCtx = useReportPeriodContext();
-  const period = useMemo(() => buildAnalyticsPeriodFromContext(periodCtx), [
-    periodCtx.range.start.getTime(),
-    periodCtx.range.end.getTime(),
-    periodCtx.compareMode,
-  ]);
+  const period = useMemo(() => buildAnalyticsPeriodFromContext(periodCtx), [periodCtx]);
 
   const [registrations, setRegistrations] = useState<Map<string, AnalyticsRegistration>>(() => new Map());
 
@@ -112,7 +108,7 @@ export function ReportAnalyticsProvider({ children }: { children: ReactNode }) {
       refetch: () => void query.refetch(),
       registerRequirements,
     }),
-    [envelopesById, query.data, query.isLoading, query.isError, query.error, query.refetch, registerRequirements],
+    [envelopesById, query, registerRequirements],
   );
 
   return <ReportAnalyticsContext.Provider value={value}>{children}</ReportAnalyticsContext.Provider>;
@@ -130,9 +126,10 @@ export function useRegisterAnalyticsSection(
   extra?: Partial<AnalyticsRegistration>,
 ) {
   const { registerRequirements } = useReportAnalyticsContext();
+  const extraMetricIds = extra?.metricIds;
   const metricIds = useMemo(
-    () => (extra?.metricIds?.length ? [...extra.metricIds] : [...resolveSectionMetricIds(sectionId)]),
-    [sectionId, extra?.metricIds?.join(",")],
+    () => (extraMetricIds?.length ? [...extraMetricIds] : [...resolveSectionMetricIds(sectionId)]),
+    [sectionId, extraMetricIds],
   );
   const dimensionsKey = extra?.dimensions?.join(",") ?? "";
 
@@ -145,7 +142,8 @@ export function useRegisterAnalyticsSection(
     return () => registerRequirements(sectionKey, null);
   }, [
     sectionKey,
-    metricIds.join(","),
+    metricIds,
+    extra,
     extra?.includeSeries,
     extra?.granularity,
     dimensionsKey,

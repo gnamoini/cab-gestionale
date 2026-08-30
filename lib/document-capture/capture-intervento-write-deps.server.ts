@@ -2,7 +2,6 @@ import "server-only";
 
 import { buildServerAttrezzaturaResolveDeps } from "@/lib/domain/mezzo-attrezzatura/build-server-attrezzatura-resolve-deps";
 import { buildServerMezzoResolveDeps } from "@/lib/domain/mezzo/build-server-mezzo-resolve-deps";
-import { resolveOrCreateMezzo } from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import {
   logMezzoResolutionEvent,
@@ -36,7 +35,7 @@ import type { InterventoWriteDeps } from "@/lib/domain/intervento-context/interv
 import { pickLavorazioneCreatePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
-import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
+import type { MezzoUpdate } from "@/src/services/mezzi.service";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";

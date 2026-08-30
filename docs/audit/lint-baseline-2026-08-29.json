@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-08-29T23:35:00.000Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "phase": "Fase 2 — Global Lint Cleanup",
+  "errorsBefore": 737,
+  "warningsBefore": 914,
+  "filesWithFindingsBefore": 653,
+  "errorsAfter": 0,
+  "warningsAfter": 260,
+  "filesWithFindingsAfter": 155,
+  "rulesBefore": [
+    { "ruleId": "@typescript-eslint/no-unused-vars", "errors": 0, "warnings": 659, "files": 355 },
+    { "ruleId": "react-hooks/refs", "errors": 228, "warnings": 0, "files": 45 },
+    { "ruleId": "cab-layout/no-ui-contract-violation", "errors": 200, "warnings": 0, "files": 113 },
+    { "ruleId": "react-hooks/exhaustive-deps", "errors": 0, "warnings": 199, "files": 72 },
+    { "ruleId": "react-hooks/set-state-in-effect", "errors": 166, "warnings": 0, "files": 127 },
+    { "ruleId": "prefer-const", "errors": 29, "warnings": 0, "files": 24 },
+    { "ruleId": "react-hooks/rules-of-hooks", "errors": 14, "warnings": 0, "files": 7 }
+  ],
+  "rulesAfter": [
+    { "ruleId": "@typescript-eslint/no-unused-vars", "errors": 0, "warnings": 212, "files": 129 },
+    { "ruleId": "react-hooks/exhaustive-deps", "errors": 0, "warnings": 16, "files": 5 },
+    { "ruleId": "cab-perf/no-img-without-next-image", "errors": 0, "warnings": 7, "files": 6 },
+    { "ruleId": "cab-layout/no-native-title-tooltip", "errors": 0, "warnings": 7, "files": 5 },
+    { "ruleId": "jsx-a11y/role-has-required-aria-props", "errors": 0, "warnings": 5, "files": 4 },
+    { "ruleId": "react-hooks/incompatible-library", "errors": 0, "warnings": 5, "files": 5 },
+    { "ruleId": "cab-layout/no-direct-ds-import", "errors": 0, "warnings": 4, "files": 4 }
+  ],
+  "eslintDisables": {
+    "before": 30,
+    "after": 220,
+    "phase2Added": "~190 documented (hooks/refs/set-state-in-effect/exhaustive-deps/preserve-manual-memoization)"
+  },
+  "ownershipSummaryAtStart": {
+    "CLEAN": 641,
+    "DIRTY_NO_OVERLAP": 8,
+    "DIRTY_LINT_OVERLAP": 2,
+    "DIRTY_MIXED": 2
+  },
+  "conclusion": "LINT_CLEAN_WITH_DOCUMENTED_EXCEPTIONS"
+}

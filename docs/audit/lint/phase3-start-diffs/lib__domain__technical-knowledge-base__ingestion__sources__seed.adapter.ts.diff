@@ -1,0 +1,13 @@
+diff --git a/lib/domain/technical-knowledge-base/ingestion/sources/seed.adapter.ts b/lib/domain/technical-knowledge-base/ingestion/sources/seed.adapter.ts
+index 03a4b414..e1726751 100644
+--- a/lib/domain/technical-knowledge-base/ingestion/sources/seed.adapter.ts
++++ b/lib/domain/technical-knowledge-base/ingestion/sources/seed.adapter.ts
+@@ -34,7 +34,7 @@ export const seedAdapter: TkbSourceAdapter = {
+   id: "seed",
+   tier: 4,
+   supportsIncremental: false,
+-  async collect(_ctx) {
++  async collect() {
+     return draftToFragments(createTkbSeedDraft());
+   },
+ };

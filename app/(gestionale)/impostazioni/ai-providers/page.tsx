@@ -1,7 +1,7 @@
 export { impostazioniAiProvidersPageMetadata as metadata } from "@/lib/site/app-page-metadata";
 
-import { AiProvidersSettingsPage } from "@/components/gestionale/impostazioni/ai-providers-settings-page";
+import { AiProvidersSettingsPageLazy } from "@/components/gestionale/lazy-route-views";
 
 export default function AiProvidersPage() {
-  return <AiProvidersSettingsPage />;
+  return <AiProvidersSettingsPageLazy />;
 }

@@ -54,8 +54,10 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     ruolo === "cliente" ? validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti) : null;
   const submitLock = useSubmitLock();
 
+   
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setNome("");
     setCognome("");
     setUsername("");

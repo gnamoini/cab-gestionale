@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ORDINI_FORNITORI_COLUMNS, ORDINI_FORNITORI_RIGHE_COLUMNS } from "@/lib/db/table-select-columns";
+import { ORDINI_FORNITORI_RIGHE_COLUMNS } from "@/lib/db/table-select-columns";
 import {
   aggregateInTransitByRicambioId,
   type OrdineFornitoreInTransitDetailRow,

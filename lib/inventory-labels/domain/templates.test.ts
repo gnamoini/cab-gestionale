@@ -1,14 +1,10 @@
 import assert from "node:assert/strict";
-import {
-  computeLabelLayout,
-  getLabelTemplate,
-  labelMarginMm,
-} from "@/lib/inventory-labels/domain/templates";
+import { getLabelTemplate, labelMarginMm } from "@/lib/inventory-labels/domain/templates";
 import { labelsPerA4Page } from "@/lib/inventory-labels/render/print-layout";
 
 const t = getLabelTemplate("60x40-default");
 assert.ok(t);
-assert.equal(t!.version, "1.8.0");
+assert.equal(t!.version, "2.0.0");
 
 const qr = t!.elements.find((e) => e.type === "qr");
 const marca = t!.elements.find((e) => e.type === "text" && e.field === "marca");
@@ -17,7 +13,6 @@ const codice = t!.elements.find((e) => e.type === "text" && e.field === "codice"
 const marca2 = t!.elements.find((e) => e.type === "text" && e.field === "marcaSecondaria");
 const codice2 = t!.elements.find((e) => e.type === "text" && e.field === "codiceSecondario");
 const altForn = t!.elements.find((e) => e.type === "text" && e.field === "fornitoreAlternativo");
-const barcode = t!.elements.find((e) => e.type === "barcode");
 assert.ok(qr && qr.type === "qr");
 assert.ok(marca && marca.type === "text");
 assert.ok(desc && desc.type === "text" && desc.zoneBottomMm != null);
@@ -25,25 +20,29 @@ assert.ok(codice && codice.type === "text" && codice.zoneBottomMm != null);
 assert.ok(marca2 && marca2.type === "text");
 assert.ok(codice2 && codice2.type === "text");
 assert.ok(altForn && altForn.type === "text" && altForn.zoneBottomMm != null);
-assert.ok(barcode && barcode.type === "barcode");
+assert.ok(!t!.elements.some((e) => (e as { type: string }).type === "barcode"), "no barcode element");
 
 const m = labelMarginMm(60, 40);
 const labelBottom = t!.heightMm - m;
-assert.equal(qr.yMm, m, "QR top allineato al margine/marca");
-assert.equal(qr.xMm, m, "QR left allineato al barcode");
-assert.equal(barcode.xMm, m, "barcode left al margine");
-assert.equal(barcode.widthMm, qr.sizeMm, "barcode stessa larghezza del QR");
+assert.equal(qr.yMm, m, "QR top al margine");
+assert.equal(qr.xMm, m, "QR left al margine");
 assert.equal(marca.yMm, m, "marca top al margine");
-const topGroupBottom = barcode.yMm - 0.6;
-assert.equal(altForn.yMm, barcode.yMm, "fornitore alt nella fascia barcode");
-assert.equal(altForn.zoneBottomMm, labelBottom, "fornitore alt ancorato al fondo barcode/etichetta");
-assert.ok(qr.yMm + qr.sizeMm <= topGroupBottom - 1, "QR non arriva al barcode");
-assert.ok(qr.sizeMm >= topGroupBottom - m - 1.5 - 0.5, `QR ridotto con inset, got ${qr.sizeMm}`);
+assert.equal(altForn.zoneBottomMm, labelBottom, "fornitore alt ancorato al fondo etichetta");
+assert.ok(Math.abs(qr.yMm + qr.sizeMm - labelBottom) < 0.05, "QR full-height tra i margini");
 
 assert.ok(codice.xMm > m + qr.sizeMm);
 assert.equal(marca.fontPt, desc.fontPt, "template: gruppo alto stessa dimensione");
 assert.equal(desc.fontPt, codice.fontPt, "template: gruppo alto stessa dimensione");
 assert.ok(altForn.fontPt <= desc.fontPt);
+
+const preferred = getLabelTemplate("100x36-default");
+assert.ok(preferred);
+assert.equal(preferred!.widthMm, 100);
+assert.equal(preferred!.heightMm, 36);
+const preferredQr = preferred!.elements.find((e) => e.type === "qr");
+assert.ok(preferredQr && preferredQr.type === "qr");
+assert.ok(Math.abs(preferredQr.sizeMm - (36 - labelMarginMm(100, 36) * 2)) < 0.05, "100x36: QR full-height");
+assert.ok(labelsPerA4Page(preferred!) >= 14, "100×36: 2 colonne × 7 righe su A4");
 
 const perPage = labelsPerA4Page(t!);
 assert.ok(perPage >= 4);
@@ -80,13 +79,13 @@ assert.equal(a4Marca.hAlign, "center");
 assert.equal(a4Marca.vAlign, "center");
 assert.equal(a4Marca.maxWidthMm, a4!.widthMm - a4!.marginsMm * 2 - 2, "A4: inset laterale testo");
 assert.ok(a4Marca.fontPt >= 52, "A4: font grande per lettura a distanza");
-assert.ok(!a4!.elements.some((e) => e.type === "barcode"), "A4: no barcode");
+assert.ok(!a4!.elements.some((e) => (e as { type: string }).type === "barcode"), "A4: no barcode");
 
 const cliente = getLabelTemplate("95x40-default", "cliente");
 assert.ok(cliente);
 assert.equal(cliente!.id, "95x40-default-cliente");
 assert.ok(cliente!.elements.some((e) => e.type === "logo"));
-assert.ok(!cliente!.elements.some((e) => e.type === "barcode"));
+assert.ok(!cliente!.elements.some((e) => (e as { type: string }).type === "barcode"));
 assert.ok(!cliente!.elements.some((e) => e.type === "text" && e.field === "codiceSecondario"));
 const clienteQr = cliente!.elements.find((e) => e.type === "qr");
 assert.ok(clienteQr && clienteQr.type === "qr");
@@ -107,17 +106,12 @@ assert.ok(manual);
 assert.equal(manual!.id, "95x40-default-manual");
 assert.equal(manual!.layoutMode, "manual-centered");
 assert.ok(!manual!.elements.some((e) => e.type === "qr"));
-assert.ok(!manual!.elements.some((e) => e.type === "barcode"));
+assert.ok(!manual!.elements.some((e) => (e as { type: string }).type === "barcode"));
 assert.ok(manual!.elements.some((e) => e.type === "logo"));
 const manualMarca = manual!.elements.find((e) => e.type === "text" && e.field === "marca");
 assert.ok(manualMarca && manualMarca.type === "text");
 assert.equal(manualMarca.hAlign, "center");
 assert.equal(manualMarca.vAlign, "center");
 assert.equal(getLabelTemplate("a4-pagina-intera", "manual"), null);
-
-const preferred = getLabelTemplate("100x36-default");
-assert.ok(preferred);
-assert.equal(preferred!.widthMm, 100);
-assert.equal(preferred!.heightMm, 36);
 
 console.log("inventory-labels/domain/templates.test.ts OK");

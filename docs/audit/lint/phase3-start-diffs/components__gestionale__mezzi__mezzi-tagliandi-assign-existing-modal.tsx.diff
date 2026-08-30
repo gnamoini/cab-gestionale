@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/mezzi/mezzi-tagliandi-assign-existing-modal.tsx b/components/gestionale/mezzi/mezzi-tagliandi-assign-existing-modal.tsx
+index 0028ab2f..216de004 100644
+--- a/components/gestionale/mezzi/mezzi-tagliandi-assign-existing-modal.tsx
++++ b/components/gestionale/mezzi/mezzi-tagliandi-assign-existing-modal.tsx
+@@ -185,7 +185,7 @@ export function MezziTagliandiAssignExistingModal({
+       titleId={titleId}
+       modalSize={isGuided ? "formMedium" : "formSmall"}
+       footer={
+-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
++        <div className="flex w-full items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+           <button type="button" className={dsBtnNeutral} onClick={onClose} disabled={upsertMut.isPending}>
+             Annulla
+           </button>

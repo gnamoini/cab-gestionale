@@ -233,6 +233,26 @@ export const computeMagMovementValue: AnalyticsCalculatorFn = ({ bundle, range }
   return verifiedResult(Math.round(v * 100) / 100, "magLogMovementValueInPeriod");
 };
 
+export const computeCostTot: AnalyticsCalculatorFn = ({ bundle, range }) => {
+  const movement = sumRicambiCostFromMagLog(
+    bundle.integrity.magLog,
+    bundle.integrity.magazzino,
+    range,
+  );
+  const manodopera = sumManodoperaCostFromSchede(
+    bundle.integrity.completate,
+    range,
+    bundle.schedeStore,
+    bundle.costoOrario,
+    bundle.magazzinoRows,
+  ).manodopera;
+  const total = Math.round((movement + manodopera) * 100) / 100;
+  if (bundle.schedeStore == null) {
+    return partialResult(total, "movement_plus_labor_in_period");
+  }
+  return estimatedResult(total, "movement_plus_labor_in_period");
+};
+
 export const computeMagOrders: AnalyticsCalculatorFn = ({ bundle, range }) => {
   if (!bundle.ordiniAvailable) {
     return partialResult(0, "ordini_fornitori_in_period");
@@ -294,6 +314,7 @@ export const ANALYTICS_CALCULATOR_REGISTRY: Record<string, AnalyticsCalculatorFn
   computeEcoDdt,
   computeEcoPreventiviApprovati,
   computeMagMovementValue,
+  computeCostTot,
   computeMagOrders,
   computeOreStraordinari,
   computeSaturazioneTeam,

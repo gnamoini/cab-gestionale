@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/gestionale-form-focus-scope.tsx b/components/gestionale/gestionale-form-focus-scope.tsx
+index 8d4ac71a..3aba17f7 100644
+--- a/components/gestionale/gestionale-form-focus-scope.tsx
++++ b/components/gestionale/gestionale-form-focus-scope.tsx
+@@ -25,7 +25,7 @@ function onScopeKeyDown(e: KeyboardEvent) {
+ }
+ 
+ /** Capture: drain batch React; combobox flush centralizzato in prepareFormSubmitAsync post-guard. */
+-function onScopeSubmitCapture(_e: FormEvent<HTMLFormElement>) {
++function onScopeSubmitCapture() {
+   flushSync(() => {});
+ }
+ 

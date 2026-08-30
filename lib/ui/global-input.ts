@@ -160,6 +160,7 @@ export function globalAutocompleteOptionPillClass(
   selected: boolean,
   _pillStyle?: import("react").CSSProperties,
 ): string {
+  void _pillStyle;
   const ring = active
     ? "ring-2 ring-inset ring-white/35"
     : selected

@@ -1,0 +1,12 @@
+diff --git a/lib/report/datasets/__tests__/test-helpers.ts b/lib/report/datasets/__tests__/test-helpers.ts
+index 6400ec45..84886958 100644
+--- a/lib/report/datasets/__tests__/test-helpers.ts
++++ b/lib/report/datasets/__tests__/test-helpers.ts
+@@ -1,6 +1,6 @@
+ import type { ReportIntegrityResult } from "@/lib/report/report-data-integrity-layer";
+ import type { ReportDatasetSlices } from "@/lib/report/datasets/builders/shared";
+-import { resolvePresetRange, ymdFromDate } from "@/lib/report/date-ranges";
++import { resolvePresetRange } from "@/lib/report/date-ranges";
+ import { buildReportRangeKey } from "@/lib/report/report-domain-types";
+ 
+ export function emptyIntegrityResult(): ReportIntegrityResult {

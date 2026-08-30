@@ -1,0 +1,12 @@
+diff --git a/components/report/sections/report-cross-section.tsx b/components/report/sections/report-cross-section.tsx
+index 8453dc19..a41f2ea0 100644
+--- a/components/report/sections/report-cross-section.tsx
++++ b/components/report/sections/report-cross-section.tsx
+@@ -38,7 +38,6 @@ function fmtEur(n: number): string {
+ 
+ export default function ReportCrossSectionView(props: DomainReportSectionProps) {
+   const derived = useReportAnalyticsDerived();
+-  const compareRange = props.showCompare && props.compareRange ? props.compareRange : props.range;
+   const timesheet = useReportTimesheetKpi(props.range);
+   const invoicesQ = useInvoicesQuery(props.fetchEnabled);
+   const preventiviQ = usePreventiviRecordsQuery(props.fetchEnabled);

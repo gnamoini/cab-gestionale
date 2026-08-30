@@ -5,7 +5,6 @@ import {
 } from "@/lib/document-capture/capture-catalog-validation";
 import {
   formatCaptureReviewDisplayValue,
-  formatCaptureReviewDraftValue,
 } from "@/lib/document-capture/capture-field-display-value";
 import { normalizeIngressoCaptureFieldRows } from "@/lib/document-capture/capture-field-key-aliases";
 import {

@@ -1,0 +1,273 @@
+{
+  "generatedAt": "2026-08-30T17:58:15.324Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "contractVersion": "1.0.0",
+  "gates": {
+    "security.typescript.compile": {
+      "contractId": "security.typescript.compile",
+      "legacy": [
+        "ci:tsc"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run ci:tsc",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "build.production": {
+      "contractId": "build.production",
+      "legacy": [
+        "ci:build"
+      ],
+      "status": "FAIL",
+      "evidence": {
+        "command": "npm run ci:build",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "security.rbac.matrix": {
+      "contractId": "security.rbac.matrix",
+      "legacy": [
+        "test:rbac"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run test:rbac",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "security.rbac.hardening": {
+      "contractId": "security.rbac.hardening",
+      "legacy": [
+        "test:rbac:hardening"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run test:rbac:hardening",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "security.remediation": {
+      "contractId": "security.remediation",
+      "legacy": [
+        "test:security:remediation"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run test:security:remediation",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.ux.enforce": {
+      "contractId": "design.ux.enforce",
+      "legacy": [
+        "ux:enforce"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run ux:enforce",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.ui.consistency": {
+      "contractId": "design.ui.consistency",
+      "legacy": [
+        "audit:ui"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run audit:ui",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.mobile.gate": {
+      "contractId": "design.mobile.gate",
+      "legacy": [
+        "ux:mobile-gate"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run ux:mobile-gate",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.ios.static": {
+      "contractId": "design.ios.static",
+      "legacy": [
+        "ios:check"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run ios:check",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "data.supabase.connection": {
+      "contractId": "data.supabase.connection",
+      "legacy": [
+        "verify-supabase-ci-env"
+      ],
+      "status": "BLOCKED",
+      "evidence": {
+        "command": "npx tsx scripts/verify-supabase-ci-env.ts",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "live"
+    },
+    "data.production.readiness": {
+      "contractId": "data.production.readiness",
+      "legacy": [
+        "production:check"
+      ],
+      "status": "BLOCKED",
+      "evidence": {
+        "command": "npm run production:check",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "live"
+    },
+    "data.publication.sanity": {
+      "contractId": "data.publication.sanity",
+      "legacy": [
+        "ci:supabase:publication"
+      ],
+      "status": "BLOCKED",
+      "evidence": {
+        "command": "npm run ci:supabase:publication",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "live"
+    },
+    "design.structural.smoke": {
+      "contractId": "design.structural.smoke",
+      "legacy": [
+        "smoke:structural"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run smoke:structural",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "runtime.regression.core": {
+      "contractId": "runtime.regression.core",
+      "legacy": [
+        "smoke:regression:core"
+      ],
+      "status": "FAIL",
+      "evidence": {
+        "command": "npm run smoke:regression:core",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.flex.eslint": {
+      "contractId": "design.flex.eslint",
+      "legacy": [
+        "flex:eslint:gate"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run flex:eslint:gate",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "design.flex.freeze": {
+      "contractId": "design.flex.freeze",
+      "legacy": [
+        "flex:freeze:gate"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npm run flex:freeze:gate",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    },
+    "runtime.e2e.smoke": {
+      "contractId": "runtime.e2e.smoke",
+      "legacy": [
+        "smoke:playwright"
+      ],
+      "status": "BLOCKED",
+      "evidence": {
+        "command": "npm run smoke:playwright",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "live"
+    },
+    "runtime.smoke.cleanup": {
+      "contractId": "runtime.smoke.cleanup",
+      "legacy": [
+        "smoke:cleanup"
+      ],
+      "status": "BLOCKED",
+      "evidence": {
+        "command": "npm run smoke:cleanup",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "live"
+    },
+    "governance.release.contract": {
+      "contractId": "governance.release.contract",
+      "legacy": [
+        "release-ready-contract"
+      ],
+      "status": "PASS",
+      "evidence": {
+        "command": "npx tsx lib/control/release-ready-contract.test.ts",
+        "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+        "timestamp": "2026-08-30T17:58:15.324Z",
+        "source": "docs/audit/phase4-failure-inventory-2026-08-30.json"
+      },
+      "tier": "static"
+    }
+  }
+}

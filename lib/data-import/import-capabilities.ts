@@ -21,7 +21,6 @@ export type EntityCapabilities = {
   note?: string;
 };
 
-const EXPORT_ALL: ExportMode[] = ["template", "importable", "backup"];
 const EXPORT_STD: ExportMode[] = ["template", "importable", "backup"];
 const EXPORT_NONE: ExportMode[] = [];
 const AI_OFF: AiImportCapability = { enabled: false, provider: null };

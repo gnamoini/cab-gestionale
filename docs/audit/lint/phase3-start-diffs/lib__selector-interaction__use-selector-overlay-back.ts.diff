@@ -1,0 +1,16 @@
+diff --git a/lib/selector-interaction/use-selector-overlay-back.ts b/lib/selector-interaction/use-selector-overlay-back.ts
+index 5a8bc3e1..652945cf 100644
+--- a/lib/selector-interaction/use-selector-overlay-back.ts
++++ b/lib/selector-interaction/use-selector-overlay-back.ts
+@@ -24,7 +24,10 @@ export function useSelectorOverlayBack({
+   layer,
+ }: UseSelectorOverlayBackOptions): void {
+   const onCloseRef = useRef(onClose);
+-  onCloseRef.current = onClose;
++
++  useIsomorphicLayoutEffect(() => {
++    onCloseRef.current = onClose;
++  }, [onClose]);
+ 
+   useIsomorphicLayoutEffect(() => {
+     if (!open) return;

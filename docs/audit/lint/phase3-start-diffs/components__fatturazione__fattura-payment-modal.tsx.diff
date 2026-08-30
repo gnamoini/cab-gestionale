@@ -1,0 +1,14 @@
+diff --git a/components/fatturazione/fattura-payment-modal.tsx b/components/fatturazione/fattura-payment-modal.tsx
+index c542624e..37e18dd0 100644
+--- a/components/fatturazione/fattura-payment-modal.tsx
++++ b/components/fatturazione/fattura-payment-modal.tsx
+@@ -43,7 +43,9 @@ export function FatturaPaymentModal({
+   const [riferimento, setRiferimento] = useState("");
+   const [note, setNote] = useState("");
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setImporto(String(invoice.residuo));
+   }, [invoice.id, invoice.residuo]);
+ 

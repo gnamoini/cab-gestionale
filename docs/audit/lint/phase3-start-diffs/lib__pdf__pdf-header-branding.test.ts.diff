@@ -1,0 +1,22 @@
+diff --git a/lib/pdf/pdf-header-branding.test.ts b/lib/pdf/pdf-header-branding.test.ts
+index da7accce..5ed3d77b 100644
+--- a/lib/pdf/pdf-header-branding.test.ts
++++ b/lib/pdf/pdf-header-branding.test.ts
+@@ -14,7 +14,7 @@ import {
+   drawPdfPageFooters,
+   measureGestionalePdfHeaderEndY,
+   pdfAdvanceAfterDocumentHeader,
+-  pdfAdvanceSection,
++
+   pdfContentWidth,
+ } from "@/lib/pdf/core/pdf-base-template";
+ import { drawPreventivoPdfBody } from "@/lib/pdf/preventivo-pdf-body";
+@@ -69,7 +69,7 @@ function buildPreventivoDoc(
+     logoDataUrl,
+   });
+   y = pdfAdvanceAfterDocumentHeader(y);
+-  y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
++  _y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
+     totaleRicambi: p.totaleRicambi,
+     totaleManodopera: p.totaleManodopera,
+     totaleSmaltimento: p.totaleSmaltimento ?? 0,

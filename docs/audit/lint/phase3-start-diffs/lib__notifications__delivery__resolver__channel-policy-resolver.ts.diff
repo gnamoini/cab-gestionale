@@ -1,0 +1,13 @@
+diff --git a/lib/notifications/delivery/resolver/channel-policy-resolver.ts b/lib/notifications/delivery/resolver/channel-policy-resolver.ts
+index ebbcfe2e..3a632b84 100644
+--- a/lib/notifications/delivery/resolver/channel-policy-resolver.ts
++++ b/lib/notifications/delivery/resolver/channel-policy-resolver.ts
+@@ -58,7 +58,7 @@ export function resolveChannels(
+     channels = channels.filter((c) => c !== "push" && c !== "email" && c !== "sms");
+   }
+ 
+-  let scheduledAt = now.toISOString();
++  const scheduledAt = now.toISOString();
+   if (
+     priority !== "CRITICAL" &&
+     isQuietHours(now, ctx.preferences.quietHoursStart, ctx.preferences.quietHoursEnd)

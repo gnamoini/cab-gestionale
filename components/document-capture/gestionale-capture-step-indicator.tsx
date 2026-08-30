@@ -1,6 +1,7 @@
 "use client";
 
 import type { CaptureStep } from "@/lib/document-capture/capture-experience-adapter";
+import { globalTableTheadSticky } from "@/lib/ui/global-table";
 
 function StepCheckIcon({ className = "h-3 w-3 sm:h-3.5 sm:w-3.5" }: { className?: string }) {
   return (
@@ -32,7 +33,7 @@ export function GestionaleCaptureStepIndicator({ steps, current, ariaLabel = "Pa
   return (
     <nav
       aria-label={ariaLabel}
-      className="sticky top-0 z-[2] -mx-1 min-w-0 bg-[var(--cab-card)] px-0.5 pb-2 pt-1 sm:px-1 sm:pb-3 sm:pt-0.5"
+      className={`${globalTableTheadSticky} z-[2] -mx-1 min-w-0 !bg-[var(--cab-card)] px-0.5 pb-2 pt-1 sm:px-1 sm:pb-3 sm:pt-0.5`}
     >
       <div className="relative min-w-0 px-1 sm:px-0.5">
         <div

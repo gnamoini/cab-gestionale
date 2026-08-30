@@ -38,8 +38,10 @@ export function ResetPasswordForm() {
 
   useGlobalLoading(phase === "loading" ? GLOBAL_LOADING_MESSAGES.default : null);
 
+   
   useEffect(() => {
     if (!isSupabasePublicEnvConfigured()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setError(MISSING_SUPABASE_ENV_MESSAGE);
       setPhase("no_session");
       return;

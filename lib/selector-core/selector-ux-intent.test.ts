@@ -17,16 +17,6 @@ function ctx(partial: Partial<SelectorContext> & Pick<SelectorContext, "optionCo
   };
 }
 
-function stable(decision: ReturnType<typeof SelectorDecisionEngine.resolve>) {
-  return {
-    surface: decision.surface,
-    reasoning: decision.reasoning,
-    flags: decision.flags,
-    matchedRules: decision.matchedRules,
-    fallbackUsed: decision.fallbackUsed,
-  };
-}
-
 __resetSelectorEngineForTests();
 
 // operational filter searchable mobile

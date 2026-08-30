@@ -9,7 +9,7 @@ import {
 } from "@/components/design-system/gestionale-info-card";
 import {
   HubModalPanoramicaField,
-  HubModalPanoramicaFieldTileShell,
+
   HubModalPanoramicaInlineCell,
   HubModalPanoramicaInlineGrid,
   HubModalPanoramicaStatusPill,
@@ -468,7 +468,7 @@ export function SchedaIngressoPanoramicaView({
   const accettazionePortalContent = omitPanoramaDuplicates ? (
     <div className="flex min-w-0 flex-col gap-3">
       <HubModalPanoramicaInlineCell label="Richiedente">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
           <span className="min-w-0 text-sm text-[color:var(--cab-text)]">
             {hubPanoramicaDisplayValue(fields.richiedente)}
           </span>

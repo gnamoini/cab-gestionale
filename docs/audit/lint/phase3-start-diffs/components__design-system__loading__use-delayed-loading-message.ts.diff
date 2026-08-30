@@ -1,0 +1,15 @@
+diff --git a/components/design-system/loading/use-delayed-loading-message.ts b/components/design-system/loading/use-delayed-loading-message.ts
+index 554de0b5..0f066c82 100644
+--- a/components/design-system/loading/use-delayed-loading-message.ts
++++ b/components/design-system/loading/use-delayed-loading-message.ts
+@@ -17,8 +17,10 @@ export function useDelayedLoadingMessage(
+ ): string | null {
+   const [show, setShow] = useState(false);
+ 
++   
+   useEffect(() => {
+     if (!isLoading) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setShow(false);
+       return;
+     }

@@ -1,0 +1,10 @@
+diff --git a/lib/selector-core/generated/selector-rollback-registry.generated.ts b/lib/selector-core/generated/selector-rollback-registry.generated.ts
+index 97cff223..4b33de10 100644
+--- a/lib/selector-core/generated/selector-rollback-registry.generated.ts
++++ b/lib/selector-core/generated/selector-rollback-registry.generated.ts
+@@ -1,5 +1,4 @@
+ /** @generated v5.3.2 — rollback-safe versions not in primary bundle */
+-import type { SelectorRuntimeSnapshot } from "@/lib/selector-core/types";
+ 
+ export const ROLLBACK_SNAPSHOT_REGISTRY = {
+ } as const;

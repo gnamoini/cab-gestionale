@@ -14,7 +14,7 @@ export function isPreventivoUuid(id: string): boolean {
 }
 
 function recordToDettagli(record: PreventivoRecord): Record<string, unknown> {
-  const { id: _id, ...rest } = record;
+  const { ...rest } = record;
   return { ...rest, version: 1 };
 }
 

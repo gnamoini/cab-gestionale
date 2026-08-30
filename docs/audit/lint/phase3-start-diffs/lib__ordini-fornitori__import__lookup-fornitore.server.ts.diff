@@ -1,0 +1,13 @@
+diff --git a/lib/ordini-fornitori/import/lookup-fornitore.server.ts b/lib/ordini-fornitori/import/lookup-fornitore.server.ts
+index 69434738..18704ada 100644
+--- a/lib/ordini-fornitori/import/lookup-fornitore.server.ts
++++ b/lib/ordini-fornitori/import/lookup-fornitore.server.ts
+@@ -12,7 +12,7 @@ import {
+ import type { FornitoreMatchResult } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
+ import { findSimilarSettingsDuplicate } from "@/lib/settings/settings-list-duplicate";
+ import {
+-  entityAutocompleteKey,
++
+   findExactEntityInPool,
+   normalizeEntityString,
+ } from "@/lib/validation/global-entity-validation";

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import { useCallback, useEffect, useRef } from "react";
 
 const DEDUP_MS = 50;
@@ -95,7 +97,7 @@ export function usePointerGesture({
       resetGesture();
     }
 
-    function onTouchStart(e: TouchEvent) {
+    function onTouchStart() {
       const now = Date.now();
       if (now - lastTouchTimeRef.current < DEDUP_MS && activePointerIdRef.current != null) return;
       lastTouchTimeRef.current = now;

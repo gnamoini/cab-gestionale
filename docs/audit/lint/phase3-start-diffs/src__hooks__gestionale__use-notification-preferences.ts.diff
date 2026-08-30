@@ -1,0 +1,12 @@
+diff --git a/src/hooks/gestionale/use-notification-preferences.ts b/src/hooks/gestionale/use-notification-preferences.ts
+index 2f6c233e..5ee5febe 100644
+--- a/src/hooks/gestionale/use-notification-preferences.ts
++++ b/src/hooks/gestionale/use-notification-preferences.ts
+@@ -23,6 +23,7 @@ export function useNotificationPreferences() {
+   }, []);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial preferences fetch on mount
+     void reload();
+   }, [reload]);
+ 

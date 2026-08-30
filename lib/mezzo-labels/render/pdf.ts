@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { computeA4Grid } from "@/lib/inventory-labels/render/print-layout";
+import { mapWithConcurrency, resolveLabelPdfRenderConcurrency } from "@/lib/inventory-labels/render/pdf-concurrency";
 import type { LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
 import { mezzoLabelGridTemplate, MEZZO_LABEL_TEMPLATE } from "@/lib/mezzo-labels/domain/template";
 import { renderMezzoLabelPng } from "@/lib/mezzo-labels/render/png";
@@ -30,7 +31,6 @@ function gridTemplate(): LabelTemplateDefinition {
     layoutMode: "horizontal-qr-left",
     supplierLayout: "inline-slash",
     qr: { maxSizeMm: MEZZO_LABEL_TEMPLATE.qr.maxSizeMm, position: "top-left" },
-    barcode: { heightMm: 0 },
     elements: [],
   };
 }
@@ -38,7 +38,11 @@ function gridTemplate(): LabelTemplateDefinition {
 export async function renderMezzoLabelsPdf(slots: MezzoLabelPdfSlot[]): Promise<Uint8Array> {
   if (slots.length === 0) throw new Error("Nessuna etichetta da generare");
 
-  const pngs = await Promise.all(slots.map((s) => renderMezzoLabelPng(s.payload, s.qrUrl)));
+  const pngs = await mapWithConcurrency(
+    slots,
+    resolveLabelPdfRenderConcurrency(),
+    (s) => renderMezzoLabelPng(s.payload, s.qrUrl),
+  );
   const template = gridTemplate();
   const grid = computeA4Grid(template);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });

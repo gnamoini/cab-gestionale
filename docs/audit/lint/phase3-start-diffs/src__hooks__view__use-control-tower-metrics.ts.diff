@@ -1,0 +1,29 @@
+diff --git a/src/hooks/view/use-control-tower-metrics.ts b/src/hooks/view/use-control-tower-metrics.ts
+index 459f19d9..c1c741f7 100644
+--- a/src/hooks/view/use-control-tower-metrics.ts
++++ b/src/hooks/view/use-control-tower-metrics.ts
+@@ -170,7 +170,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
+     canReadDipendentiPage,
+     activityVisible,
+     headerVisible,
+-    visibleIds,
++    
+     dipendentiOpts,
+   } = shell;
+ 
+@@ -277,7 +277,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
+     dash.movLogs,
+     magLog,
+     useMovimentiMagLog,
+-    movimentiQ.data,
+     preventiviQ.records,
+     invoicesQ.invoices,
+     timesheetQ.data,
+@@ -327,7 +326,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
+   }, [
+     modules,
+     dash.lavRows,
+-    dash.globalOpts.lavorazioni.addetti,
+     dash.ricambi,
+     dash.magRecentMovements,
+     magLog,

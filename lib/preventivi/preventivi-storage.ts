@@ -217,22 +217,22 @@ export function clearPreventiviLocalEntityData(): void {
 }
 
 /** @deprecated DB-first: no-op — localStorage non usato in produzione. */
-export function savePreventivi(_rows: PreventivoRecord[]): void {
+export function savePreventivi(): void {
   warnDeprecatedWrite("savePreventivi");
 }
 
 /** @deprecated DB-first: no-op — localStorage non usato in produzione. */
-export function appendPreventivo(_row: PreventivoRecord): void {
+export function appendPreventivo(): void {
   warnDeprecatedWrite("appendPreventivo");
 }
 
 /** @deprecated DB-first: no-op — localStorage non usato in produzione. */
-export function upsertPreventivo(_row: PreventivoRecord): void {
+export function upsertPreventivo(): void {
   warnDeprecatedWrite("upsertPreventivo");
 }
 
 /** @deprecated DB-first: no-op — localStorage non usato in produzione. */
-export function deletePreventivo(_id: string): void {
+export function deletePreventivo(): void {
   warnDeprecatedWrite("deletePreventivo");
 }
 

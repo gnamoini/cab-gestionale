@@ -28,7 +28,7 @@ export function BusinessReportShell() {
       persistKey="bi-business-report"
     >
       <div className="min-w-0 space-y-3" data-testid="business-report-shell">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 flex-nowrap sm:flex-wrap">
           <Button
             size="sm"
             disabled={generate.isPending}

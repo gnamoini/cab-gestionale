@@ -1,0 +1,13 @@
+diff --git a/lib/ordini-fornitori/ordine-fornitore-email-draft.client.ts b/lib/ordini-fornitori/ordine-fornitore-email-draft.client.ts
+index 955ab2bc..122a9db8 100644
+--- a/lib/ordini-fornitori/ordine-fornitore-email-draft.client.ts
++++ b/lib/ordini-fornitori/ordine-fornitore-email-draft.client.ts
+@@ -81,7 +81,7 @@ export async function openOrdineFornitoreEmailDraft(
+   }
+ 
+   const subject = ordineFornitoreEmailDraftSubject(record);
+-  const body = ordineFornitoreEmailDraftBody();
++  const body = ordineFornitoreEmailDraftBody(record);
+   const fileName = ordineFornitoreEmailAttachmentFileName(record);
+ 
+   try {

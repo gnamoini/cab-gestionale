@@ -350,8 +350,6 @@ function scanTooltipJsx(
 
 function scanNativeTitles(fileRel: string, content: string, entries: TooltipAuditEntry[]) {
   const { violations } = scanNativeTitleInSource(fileRel, content);
-  const kind = fileRel.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(fileRel, content, ts.ScriptTarget.Latest, true, kind);
 
   for (const v of violations) {
     if (NON_HOVER_TITLE_COMPONENTS.has(v.element)) continue;

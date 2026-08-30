@@ -12,7 +12,6 @@ import {
   computeGlobalReach,
   effectiveReachForScope,
   inferReachScope,
-  type ReachScope,
 } from "@/lib/performance/bundle-ranking-types";
 
 const ROOT = process.cwd();

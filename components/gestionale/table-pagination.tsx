@@ -98,7 +98,7 @@ export function TablePagination({ page, pageCount, onPageChange, label, classNam
       </nav>
 
       <nav
-        className="hidden min-w-0 shrink-0 flex-wrap items-center justify-end gap-1 sm:flex"
+        className="hidden min-w-0 shrink-0 items-center justify-end gap-1 sm:flex flex-nowrap sm:flex-wrap"
         aria-label="Paginazione"
       >
         <button

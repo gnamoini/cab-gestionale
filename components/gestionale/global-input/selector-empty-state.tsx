@@ -61,7 +61,7 @@ export function SelectorEmptyState({
       </svg>
       <p className="text-sm font-medium text-[color:var(--cab-text)]">{message}</p>
       <p className="text-xs text-[color:var(--cab-text-muted)]">{hint}</p>
-      <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+      <div className="mt-1 flex items-center justify-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         {onResetSearch ? (
           <button
             type="button"

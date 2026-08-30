@@ -16,7 +16,7 @@ const payload = {
 
 async function main() {
   const template = getLabelTemplate("95x40-default", "cliente")!;
-  assert.equal(template.version, "1.8.5-cliente");
+  assert.equal(template.version, "2.0.0-cliente");
   const qr = template.elements.find((e) => e.type === "qr");
   const website = template.elements.find(
     (e) => e.type === "text" && e.literalSource === "clienteWebsite",
@@ -31,7 +31,6 @@ async function main() {
     const svg = await renderLabelSvg(template, payload, DEFAULT_COMPANY_WEBSITE_URL, {
       embedFonts: !textAsPaths,
       textAsPaths,
-      includeBarcode: false,
       labelKind: "cliente",
     });
 

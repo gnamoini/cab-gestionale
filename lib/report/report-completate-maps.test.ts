@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { buildCompletateDbMaps, resolveReportMonthCompletedCount, reportMonthKeyFromArchiviata } from "@/lib/report/report-completate-maps";
-import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { buildReportLavorazioniBundle } from "@/lib/report/lavorazioni-report-selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 

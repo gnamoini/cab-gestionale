@@ -44,6 +44,7 @@ export function MezzoSchedaReadOnlyDrawer({
   useEffect(() => {
     if (!open || !lavorazioneId?.trim()) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLoading(true);
     setError(null);
     void fetchSchedeBundlesStoreAuthorized([lavorazioneId])
@@ -96,7 +97,7 @@ export function MezzoSchedaReadOnlyDrawer({
             Chiudi
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 min-w-0">
           {loading ? (
             <div className="flex justify-center py-8">
               <LoadingSpinner size="md" />

@@ -1,0 +1,10 @@
+diff --git a/app/api/official-documents/[entity]/[id]/stream/route.ts b/app/api/official-documents/[entity]/[id]/stream/route.ts
+index 69ea58a1..d5f2033b 100644
+--- a/app/api/official-documents/[entity]/[id]/stream/route.ts
++++ b/app/api/official-documents/[entity]/[id]/stream/route.ts
+@@ -1,5 +1,4 @@
+ import { streamOfficialDdtPdfServer, streamOfficialPreventivoPdfServer } from "@/lib/official-documents/official-pdf-stream.server";
+-import { streamOfficialPdfByTokenServer } from "@/lib/official-documents/official-pdf-token-stream.server";
+ import { pdfArtifactResponseHeaders } from "@/lib/pdf/pdf-artifact-response";
+ import { NextResponse } from "next/server";
+ 

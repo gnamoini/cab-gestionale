@@ -3,10 +3,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
   bundleToSchedaPayloads,
-  mergeSchedeStores,
+
   schedaInsertFromBundlePart,
   schedaRowsToBundle,
-  schedaRowsToStore,
+
   schedaUpdateFromContenuto,
 } from "@/lib/schede/schede-db-mapper";
 export { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-cache-patch";
@@ -240,7 +240,7 @@ export async function ensureSchedeBundlesInCache(
   const fetched = await fetchSchedeBundlesForLavorazioni(toFetch, qc, {
     clientPortal: options?.clientPortal,
   });
-  let merged = { ...prev, ...fetched };
+  const merged = { ...prev, ...fetched };
   const local = typeof window !== "undefined" ? loadLavorazioneSchedeStore() : {};
   for (const id of unique) {
     const localB = local[id];

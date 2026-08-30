@@ -8,6 +8,7 @@ import {
   type SchedaIngressoIdentMatchKind,
 } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { dsInput } from "@/lib/ui/design-system";
 
 const MATCH_DEBOUNCE_MS = 300;
@@ -20,7 +21,8 @@ function identPlaceholder(field: SchedaIngressoIdentField): string {
 }
 
 function normalizeIdentInput(field: SchedaIngressoIdentField, raw: string): string {
-  return field === "vin" ? raw.trim().toUpperCase() : raw;
+  if (field === "vin") return normalizeVin(raw) ?? "";
+  return raw;
 }
 
 export function SchedaIngressoIdentTextField({

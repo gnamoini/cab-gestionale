@@ -1,0 +1,11 @@
+diff --git a/lib/report/report-completate-maps.test.ts b/lib/report/report-completate-maps.test.ts
+index cb2fda48..3c43d44b 100644
+--- a/lib/report/report-completate-maps.test.ts
++++ b/lib/report/report-completate-maps.test.ts
+@@ -1,6 +1,5 @@
+ import assert from "node:assert/strict";
+ import { buildCompletateDbMaps, resolveReportMonthCompletedCount, reportMonthKeyFromArchiviata } from "@/lib/report/report-completate-maps";
+-import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
+ import { buildReportLavorazioniBundle } from "@/lib/report/lavorazioni-report-selectors";
+ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+ 

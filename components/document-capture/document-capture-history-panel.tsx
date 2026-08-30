@@ -53,7 +53,9 @@ export function DocumentCaptureHistoryPanel({ lavorazioneId, refreshKey = 0 }: P
     }
   }, [lavorazioneId]);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void load();
   }, [load, refreshKey]);
 
@@ -74,7 +76,7 @@ export function DocumentCaptureHistoryPanel({ lavorazioneId, refreshKey = 0 }: P
     <ul className={`${LIST_DIVIDER_UL} rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]`}>
       {rows.map((row) => (
         <li key={row.id} className="p-3 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <div>
               <p className="font-medium">{row.file_name}</p>
               <p className="text-xs text-[color:var(--cab-muted-fg)]">
@@ -83,7 +85,7 @@ export function DocumentCaptureHistoryPanel({ lavorazioneId, refreshKey = 0 }: P
                 {new Date(row.uploaded_at).toLocaleString("it-IT")}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
               {row.finalized_at ? (
                 <a
                   className={dsBtnNeutral}

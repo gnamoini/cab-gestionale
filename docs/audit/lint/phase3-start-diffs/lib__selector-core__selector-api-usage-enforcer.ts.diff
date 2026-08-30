@@ -1,0 +1,12 @@
+diff --git a/lib/selector-core/selector-api-usage-enforcer.ts b/lib/selector-core/selector-api-usage-enforcer.ts
+index 4eb03bd1..2b40ad8c 100644
+--- a/lib/selector-core/selector-api-usage-enforcer.ts
++++ b/lib/selector-core/selector-api-usage-enforcer.ts
+@@ -26,7 +26,6 @@ import {
+   isAllowedLegacyImporter,
+   isLegacyShimModule,
+   normalizeModuleSegment,
+-  type ConvergenceSeverity,
+   type PolicyRuntimeConvergenceResult,
+ } from "@/lib/selector-core/selector-enforcement-ruleset";
+ import {

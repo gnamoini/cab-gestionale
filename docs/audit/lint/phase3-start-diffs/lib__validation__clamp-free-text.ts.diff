@@ -1,0 +1,13 @@
+diff --git a/lib/validation/clamp-free-text.ts b/lib/validation/clamp-free-text.ts
+index e09f76ee..4210cb1a 100644
+--- a/lib/validation/clamp-free-text.ts
++++ b/lib/validation/clamp-free-text.ts
+@@ -4,7 +4,7 @@ import {
+   applyOreLavoroStorageToCampi,
+   resolveOreLavoroFields,
+ } from "@/lib/schede/resolve-ore-lavoro-fields";
+-import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_LONG, TEXT_MEDIUM, TEXT_SHORT } from "@/lib/validation/text-field-limits";
++import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_SHORT } from "@/lib/validation/text-field-limits";
+ import type {
+   LavorazioneSchedeBundle,
+   SchedaIngressoFields,

@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/lavorazioni/lavorazioni-table-shared.tsx b/components/gestionale/lavorazioni/lavorazioni-table-shared.tsx
+index 12ad891c..7509fdf1 100644
+--- a/components/gestionale/lavorazioni/lavorazioni-table-shared.tsx
++++ b/components/gestionale/lavorazioni/lavorazioni-table-shared.tsx
+@@ -1,7 +1,6 @@
+ "use client";
+ 
+-import { TruncatedTextTooltip } from "@/components/design-system/truncated-text-tooltip";
+-import { Tooltip } from "@/components/design-system";
++import { TruncatedTextTooltip, Tooltip } from "@/components/ui";
+ import { useMemo, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
+ import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+ import type { PrioritaLavorazione } from "@/src/types/supabase-tables";

@@ -237,7 +237,7 @@ export const mezziService = {
   async update(id: string, data: MezzoUpdate): Promise<ServiceResult<MezzoRow>> {
     try {
       const c = await sb();
-      let prepared =
+      const prepared =
         Object.keys(data).length > 0 ? (prepareMezzoWritePayload(data) as MezzoUpdate) : data;
       if (mezzoUpdateTouchesAssociationFields(prepared)) {
         return err<MezzoRow>(ASSOCIATION_FIELDS_REQUIRE_DEDICATED_PATH);
@@ -305,6 +305,7 @@ export const mezziService = {
 
   /** @deprecated ponytail: v1 matrice tagliandi disabilitata — no-op. */
   async setTagliandiEnabled(id: string, _enabled: boolean): Promise<ServiceResult<MezzoRow>> {
+    void _enabled;
     try {
       const c = await sb();
       const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();

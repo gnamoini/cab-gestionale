@@ -13,7 +13,6 @@ import {
 } from "./audit-orphan-taxonomy";
 
 const ROOT = process.cwd();
-const GRAPH_PATH = path.join(ROOT, "artifacts", "audit", "dependency-graph", "after.graph.json");
 const KNIP_PATH = path.join(ROOT, "artifacts", "audit", "dead-code-baseline", "knip-baseline.json");
 const OUT_PATH = path.join(ROOT, "artifacts", "audit", "dead-code-baseline", "orphan-hotspots.json");
 

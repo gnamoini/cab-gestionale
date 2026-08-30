@@ -1,0 +1,49 @@
+diff --git a/components/preventivi/preventivo-ricambi-editor-section.tsx b/components/preventivi/preventivo-ricambi-editor-section.tsx
+index a6f68197..a8d288f6 100644
+--- a/components/preventivi/preventivo-ricambi-editor-section.tsx
++++ b/components/preventivi/preventivo-ricambi-editor-section.tsx
+@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
+ import { CaptureRicambioCodiceField } from "@/components/document-capture/capture-ricambio-codice-field";
+ import { RicambioMagazzinoInlineHint } from "@/components/document-capture/ricambio-magazzino-inline-hint";
+ import { IconActionButton } from "@/components/design-system";
++import { OptionalTooltip } from "@/components/ui";
+ import { ShellNavIconClose } from "@/components/design-system/shell-nav-icons";
+ import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
+ import { RicambioUnitaMisuraPicker } from "@/components/gestionale/magazzino/ricambio-unita-misura-picker";
+@@ -213,23 +214,26 @@ function RicambioRigaRow({
+           onCommit={(prezzoUnitario) => onPatchRiga(r.id, { prezzoUnitario })}
+           aria-label={`Prezzo unitario riga ${idx + 1}`}
+         />
+-        <div
+-          className={preventivoEditorRicambiMarkupReadout}
+-          title={
++        <OptionalTooltip
++          content={
+             markup.source === "magazzino"
+               ? "Markup da magazzino/scheda ricambio"
+               : markup.source === "calcolato"
+                 ? "Markup calcolato da prezzo e costo"
+                 : undefined
+           }
+-          aria-label={
+-            markup.percent != null
+-              ? `Markup riga ${idx + 1}: ${fmtPreventivoMarkupPercent(markup.percent)}`
+-              : `Markup riga ${idx + 1}: non disponibile`
+-          }
+         >
+-          {markup.percent != null ? fmtPreventivoMarkupPercent(markup.percent) : "—"}
+-        </div>
++          <div
++            className={preventivoEditorRicambiMarkupReadout}
++            aria-label={
++              markup.percent != null
++                ? `Markup riga ${idx + 1}: ${fmtPreventivoMarkupPercent(markup.percent)}`
++                : `Markup riga ${idx + 1}: non disponibile`
++            }
++          >
++            {markup.percent != null ? fmtPreventivoMarkupPercent(markup.percent) : "—"}
++          </div>
++        </OptionalTooltip>
+         <GestionaleNumericField
+           className={ricambiNumInputClass}
+           value={r.scontoPercent ?? 0}

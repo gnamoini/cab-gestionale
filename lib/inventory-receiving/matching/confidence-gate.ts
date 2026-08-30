@@ -37,9 +37,9 @@ export function lineRequiresReview(input: {
 export function defaultLineActionWithGate(
   matchStatus: InventoryLineMatchStatus,
   matchConfidence: number | null,
-  method?: MatchCandidate["method"] | null,
+  _method?: MatchCandidate["method"] | null,
 ): "add" | "create" | "skip" {
-  const resolvedMethod = method ?? inferMatchMethod({ matchStatus, matchConfidence });
+  void _method;
   const conf = matchConfidence ?? 0;
   if (matchStatus === "NEW_ITEM" && conf < CONFIDENCE_DESCRIPTION_CANDIDATE_MIN) return "create";
   return defaultLineAction(matchStatus);

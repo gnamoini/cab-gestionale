@@ -1,0 +1,12 @@
+diff --git a/lib/lavorazioni/client-portal-timeline.ts b/lib/lavorazioni/client-portal-timeline.ts
+index 6c33aee1..67f5ad35 100644
+--- a/lib/lavorazioni/client-portal-timeline.ts
++++ b/lib/lavorazioni/client-portal-timeline.ts
+@@ -2,7 +2,6 @@ import {
+   buildClientPortalRowFields,
+   clientPortalCantiereLabel,
+   clientPortalClienteLabel,
+-  clientPortalDataIngressoLabel,
+ } from "@/lib/lavorazioni/client-portal-row-fields";
+ import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+ import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";

@@ -72,7 +72,7 @@ assert.equal(
 const migratedSamples = [
   "components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx",
   "components/gestionale/magazzino/ricambio-form-fields.tsx",
-  "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+  "components/lavorazioni/schede/scheda-ricambi-form-body.tsx",
   "components/gestionale/documenti/documenti-modals.tsx",
 ] as const;
 

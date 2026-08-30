@@ -23,12 +23,15 @@ export function useOverlayBackHandler(
   opts?: RegisterOverlayBackOptions,
 ): void {
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const beforeBackRef = useRef(opts?.beforeBack);
-  beforeBackRef.current = opts?.beforeBack;
   const resyncCleanupRef = useRef<(() => void) | null>(null);
   const optsRef = useRef(opts);
-  optsRef.current = opts;
+
+  useIsomorphicLayoutEffect(() => {
+    onCloseRef.current = onClose;
+    beforeBackRef.current = opts?.beforeBack;
+    optsRef.current = opts;
+  });
 
   useIsomorphicLayoutEffect(() => {
     if (!active) return;

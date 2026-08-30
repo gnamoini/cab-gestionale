@@ -1,0 +1,16 @@
+diff --git a/components/report/bi-center/advanced/report-cross-trend-section.tsx b/components/report/bi-center/advanced/report-cross-trend-section.tsx
+index a42c3727..72c3a13d 100644
+--- a/components/report/bi-center/advanced/report-cross-trend-section.tsx
++++ b/components/report/bi-center/advanced/report-cross-trend-section.tsx
+@@ -24,7 +24,10 @@ export function ReportCrossComparativeTrendChart() {
+   const invoicesQ = useInvoicesQuery(canFatturazione);
+   const timesheet = useReportTimesheetKpi(range);
+ 
+-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
++  const invoices = useMemo(
++    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
++    [invoicesQ.isError, invoicesQ.invoices],
++  );
+ 
+   useRegisterAnalyticsSection("bi-cross-trend", "cross", {
+     metricIds: ["cross_efficiency", "cross_parts_job", "cross_cost_job", "cross_value_hour"],

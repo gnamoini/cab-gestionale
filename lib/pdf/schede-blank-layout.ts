@@ -365,6 +365,7 @@ export function drawSchedaRicambiBlankPdf(doc: jsPDF): void {
 }
 
 export function drawSchedaBlankPdf(doc: jsPDF, tipo: SchedaBlankTipo, _generatedAt: Date): void {
+  void _generatedAt;
   if (tipo === "ingresso") {
     drawSchedaIngressoBlankPdf(doc);
     return;

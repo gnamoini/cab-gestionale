@@ -1,0 +1,13 @@
+diff --git a/lib/preventivi/righe-addetti-from-scheda-lavorazioni.ts b/lib/preventivi/righe-addetti-from-scheda-lavorazioni.ts
+index 67b4939a..1f37eceb 100644
+--- a/lib/preventivi/righe-addetti-from-scheda-lavorazioni.ts
++++ b/lib/preventivi/righe-addetti-from-scheda-lavorazioni.ts
+@@ -28,7 +28,7 @@ export function righeAddettiFromSchedaLavorazioni(
+       (typeof (raw as { addetto?: string }).addetto === "string" ||
+         typeof (raw as { oreImpiegate?: number }).oreImpiegate === "number")
+         ? (() => {
+-            const { addettiAssegnati: _drop, ...rest } = raw as Record<string, unknown>;
++            const { ...rest } = raw as Record<string, unknown>;
+             return rest;
+           })()
+         : raw;

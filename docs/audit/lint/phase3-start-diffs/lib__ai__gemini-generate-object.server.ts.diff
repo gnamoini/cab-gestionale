@@ -1,0 +1,13 @@
+diff --git a/lib/ai/gemini-generate-object.server.ts b/lib/ai/gemini-generate-object.server.ts
+index 24219f86..6bbe1a4d 100644
+--- a/lib/ai/gemini-generate-object.server.ts
++++ b/lib/ai/gemini-generate-object.server.ts
+@@ -18,7 +18,7 @@ type GenerateObjectInput = {
+ export async function generateObjectWithGeminiFailover(
+   input: GenerateObjectInput,
+ ): Promise<Awaited<ReturnType<typeof generateObject>>> {
+-  const { abortSignal, model: _override, ...rest } = input;
++  const { abortSignal, ...rest } = input;
+   const timeoutMs =
+     abortSignal != null && typeof AbortSignal.timeout === "function" ? 90_000 : readTimeout(abortSignal);
+   const result = await aiService.generateObject({

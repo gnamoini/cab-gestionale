@@ -1,0 +1,22 @@
+diff --git a/lib/regression/pdf-artifact-policy.test.ts b/lib/regression/pdf-artifact-policy.test.ts
+index e40201e8..0a13c668 100644
+--- a/lib/regression/pdf-artifact-policy.test.ts
++++ b/lib/regression/pdf-artifact-policy.test.ts
+@@ -79,13 +79,15 @@ for (const rel of pdfDataModules) {
+ const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
+ assert.match(requestArtifact, /openSafePopup/);
+ assert.match(requestArtifact, /openSameOriginApiPdf/);
+-const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
++const responseHeaders = read("lib/pdf/core/pdf-response.ts");
+ assert.match(responseHeaders, /X-Cache-Status/);
+ assert.match(responseHeaders, /X-PDF-Generate-Ms/);
+-assert.match(responseHeaders, /"Cache-Control":\s*"private, no-store, max-age=0"/);
++assert.match(responseHeaders, /ETag/);
++assert.match(responseHeaders, /PDF_ARTIFACT_BROWSER_CACHE_MAX_AGE_SEC/);
+ assert.doesNotMatch(responseHeaders, /"Cache-Control":\s*"public[^"]*immutable/);
+ 
+ const generateServer = read("lib/pdf-artifacts/pdf-artifact-generate.server.ts");
++assert.match(generateServer, /fetchPreventivoPdfHashMetaServer/);
+ assert.match(generateServer, /uploadPdfArtifactBestEffort/);
+ assert.match(generateServer, /fetchSchedeBundlesStoreServer/);
+ assert.match(generateServer, /fetchLavorazioniListAuthorizedServer\(LAVORAZIONI_ATTIVE_LIGHT_FILTERS\)/);

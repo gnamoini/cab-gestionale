@@ -93,8 +93,9 @@ async function runReconcile(sb: SupabaseClient): Promise<ReconcileResult> {
 /** Riconciliazione sessione pura — single-flight in-flight, nessun side effect. */
 export function reconcileSession(
   sb: SupabaseClient,
-  _opts: { reason: ReconcileReason; force?: boolean },
+  _opts?: { reason: ReconcileReason; force?: boolean },
 ): Promise<ReconcileResult> {
+  void _opts;
   if (inFlightPromise) {
     return inFlightPromise;
   }

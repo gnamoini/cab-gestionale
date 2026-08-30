@@ -51,11 +51,6 @@ export const MEZZO_PERMANENT_FIELD_LABELS: Record<MezzoPermanentFieldKey, string
   targa: "Targa",
 };
 
-function fieldStr(v: unknown): string {
-  if (v === undefined || v === null) return "";
-  return String(v).trim();
-}
-
 export function buildSchedaSaveConflictSummary(input: {
   fields: SchedaIngressoFields;
   linkedSnapshot: LinkedMezzoSnapshot | null;

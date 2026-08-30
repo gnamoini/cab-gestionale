@@ -18,8 +18,6 @@ import type { SecurityUserAdminRow } from "@/src/actions/admin-users.types";
 import { isUserBanned } from "@/lib/auth/user-ban-state";
 import {
   loadAllRolePageAccess,
-  loadAllUserPageOverrideRows,
-  listAllRoles,
   deleteUserPageOverride,
   upsertUserPageOverride,
 } from "@/src/lib/rbac/load-rbac-data";
@@ -32,7 +30,6 @@ import { onUserRoleChangedServer } from "@/src/lib/rbac/on-user-role-changed.ser
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
 import {
   computePagePermissionDraft,
-  hasPagePermissionOverrides,
   planPagePermissionPersist,
   type PagePermissionDraftRow,
 } from "@/lib/security/user-page-permissions";
@@ -94,27 +91,6 @@ export type ListSecurityUsersPermissionsResult =
 export type BatchUpdateSecurityUsersResult =
   | { ok: true; updatedCount: number; roleChangedUserIds: string[] }
   | { ok: false; message: string };
-
-function roleGrantsClientPortal(rolePageAccess: Record<string, PageAccessLevel>, roleKey: string): boolean {
-  const access = rolePageAccess.lavorazioni_clienti ?? seedPageAccessForRole(roleKey).lavorazioni_clienti ?? "none";
-  return access === "read" || access === "write";
-}
-
-function toPermissionRow(
-  user: SecurityUserAdminRow,
-  userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[],
-  rolePageAccessByRole: Map<string, Record<string, PageAccessLevel>>,
-): SecurityUserPermissionRow {
-  const roleKey = resolveRole(user.ruolo);
-  const rolePageAccess = rolePageAccessByRole.get(roleKey) ?? seedPageAccessForRole(roleKey);
-  const fromRole = roleGrantsClientPortal(rolePageAccess, roleKey);
-  return {
-    ...user,
-    clientLavorazioniAccessFromRole: fromRole,
-    clientLavorazioniAccess: fromRole,
-    hasPagePermissionOverrides: hasPagePermissionOverrides(user.id, userPageOverrideRows),
-  };
-}
 
 async function deleteAllUserPageOverrides(admin: SupabaseClient, userId: string): Promise<void> {
   const { error } = await admin.from("user_page_overrides").delete().eq("user_id", userId);

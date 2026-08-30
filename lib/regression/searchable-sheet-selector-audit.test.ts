@@ -67,7 +67,7 @@ assert.match(ordering, /orderSelectSuggestions/);
 assert.match(focusRestore, /restoreFocus/);
 
 const settingsSelect = read("components/gestionale/global-input/global-settings-list-select.tsx");
-assert.match(settingsSelect, /recentsKey: isMagazzinoListKey \? undefined : listKey/);
+assert.match(settingsSelect, /recentsKey: disableRecents \|\| isMagazzinoListKey \? undefined : listKey/);
 assert.match(settingsSelect, /alphabeticalBrowse: isMagazzinoListKey/);
 
 const resolveSuggestions = read("lib/selector-core/resolve-selector-suggestions.ts");

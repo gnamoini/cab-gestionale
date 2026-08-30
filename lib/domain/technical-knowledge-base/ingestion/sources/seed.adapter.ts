@@ -34,7 +34,7 @@ export const seedAdapter: TkbSourceAdapter = {
   id: "seed",
   tier: 4,
   supportsIncremental: false,
-  async collect(_ctx) {
+  async collect() {
     return draftToFragments(createTkbSeedDraft());
   },
 };

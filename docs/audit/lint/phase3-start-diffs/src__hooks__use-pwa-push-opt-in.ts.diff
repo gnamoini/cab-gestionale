@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-pwa-push-opt-in.ts b/src/hooks/use-pwa-push-opt-in.ts
+index ba100b7a..e5042856 100644
+--- a/src/hooks/use-pwa-push-opt-in.ts
++++ b/src/hooks/use-pwa-push-opt-in.ts
+@@ -55,7 +55,6 @@ function subscribePermission(onStoreChange: () => void) {
+ 
+ export function usePwaPushOptIn() {
+   const [engagementElapsed, setEngagementElapsed] = useState(false);
+-  const [dismissed, setDismissed] = useState(false);
+   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+   const [subscriptionRevoked, setSubscriptionRevoked] = useState(() => readRevokedFlag());
+   const [busy, setBusy] = useState(false);

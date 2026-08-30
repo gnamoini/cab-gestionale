@@ -25,7 +25,7 @@ export function PaginatedList<T>({ items, depsKey, children, paginationClassName
     resetPage();
   }, [depsKey, resetPage]);
 
-  const pageItems = useMemo(() => sliceItems([...items]), [items, sliceItems, page]);
+  const pageItems = useMemo(() => sliceItems([...items]), [items, sliceItems]);
 
   return (
     <>

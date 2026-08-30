@@ -1,0 +1,13 @@
+diff --git a/lib/pdf/schede-blank-layout.ts b/lib/pdf/schede-blank-layout.ts
+index a88fcea8..4ad7fb8b 100644
+--- a/lib/pdf/schede-blank-layout.ts
++++ b/lib/pdf/schede-blank-layout.ts
+@@ -364,7 +364,7 @@ export function drawSchedaRicambiBlankPdf(doc: jsPDF): void {
+   drawLabelLine(doc, "Targa/Matricola", y, 42);
+ }
+ 
+-export function drawSchedaBlankPdf(doc: jsPDF, tipo: SchedaBlankTipo, _generatedAt: Date): void {
++export function drawSchedaBlankPdf(doc: jsPDF, tipo: SchedaBlankTipo): void {
+   if (tipo === "ingresso") {
+     drawSchedaIngressoBlankPdf(doc);
+     return;

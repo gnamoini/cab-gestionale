@@ -4,12 +4,12 @@ import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import {
   buildLogModificaSummary,
-  filterAuditMetadataCampoChanges,
+
   modificheToModificaRiga,
   parseModificheLines,
   type LogModificaSummary,
 } from "@/lib/gestionale-log/log-summary";
-import { isImageLogAction, type GestionaleLogEventTone, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { isImageLogAction, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";

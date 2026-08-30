@@ -43,7 +43,7 @@ export function MezziHubLavorazioniSummaryPanel({
     sorted.length,
     listPageSize,
   );
-  const paged = useMemo(() => sliceItems(sorted), [sorted, sliceItems, page]);
+  const paged = useMemo(() => sliceItems(sorted), [sorted, sliceItems]);
 
   const lavorazioneIds = useMemo(() => sorted.map((r) => r.id), [sorted]);
   const { store: schedeStore } = useSchedeBundlesQuery(sorted.length > 0, { lavorazioneIds });

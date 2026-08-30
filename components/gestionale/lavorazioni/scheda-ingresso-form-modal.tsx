@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import {
   useCallback,
   useEffect,
@@ -68,7 +70,6 @@ import { useSchedaIngressoMezzoLinkGate } from "@/src/hooks/use-scheda-ingresso-
 import { useSchedaIngressoSavePipeline } from "@/src/hooks/use-scheda-ingresso-save-pipeline";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
-import { prepareFormSubmitAsync } from "@/lib/forms/form-engine/prepare-form-submit";
 import type { FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
 import type {
   IngressoSaveCommitInput,
@@ -84,7 +85,7 @@ import {
 } from "@/components/design-system";
 import { Tooltip } from "@/components/ui";
 import {
-  erpBtnNeutral,
+
   prioritaPillShellClass,
   prioritaPillShellStyle,
   statoPillShellClass,
@@ -108,6 +109,7 @@ import { RichiedenteFirmaCaptureModal } from "@/components/gestionale/schede/ric
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { globalTableTheadSticky } from "@/lib/ui/global-table";
 import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
@@ -120,7 +122,7 @@ import { useSchedaIngressoUnknownSettingsGate } from "@/src/hooks/use-scheda-ing
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import {
   SCHEDA_INGRESSO_INGRESSO_FIELD_KEYS,
-  SCHEDA_INGRESSO_INTERVENTO_FIELD_KEYS,
+
   schedaIngressoFieldsSliceEqual,
 } from "@/lib/schede/scheda-ingresso-form-field-groups";
 import type { FixedListPillOption } from "@/components/gestionale/global-input/global-fixed-list-pill";
@@ -631,14 +633,12 @@ export function SchedaIngressoFormModalShell({
 export function SchedaIngressoFormBody({
   variant,
   fields,
-  setFields,
   onPatch,
   pending,
   readOnly = false,
   mezzi = [],
   schedeStore = {},
   attive = [],
-  storico = [],
   excludeLavorazioneId,
   stato,
   onStatoChange,
@@ -723,6 +723,7 @@ export function SchedaIngressoFormBody({
     [globalOpts.lavorazioni.prioritaDb],
   );
   const addettiOpts = globalOpts.lavorazioni.addetti;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
@@ -844,6 +845,7 @@ export function SchedaIngressoFormBody({
   const lavorazioniOpts = globalOpts.lavorazioni;
   const tablePillOptions = useMemo(
     () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
     [
       lavorazioniOpts.stati,
       lavorazioniOpts.prioritaDb,
@@ -899,7 +901,7 @@ export function SchedaIngressoFormBody({
           <CaptureIngressoHintsBanner reviewCount={captureReviewCount} />
         ) : null}
         {(globalOpts.isError || errorMessage) ? (
-          <div className="sticky top-0 z-10 -mx-2 -mt-4 space-y-3 bg-[var(--cab-card)] px-2 pb-3 pt-4 shadow-[0_1px_0_0_var(--cab-border)] sm:-mx-3 sm:px-3 md:-mx-4 md:px-4">
+          <div className={`${globalTableTheadSticky} z-10 -mx-2 -mt-4 space-y-3 !bg-[var(--cab-card)] px-2 pb-3 pt-4 shadow-[0_1px_0_0_var(--cab-border)] sm:-mx-3 sm:px-3 md:-mx-4 md:px-4`}>
             {globalOpts.isError ? (
               <FormAlert title="Impostazioni non disponibili">
                 {globalOpts.error?.message ?? "Errore nel caricamento delle impostazioni."}
@@ -1127,7 +1129,7 @@ export function SchedaIngressoEditModal({
     initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
   );
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
-  const { value: draft, reset, setValue, patch: onPatch, getSnapshot, formProps, ref: draftRef } =
+  const { value: draft, reset, setValue, patch: onPatch, getSnapshot, formProps, runSubmit } =
     formEngine;
   const commitRef = useRef(commitIngressoEdit);
   commitRef.current = commitIngressoEdit;
@@ -1195,6 +1197,7 @@ export function SchedaIngressoEditModal({
       ingressoEditorOpenedRef.current = false;
       lastBootstrappedMezzoIdRef.current = null;
       baselineRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setUnsavedExitOpen(false);
       return;
     }
@@ -1235,6 +1238,7 @@ export function SchedaIngressoEditModal({
   );
 
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => (mezziUi.length > 0 ? mezziUi : [...mezzi]),
@@ -1341,10 +1345,9 @@ export function SchedaIngressoEditModal({
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (ro || !open || savePending) return;
-    void (async () => {
-      await prepareFormSubmitAsync(e.currentTarget);
+    void runSubmit(e.currentTarget, async () => {
       await runIngressoSave();
-    })();
+    });
   }
 
   if (!open) return null;

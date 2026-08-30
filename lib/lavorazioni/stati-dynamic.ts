@@ -47,7 +47,7 @@ export function migrateStatoConfigId(id: string): string {
 }
 
 function uniqueStatoId(base: string, used: Set<string>): string {
-  let id = slugifyStatoId(base);
+  const id = slugifyStatoId(base);
   if (!used.has(id)) return id;
   let n = 2;
   while (used.has(`${id}_${n}`)) n += 1;

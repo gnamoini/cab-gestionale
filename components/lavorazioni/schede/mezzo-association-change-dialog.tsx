@@ -12,6 +12,7 @@ import {
   GestionaleModalFooterCancelButton,
   GestionaleModalFooterSaveButton,
 } from "@/components/design-system";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 
 export function MezzoAssociationChangeDialog({
   open,
@@ -80,10 +81,11 @@ export function MezzoAssociationChangeDialog({
           <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
             Motivazione (opzionale)
           </span>
-          <textarea
-            className="cab-input w-full min-h-[4rem] resize-y"
+          <GestionaleTextarea
+            className="min-h-[4rem]"
+            size="sm"
             value={reason}
-            onChange={(e) => onReasonChange?.(e.target.value)}
+            onChange={(v) => onReasonChange?.(v)}
             placeholder="Es. cambio commessa, nuovo utilizzatore…"
           />
         </label>

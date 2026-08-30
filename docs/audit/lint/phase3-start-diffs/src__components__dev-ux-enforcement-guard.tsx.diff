@@ -1,0 +1,11 @@
+diff --git a/src/components/dev-ux-enforcement-guard.tsx b/src/components/dev-ux-enforcement-guard.tsx
+index 20a23c14..27b0dafa 100644
+--- a/src/components/dev-ux-enforcement-guard.tsx
++++ b/src/components/dev-ux-enforcement-guard.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++/* eslint-disable no-restricted-properties -- dev-only shim that patches legacy window.alert/confirm/prompt */
+ import { useEffect } from "react";
+ import {
+   isUxEnforcementDevMode,

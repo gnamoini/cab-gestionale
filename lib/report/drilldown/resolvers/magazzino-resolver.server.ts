@@ -2,7 +2,6 @@ import "server-only";
 
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import { sottoScortaCount } from "@/lib/report/kpi-performance/kpi-performance-formulas";
-import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import type { ReportAnalyticsSourceBundle } from "@/lib/report/analytics-engine/source-bundle";
 import type { ReportDrillDownRow } from "@/lib/report/drilldown/types";
@@ -49,7 +48,6 @@ export function listMovimentiUscitaInRange(
   range: DateRange,
   ricambioId?: string,
 ): ReportDrillDownRow[] {
-  const agg = aggregateMagazzinoQtyByProductInRange(bundle.integrity.magLog, range);
   const prodMap = new Map(bundle.integrity.magazzino.map((p) => [p.id, p]));
   const rows: ReportDrillDownRow[] = [];
 

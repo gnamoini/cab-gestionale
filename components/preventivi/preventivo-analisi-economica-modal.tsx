@@ -28,6 +28,7 @@ import {
   type PreventivoAnalisiEconomicaApiResponse,
 } from "@/lib/preventivi/preventivo-analisi-economica";
 import { resolveMargineTier } from "@/lib/preventivi/preventivo-profitto";
+import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 import { prevTableBodyTextClass, prevTableTd } from "@/components/preventivi/preventivi-table-shared";
 import { preventivoEditorMoneyValue, preventivoEditorSubsectionTitle } from "@/components/preventivi/preventivo-editor-ui";
 import { dsLabel } from "@/lib/ui/design-system";
@@ -240,9 +241,9 @@ function AnalisiContent({ data }: { data: PreventivoAnalisiEconomicaApiResponse 
           {categorie.map((c) => (
             <GestionaleListTableRow key={c.id}>
               <td className={prevTableTd}>{c.label}</td>
-              <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.ricavo)}</td>
-              <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.costo)}</td>
-              <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.profitto)}</td>
+              <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.ricavo)}</td>
+              <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.costo)}</td>
+              <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(c.totale.profitto)}</td>
               <td className={prevTableTd}><MargineCell margine={c.totale.margine} /></td>
             </GestionaleListTableRow>
           ))}
@@ -286,14 +287,14 @@ function AnalisiContent({ data }: { data: PreventivoAnalisiEconomicaApiResponse 
         >
           <GestionaleListTableRow>
             <td className={prevTableTd}>{mano.descrizione}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtQty(confronto.ore.preventivato)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtQty(confronto.ore.reale)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtQty(confronto.ore.scostamento)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.costoOrarioInterno)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.prezzoVenditaOrario)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.costoReale)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.ricavo)}</td>
-            <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.profitto)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtQty(confronto.ore.preventivato)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtQty(confronto.ore.reale)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtQty(confronto.ore.scostamento)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.costoOrarioInterno)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.prezzoVenditaOrario)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.costoReale)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.ricavo)}</td>
+            <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(mano.profitto)}</td>
             <td className={prevTableTd}><MargineCell margine={mano.margine} /></td>
           </GestionaleListTableRow>
         </GestionaleListTable>
@@ -327,12 +328,12 @@ function AnalisiContent({ data }: { data: PreventivoAnalisiEconomicaApiResponse 
               >
                 <td className={prevTableTd}>{r.codice}</td>
                 <td className={prevTableTd}>{r.descrizione}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtQty(r.quantita)}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(r.costoUnitario)}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(r.costoTotale)}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(r.prezzoVenditaUnitario)}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(r.ricavo)}</td>
-                <td className={`${prevTableTd} tabular-nums`}>{fmtPreventivoEuro(r.profitto)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtQty(r.quantita)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(r.costoUnitario)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(r.costoTotale)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(r.prezzoVenditaUnitario)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(r.ricavo)}</td>
+                <td className={`${gestionaleListTableTd} tabular-nums`}>{fmtPreventivoEuro(r.profitto)}</td>
                 <td className={prevTableTd}><MargineCell margine={r.margine} /></td>
               </GestionaleListTableRow>
             ))}

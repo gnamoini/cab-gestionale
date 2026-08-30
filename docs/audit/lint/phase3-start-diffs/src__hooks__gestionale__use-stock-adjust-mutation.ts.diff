@@ -1,0 +1,22 @@
+diff --git a/src/hooks/gestionale/use-stock-adjust-mutation.ts b/src/hooks/gestionale/use-stock-adjust-mutation.ts
+index 40f788d2..45facf8a 100644
+--- a/src/hooks/gestionale/use-stock-adjust-mutation.ts
++++ b/src/hooks/gestionale/use-stock-adjust-mutation.ts
+@@ -2,7 +2,7 @@
+ 
+ import { useCallback, useEffect, useSyncExternalStore } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+-import { useDeterministicStockPipeline } from "@/lib/feature-flags/stock-pipeline";
++import { isDeterministicStockPipelineActive } from "@/lib/feature-flags/stock-pipeline";
+ import {
+   getStockQueueState,
+   subscribeStockQueueState,
+@@ -56,7 +56,7 @@ function useDeterministicStockAdjustMutation() {
+ }
+ 
+ export function useStockAdjustMutation() {
+-  const v4 = useDeterministicStockPipeline();
++  const v4 = isDeterministicStockPipelineActive();
+   const deterministic = useDeterministicStockAdjustMutation();
+   const legacy = useEmergencyLegacyStockAdjustMutation();
+   return v4 ? deterministic : legacy;

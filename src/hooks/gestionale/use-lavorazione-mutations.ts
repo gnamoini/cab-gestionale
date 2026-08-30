@@ -196,12 +196,16 @@ export function useLavorazioneRestoreMutation() {
   );
 }
 
+export type LavorazioneConcludePayload = { id: string; completionYmd: string };
+
 export function useLavorazioneConcludeMutation() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
-  return useServiceMutation((id: string) => lavorazioniEntry.conclude(id), {
-    onMutate: async (id) => {
+  return useServiceMutation(
+    ({ id, completionYmd }: LavorazioneConcludePayload) => lavorazioniEntry.conclude(id, completionYmd),
+    {
+    onMutate: async ({ id, completionYmd }) => {
       const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
       const existing = context.lists
         .flatMap((s) => lavorazioniListCacheRows(s.data))
@@ -209,20 +213,20 @@ export function useLavorazioneConcludeMutation() {
       applyOptimisticLavorazioneUpdate(
         queryClient,
         id,
-        buildConcludeOptimisticPatch(existing),
+        buildConcludeOptimisticPatch(existing, completionYmd),
         undefined,
         optimisticAudit,
       );
       return context;
     },
-    onSuccess: (serverRow, id) => {
+    onSuccess: (serverRow, { id }) => {
       applyOptimisticLavorazioneUpdate(queryClient, id, {}, serverRow);
       markRecentLocalGestionaleMutation(["lavorazioni"], id);
     },
-    onError: (_err, _id, context) => {
+    onError: (_err, _payload, context) => {
       if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
     },
-    onSettled: async (_data, error, id) => {
+    onSettled: async (_data, error, { id }) => {
       if (error) return;
       await traceMutationLifecycle(
         { entityType: "lavorazione", entityId: id, operation: "conclude" },
@@ -235,7 +239,8 @@ export function useLavorazioneConcludeMutation() {
           ),
       );
     },
-  });
+  },
+  );
 }
 
 export type LavorazioneUpdatePayload = { id: string; data: LavorazioneUpdate };

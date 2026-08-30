@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/rbac-page-guard.tsx b/components/gestionale/rbac-page-guard.tsx
+index 226be14e..6ce1b49f 100644
+--- a/components/gestionale/rbac-page-guard.tsx
++++ b/components/gestionale/rbac-page-guard.tsx
+@@ -72,6 +72,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
+   useEffect(() => {
+     if (!showLoadingGate) {
+       loadingGateStartedRef.current = null;
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setLoadingFailsafe(false);
+       return;
+     }

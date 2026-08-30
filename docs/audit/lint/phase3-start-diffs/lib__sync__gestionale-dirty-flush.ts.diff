@@ -1,0 +1,11 @@
+diff --git a/lib/sync/gestionale-dirty-flush.ts b/lib/sync/gestionale-dirty-flush.ts
+index 98c2e1d1..b75dac68 100644
+--- a/lib/sync/gestionale-dirty-flush.ts
++++ b/lib/sync/gestionale-dirty-flush.ts
+@@ -1,6 +1,5 @@
+ "use client";
+ 
+-import { invalidateGestionaleTables } from "@/lib/realtime/gestionale-realtime-config";
+ import {
+   markGestionaleDirty,
+ } from "@/lib/sync/gestionale-dirty-state";

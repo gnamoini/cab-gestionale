@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 const ROOT = join(process.cwd());
 const BI = join(ROOT, "components/report/bi-center");
-const OP = join(BI, "operational");
 
 const FORBIDDEN = ["buildInvoicePeriodKpiExtended", "countCompletedInRange", 'from("invoices")', "supabase"];
 

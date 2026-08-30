@@ -1,0 +1,21 @@
+diff --git a/components/gestionale/media/gestionale-media-image.tsx b/components/gestionale/media/gestionale-media-image.tsx
+index 111a79dc..a0055dd0 100644
+--- a/components/gestionale/media/gestionale-media-image.tsx
++++ b/components/gestionale/media/gestionale-media-image.tsx
+@@ -46,6 +46,7 @@ export function GestionaleMediaImage({
+   const [failed, setFailed] = useState(false);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDeliveryPath(baseDeliveryPath);
+     setLoaded(false);
+     setFailed(false);
+@@ -79,7 +80,7 @@ export function GestionaleMediaImage({
+         </span>
+       ) : null}
+       {!failed ? (
+-        /* eslint-disable-next-line @next/next/no-img-element -- Stable /api/media proxy URLs with immutable cache. */
++        /* eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- Stable /api/media proxy URLs with immutable cache. */
+         <img
+           key={deliveryPath}
+           src={src}

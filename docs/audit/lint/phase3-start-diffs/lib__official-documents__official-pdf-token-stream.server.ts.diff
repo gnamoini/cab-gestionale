@@ -1,0 +1,13 @@
+diff --git a/lib/official-documents/official-pdf-token-stream.server.ts b/lib/official-documents/official-pdf-token-stream.server.ts
+index cba86bd7..e11f5f70 100644
+--- a/lib/official-documents/official-pdf-token-stream.server.ts
++++ b/lib/official-documents/official-pdf-token-stream.server.ts
+@@ -4,7 +4,7 @@ import { DOCUMENT_ACCESS_TOKENS_COLUMNS } from "@/lib/db/table-select-columns";
+ import { streamOfficialDdtPdfServer, streamOfficialPreventivoPdfServer } from "@/lib/official-documents/official-pdf-stream.server";
+ import type { PdfArtifactDelivery } from "@/lib/pdf-artifacts/pdf-artifact-generate.server";
+ import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+-import { err, success, type ServiceResult } from "@/src/services/service-result";
++import { err, type ServiceResult } from "@/src/services/service-result";
+ import type { DocumentAccessTokenRow } from "@/src/types/supabase-tables";
+ 
+ export async function streamOfficialPdfByTokenServer(

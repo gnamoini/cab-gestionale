@@ -4,7 +4,7 @@ import { useEffect, type RefObject } from "react";
 import { subscribeGestionaleViewport } from "@/lib/ui/gestionale-viewport-orchestrator";
 import {
   applyKeyboardPadToScrollContainer,
-  CAB_MODAL_ROOT_ATTR,
+
   CAB_MODAL_SCROLL_ATTR,
   isVirtualKeyboardClosing,
 } from "@/lib/ui/mobile-modal-behavior";

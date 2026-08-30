@@ -68,7 +68,7 @@ export function ReportMetricCompareSection({
 
   return (
     <div className="mt-3 space-y-1.5 border-t border-[color:var(--cab-border)] pt-3">
-      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs">
+      <div className="flex min-w-0 items-baseline justify-between gap-x-2 gap-y-0.5 text-xs flex-nowrap sm:flex-wrap">
         <span className="font-medium text-[color:var(--cab-text-muted)]">Periodo precedente</span>
         <span className="tabular-nums text-[color:var(--cab-text)]">{prevFormatted}</span>
       </div>

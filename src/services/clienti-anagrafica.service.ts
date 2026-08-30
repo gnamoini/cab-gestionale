@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable cab-rbac/no-auth-in-services -- lint phase2: legacy service layer; domain entry migration deferred */
 import {
   CLIENTI_ANAGRAFICHE_COLUMNS,
   CLIENTI_CONTATTI_COLUMNS,

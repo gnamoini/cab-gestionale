@@ -19,7 +19,7 @@ export function ReportClassificheOperativePanel({
   return (
     <div className="flex flex-col gap-10 2xl:grid 2xl:grid-cols-[minmax(0,1.22fr)_minmax(280px,0.78fr)] 2xl:items-start 2xl:gap-8">
       <section className="min-w-0">
-        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <header className="mb-3 flex items-baseline justify-between gap-x-3 gap-y-1 flex-nowrap sm:flex-wrap">
           <h3 className={subsectionTitle}>Mezzi più lavorati</h3>
           <p className={subsectionMeta}>
             {mezzi.length === 0
@@ -30,7 +30,7 @@ export function ReportClassificheOperativePanel({
         <ReportTopMezzi rows={mezzi} showCompare={showCompare} />
       </section>
       <section className="min-w-0">
-        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <header className="mb-3 flex items-baseline justify-between gap-x-3 gap-y-1 flex-nowrap sm:flex-wrap">
           <h3 className={subsectionTitle}>Clienti più attivi</h3>
           <p className={subsectionMeta}>
             {clienti.length === 0

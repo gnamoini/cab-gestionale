@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import {

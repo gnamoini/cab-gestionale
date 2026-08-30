@@ -1,0 +1,13 @@
+diff --git a/components/report/layout/report-maintenance-zone.tsx b/components/report/layout/report-maintenance-zone.tsx
+index e65042b7..988a695f 100644
+--- a/components/report/layout/report-maintenance-zone.tsx
++++ b/components/report/layout/report-maintenance-zone.tsx
+@@ -25,7 +25,7 @@ import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
+ export function ReportMaintenanceZone({
+   attive,
+   completate,
+-  manualEntries,
++  
+   anchor,
+   filterRange,
+   compareDetail,

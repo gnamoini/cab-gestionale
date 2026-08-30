@@ -93,7 +93,9 @@ export function SettingsPropagationHealthSection({ liste }: { liste: MezziListeP
     }
   }, [gestToast]);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void reload();
   }, [reload, liste]);
 
@@ -213,7 +215,7 @@ export function SettingsPropagationHealthSection({ liste }: { liste: MezziListeP
             <li className="text-[color:var(--cab-text-muted)]">Nessun job registrato</li>
           ) : (
             recentJobs.map((j) => (
-              <li key={j.id} className="flex flex-wrap gap-x-2 text-[color:var(--cab-text-muted)]">
+              <li key={j.id} className="flex gap-x-2 text-[color:var(--cab-text-muted)] min-w-0 flex-nowrap sm:flex-wrap">
                 <span className="font-medium text-[color:var(--cab-text)]">{j.old_label}</span>
                 <span>→</span>
                 <span className="font-medium text-[color:var(--cab-text)]">{j.new_label}</span>

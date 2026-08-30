@@ -1,0 +1,61 @@
+diff --git a/lib/communications/template/default-templates.ts b/lib/communications/template/default-templates.ts
+index 57d6ddc8..87548892 100644
+--- a/lib/communications/template/default-templates.ts
++++ b/lib/communications/template/default-templates.ts
+@@ -36,7 +36,7 @@ Cordiali saluti,
+ {{azienda}}`,
+   },
+   "estimate.published": {
+-    subject: "Nuovo preventivo disponibile per la tua lavorazione",
++    subject: "Nuovo preventivo disponibile",
+     body: `Gentile {{cliente}},
+ 
+ è disponibile il preventivo {{numero_preventivo}} (v{{versione}}) per la lavorazione {{numero_lavorazione}}.
+@@ -46,7 +46,7 @@ Totale: {{totale}}
+ 
+ {{descrizione_preventivo}}
+ 
+-Il preventivo è disponibile nel portale cliente:
++Può consultarlo nel portale cliente:
+ {{link_lavorazione}}
+ 
+ Cordiali saluti,
+@@ -56,7 +56,7 @@ Cordiali saluti,
+     subject: "Conferma preventivo",
+     body: `Gentile {{cliente}},
+ 
+-confermiamo l'approvazione del preventivo {{numero_preventivo}}.
++confermiamo l'approvazione del preventivo {{numero_preventivo}} per la lavorazione {{numero_lavorazione}}.
+ 
+ Cordiali saluti,
+ {{azienda}}`,
+@@ -65,7 +65,7 @@ Cordiali saluti,
+     subject: "Fattura emessa",
+     body: `Gentile {{cliente}},
+ 
+-è stata emessa una fattura. Totale: {{totale}}
++è stata emessa una fattura con totale {{totale}}.
+ 
+ Cordiali saluti,
+ {{azienda}}`,
+@@ -74,17 +74,17 @@ Cordiali saluti,
+     subject: "Ordine {{ordine}}",
+     body: `Spett.le {{fornitore}},
+ 
+-in allegato l'ordine {{ordine}}.
++in allegato trasmettiamo l'ordine {{ordine}}.
+ 
+ Cordiali saluti,
+ {{azienda}}
+-{{telefono_officina}}`,
++Tel. {{telefono_officina}}`,
+   },
+   "maintenance.reminder": {
+     subject: "Promemoria tagliando",
+     body: `Gentile {{cliente}},
+ 
+-promemoria tagliando per il mezzo {{mezzo}} ({{targa}}).
++le ricordiamo il tagliando previsto per il mezzo {{mezzo}} ({{targa}}).
+ Data prevista: {{data}}
+ 
+ Cordiali saluti,

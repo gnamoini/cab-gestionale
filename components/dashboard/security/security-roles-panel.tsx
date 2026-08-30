@@ -55,6 +55,7 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
     [matrixQ.data],
   );
 
+   
   useEffect(() => {
     if (!matrixQ.data) return;
     const initial = new Map<string, PageAccessLevel>();
@@ -63,6 +64,7 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
         initial.set(cellKey(row.role.key, cell.pageKey), cell.level);
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDraft(initial);
     setSaved(new Map(initial));
   }, [matrixQ.data]);

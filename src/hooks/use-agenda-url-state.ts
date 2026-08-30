@@ -113,6 +113,7 @@ export function useAgendaUrlState(input: UseAgendaUrlStateInput) {
       );
     }
     if (incoming.panel) input.setAnalysisCollapsed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- input decomposed to stable setter fields
   }, [
     input.searchParams,
     input.router,

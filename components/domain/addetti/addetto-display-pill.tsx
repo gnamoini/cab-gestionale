@@ -35,7 +35,9 @@ export function AddettoDisplayPill({
   const global = useGlobalOptions({ enabled: !recordsProp || !colorsProp });
   const records = recordsProp ?? global.lavorazioni.addettiRecords;
   const colorMap = colorsProp ?? global.lavorazioni.addettoColors;
+  // eslint-disable-next-line react-hooks/refs -- domain AddettoRef id, not a React ref
   const label = getAddettoDisplayLabel(records, addettoRef);
+  // eslint-disable-next-line react-hooks/refs -- domain AddettoRef id, not a React ref
   const shellStyle = getAddettoPillStyle(records, addettoRef, colorMap);
 
   if (label === emptyLabel || !label.trim()) {

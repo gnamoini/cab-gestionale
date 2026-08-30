@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-agenda-url-state.ts b/src/hooks/use-agenda-url-state.ts
+index 4447390a..c66d46f3 100644
+--- a/src/hooks/use-agenda-url-state.ts
++++ b/src/hooks/use-agenda-url-state.ts
+@@ -113,6 +113,7 @@ export function useAgendaUrlState(input: UseAgendaUrlStateInput) {
+       );
+     }
+     if (incoming.panel) input.setAnalysisCollapsed(false);
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- input decomposed to stable setter fields
+   }, [
+     input.searchParams,
+     input.router,

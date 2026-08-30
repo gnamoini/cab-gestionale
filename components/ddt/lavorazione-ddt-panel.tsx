@@ -38,7 +38,7 @@ export function LavorazioneDdtPanel({ lavorazioneId }: { lavorazioneId: string }
       ) : (
         <div className="mt-2 space-y-2">
           {documents.map((d) => (
-            <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-[color:var(--cab-border)] p-2">
+            <div key={d.id} className="flex items-center justify-between gap-2 rounded border border-[color:var(--cab-border)] p-2 min-w-0 flex-nowrap sm:flex-wrap">
               <div>
                 <p className="font-mono text-xs font-semibold">{ddtDisplayNumber(d)}</p>
                 <p className="text-xs text-[color:var(--cab-text-muted)]">

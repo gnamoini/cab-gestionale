@@ -1,0 +1,13 @@
+diff --git a/lib/ai/gemini-client.ts b/lib/ai/gemini-client.ts
+index a303ef15..e2fdbc4b 100644
+--- a/lib/ai/gemini-client.ts
++++ b/lib/ai/gemini-client.ts
+@@ -5,7 +5,7 @@ import type { LanguageModel } from "ai";
+ import {
+   resolveGeminiApiKeysFromEnv,
+   resolvePrimaryGeminiEnvSource,
+-  isGeminiApiKeyFormatValid,
++
+   inspectGeminiKeyFormat,
+   readRuntimeEnvVar,
+   normalizeGeminiReportModelId,

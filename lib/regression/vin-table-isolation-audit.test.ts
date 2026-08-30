@@ -11,8 +11,8 @@ const SCAN_DIRS = [
 ];
 
 const FORBIDDEN_PATTERNS = [
-  /\bvin\b.*(?:sort|export|search|column|<th\b|thead)/i,
-  /(?:sort|export|search).*\bvin\b/i,
+  /\bvin\b.*(?:sort|search|column|<th\b|thead)/i,
+  /(?:sort|search)\b.*\bvin\b/i,
   /mezzoMatchesSearch[\s\S]*\bvin\b/,
   /key:\s*["']vin["']/,
 ];

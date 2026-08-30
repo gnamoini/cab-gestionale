@@ -1,4 +1,4 @@
-import { migrateAddettoColorMapNomeToId, syncAddettoColorMap, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
+import { migrateAddettoColorMapNomeToId, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import {
   defaultDipendentiRecords,
   parseDipendentiRecordsFromPayload,
@@ -88,6 +88,7 @@ function resolveLavorazioniAddettiFromDipendentiPayload(o: Record<string, unknow
 }
 
 function parsePrioritaDb(_raw: unknown): PrioritaLavorazione[] {
+  void _raw;
   return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
 }
 

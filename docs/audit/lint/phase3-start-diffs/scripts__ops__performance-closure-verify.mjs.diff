@@ -1,0 +1,13 @@
+diff --git a/scripts/ops/performance-closure-verify.mjs b/scripts/ops/performance-closure-verify.mjs
+index d2c35f17..42bc2456 100644
+--- a/scripts/ops/performance-closure-verify.mjs
++++ b/scripts/ops/performance-closure-verify.mjs
+@@ -8,7 +8,7 @@ import { join } from "node:path";
+ 
+ const ROOT = process.cwd();
+ 
+-function run(label, cmd, args, { optional = false } = {}) {
++function run(label, cmd, args, { _optional = false } = {}) {
+   console.log(`\n[closure] ${label}...`);
+   const r = execFileSync(cmd, args, { cwd: ROOT, stdio: "inherit", shell: true });
+   return r;

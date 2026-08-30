@@ -1,13 +1,13 @@
 "use client";
 
 import { normMatricola, pickCanonicalAttrezzatura, matricolaRowsForNorm } from "@/lib/domain/mezzo-attrezzatura/attrezzatura-identity";
-import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
-import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
+import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
+import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { AssignmentChangeReason, AttrezzaturaRow } from "@/src/types/supabase-tables";
+import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
@@ -27,23 +27,6 @@ async function sb() {
 function oggettoAttrezzatura(r: AttrezzaturaRow) {
   const parts = [r.marca?.trim(), r.modello?.trim(), r.matricola?.trim()].filter(Boolean);
   return parts.length ? auditContext(parts.join(" ")) : undefined;
-}
-
-async function openAssignmentIfEnabled(
-  client: Awaited<ReturnType<typeof sb>>,
-  attrezzaturaId: string,
-  mezzoId: string,
-  reason: AssignmentChangeReason = "installazione",
-): Promise<void> {
-  const flags = resolveAssetLifecycleV1EnabledClient();
-  if (!isAssetLifecycleSubFlagActive(flags, "assignment_history")) return;
-  const { data: user } = await client.auth.getUser();
-  await client.rpc("open_attrezzatura_assignment", {
-    p_attrezzatura_id: attrezzaturaId,
-    p_mezzo_id: mezzoId,
-    p_change_reason: reason,
-    p_actor_id: user.user?.id ?? null,
-  });
 }
 
 export const attrezzatureService = {
@@ -111,7 +94,8 @@ export const attrezzatureService = {
             p_actor_id: user.user?.id ?? null,
           });
           if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "update" }));
-          const { mezzo_id: _drop, ...rest } = patch;
+          const rest = { ...patch };
+          delete rest.mezzo_id;
           if (Object.keys(rest).length === 0) {
             const updated = row as AttrezzaturaRow;
             await writeModificaLog(client, {

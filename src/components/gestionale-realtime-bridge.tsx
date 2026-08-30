@@ -187,10 +187,6 @@ export function GestionaleRealtimeBridge() {
       transport.activatePolling(reason);
     };
 
-    const stopPollingFallback = () => {
-      transport.stopPolling();
-    };
-
     const flushInvalidations = () => {
       if (cancelled || pendingTables.size === 0) return;
       const tables = [...pendingTables];
@@ -345,7 +341,7 @@ export function GestionaleRealtimeBridge() {
       }
     };
 
-    const removeActiveChannel = async (reason: string) => {
+    const removeActiveChannel = async () => {
       const sb = getBrowserSupabase();
       if (activeChannel) {
         try {
@@ -367,7 +363,7 @@ export function GestionaleRealtimeBridge() {
       reconnecting = true;
       const gen = ++connectGeneration;
 
-      await removeActiveChannel("pre-connect");
+      await removeActiveChannel();
       if (cancelled || gen !== connectGeneration) {
         reconnecting = false;
         return;
@@ -409,7 +405,7 @@ export function GestionaleRealtimeBridge() {
             if (cancelled || reconnectExhausted) return;
             rtConnectedRef.current = false;
             startPollingFallback("channel lost");
-            void removeActiveChannel("channel-lost").then(() => {
+            void removeActiveChannel().then(() => {
               if (cancelled || reconnectExhausted) return;
               if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
                 reconnectExhausted = true;
@@ -510,9 +506,9 @@ export function GestionaleRealtimeBridge() {
       pendingEntityIdsByTable.clear();
       connectGeneration += 1;
       setConnectionStatus("idle");
-      void removeActiveChannel("effect-cleanup");
+      void removeActiveChannel();
     };
-  }, [authReady, qc, setGestionaleStatus, setSettingsStatus, user?.id]);
+  }, [authReady, qc, refresh, setGestionaleStatus, setSettingsStatus, user?.id]);
 
   return null;
 }

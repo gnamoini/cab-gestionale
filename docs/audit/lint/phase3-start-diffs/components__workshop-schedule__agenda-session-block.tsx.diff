@@ -1,0 +1,13 @@
+diff --git a/components/workshop-schedule/agenda-session-block.tsx b/components/workshop-schedule/agenda-session-block.tsx
+index d0ea8652..4fe3ee67 100644
+--- a/components/workshop-schedule/agenda-session-block.tsx
++++ b/components/workshop-schedule/agenda-session-block.tsx
+@@ -60,7 +60,7 @@ export function AgendaSessionBlock({
+               {localTimeLabel(session.startAt)}–{localTimeLabel(session.endAt)}
+             </span>
+           </div>
+-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1">
++          <div className="mt-1.5 flex min-w-0 items-center gap-1 flex-nowrap sm:flex-wrap">
+             <span className={PLANNING_STATUS_BADGE_CLASS[session.planningStatus]}>
+               {PLANNING_STATUS_LABELS[session.planningStatus]}
+             </span>

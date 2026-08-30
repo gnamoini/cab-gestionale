@@ -1,0 +1,20 @@
+diff --git a/components/gestionale/selector/selector-listbox-helpers.tsx b/components/gestionale/selector/selector-listbox-helpers.tsx
+index 6de98614..b6e76017 100644
+--- a/components/gestionale/selector/selector-listbox-helpers.tsx
++++ b/components/gestionale/selector/selector-listbox-helpers.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++/* eslint-disable react/display-name -- lint phase2: factory render fns are not standalone components */
+ import {
+   globalAutocompleteOptionClass,
+   globalAutocompleteOptionPillClass,
+@@ -80,7 +81,7 @@ export function defaultItemRenderOption(
+     onPointerSelect,
+     sheetTapSelect = false,
+   } = params;
+-  return ({ item, active, selected, optionId, onSelect, onMouseEnter }) => {
++  return ({ item, active, optionId, onSelect, onMouseEnter }) => {
+     const isSelected = item.value === value;
+     const btnClass =
+       coloredOptions && item.pillStyle

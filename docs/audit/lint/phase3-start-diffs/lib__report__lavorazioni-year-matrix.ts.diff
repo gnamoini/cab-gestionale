@@ -1,0 +1,11 @@
+diff --git a/lib/report/lavorazioni-year-matrix.ts b/lib/report/lavorazioni-year-matrix.ts
+index 683400ab..58f95b53 100644
+--- a/lib/report/lavorazioni-year-matrix.ts
++++ b/lib/report/lavorazioni-year-matrix.ts
+@@ -1,5 +1,5 @@
+ import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
+-import { countCompletedByMonth, type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
++import { type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
+ import {
+   buildCompletateDbMaps,
+   isReportManualMonthOverride,

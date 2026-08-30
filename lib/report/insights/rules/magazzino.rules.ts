@@ -2,7 +2,6 @@ import type { InsightRuleDefinition } from "@/lib/report/insights/insight-rule-t
 import {
   MAG_COVERAGE_CRITICAL_DAYS,
   MAG_PARTS_SPIKE_RATIO,
-  detectMagazzinoConsumoSpike,
 } from "@/lib/report/magazzino-analytics";
 import { fire, makeCandidate, skipFalse, skipMissing } from "@/lib/report/insights/rules/rule-helpers";
 

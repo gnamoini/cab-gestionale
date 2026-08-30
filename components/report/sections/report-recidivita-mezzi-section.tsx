@@ -72,6 +72,7 @@ export default function ReportRecidivitaMezziSectionView(props: DomainReportSect
       filters.windowDays,
       props.schedeStore,
       props.magazzinoRows,
+      props.lavListRows,
       addettiRecords,
     ],
   );

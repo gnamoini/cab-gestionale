@@ -1,0 +1,13 @@
+diff --git a/lib/document-capture/capture-lavorazioni-text.ts b/lib/document-capture/capture-lavorazioni-text.ts
+index 714e579e..4c4403f9 100644
+--- a/lib/document-capture/capture-lavorazioni-text.ts
++++ b/lib/document-capture/capture-lavorazioni-text.ts
+@@ -109,7 +109,7 @@ function polishCaptureLavorazioniLine(line: string): string {
+   for (const [pattern, replacement] of INLINE_WORKSHOP_ABBREVS) {
+     body = body.replace(pattern, replacement);
+   }
+-  let result = formatCaptureMultilineText(body);
++  const result = formatCaptureMultilineText(body);
+   return result.replace(/\bpto\b/gi, "PTO");
+ }
+ 

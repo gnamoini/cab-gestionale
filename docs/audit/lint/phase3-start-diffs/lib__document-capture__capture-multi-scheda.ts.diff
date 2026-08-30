@@ -1,0 +1,11 @@
+diff --git a/lib/document-capture/capture-multi-scheda.ts b/lib/document-capture/capture-multi-scheda.ts
+index 0925dabc..77381d2a 100644
+--- a/lib/document-capture/capture-multi-scheda.ts
++++ b/lib/document-capture/capture-multi-scheda.ts
+@@ -1,5 +1,5 @@
+ import {
+-  mapCaptureFieldsToIngresso,
++
+   mapCaptureHeaderToIngressoSlice,
+   resolveCaptureFieldValue,
+   resolveRawFieldValue,

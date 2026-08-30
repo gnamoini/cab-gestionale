@@ -16,6 +16,7 @@ export function PwaIosInstallPromptBridge() {
     } catch {
       /* ignore */
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setVisible(true);
   }, []);
 

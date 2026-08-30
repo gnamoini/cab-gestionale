@@ -11,7 +11,7 @@ import {
 } from "./tkb-publish";
 import type { PublishTkbResult, TkbDraftBundle, TkbPublishedSnapshot } from "./types";
 
-const useMemoryStore = () =>
+const shouldUseTkbMemoryStore = () =>
   process.env.TKB_USE_MEMORY_STORE === "1" || process.env.NODE_ENV === "test";
 
 export async function publishTkbDraftServer(
@@ -19,7 +19,7 @@ export async function publishTkbDraftServer(
   bundle: TkbDraftBundle,
   opts?: PublishDraftOpts,
 ): Promise<PublishTkbResult> {
-  if (useMemoryStore() || !supabase) {
+  if (shouldUseTkbMemoryStore() || !supabase) {
     return publishMemoryDraft(bundle, opts);
   }
   const result = await publishDraftToDb(supabase, bundle, opts);
@@ -31,7 +31,7 @@ export async function loadPublishedTkbSnapshotServer(
   supabase: SupabaseClient | null,
   kbVersion?: number,
 ): Promise<TkbPublishedSnapshot> {
-  if (useMemoryStore() || !supabase) {
+  if (shouldUseTkbMemoryStore() || !supabase) {
     return loadMemorySnapshot(kbVersion);
   }
   const { getCachedPublishedSnapshot } = await import("./cache/tkb-snapshot-cache.server");
@@ -41,7 +41,7 @@ export async function loadPublishedTkbSnapshotServer(
 }
 
 export async function getLatestKbVersionServer(supabase: SupabaseClient | null): Promise<number | null> {
-  if (useMemoryStore() || !supabase) {
+  if (shouldUseTkbMemoryStore() || !supabase) {
     return getLatestMemorySnapshot()?.kbVersion ?? null;
   }
   const latest = await loadLatestPublishedSnapshot(supabase);

@@ -60,7 +60,7 @@ export function MezzoRegistratoIngressoInlineHint({
       {variant === "ambiguo" && ambiguousCandidates && ambiguousCandidates.length > 0 ? (
         <ul className="mt-1 space-y-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
           {ambiguousCandidates.map((candidate) => (
-            <li key={candidate.id} className="flex flex-wrap items-center gap-2">
+            <li key={candidate.id} className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
               <span>{mezzoIngressoSuggestLabel(candidate)}</span>
               {onSelectCandidate ? (
                 <button
@@ -79,7 +79,7 @@ export function MezzoRegistratoIngressoInlineHint({
           {mezzoIngressoSuggestLabel(mezzo)}
         </p>
       ) : null}
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         {showUseMezzo ? (
           <button type="button" className={`${dsBtnSoftOrange} ${dsFocus}`} onClick={onUseMezzo}>
             Usa questo mezzo

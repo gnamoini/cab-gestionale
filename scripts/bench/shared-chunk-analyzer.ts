@@ -207,7 +207,6 @@ async function main(): Promise<void> {
     const inFirstLoad = firstLoadBases.has(chunkName);
     const { packages, source, role } = attributeChunk(chunkFile);
     const chunkSize = statSync(chunkFile).size;
-    const content = readFileSync(chunkFile, "utf8");
     const labels = [...packages.keys()];
 
     if (inFirstLoad && meta && meta.firstLoadFactor >= 0.5) {

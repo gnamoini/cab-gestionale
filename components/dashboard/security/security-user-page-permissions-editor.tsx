@@ -1,7 +1,6 @@
 "use client";
 
 import { pageAccessLabel } from "@/src/lib/permissions/gestionale-pages";
-import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { PagePermissionDraftRow, PageOverrideUiLevel } from "@/lib/security/user-page-permissions";
 import { dsBtnGhost, dsScrollbar, dsTable, dsTableRow, dsTableTd, dsTableWrap } from "@/lib/ui/design-system";
 import type { AppRole } from "@/lib/auth/rbac";
@@ -55,7 +54,7 @@ export function SecurityUserPagePermissionsEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <p className="text-[11px] text-[color:var(--cab-text-muted)]">
           Override per pagina. &quot;Eredita&quot; non viene salvato nel database.
         </p>

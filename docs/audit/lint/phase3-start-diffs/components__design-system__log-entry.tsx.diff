@@ -1,0 +1,13 @@
+diff --git a/components/design-system/log-entry.tsx b/components/design-system/log-entry.tsx
+index d325b9e8..2e74a4a4 100644
+--- a/components/design-system/log-entry.tsx
++++ b/components/design-system/log-entry.tsx
+@@ -105,7 +105,7 @@ function LogEntryBody({
+     <div className={`flex min-w-0 gap-3 py-3 ${voided ? "opacity-65" : ""}`}>
+       <span className={`mt-2 h-2 w-2 shrink-0 rounded-full ${TONE_DOT[vm.tone]}`} aria-hidden />
+       <div className="min-w-0 flex-1 space-y-2">
+-        <div className="flex flex-wrap items-start justify-between gap-2">
++        <div className="flex items-start justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+           <span
+             className={`inline-flex max-w-full items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge}`}
+           >

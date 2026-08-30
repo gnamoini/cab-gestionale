@@ -1,0 +1,61 @@
+diff --git a/components/gestionale/magazzino/magazzino-label-qty-stepper.tsx b/components/gestionale/magazzino/magazzino-label-qty-stepper.tsx
+index 2466f80d..3ff406f7 100644
+--- a/components/gestionale/magazzino/magazzino-label-qty-stepper.tsx
++++ b/components/gestionale/magazzino/magazzino-label-qty-stepper.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useEffect, useState } from "react";
++import { useCallback, useState } from "react";
+ import {
+   commitNumericDraft,
+   resolveCommittedNumber,
+@@ -23,18 +23,16 @@ export function MagazzinoLabelQtyStepper({
+   ariaLabel: string;
+ }) {
+   const [draft, setDraft] = useState(String(value));
+-
+-  useEffect(() => {
+-    setDraft(String(value));
+-  }, [value]);
++  const [isFocused, setIsFocused] = useState(false);
++  const displayDraft = isFocused ? draft : String(value);
+ 
+   const commitDraft = useCallback(() => {
+-    const result = commitNumericDraft(draft, labelQtyPreset, value);
++    const result = commitNumericDraft(displayDraft, labelQtyPreset, value);
+     const next = resolveCommittedNumber(result, value);
+     const clamped = Math.max(0, Math.min(BULK_QUANTITY_MAX, next));
+     onChange(clamped);
+     setDraft(String(clamped));
+-  }, [draft, onChange, value]);
++  }, [displayDraft, onChange, value]);
+ 
+   return (
+     <div
+@@ -56,7 +54,7 @@ export function MagazzinoLabelQtyStepper({
+         inputMode="numeric"
+         pattern="[0-9]*"
+         className="h-9 w-10 border-x border-[color:var(--cab-border)] bg-transparent text-center text-sm font-semibold tabular-nums text-[color:var(--cab-text)] outline-none"
+-        value={draft}
++        value={displayDraft}
+         disabled={disabled}
+         aria-label={`Quantità ${ariaLabel}`}
+         onChange={(e) => {
+@@ -64,8 +62,14 @@ export function MagazzinoLabelQtyStepper({
+           if (!isDecimalInputDraft(next, { allowNegative: false })) return;
+           setDraft(next);
+         }}
+-        onBlur={commitDraft}
+-        onFocus={(e) => e.target.select()}
++        onBlur={() => {
++          setIsFocused(false);
++          commitDraft();
++        }}
++        onFocus={(e) => {
++          setIsFocused(true);
++          e.target.select();
++        }}
+         onKeyDown={(e) => {
+           if (e.key === "Enter") {
+             e.preventDefault();

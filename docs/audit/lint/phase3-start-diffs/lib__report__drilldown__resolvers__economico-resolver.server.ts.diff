@@ -1,0 +1,13 @@
+diff --git a/lib/report/drilldown/resolvers/economico-resolver.server.ts b/lib/report/drilldown/resolvers/economico-resolver.server.ts
+index b558403b..8db25f3e 100644
+--- a/lib/report/drilldown/resolvers/economico-resolver.server.ts
++++ b/lib/report/drilldown/resolvers/economico-resolver.server.ts
+@@ -4,7 +4,7 @@ import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-fi
+ import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
+ import type { ReportAnalyticsSourceBundle } from "@/lib/report/analytics-engine/source-bundle";
+ import type { ReportDrillDownRow } from "@/lib/report/drilldown/types";
+-import type { InvoiceRow, InvoicePaymentRow } from "@/src/types/supabase-tables";
++import type { InvoiceRow } from "@/src/types/supabase-tables";
+ 
+ function isEmittedInvoice(inv: InvoiceRow): boolean {
+   return inv.status !== "annullata" && inv.status !== "bozza" && inv.status !== "da_verificare";

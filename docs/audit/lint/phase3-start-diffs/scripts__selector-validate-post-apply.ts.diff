@@ -1,0 +1,13 @@
+diff --git a/scripts/selector-validate-post-apply.ts b/scripts/selector-validate-post-apply.ts
+index 5c0aa893..37b25a1f 100644
+--- a/scripts/selector-validate-post-apply.ts
++++ b/scripts/selector-validate-post-apply.ts
+@@ -12,7 +12,7 @@ import {
+ } from "@/lib/selector-core/selector-post-apply-validator";
+ import type {
+   SelectorAbSimulationOutcome,
+-  SelectorConfigProposal,
++
+   SelectorValidationResult,
+ } from "@/lib/selector-core/types";
+ import type { SelectorOpenEvent } from "@/lib/selector-core/selector-telemetry";

@@ -1,0 +1,17 @@
+diff --git a/lib/ui/responsive-layout-core.ts b/lib/ui/responsive-layout-core.ts
+index 39c70f1c..9cd14a8c 100644
+--- a/lib/ui/responsive-layout-core.ts
++++ b/lib/ui/responsive-layout-core.ts
+@@ -11,10 +11,10 @@ import {
+ } from "@/lib/ui/ios-mobile-tokens";
+ import {
+   flexFill,
+-  flexFillSafe,
++
+   flexSafe,
+   flexSafeCol,
+-  flexSafeItem,
++
+   flexSafeRow,
+   flexShrinkSafe,
+   FLEX_SCOPE_CLASS,

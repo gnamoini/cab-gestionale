@@ -97,6 +97,7 @@ export async function recognizePngBuffersPool(
   _concurrency = 1,
   trace?: AnalyzeTraceEmitter,
 ): Promise<Map<string, { text: string; confidence: number }>> {
+  void _concurrency;
   const out = new Map<string, { text: string; confidence: number }>();
   // ponytail: worker Tesseract singleton — recognize() non è concorrente; pool sequenziale
   if (items.length > 0) {

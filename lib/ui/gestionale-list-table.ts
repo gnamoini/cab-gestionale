@@ -38,7 +38,7 @@ import {
   globalTableFixed,
   globalTableHeadEdgeInset,
   globalTableRow,
-  globalTableTdActions,
+
   globalTableTdBody,
   globalTableTheadClass,
   globalTableTheadSticky,

@@ -68,8 +68,11 @@ export function useClientPortalDataContract(
   else if (l0Error) l0Status = "error";
   else if (l0HasData) l0Status = "success";
 
-  const inCorsoRows = inCorsoQ.data ?? [];
-  const archivioRows = archivioListEnabled ? (archivioQ.data ?? []) : [];
+  const inCorsoRows = useMemo(() => inCorsoQ.data ?? [], [inCorsoQ.data]);
+  const archivioRows = useMemo(
+    () => (archivioListEnabled ? (archivioQ.data ?? []) : []),
+    [archivioListEnabled, archivioQ.data],
+  );
   const ids = useMemo(
     () => [...inCorsoRows, ...archivioRows].map((r) => r.id),
     [inCorsoRows, archivioRows],

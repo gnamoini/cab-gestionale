@@ -183,6 +183,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "regression-p2": { resolve: () => runTestFiles(REGRESSION_P2) },
   "regression-p3": { resolve: () => runTestFiles(REGRESSION_P3) },
   "control-review": { resolve: () => spawnScript("lib/control/control-review.test.ts") },
+  "release-ready-contract": { resolve: () => spawnScript("lib/control/release-ready-contract.test.ts") },
   "regression-classification": {
     resolve: () => spawnScript("lib/control/regression-classification.test.ts"),
   },

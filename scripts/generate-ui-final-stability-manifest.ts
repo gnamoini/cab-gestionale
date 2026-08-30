@@ -26,7 +26,6 @@ function main(): void {
   }
 
   const update = process.argv.includes("--update");
-  const live = buildUiFinalStabilityManifest();
 
   if (update || !fs.existsSync(MANIFEST_PATH)) {
     if (update && !isUiFinalStabilityUpdateApproved()) {

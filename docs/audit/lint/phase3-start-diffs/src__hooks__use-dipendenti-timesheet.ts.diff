@@ -1,0 +1,33 @@
+diff --git a/src/hooks/use-dipendenti-timesheet.ts b/src/hooks/use-dipendenti-timesheet.ts
+index cb95c46a..5fb64986 100644
+--- a/src/hooks/use-dipendenti-timesheet.ts
++++ b/src/hooks/use-dipendenti-timesheet.ts
+@@ -121,7 +121,10 @@ export function useDipendentiTimesheet(
+   const previousMonthKey = useMemo(() => shiftMonthKey(monthKey, -1), [monthKey]);
+ 
+   const dipendentiReady = dipendentiOpts.source === "app_settings" && !dipendentiOpts.isLoading;
+-  const realDipendentiRecords = dipendentiReady ? dipendentiOpts.records : [];
++  const realDipendentiRecords = useMemo(
++    () => (dipendentiReady ? dipendentiOpts.records : []),
++    [dipendentiReady, dipendentiOpts.records],
++  );
+ 
+   const currentDipendentiIds = useMemo(
+     () => new Set(getActiveDipendentiRecords(realDipendentiRecords).map((r) => r.id)),
+@@ -212,7 +215,7 @@ export function useDipendentiTimesheet(
+       const msg = e instanceof Error ? e.message : "Sincronizzazione dipendenti non riuscita.";
+       setSyncError(msg);
+     });
+-  }, [dipendentiOpts.source, dipendentiOpts.isLoading, dipendentiRecordsSyncKey, runSyncFromDipendenti, dipendentiOpts.records]);
++  }, [dipendentiOpts, dipendentiRecordsSyncKey, runSyncFromDipendenti]);
+ 
+   const upsertMutation = useServiceMutation(
+     (input: TimesheetEntryUpsert) =>
+@@ -418,7 +421,6 @@ export function useDipendentiTimesheet(
+ }
+ 
+ export function useDefaultTimesheetMonthKey(): TimesheetMonthKey {
+-  const [key, setKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
+   return key;
+ }
+ 

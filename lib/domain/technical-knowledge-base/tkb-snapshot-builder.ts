@@ -75,7 +75,7 @@ export function buildPublishedSnapshot(
 }
 
 export function hashDraftBundle(bundle: TkbDraftBundle): string {
-  const { buildReport: _r, ...core } = bundle;
+  const { ...core } = bundle;
   return sha256Canonical(canonicalizeDraftBundle(core));
 }
 

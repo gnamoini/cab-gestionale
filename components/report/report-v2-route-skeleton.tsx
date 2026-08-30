@@ -133,6 +133,11 @@ export function ReportHubRouteSkeleton({ className = "" }: { className?: string 
       data-skeleton-variant="hub"
     >
       <SkeletonBlock minHeightClass={hubHeaderShellClass} className="w-full" />
+      <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <SkeletonBlock key={i} minHeightClass="min-h-[5.5rem]" className="w-full" />
+        ))}
+      </div>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {Array.from({ length: HUB_CARD_COUNT }).map((_, i) => (
           <SkeletonBlock key={i} minHeightClass="min-h-[9.5rem]" className="w-full" />

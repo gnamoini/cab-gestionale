@@ -1,0 +1,12 @@
+diff --git a/lib/ui-os/ui-backward-adapter.tsx b/lib/ui-os/ui-backward-adapter.tsx
+index 36639252..e66988d6 100644
+--- a/lib/ui-os/ui-backward-adapter.tsx
++++ b/lib/ui-os/ui-backward-adapter.tsx
+@@ -58,6 +58,7 @@ export function UIPageAdapter(props: UIPageAdapterProps) {
+ 
+   useEffect(() => {
+     if (!eligible) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setDecision(null);
+       return;
+     }

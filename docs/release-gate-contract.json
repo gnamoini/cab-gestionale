@@ -1,0 +1,178 @@
+{
+  "version": "1.0.0",
+  "mergeAuthority": "release-gate",
+  "updatedAt": "2026-08-29",
+  "required": [
+    {
+      "id": "security.typescript.compile",
+      "severity": "blocker",
+      "legacy": ["ci:tsc"],
+      "controlPlane": "security.typescript.compile"
+    },
+    {
+      "id": "build.production",
+      "severity": "blocker",
+      "legacy": ["ci:build"],
+      "controlPlane": "domain.build.production"
+    },
+    {
+      "id": "security.rbac.matrix",
+      "severity": "blocker",
+      "legacy": ["test:rbac"],
+      "controlPlane": "security.rbac.matrix"
+    },
+    {
+      "id": "security.rbac.hardening",
+      "severity": "blocker",
+      "legacy": ["test:rbac:hardening"],
+      "controlPlane": "security.rbac.hardening"
+    },
+    {
+      "id": "security.remediation",
+      "severity": "blocker",
+      "legacy": ["test:security:remediation"],
+      "controlPlane": "security.remediation"
+    },
+    {
+      "id": "design.ux.enforce",
+      "severity": "blocker",
+      "legacy": ["ux:enforce"],
+      "controlPlane": "design.ux.enforce"
+    },
+    {
+      "id": "design.ui.consistency",
+      "severity": "blocker",
+      "legacy": ["audit:ui"],
+      "controlPlane": "design.ui.consistency"
+    },
+    {
+      "id": "design.mobile.gate",
+      "severity": "blocker",
+      "legacy": ["ux:mobile-gate"],
+      "controlPlane": "design.mobile.gate"
+    },
+    {
+      "id": "design.ios.static",
+      "severity": "blocker",
+      "legacy": ["ios:check"],
+      "controlPlane": "design.ios.static"
+    },
+    {
+      "id": "data.supabase.connection",
+      "severity": "blocker",
+      "legacy": ["verify-supabase-ci-env"],
+      "controlPlane": "data.supabase.connection"
+    },
+    {
+      "id": "data.production.readiness",
+      "severity": "blocker",
+      "legacy": ["production:check"],
+      "controlPlane": "data.production.readiness"
+    },
+    {
+      "id": "data.publication.sanity",
+      "severity": "blocker",
+      "legacy": ["ci:supabase:publication"],
+      "controlPlane": "data.publication.sanity"
+    },
+    {
+      "id": "design.structural.smoke",
+      "severity": "blocker",
+      "legacy": ["smoke:structural"],
+      "controlPlane": "design.structural.smoke"
+    },
+    {
+      "id": "runtime.regression.core",
+      "severity": "blocker",
+      "legacy": ["smoke:regression:core"],
+      "controlPlane": "runtime.regression.p0",
+      "reconciliationNote": "CORE (268) is not equivalent to P0 partition; both must pass their respective suites"
+    },
+    {
+      "id": "design.flex.eslint",
+      "severity": "blocker",
+      "legacy": ["flex:eslint:gate"],
+      "controlPlane": "design.flex.eslint"
+    },
+    {
+      "id": "design.flex.freeze",
+      "severity": "blocker",
+      "legacy": ["flex:freeze:gate"],
+      "controlPlane": "design.flex.freeze"
+    },
+    {
+      "id": "runtime.e2e.smoke",
+      "severity": "blocker",
+      "legacy": ["smoke:playwright"],
+      "controlPlane": "runtime.e2e.smoke"
+    },
+    {
+      "id": "runtime.smoke.cleanup",
+      "severity": "blocker",
+      "legacy": ["smoke:cleanup"],
+      "controlPlane": "runtime.smoke.cleanup"
+    },
+    {
+      "id": "governance.release.contract",
+      "severity": "blocker",
+      "legacy": ["release-ready-contract"],
+      "controlPlane": "governance.release.contract"
+    }
+  ],
+  "intentionalDivergences": [
+    {
+      "id": "runtime.e2e.smoke",
+      "legacy": "blocking in release-gate.yml",
+      "controlPlane": "skipped when SMOKE_SKIP=1 in control-pr.yml",
+      "reason": "Control Plane PR runs contract-compatible subset without E2E during transition"
+    },
+    {
+      "id": "runtime.performance.lint",
+      "legacy": "advisory (release-gate-nightly only)",
+      "controlPlane": "blocker in control:pr via runtime.performance.lint",
+      "reason": "Full lint debt cleanup deferred to Fase 2; flex gates enforce subset on legacy path"
+    },
+    {
+      "id": "runtime.regression.core-vs-p0",
+      "legacy": "smoke:regression:core full list",
+      "controlPlane": "runtime.regression.p0 partitioned subset",
+      "reason": "P0 coverage reconciled against CORE; not assumed equivalent"
+    }
+  ],
+  "criticalSurfaces": [
+    {
+      "id": "auth-rbac",
+      "coverage": ["security.rbac.matrix", "security.rbac.hardening", "security.remediation"]
+    },
+    {
+      "id": "magazzino-stock",
+      "coverage": [
+        "lib/regression/stock-apply-movement-signature.test.ts",
+        "lib/regression/stock-writer-matrix.test.ts",
+        "lib/regression/magazzino-stock-audit-payload.test.ts"
+      ]
+    },
+    {
+      "id": "ricambi-ai",
+      "coverage": [
+        "lib/regression/identifica-ricambio-policy.test.ts",
+        "lib/regression/spare-parts-policy.test.ts",
+        "lib/regression/catalog-exact-match.test.ts",
+        "lib/regression/finalize-quality-gate.test.ts"
+      ]
+    },
+    {
+      "id": "portal-sync",
+      "coverage": ["lib/regression/gestionale-sync-scope-coverage.test.ts"]
+    },
+    {
+      "id": "metadata",
+      "coverage": ["lib/regression/page-metadata-policy.test.ts"]
+    },
+    {
+      "id": "numeric-input",
+      "coverage": ["lib/regression/numeric-input-anti-patterns.test.ts"],
+      "tier": "cert-extended"
+    }
+  ]
+}

@@ -7,7 +7,6 @@ import {
   attachmentRefsWithoutContent,
   buildAttachmentsForTypes,
 } from "@/lib/communications/attachments/attachment-builder.server";
-import { emailChannelProvider } from "@/lib/communications/channels/email-channel-provider";
 import type { CommunicationLogStatus } from "@/lib/communications/domain/communication-types";
 import { resolveCommunicationSend } from "@/lib/communications/guards/send-guard.server";
 import { traceCommunicationEvent } from "@/lib/communications/logging/communication-trace.server";

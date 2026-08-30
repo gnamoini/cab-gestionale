@@ -1,0 +1,13 @@
+diff --git a/lib/ui/ui-route-reliability-audit.ts b/lib/ui/ui-route-reliability-audit.ts
+index aac078bd..29f84c11 100644
+--- a/lib/ui/ui-route-reliability-audit.ts
++++ b/lib/ui/ui-route-reliability-audit.ts
+@@ -6,7 +6,7 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ import {
+-  flexViolationFingerprint,
++
+   isFlexViolationBaselined,
+   verifyFlexBaselineIntegrity,
+   type FlexBaselineEntry,

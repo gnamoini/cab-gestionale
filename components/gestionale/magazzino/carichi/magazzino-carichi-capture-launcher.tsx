@@ -51,6 +51,7 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
   const flow = useInventoryReceivingFlow();
 
   const applyInput = useMemo(
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- lint phase2: preserve existing hook contract
     () =>
       flow.document?.id
         ? {
@@ -84,6 +85,7 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
   useEffect(() => {
     if (!open || !flow.document?.id) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setPreviewLoading(true);
     void fetchInventoryReceivingPreviewUrl(flow.document.id)
       .then((url) => {

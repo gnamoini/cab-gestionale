@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 
 export function ReportAskInput({
   value,
@@ -34,13 +35,15 @@ export function ReportAskInput({
       }}
     >
       <div className="flex items-end gap-2 rounded-2xl border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-muted)_25%,var(--cab-card))] p-2 shadow-sm focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-        <textarea
+        <GestionaleTextarea
           ref={textareaRef}
           rows={1}
-          className={`max-h-32 min-h-[2.5rem] min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed text-[color:var(--cab-text)] outline-none placeholder:text-[color:var(--cab-text-muted)] ${disabled ? "opacity-60" : ""}`}
+          size="sm"
+          maxHeight="8rem"
+          className={`min-h-[2.5rem] min-w-0 flex-1 !border-0 !bg-transparent !shadow-none px-2 py-1.5 text-sm leading-relaxed outline-none ${disabled ? "opacity-60" : ""}`}
           placeholder="Scrivi un messaggio…"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -48,7 +51,6 @@ export function ReportAskInput({
             }
           }}
           readOnly={disabled}
-          spellCheck={false}
           autoCorrect="off"
           autoCapitalize="sentences"
           aria-disabled={disabled}

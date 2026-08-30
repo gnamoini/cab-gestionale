@@ -1,0 +1,258 @@
+diff --git a/lib/ai/spare-parts/workers/spare-parts-worker.server.ts b/lib/ai/spare-parts/workers/spare-parts-worker.server.ts
+index d937c776..8af8a025 100644
+--- a/lib/ai/spare-parts/workers/spare-parts-worker.server.ts
++++ b/lib/ai/spare-parts/workers/spare-parts-worker.server.ts
+@@ -3,10 +3,13 @@ import "server-only";
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ import {
+   claimDocumentIndexJobs,
++  claimDocumentIndexJobById,
+   claimUnderstandingJobs,
++  claimUnderstandingJobById,
+   markIndexFailed,
+   type DocumentAiIndexRow,
+ } from "@/lib/ai/spare-parts/queue/document-index-queue.server";
++import { reclaimStuckDocumentIndexJobs } from "@/lib/ai/spare-parts/queue/document-index-recovery.server";
+ import {
+   claimPartSearchJobs,
+ } from "@/lib/ai/spare-parts/queue/part-search-queue.server";
+@@ -21,13 +24,64 @@ import {
+   readMaxConcurrentDocumentIndexing,
+   readMaxConcurrentPartSearch,
+ } from "@/lib/ai/spare-parts/config";
+-import { sparePartSearchInputSchema } from "@/lib/ai/spare-parts/types/schemas";
++import { sparePartSearchInputSchema, type SparePartSearchInput } from "@/lib/ai/spare-parts/types/schemas";
++import { isGeminiQuotaErrorMessage } from "@/lib/ai/gemini-retry-after";
+ import { logAiObs } from "@/lib/ai/runtime/observability";
+ 
+ const STORE_DISPLAY_NAME = "cab-spare-parts-catalogs";
++const INDEX_HEARTBEAT_MS = 30_000;
++
++async function touchDocumentIndexHeartbeat(sb: SupabaseClient, indexId: string): Promise<void> {
++  await sb
++    .from("document_ai_index")
++    .update({ updated_at: new Date().toISOString() })
++    .eq("id", indexId);
++}
++
++async function withIndexHeartbeat(sb: SupabaseClient, indexId: string, run: () => Promise<void>): Promise<void> {
++  const timer = setInterval(() => {
++    void touchDocumentIndexHeartbeat(sb, indexId);
++  }, INDEX_HEARTBEAT_MS);
++  try {
++    await touchDocumentIndexHeartbeat(sb, indexId);
++    await run();
++    await touchDocumentIndexHeartbeat(sb, indexId);
++  } finally {
++    clearInterval(timer);
++  }
++}
+ 
+ async function processDocumentIndexJob(sb: SupabaseClient, job: DocumentAiIndexRow): Promise<void> {
+   try {
++    await withIndexHeartbeat(sb, job.id, async () => {
++    const { data: indexRow } = await sb
++      .from("document_ai_index")
++      .select("gemini_file_name, gemini_store_name")
++      .eq("id", job.id)
++      .maybeSingle();
++
++    const existingFileName =
++      typeof indexRow?.gemini_file_name === "string" ? indexRow.gemini_file_name.trim() : "";
++    const existingStoreName =
++      typeof indexRow?.gemini_store_name === "string" ? indexRow.gemini_store_name.trim() : "";
++
++    if (existingFileName && existingStoreName) {
++      await sb
++        .from("document_ai_index")
++        .update({
++          status: "indexed",
++          understanding_status: "pending",
++          updated_at: new Date().toISOString(),
++        })
++        .eq("id", job.id);
++      logAiObs("AI_RESPONSE", {
++        operation: "spare_parts_document_file_search_skipped",
++        indexId: job.id,
++        fileName: existingFileName,
++      });
++      return;
++    }
++
+     const loaded = await loadDocumentBytes(sb, job.documento_id);
+     if (!loaded) {
+       await markIndexFailed(sb, job.id, "DOCUMENT_LOAD_FAILED", "Impossibile leggere il documento", job.attempt_count);
+@@ -61,6 +115,7 @@ async function processDocumentIndexJob(sb: SupabaseClient, job: DocumentAiIndexR
+       .eq("id", job.id);
+ 
+     logAiObs("AI_RESPONSE", { operation: "spare_parts_document_indexed", indexId: job.id });
++    });
+   } catch (e) {
+     const msg = e instanceof Error ? e.message : "INDEX_FAILED";
+     await markIndexFailed(sb, job.id, "INDEX_FAILED", msg, job.attempt_count);
+@@ -69,18 +124,35 @@ async function processDocumentIndexJob(sb: SupabaseClient, job: DocumentAiIndexR
+ 
+ async function processUnderstandingJob(sb: SupabaseClient, job: DocumentAiIndexRow): Promise<void> {
+   try {
+-    await runDocumentUnderstandingPipeline(sb, job.id, job.documento_id);
++    await withIndexHeartbeat(sb, job.id, async () => {
++      await runDocumentUnderstandingPipeline(sb, job.id, job.documento_id);
++      logAiObs("AI_RESPONSE", {
++        operation: "spare_parts_understanding_complete",
++        indexId: job.id,
++        documentoId: job.documento_id,
++      });
++    });
+   } catch (e) {
+     const msg = e instanceof Error ? e.message : "UNDERSTANDING_FAILED";
++    const quota = isGeminiQuotaErrorMessage(msg);
++    const backoffMinutes = quota ? 60 : Math.min(30, 2 ** Math.min(job.attempt_count ?? 1, 4));
++    const nextRetry = new Date(Date.now() + backoffMinutes * 60_000).toISOString();
+     await sb
+       .from("document_ai_index")
+       .update({
+         understanding_status: "failed",
+-        error_code: "UNDERSTANDING_FAILED",
++        error_code: quota ? "AI_QUOTA_EXCEEDED" : "UNDERSTANDING_FAILED",
+         error_message: msg.slice(0, 500),
++        next_retry_at: nextRetry,
+         updated_at: new Date().toISOString(),
+       })
+       .eq("id", job.id);
++    logAiObs("AI_ERROR", {
++      operation: "spare_parts_understanding_failed",
++      indexId: job.id,
++      errorCode: quota ? "AI_QUOTA_EXCEEDED" : "UNDERSTANDING_FAILED",
++      nextRetryAt: nextRetry,
++    });
+   }
+ }
+ 
+@@ -109,9 +181,84 @@ export type SparePartsWorkerResult = {
+   documentIndexClaimed: number;
+   understandingClaimed: number;
+   partSearchClaimed: number;
++  documentIndexReclaimed: number;
++};
++
++export type DocumentAiIndexInlineResult = {
++  indexProcessed: boolean;
++  understandingProcessed: boolean;
++  status: string | null;
++  understandingStatus: string | null;
++  errorMessage: string | null;
+ };
+ 
++/** Esecuzione inline su un documento (retry UI) — non dipende dalla coda globale né da next_retry_at. */
++export async function processDocumentAiIndexForDocumento(
++  sb: SupabaseClient,
++  documentoId: string,
++  indexId?: string,
++): Promise<DocumentAiIndexInlineResult> {
++  await reclaimStuckDocumentIndexJobs(sb);
++
++  let targetId = indexId;
++  if (!targetId) {
++    const { data } = await sb
++      .from("document_ai_index")
++      .select("id")
++      .eq("documento_id", documentoId)
++      .eq("is_active", true)
++      .maybeSingle();
++    targetId = (data?.id as string | undefined) ?? undefined;
++  }
++
++  if (!targetId) {
++    return {
++      indexProcessed: false,
++      understandingProcessed: false,
++      status: null,
++      understandingStatus: null,
++      errorMessage: null,
++    };
++  }
++
++  await sb
++    .from("document_ai_index")
++    .update({ next_retry_at: null, updated_at: new Date().toISOString() })
++    .eq("id", targetId)
++    .in("status", ["pending", "failed"]);
++
++  let indexProcessed = false;
++  let understandingProcessed = false;
++
++  const indexJob = await claimDocumentIndexJobById(sb, targetId);
++  if (indexJob) {
++    await processDocumentIndexJob(sb, indexJob);
++    indexProcessed = true;
++  }
++
++  const understandingJob = await claimUnderstandingJobById(sb, targetId);
++  if (understandingJob) {
++    await processUnderstandingJob(sb, understandingJob);
++    understandingProcessed = true;
++  }
++
++  const { data: final } = await sb
++    .from("document_ai_index")
++    .select("status, understanding_status, error_message")
++    .eq("id", targetId)
++    .maybeSingle();
++
++  return {
++    indexProcessed,
++    understandingProcessed,
++    status: (final?.status as string | null) ?? null,
++    understandingStatus: (final?.understanding_status as string | null) ?? null,
++    errorMessage: (final?.error_message as string | null) ?? null,
++  };
++}
++
+ export async function processSparePartsQueues(sb: SupabaseClient): Promise<SparePartsWorkerResult> {
++  const documentIndexReclaimed = await reclaimStuckDocumentIndexJobs(sb);
+   const indexLimit = readMaxConcurrentDocumentIndexing();
+   const searchLimit = readMaxConcurrentPartSearch();
+ 
+@@ -134,6 +281,7 @@ export async function processSparePartsQueues(sb: SupabaseClient): Promise<Spare
+     documentIndexClaimed: indexJobs.length,
+     understandingClaimed: understandingJobs.length,
+     partSearchClaimed: searchJobs.length,
++    documentIndexReclaimed,
+   };
+ }
+ 
+@@ -144,3 +292,34 @@ export async function processPartSearchQueueOnly(sb: SupabaseClient): Promise<nu
+   }
+   return jobs.length;
+ }
++
++/** Esecuzione diretta (API /start) — non dipende da pg_cron né da waitUntil. */
++export async function runPartSearchForId(
++  sb: SupabaseClient,
++  searchId: string,
++  input: SparePartSearchInput,
++): Promise<void> {
++  const { data: row } = await sb
++    .from("ai_part_searches")
++    .select("id, status, attempt_count")
++    .eq("id", searchId)
++    .maybeSingle();
++
++  if (!row) return;
++  if (row.status === "completed" || row.status === "failed" || row.status === "cancelled") return;
++
++  if (row.status === "pending" || row.status === "draft") {
++    const { error } = await sb
++      .from("ai_part_searches")
++      .update({
++        status: "processing",
++        attempt_count: Number(row.attempt_count ?? 0) + 1,
++        updated_at: new Date().toISOString(),
++      })
++      .eq("id", searchId)
++      .in("status", ["pending", "draft"]);
++    if (error) throw new Error(error.message);
++  }
++
++  await processPartSearchJob(sb, { id: searchId, input_json: input as Record<string, unknown> });
++}

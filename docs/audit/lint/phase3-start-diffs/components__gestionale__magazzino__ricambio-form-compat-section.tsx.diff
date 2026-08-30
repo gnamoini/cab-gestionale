@@ -1,0 +1,25 @@
+diff --git a/components/gestionale/magazzino/ricambio-form-compat-section.tsx b/components/gestionale/magazzino/ricambio-form-compat-section.tsx
+index af4c68b9..e9163c54 100644
+--- a/components/gestionale/magazzino/ricambio-form-compat-section.tsx
++++ b/components/gestionale/magazzino/ricambio-form-compat-section.tsx
+@@ -159,6 +159,7 @@ function RicambioFormCompatSectionInner({
+   );
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setMarcheFiltroAtt(new Set(parseCompatInput(form.compatMarcheAttrezzaturaFiltro)));
+     setMarcheFiltroTel(new Set(parseCompatInput(form.compatMarcheTelaioFiltro)));
+     setShowAttModelloMarcaHint(false);
+@@ -247,10 +248,12 @@ function RicambioFormCompatSectionInner({
+   const telModelloBlocked = !globalOpts.isLoading && marcheFiltroTelList.length === 0;
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (!attModelloBlocked) setShowAttModelloMarcaHint(false);
+   }, [attModelloBlocked]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (!telModelloBlocked) setShowTelModelloMarcaHint(false);
+   }, [telModelloBlocked]);
+ 

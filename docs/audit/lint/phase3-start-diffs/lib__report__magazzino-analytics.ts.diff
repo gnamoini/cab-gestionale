@@ -1,0 +1,13 @@
+diff --git a/lib/report/magazzino-analytics.ts b/lib/report/magazzino-analytics.ts
+index fcf7b085..5605ff17 100644
+--- a/lib/report/magazzino-analytics.ts
++++ b/lib/report/magazzino-analytics.ts
+@@ -9,7 +9,7 @@ import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
+ import type { DateRange } from "@/lib/report/date-ranges";
+ import { isoInRange } from "@/lib/report/date-ranges";
+ import {
+-  aggregateMagazzinoQtyByProductInRange,
++
+   sumMagazzinoEntrateQtyInRange,
+   sumMagazzinoUsciteQtyInRange,
+ } from "@/lib/report/magazzino-period-aggregate";

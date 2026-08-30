@@ -482,6 +482,18 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     impact: ["compliance-audit", "developer-experience"],
   },
   {
+    id: "governance.release.contract",
+    implementation: { type: "test-suite", reference: "release-ready-contract" },
+    domain: "governance",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "platform",
+    sourceOfTruth: "docs/release-gate-contract.json",
+    impact: ["compliance-audit"],
+    dependsOn: ["governance.control.review"],
+  },
+  {
     id: "governance.regression.classification",
     implementation: { type: "test-suite", reference: "regression-classification" },
     domain: "governance",

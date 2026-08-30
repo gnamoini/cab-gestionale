@@ -1,0 +1,12 @@
+diff --git a/src/hooks/gestionale/use-undoable-configurazione-save.ts b/src/hooks/gestionale/use-undoable-configurazione-save.ts
+index e7331884..df6a2274 100644
+--- a/src/hooks/gestionale/use-undoable-configurazione-save.ts
++++ b/src/hooks/gestionale/use-undoable-configurazione-save.ts
+@@ -23,6 +23,7 @@ export function useUndoableConfigurazioneSave(options?: { enabled?: boolean }) {
+   const undoable = useMemo(() => {
+     if (!enabled) return null;
+     return latestUndoableConfigurazioneSave(user?.id, sessionId);
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- revision bumps after undo refresh event
+   }, [enabled, user?.id, sessionId, revision]);
+ 
+   return { undoable, sessionId, userId: user?.id ?? null };

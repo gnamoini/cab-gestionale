@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx b/components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx
+index b5b01e12..215a79a7 100644
+--- a/components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx
++++ b/components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx
+@@ -22,7 +22,7 @@ function summarizeMezzo(m: MezzoGestito): string {
+ 
+ export function LavorazioneMezzoPicker({
+   mezzi,
+-  draft,
++  
+   setDraft,
+ }: {
+   mezzi: MezzoGestito[];

@@ -67,7 +67,7 @@ export function useLavorazioniList(
 ): ListQueryResult<LavorazioneListRow> {
   const v2Enabled = isServerListPaginationEnabled();
   const clientPortal = options?.clientPortal === true;
-  const { clientPortal: _cp, ...queryOpts } = options ?? {};
+  const { ...queryOpts } = options ?? {};
   const enabled = queryOpts.enabled !== false;
 
   const legacyQuery = useLavorazioniListLegacy(filters, {
@@ -91,7 +91,7 @@ export function useLavorazioniList(
 function useLavorazioniListLegacy(filters?: LavorazioneFilters, options?: LavListOpts) {
   const fk = stableLavorazioniFiltersKey(filters);
   const clientPortal = options?.clientPortal === true;
-  const { clientPortal: _cp, ...queryOpts } = options ?? {};
+  const { ...queryOpts } = options ?? {};
   return useServiceQuery(
     lavorazioniDomainQueryKeys.list(fk, clientPortal),
     () => fetchLavorazioniListAuthorized(filters, { clientPortal }),

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { readMasterEncryptionKeyEnv, readRuntimeSecret } from "@/lib/ai/runtime/env-reader";
+import { readMasterEncryptionKeyEnv } from "@/lib/ai/runtime/env-reader";
 
 const ALGO = "aes-256-gcm";
 const IV_BYTES = 12;

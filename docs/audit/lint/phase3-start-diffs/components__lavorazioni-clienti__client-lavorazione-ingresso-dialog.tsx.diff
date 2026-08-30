@@ -1,0 +1,13 @@
+diff --git a/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx b/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx
+index d26072e6..e4458de0 100644
+--- a/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx
++++ b/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx
+@@ -74,7 +74,7 @@ export function ClientLavorazioneIngressoDialog({
+   const bundle = useMemo(() => getOrCreateBundle(schedeStore, row.id), [schedeStore, row.id]);
+   const fields = useMemo(
+     () => resolveClientPortalSchedaIngressoFields(row, schedeStore, addettiGlobali, addettiRecords),
+-    [bundle.ingresso?.campi, row, schedeStore, addettiGlobali, addettiRecords],
++    [row, schedeStore, addettiGlobali, addettiRecords],
+   );
+ 
+   if (!open) return null;

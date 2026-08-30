@@ -146,5 +146,6 @@ export type GestionaleModalWidth = "standard" | "wide";
 export function resolveGestionaleModalWidthFromLegacy(
   _size: GestionaleModalWidth = "standard",
 ): string {
+  void _size;
   return resolveModalWidthClasses("formMedium");
 }

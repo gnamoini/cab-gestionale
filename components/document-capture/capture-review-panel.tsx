@@ -108,7 +108,7 @@ export function CaptureReviewPanelLoading({
 }) {
   return (
     <CaptureReviewPanelFrame title={title}>
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-4" role="status">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-4 min-w-0" role="status">
         {progressState?.active ? (
           <CaptureStatusProgress state={progressState} />
         ) : (
@@ -141,7 +141,7 @@ export function CaptureReviewPanelError({
 }) {
   return (
     <CaptureReviewPanelFrame title={title}>
-      <div className="flex flex-1 flex-col justify-center gap-2 py-6 text-sm">
+      <div className="flex flex-1 flex-col justify-center gap-2 py-6 text-sm min-w-0">
         <p className="text-[color:var(--cab-danger)]">{message}</p>
         {onRetry ? (
           <button type="button" className="w-fit text-xs underline" onClick={onRetry}>

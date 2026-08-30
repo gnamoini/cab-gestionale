@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-global-options.ts b/src/hooks/use-global-options.ts
+index 7f38adc1..66e1d56f 100644
+--- a/src/hooks/use-global-options.ts
++++ b/src/hooks/use-global-options.ts
+@@ -9,7 +9,6 @@ import {
+ import { migrateMezziListePrefs, type AttrezzaturaMarca } from "@/lib/mezzi/attrezzature-prefs";
+ import { useServiceQuery } from "@/src/hooks/use-service-query";
+ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+-import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+ import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+ import type { PrioritaLav } from "@/lib/lavorazioni/types";
+ import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";

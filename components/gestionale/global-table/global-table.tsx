@@ -70,6 +70,7 @@ const VirtualTableBody = memo(function VirtualTableBody({
   // ponytail: wrap liste usa overflow-y-clip — padding virtuali = spazio vuoto hoverabile
   const [forceFullRender, setForceFullRender] = useState(true);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
   const virtualizer = useVirtualizer({
     count: virtualRows.rowCount,
     getScrollElement: () => scrollRef.current,

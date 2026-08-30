@@ -44,8 +44,6 @@ assert.match(reportSkeleton, /report-area-content-skeleton/, "report area narrat
 assert.match(reportSkeleton, /report-hub-route-skeleton/, "report hub skeleton");
 assert.match(structuralRouteSkeleton, /ROUTE_PAGE_STRUCTURE/, "StructuralRouteSkeleton delega a PageStructure");
 
-const violations: string[] = [];
-
 for (const route of MIGRATED_STRUCTURAL_ROUTES) {
   const token = STRUCTURAL_ROUTE_PAGE_STRUCTURE[route];
   const file = PAGE_STRUCTURE_FILES[token];

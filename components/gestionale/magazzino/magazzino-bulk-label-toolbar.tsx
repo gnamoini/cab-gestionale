@@ -103,7 +103,7 @@ export function MagazzinoBulkLabelToolbar({
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode: false, clienteLabel }),
+        body: JSON.stringify({ items, preset, format: "pdf", clienteLabel }),
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);

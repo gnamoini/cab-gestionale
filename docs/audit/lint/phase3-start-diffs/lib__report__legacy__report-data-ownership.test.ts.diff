@@ -1,0 +1,11 @@
+diff --git a/lib/report/legacy/report-data-ownership.test.ts b/lib/report/legacy/report-data-ownership.test.ts
+index dec573ad..9e252ba4 100644
+--- a/lib/report/legacy/report-data-ownership.test.ts
++++ b/lib/report/legacy/report-data-ownership.test.ts
+@@ -1,6 +1,4 @@
+ import assert from "node:assert/strict";
+-import { readFileSync, existsSync } from "node:fs";
+-import { join } from "node:path";
+ import {
+   REPORT_DATA_OWNERSHIP,
+   isP9EliminationGatePassed,

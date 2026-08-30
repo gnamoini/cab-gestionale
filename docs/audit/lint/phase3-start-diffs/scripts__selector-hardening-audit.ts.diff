@@ -1,0 +1,22 @@
+diff --git a/scripts/selector-hardening-audit.ts b/scripts/selector-hardening-audit.ts
+index e13f6ba6..4299f5f2 100644
+--- a/scripts/selector-hardening-audit.ts
++++ b/scripts/selector-hardening-audit.ts
+@@ -169,7 +169,7 @@ function resolveSelectorCorePath(importPath: string): string | null {
+   return null;
+ }
+ 
+-function moduleSegment(importPath: string): string | null {
++function _moduleSegment(importPath: string): string | null {
+   const resolved = resolveSelectorCorePath(importPath);
+   if (!resolved) return null;
+   return path.basename(resolved, ".ts");
+@@ -428,7 +428,7 @@ function buildRuntimeSurfaceAudit(repoFiles: string[]): Record<string, unknown>
+ 
+   for (const [symbol, spec] of Object.entries(RUNTIME_SYMBOLS)) {
+     const allImportPaths: string[] = [];
+-    const importRe = new RegExp(
++    const _importRe = new RegExp(
+       `from\\s+["']@/lib/selector-core/([^"']+)["'][^;]*\\b${symbol}\\b|import\\s*\\{[^}]*\\b${symbol}\\b`,
+     );
+     const directRe = new RegExp(`\\b${symbol}\\b`);

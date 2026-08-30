@@ -133,7 +133,7 @@ export async function renderMultiLabelPdfWithPipeline(
 ): Promise<BulkPdfRenderResult> {
   const total = items.length;
   const concurrency = resolveLabelPdfRenderConcurrency();
-  const renderOptions: LabelRenderOptions = { includeBarcode: options?.includeBarcode };
+  const renderOptions: LabelRenderOptions = { labelKind: options?.labelKind };
   let peakHeapMb = readPeakHeapMb();
 
   const tickProgress = async (done: number) => {

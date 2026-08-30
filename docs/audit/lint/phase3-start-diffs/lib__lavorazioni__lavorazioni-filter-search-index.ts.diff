@@ -1,0 +1,12 @@
+diff --git a/lib/lavorazioni/lavorazioni-filter-search-index.ts b/lib/lavorazioni/lavorazioni-filter-search-index.ts
+index 676791c9..3c46827f 100644
+--- a/lib/lavorazioni/lavorazioni-filter-search-index.ts
++++ b/lib/lavorazioni/lavorazioni-filter-search-index.ts
+@@ -30,6 +30,6 @@ export function lavRowMatchesPageFiltersIndexed(
+     const hay = lavHaystackForRow(row, haystackById, schedeStore);
+     if (!matchSearchStringWithPrepared(prepared, hay).matches) return false;
+   }
+-  const { search: _s, ...advanced } = filters;
++  const { ...advanced } = filters;
+   return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
+ }

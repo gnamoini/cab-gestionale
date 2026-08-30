@@ -18,7 +18,7 @@ export function BusinessReportHistory() {
       ) : (
         <ul className="space-y-1 text-sm">
           {rows.map((row) => (
-            <li key={row.id} className="flex flex-wrap gap-2 justify-between">
+            <li key={row.id} className="flex gap-2 justify-between flex-nowrap sm:flex-wrap">
               <span>
                 {row.report_type} · {row.period_start} → {row.period_end} · v{row.generation_version}
               </span>

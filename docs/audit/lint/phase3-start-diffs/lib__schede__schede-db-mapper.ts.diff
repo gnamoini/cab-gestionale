@@ -1,0 +1,13 @@
+diff --git a/lib/schede/schede-db-mapper.ts b/lib/schede/schede-db-mapper.ts
+index 846582e0..5d1fc0c8 100644
+--- a/lib/schede/schede-db-mapper.ts
++++ b/lib/schede/schede-db-mapper.ts
+@@ -4,7 +4,7 @@ import type { SchedaInsert, SchedaUpdate } from "@/src/services/schede.service";
+ import {
+   bundleKeyToDbTipo,
+   dbTipoToBundleKey,
+-  normalizeSchedaTipoDb,
++
+   type SchedaBundleKey,
+ } from "@/lib/schede/scheda-tipo-db-mapper";
+ 

@@ -1,0 +1,12 @@
+diff --git a/components/preventivi/preventivo-tipo-documento-badge.tsx b/components/preventivi/preventivo-tipo-documento-badge.tsx
+index a329d601..14e9f34a 100644
+--- a/components/preventivi/preventivo-tipo-documento-badge.tsx
++++ b/components/preventivi/preventivo-tipo-documento-badge.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Tooltip } from "@/components/design-system";
++import { Tooltip } from "@/components/ui";
+ import {
+   preventivoTipoDocumentoBadgeClass,
+   preventivoTipoDocumentoLabel,

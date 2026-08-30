@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
+
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { useRbac } from "@/src/hooks/use-rbac";

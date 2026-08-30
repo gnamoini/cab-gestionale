@@ -31,6 +31,7 @@ export function defaultTargetTypeForProfilo(profilo: OfficinaProfiloOperativo) {
 export type SchedaIngressoMezzoSectionKind = "attrezzatura" | "telaio";
 
 export function showTelaioSections(_profilo: OfficinaProfiloOperativo): boolean {
+  void _profilo;
   return true;
 }
 

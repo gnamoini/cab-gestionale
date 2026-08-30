@@ -1,0 +1,12 @@
+diff --git a/lib/regression/magazzino-log-feed-rbac.test.ts b/lib/regression/magazzino-log-feed-rbac.test.ts
+index 8abc54d0..1e3e33ee 100644
+--- a/lib/regression/magazzino-log-feed-rbac.test.ts
++++ b/lib/regression/magazzino-log-feed-rbac.test.ts
+@@ -77,7 +77,6 @@ function stockLogRow(overrides?: Partial<LogModificaRow>): LogModificaWithProfil
+ }
+ 
+ {
+-  const catalog = new Map([[RICAMBIO_ID, ricambio()]]);
+   const feed = buildControlTowerActivityFeedSlice({
+     lavRows: [],
+     ricambi: [ricambio()],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactElement } from "react";
+import { useEffect } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { gestionaleModalFooterSaveBtnClass } from "@/components/design-system";
 import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";

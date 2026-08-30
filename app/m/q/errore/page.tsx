@@ -1,3 +1,5 @@
+export { mezzoQrErrorePageMetadata as metadata } from "@/lib/site/app-page-metadata";
+
 import Link from "next/link";
 import { PageLayout } from "@/components/design-system";
 
@@ -13,6 +15,10 @@ const MESSAGES: Record<string, { title: string; body: string }> = {
   not_found: {
     title: "QR non valido",
     body: "Questo identificativo non è più associato a un mezzo attivo. Contattare l'officina.",
+  },
+  forbidden: {
+    title: "Accesso non consentito",
+    body: "Non hai permesso di accedere a questo mezzo. Se ritieni sia un errore, contatta l'officina.",
   },
 };
 

@@ -1,0 +1,23 @@
+diff --git a/src/hooks/use-cab-sync-listener.ts b/src/hooks/use-cab-sync-listener.ts
+index d5bd9797..ee236fc7 100644
+--- a/src/hooks/use-cab-sync-listener.ts
++++ b/src/hooks/use-cab-sync-listener.ts
+@@ -12,7 +12,6 @@ export function useCabSyncListener(
+   handler: (event: CabSyncEvent) => void,
+ ): void {
+   const handlerRef = useRef(handler);
+-  handlerRef.current = handler;
+ 
+   const entities =
+     entity === "settings"
+@@ -21,6 +20,10 @@ export function useCabSyncListener(
+         ? entity
+         : [entity];
+ 
++  useEffect(() => {
++    handlerRef.current = handler;
++  }, [handler]);
++
+   useEffect(() => {
+     const targets = entities;
+     return subscribeCabSync((ev) => {

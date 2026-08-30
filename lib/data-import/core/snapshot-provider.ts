@@ -36,7 +36,7 @@ export function recordsToNormalizedSheet(
   const rows: NormalizedRow[] = records.map((rec, i) => {
     const cells: NormalizedRow["cells"] = {};
     for (const f of fields) {
-      let raw = rec[f.key];
+      const raw = rec[f.key];
       let parsed = raw;
       if (f.key.endsWith("_at") || f.key.includes("date")) {
         parsed = normalizeDateToIso(raw);

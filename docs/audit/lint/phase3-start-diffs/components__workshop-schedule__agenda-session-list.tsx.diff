@@ -1,0 +1,12 @@
+diff --git a/components/workshop-schedule/agenda-session-list.tsx b/components/workshop-schedule/agenda-session-list.tsx
+index 742bd7f2..31f3e187 100644
+--- a/components/workshop-schedule/agenda-session-list.tsx
++++ b/components/workshop-schedule/agenda-session-list.tsx
+@@ -57,6 +57,7 @@ export function AgendaSessionList({
+   const sorted = useMemo(() => sortAgendaSessions(sessions), [sessions]);
+   const scrollRef = useRef<HTMLUListElement>(null);
+   const useVirtual = scrollable && sorted.length >= AGENDA_LIST_VIRTUAL_THRESHOLD;
++  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
+   const virtualizer = useVirtualizer({
+     count: useVirtual ? sorted.length : 0,
+     getScrollElement: () => scrollRef.current,

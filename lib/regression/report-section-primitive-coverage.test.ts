@@ -5,6 +5,7 @@ import {
   COVERAGE_MIGRATION_ALLOWLIST,
   REPORT_SECTION_FILE_TO_CONTRACT_KEY,
   REPORT_SECTION_PRIMITIVE_CONTRACT,
+  REPORT_SECTION_PRIMITIVE_LAYOUT_DELEGATES,
 } from "@/components/report/design-system/contracts/section-primitive-contract";
 import { extractJsxPrimitivesFromSource, hasInlineColumnsProp } from "@/lib/regression/report-ds-ast-utils";
 
@@ -31,6 +32,14 @@ for (const [file, contractKey] of Object.entries(REPORT_SECTION_FILE_TO_CONTRACT
       (declared as readonly string[]).includes(kind),
       `${file}: primitive non dichiarata ${kind}`,
     );
+  }
+}
+
+for (const [file, delegate] of Object.entries(REPORT_SECTION_PRIMITIVE_LAYOUT_DELEGATES)) {
+  const layoutContent = fs.readFileSync(path.join(ROOT, delegate.layoutFile), "utf8");
+  const layoutPrimitives = extractJsxPrimitivesFromSource(delegate.layoutFile, layoutContent);
+  for (const kind of delegate.primitives) {
+    assert.ok(layoutPrimitives.has(kind), `${delegate.layoutFile}: manca primitive delegata ${kind} per ${file}`);
   }
 }
 

@@ -1,0 +1,26 @@
+diff --git a/components/design-system/gestionale-collapsible-section.tsx b/components/design-system/gestionale-collapsible-section.tsx
+index fab8f149..e05042a5 100644
+--- a/components/design-system/gestionale-collapsible-section.tsx
++++ b/components/design-system/gestionale-collapsible-section.tsx
+@@ -54,7 +54,7 @@ export function gestionaleCollapsibleSectionTitleClass(
+ 
+ export function GestionaleCollapsibleSection({
+   title,
+-  titleTone = "primary",
++  _titleTone = "primary",
+   defaultCollapsed = true,
+   forceExpanded = false,
+   unmountOnCollapse = false,
+@@ -101,9 +101,12 @@ export function GestionaleCollapsibleSection({
+   const titleId = `${panelId}-title`;
+   const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
+ 
++   
+   useEffect(() => {
+     if (forceExpanded) {
++       
+       if (usePersistence) setPersistedCollapsed(false);
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       else setLocalCollapsed(false);
+     }
+   }, [forceExpanded, usePersistence, setPersistedCollapsed]);

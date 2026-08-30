@@ -1,0 +1,22 @@
+diff --git a/components/design-system/loading/route-skeletons.tsx b/components/design-system/loading/route-skeletons.tsx
+index 2ed3fc84..1d868f46 100644
+--- a/components/design-system/loading/route-skeletons.tsx
++++ b/components/design-system/loading/route-skeletons.tsx
+@@ -124,7 +124,7 @@ export function LavorazioniRouteSkeleton({
+     return (
+       <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni" testId="lavorazioni-route-skeleton" scope={scope} className={className}>
+         <RouteSkeletonActionsRow />
+-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
++        <div className="mb-2 flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+           <SkeletonBlock minHeightClass="min-h-10" className="w-40" />
+           <SkeletonBlock minHeightClass="min-h-10" className="w-24" />
+         </div>
+@@ -143,7 +143,7 @@ export function LavorazioniRouteSkeleton({
+   return (
+     <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni" testId="lavorazioni-route-skeleton" scope={scope} className={className}>
+       <RouteSkeletonActionsRow />
+-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
++      <div className="mb-2 flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+         <SkeletonBlock minHeightClass="min-h-10" className="w-40" />
+         <SkeletonBlock minHeightClass="min-h-10" className="w-24" />
+       </div>

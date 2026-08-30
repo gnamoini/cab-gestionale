@@ -1,0 +1,63 @@
+diff --git a/lib/forms/form-engine/use-form-engine.ts b/lib/forms/form-engine/use-form-engine.ts
+index 3f18b9c2..cb1d4af4 100644
+--- a/lib/forms/form-engine/use-form-engine.ts
++++ b/lib/forms/form-engine/use-form-engine.ts
+@@ -40,11 +40,14 @@ export function useFormEngine<T extends object>(options: {
+ }): UseFormEngineResult<T> {
+   const enabled = options.enabled ?? isFormEngineEnabled();
+   const initialRef = useRef(options.initial);
+-  initialRef.current = options.initial;
+   const [value, setValueState] = useState<T>(options.initial);
+   const ref = useRef(value);
+   const submitLock = useMemo(() => createSubmitLock(), []);
+ 
++  useLayoutEffect(() => {
++    initialRef.current = options.initial;
++  }, [options.initial]);
++
+   const setValue = useCallback((action: SetStateAction<T>) => {
+     setValueState((prev) => {
+       const resolved = typeof action === "function" ? (action as (p: T) => T)(prev) : action;
+@@ -136,13 +139,12 @@ export function useFormEngineSections<S extends FormEngineSections>(options: {
+   enabled?: boolean;
+ }): UseFormEngineSectionsResult<S> {
+   const enabled = options.enabled ?? isFormEngineEnabled();
+-  const sectionKeysRef = useRef<(keyof S)[] | null>(null);
+-  if (!sectionKeysRef.current) {
+-    sectionKeysRef.current = Object.keys(options.sections) as (keyof S)[];
+-  }
+-  const sectionKeys = sectionKeysRef.current;
++  const [sectionKeys] = useState(() => Object.keys(options.sections) as (keyof S)[]);
+   const sectionsConfigRef = useRef(options.sections);
+-  sectionsConfigRef.current = options.sections;
++
++  useLayoutEffect(() => {
++    sectionsConfigRef.current = options.sections;
++  }, [options.sections]);
+ 
+   const buildInitial = useCallback((): S => {
+     const out = {} as S;
+@@ -152,7 +154,13 @@ export function useFormEngineSections<S extends FormEngineSections>(options: {
+     return out;
+   }, [sectionKeys]);
+ 
+-  const [values, setValuesState] = useState<S>(buildInitial);
++  const [values, setValuesState] = useState<S>(() => {
++    const out = {} as S;
++    for (const key of sectionKeys) {
++      out[key] = options.sections[key].initial;
++    }
++    return out;
++  });
+   const refsMap = useRef<{ [K in keyof S]?: S[K] }>({});
+ 
+   const syncAllRefs = useCallback((next: S) => {
+@@ -161,8 +169,6 @@ export function useFormEngineSections<S extends FormEngineSections>(options: {
+     }
+   }, [sectionKeys]);
+ 
+-  syncAllRefs(values);
+-
+   useLayoutEffect(() => {
+     syncAllRefs(values);
+   }, [values, syncAllRefs]);

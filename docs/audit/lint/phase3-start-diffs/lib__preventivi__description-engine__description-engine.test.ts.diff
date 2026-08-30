@@ -1,0 +1,12 @@
+diff --git a/lib/preventivi/description-engine/description-engine.test.ts b/lib/preventivi/description-engine/description-engine.test.ts
+index f6170b6b..8d7a859e 100644
+--- a/lib/preventivi/description-engine/description-engine.test.ts
++++ b/lib/preventivi/description-engine/description-engine.test.ts
+@@ -4,7 +4,6 @@ import {
+   generatePreventivoDescription,
+   resetDescriptionEngineDevState,
+ } from "@/lib/preventivi/description-engine/description-engine";
+-import { descriptionEngineMetaSchema } from "@/lib/preventivi/description-engine/contracts/engine-meta.contract";
+ 
+ const emptyCtx = {
+   cliente: "",

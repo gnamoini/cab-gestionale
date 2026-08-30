@@ -1,13 +1,14 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { CAB_SYNC_TABLE_USER_PERMISSIONS } from "@/lib/sync/cab-sync-bus";
 
 export type OperationalTableVersions = Readonly<Record<string, number>>;
 
 /** Tabelle il cui drift non deve mostrare banner dirty (feed/log, RBAC, …). */
 export const NO_DIRTY_SIGNAL_TABLES = new Set([
   "log_modifiche",
-  "user_permissions",
+  CAB_SYNC_TABLE_USER_PERMISSIONS,
   "profiles",
   "app_settings",
 ]);
@@ -17,7 +18,7 @@ const VERSION_BASELINE_STORAGE_KEY = "cab-operational-versions-v1";
 
 let lastTableVersions: OperationalTableVersions | null = null;
 const pendingBaselineAck = new Set<string>();
-let pendingAckTables = new Set<string>();
+const pendingAckTables = new Set<string>();
 let ackDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let ackInFlight: Promise<void> | null = null;
 let fetchVersionsOverride: (() => Promise<OperationalTableVersions>) | null = null;

@@ -1,0 +1,12 @@
+diff --git a/src/services/internal/audit-log.ts b/src/services/internal/audit-log.ts
+index 44cab5b9..b6a63692 100644
+--- a/src/services/internal/audit-log.ts
++++ b/src/services/internal/audit-log.ts
+@@ -87,6 +87,6 @@ export async function commitCriticalMutation<T>(
+   return result;
+ }
+ 
+-export async function flushPendingModificaLogs(client: SupabaseClient): Promise<void> {
++export async function flushPendingModificaLogs(): Promise<void> {
+   await flushAllModificaLogs(flushModificaLog);
+ }

@@ -1,4 +1,4 @@
-import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
+import { CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 
 /** Soglie copertura scorta configurabili (R-25). */
 export type MagazzinoStockPolicy = {

@@ -1,9 +1,5 @@
 import assert from "node:assert/strict";
 import {
-  DEFAULT_PERSISTED_THEME_MODE,
-  type PersistedThemeMode,
-} from "@/lib/theme/user-theme-prefs";
-import {
   getThemeRuntimeState,
   patchThemeRuntimeState,
 } from "@/lib/theme/theme-runtime-store";

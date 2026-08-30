@@ -165,9 +165,9 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     };
   }
 
-  let bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
+  const bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
   const fileName = input.storagePath.split("/").pop() ?? "document";
-  let mime = normalizeCaptureMime({
+  const mime = normalizeCaptureMime({
     mime: fileData.type,
     fileName,
     bytes,

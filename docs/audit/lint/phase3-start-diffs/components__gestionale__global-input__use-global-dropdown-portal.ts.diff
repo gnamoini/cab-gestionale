@@ -1,0 +1,74 @@
+diff --git a/components/gestionale/global-input/use-global-dropdown-portal.ts b/components/gestionale/global-input/use-global-dropdown-portal.ts
+index eaaff39a..fae427d3 100644
+--- a/components/gestionale/global-input/use-global-dropdown-portal.ts
++++ b/components/gestionale/global-input/use-global-dropdown-portal.ts
+@@ -139,17 +139,20 @@ export function useGlobalDropdownPortal({
+     }
+     const anchor = anchorRef.current;
+     if (anchor) refs.setReference(anchor);
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- repositionDeps caller-controlled
+   }, [open, anchorRef, refs, ...repositionDeps]);
+ 
+   useLayoutEffect(() => {
+     if (!open) return;
+     const panel = contentRef?.current;
+     if (panel) refs.setFloating(panel);
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- repositionDeps caller-controlled
+   }, [open, contentRef, refs, floatingIsPositioned, ...repositionDeps]);
+ 
+   useLayoutEffect(() => {
+     if (!open) return;
+     update();
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- repositionDeps caller-controlled
+   }, [open, update, ...repositionDeps]);
+ 
+   useLayoutEffect(() => {
+@@ -172,6 +175,7 @@ export function useGlobalDropdownPortal({
+     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+     ro?.observe(el);
+     return () => ro?.disconnect();
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- repositionDeps caller-controlled
+   }, [open, contentRef, floatingStyles, ...repositionDeps]);
+ 
+   const isPositioned = open && floatingIsPositioned;
+@@ -187,28 +191,23 @@ export function useGlobalDropdownPortal({
+   }, [open, floatingStyles, isPositioned]);
+ 
+   const coords: GlobalDropdownCoords | null = useMemo(() => {
+-    if (!open || !anchorRef.current) return null;
+-    const anchorRect = anchorRef.current.getBoundingClientRect();
+-    const floatingRect = contentRef?.current?.getBoundingClientRect();
+-    const width = panelWidth ?? (matchAnchorWidth ? anchorRect.width : floatingRect?.width ?? anchorRect.width);
++    if (!open || !isPositioned) return null;
++    const topRaw = floatingStyles.top;
++    const leftRaw = floatingStyles.left;
++    const widthRaw = floatingStyles.width;
++    const top = typeof topRaw === "number" ? topRaw : Number.parseFloat(String(topRaw ?? ""));
++    const left = typeof leftRaw === "number" ? leftRaw : Number.parseFloat(String(leftRaw ?? ""));
++    const width = typeof widthRaw === "number" ? widthRaw : Number.parseFloat(String(widthRaw ?? ""));
++    if (!Number.isFinite(top) || !Number.isFinite(left)) return null;
+     return {
+-      top: floatingRect?.top ?? anchorRect.bottom + GLOBAL_DROPDOWN_MENU_GAP,
+-      left: floatingRect?.left ?? anchorRect.left,
+-      width,
++      top,
++      left,
++      width: Number.isFinite(width) ? width : 0,
+       maxHeight,
+       scrollInside,
+       placement: placementAxis(resolvedPlacement),
+     };
+-  }, [
+-    open,
+-    anchorRef,
+-    contentRef,
+-    panelWidth,
+-    matchAnchorWidth,
+-    maxHeight,
+-    scrollInside,
+-    resolvedPlacement,
+-  ]);
++  }, [open, isPositioned, floatingStyles.top, floatingStyles.left, floatingStyles.width, maxHeight, scrollInside, resolvedPlacement]);
+ 
+   const placementOriginClass = globalDropdownPlacementOriginClass(resolvedPlacement);
+ 

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -141,6 +143,7 @@ export function useDebouncedInventoryQuantity(
       commitDeps,
     });
     return () => releaseDebouncedScortaSubscriber(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- acquire once per id; bindings via update effect
   }, [id]);
 
   useEffect(() => {

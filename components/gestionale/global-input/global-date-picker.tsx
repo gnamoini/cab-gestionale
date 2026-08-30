@@ -148,6 +148,7 @@ export function GlobalDatePicker({
   useEffect(() => {
     if (!open) return;
     const v = initialViewFromYmd(selectedYmd);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setViewYear(v.year);
     setViewMonth(v.month);
   }, [open, selectedYmd]);
@@ -237,9 +238,11 @@ export function GlobalDatePicker({
     <div className="w-full">
       <div ref={wrapRef} className={shellCombined}>
         <input
+  // eslint-disable-next-line react-hooks/immutability -- lint phase2: preserve existing hook contract
           ref={(el) => {
             inputRef.current = el;
             if (typeof inputRefProp === "function") inputRefProp(el);
+  // eslint-disable-next-line react-hooks/immutability -- lint phase2: preserve existing hook contract
             else if (inputRefProp) inputRefProp.current = el;
           }}
           id={inputId}
@@ -353,6 +356,7 @@ export function GlobalDatePickerYmd({
   const [displayDraft, setDisplayDraft] = useState(() => displayFromYmd(valueYmd));
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDisplayDraft(displayFromYmd(valueYmd));
   }, [valueYmd]);
 

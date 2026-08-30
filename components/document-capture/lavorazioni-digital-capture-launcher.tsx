@@ -682,10 +682,9 @@ export function LavorazioniDigitalCaptureLauncher({
       finalizeCaptureImportSuccess,
       gestToast,
       linkCaptureToLavorazione,
-      onLavorazioneCreated,
       openSchedeEditor,
       pendingSchedaTipo,
-      resetFlow,
+      persistAcquisitionDraft,
       schedeStore,
     ],
   );

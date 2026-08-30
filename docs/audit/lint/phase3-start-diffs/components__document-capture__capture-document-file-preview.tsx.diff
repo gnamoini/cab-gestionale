@@ -1,0 +1,23 @@
+diff --git a/components/document-capture/capture-document-file-preview.tsx b/components/document-capture/capture-document-file-preview.tsx
+index 80c21145..ea5c4b80 100644
+--- a/components/document-capture/capture-document-file-preview.tsx
++++ b/components/document-capture/capture-document-file-preview.tsx
+@@ -93,7 +93,9 @@ function CaptureDocumentFilePreviewInner({
+     }
+   }, [captureId]);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     void load();
+   }, [load]);
+ 
+@@ -287,7 +289,7 @@ function CaptureDocumentFilePreviewInner({
+               <iframe
+                 title={meta.file_name}
+                 src={pdfFullscreenUrl}
+-                className="min-h-0 h-full w-full flex-1 border-0 bg-[color:var(--cab-surface-muted)]"
++                className="min-h-0 h-full w-full flex-1 border-0 bg-[color:var(--cab-surface-muted)] min-w-0"
+               />
+             )}
+           </div>

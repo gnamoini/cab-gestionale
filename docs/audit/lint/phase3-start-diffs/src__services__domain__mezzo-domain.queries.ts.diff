@@ -1,0 +1,12 @@
+diff --git a/src/services/domain/mezzo-domain.queries.ts b/src/services/domain/mezzo-domain.queries.ts
+index 5206f118..5563db64 100644
+--- a/src/services/domain/mezzo-domain.queries.ts
++++ b/src/services/domain/mezzo-domain.queries.ts
+@@ -77,7 +77,6 @@ export function useMezzoDocumenti(mezzoId: string | undefined) {
+   const id = mezzoIdOrEmpty(mezzoId);
+   const base = useMezzoBase(mezzoId);
+   const marca = base.data?.marca?.trim() ?? "";
+-  const modello = base.data?.modello?.trim() ?? "";
+   return useServiceQuery(
+     mezzoDomainQueryKeys.documenti(id, marca || "__pending__"),
+     async () => {

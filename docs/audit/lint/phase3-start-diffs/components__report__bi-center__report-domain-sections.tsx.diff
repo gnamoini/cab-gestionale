@@ -1,0 +1,57 @@
+diff --git a/components/report/bi-center/report-domain-sections.tsx b/components/report/bi-center/report-domain-sections.tsx
+index 859e7d42..969a5630 100644
+--- a/components/report/bi-center/report-domain-sections.tsx
++++ b/components/report/bi-center/report-domain-sections.tsx
+@@ -51,7 +51,7 @@ export function SectionMetricGrid({ metricIds }: { metricIds: readonly string[]
+ 
+ export function SectionTrend({
+   trendMetricId,
+-  granularity,
++  
+ }: {
+   trendMetricId: string;
+   granularity: ReportAnalyticsGranularity;
+@@ -67,43 +67,6 @@ export function SectionTrend({
+   );
+ }
+ 
+-function DomainSection({
+-  registrationKey,
+-  sectionId,
+-  title,
+-  subtitle,
+-  persistKey,
+-  trendMetricId,
+-  granularity = "month",
+-}: {
+-  registrationKey: string;
+-  sectionId: Parameters<typeof resolveSectionMetricIds>[0];
+-  title: string;
+-  subtitle: string;
+-  persistKey: string;
+-  trendMetricId?: string;
+-  granularity?: ReportAnalyticsGranularity;
+-}) {
+-  const metricIds = useMemo(() => resolveSectionMetricIds(sectionId), [sectionId]);
+-  const fetchIds = useMemo(() => {
+-    if (!trendMetricId || metricIds.includes(trendMetricId)) return metricIds;
+-    return [...metricIds, trendMetricId];
+-  }, [metricIds, trendMetricId]);
+-
+-  useRegisterAnalyticsSection(registrationKey, sectionId, {
+-    metricIds: fetchIds,
+-    includeSeries: Boolean(trendMetricId),
+-    granularity: trendMetricId ? granularity : undefined,
+-  });
+-
+-  return (
+-    <ReportAnalysisSectionShell title={title} subtitle={subtitle} persistKey={persistKey}>
+-      <SectionMetricGrid metricIds={metricIds} />
+-      {trendMetricId ? <SectionTrend trendMetricId={trendMetricId} granularity={granularity} /> : null}
+-    </ReportAnalysisSectionShell>
+-  );
+-}
+-
+ export function ReportEconomiaSection() {
+   const metricIds = useMemo(() => resolveSectionMetricIds("economia"), []);
+   const fetchIds = useMemo(() => {

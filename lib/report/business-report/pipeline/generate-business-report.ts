@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { ReportCompareMode } from "@/lib/report/date-ranges";
 import type { ReportRequestedPeriod } from "@/lib/report/contracts/metadata-envelope";
 import type { BusinessReportType } from "@/lib/report/business-report/types";
 import {

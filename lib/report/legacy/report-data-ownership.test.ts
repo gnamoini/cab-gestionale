@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import {
   REPORT_DATA_OWNERSHIP,
   isP9EliminationGatePassed,

@@ -1,0 +1,42 @@
+diff --git a/lib/domain/technical-knowledge-base/merge/merge-engine.ts b/lib/domain/technical-knowledge-base/merge/merge-engine.ts
+index cb06793d..4c3b3e2a 100644
+--- a/lib/domain/technical-knowledge-base/merge/merge-engine.ts
++++ b/lib/domain/technical-knowledge-base/merge/merge-engine.ts
+@@ -115,21 +115,16 @@ function toBuckets(fragments: StoredFragment[]): EntityBucket {
+   };
+ 
+   const stored = new Map<string, StoredFragment>();
+-  let duplicatesFound = 0;
+-  let conflictsResolved = 0;
+-  let performed = 0;
+-  let added = 0;
+-  let updated = 0;
+ 
+   for (const frag of fragments) {
+     const key = bucketKey(frag.entityKind, frag.entityKey);
+     const existing = stored.get(key);
+     if (!existing) {
+       stored.set(key, frag);
+-      added++;
++      _added++;
+       continue;
+     }
+-    duplicatesFound++;
++    _duplicatesFound++;
+     const win =
+       frag.precedence > existing.precedence
+         ? frag
+@@ -138,10 +133,10 @@ function toBuckets(fragments: StoredFragment[]): EntityBucket {
+           : (frag.updatedAt ?? "") >= (existing.updatedAt ?? "")
+             ? frag
+             : existing;
+-    if (win !== existing) conflictsResolved++;
++    if (win !== existing) _conflictsResolved++;
+     stored.set(key, win);
+-    updated++;
+-    performed++;
++    _updated++;
++    _performed++;
+   }
+ 
+   for (const frag of stored.values()) {

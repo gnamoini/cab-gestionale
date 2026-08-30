@@ -13,9 +13,11 @@ export function OfficialDocumentViewer({ streamUrl, title }: OfficialDocumentVie
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+   
   useEffect(() => {
     if (!isMobile) return;
     let revoked: string | null = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setError(null);
     void (async () => {
       try {

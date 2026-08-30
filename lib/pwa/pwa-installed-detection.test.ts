@@ -6,8 +6,8 @@ import {
   isPwaAppInstalledOnDeviceSync,
   readPwaDisplayModeInBrowser,
 } from "@/lib/pwa/pwa-installed-detection";
-import { clearPwaInstallCompleted, markPwaInstallCompleted } from "@/lib/pwa/pwa-install-state";
-import { clearPwaInstallRuntimeInstalled, markPwaInstallRuntimeInstalled, resetPwaInstallRuntimeForTests } from "@/lib/pwa/pwa-install-runtime";
+import { markPwaInstallCompleted } from "@/lib/pwa/pwa-install-state";
+import { markPwaInstallRuntimeInstalled, resetPwaInstallRuntimeForTests } from "@/lib/pwa/pwa-install-runtime";
 
 const ROOT = process.cwd();
 

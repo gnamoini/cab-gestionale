@@ -8,7 +8,7 @@ export function isMezziListeSettingsPayload(payload: PostgresChangePayload): boo
 }
 
 /** Remote liste change: settings cache only unless propagation already completed elsewhere. */
-export function remoteAppSettingsInvalidationTables(payload: PostgresChangePayload): string[] {
+export function remoteAppSettingsInvalidationTables(): string[] {
   return ["app_settings"];
 }
 

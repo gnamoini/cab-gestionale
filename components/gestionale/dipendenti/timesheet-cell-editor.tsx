@@ -9,6 +9,7 @@ import type { TimesheetCellValue } from "@/lib/dipendenti/types";
 import { sliceInputValue, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
 import { dsDisabled, dsFocus, dsInput, gestionaleFilterChipClass } from "@/lib/ui/design-system";
 import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
+import { Tooltip } from "@/components/ui";
 
 function tipoAssenzaChipClass(selected: boolean): string {
   return selected
@@ -38,21 +39,21 @@ function TimesheetTipoAssenzaPicker({
       {tipiAssenza.map((tipo) => {
         const selected = selectedId === tipo.id;
         return (
-          <button
-            key={tipo.id}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            disabled={readOnly}
-            title={tipo.label}
-            className={`${tipoAssenzaChipClass(selected)} ${dsFocus} ${dsDisabled}`}
-            onClick={() => onSelect(tipo)}
-          >
+          <Tooltip key={tipo.id} content={tipo.label}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={readOnly}
+              className={`${tipoAssenzaChipClass(selected)} ${dsFocus} ${dsDisabled}`}
+              onClick={() => onSelect(tipo)}
+            >
             <span className="shrink-0 font-bold tabular-nums text-[color:var(--cab-primary)]">
               {tipo.abbrev}
             </span>
             <span className="min-w-0 truncate">{tipo.label}</span>
           </button>
+          </Tooltip>
         );
       })}
     </div>

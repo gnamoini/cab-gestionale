@@ -1,0 +1,12 @@
+diff --git a/lib/document-capture/capture-ingresso-field-hints.ts b/lib/document-capture/capture-ingresso-field-hints.ts
+index 1cb9d1d7..cd611545 100644
+--- a/lib/document-capture/capture-ingresso-field-hints.ts
++++ b/lib/document-capture/capture-ingresso-field-hints.ts
+@@ -5,7 +5,6 @@ import {
+ } from "@/lib/document-capture/capture-catalog-validation";
+ import {
+   formatCaptureReviewDisplayValue,
+-  formatCaptureReviewDraftValue,
+ } from "@/lib/document-capture/capture-field-display-value";
+ import { normalizeIngressoCaptureFieldRows } from "@/lib/document-capture/capture-field-key-aliases";
+ import {

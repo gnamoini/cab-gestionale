@@ -23,7 +23,6 @@ assert.equal(TOOLTIP_CONTRACT.consumerImportPath, "@/components/ui");
 assert.ok(UI_PRIMITIVE_VERSIONS.Tooltip);
 
 // API stabile: content su TooltipProps, no trigger compositional
-type _ContentRequired = Pick<TooltipProps, "content" | "children">;
 type _NoTrigger = "trigger" extends keyof TooltipProps ? never : true;
 const _apiCheck: _NoTrigger = true;
 void _apiCheck;
@@ -42,7 +41,7 @@ const barrel = read("components/ui/index.ts");
 assert.match(barrel, /TooltipList/);
 assert.match(barrel, /GlobalAnchoredMenu/);
 
-const gallery = read("app/(gestionale)/report/design-system-preview/page.tsx");
+const gallery = read("app/(gestionale)/report/design-system-preview/report-design-system-preview-dev.tsx");
 for (const section of ["tooltip", "lists", "overlays", "states", "accessibility"]) {
   assert.match(gallery, new RegExp(section, "i"), `gallery missing section: ${section}`);
 }

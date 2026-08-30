@@ -21,7 +21,6 @@ import {
   applyEntityResolutionToCaptureFields,
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
-import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;

@@ -1,0 +1,12 @@
+diff --git a/lib/ordini-fornitori/ordine-fornitore-in-transit.server.ts b/lib/ordini-fornitori/ordine-fornitore-in-transit.server.ts
+index a6dc9500..1edbcd37 100644
+--- a/lib/ordini-fornitori/ordine-fornitore-in-transit.server.ts
++++ b/lib/ordini-fornitori/ordine-fornitore-in-transit.server.ts
+@@ -1,6 +1,6 @@
+ import "server-only";
+ 
+-import { ORDINI_FORNITORI_COLUMNS, ORDINI_FORNITORI_RIGHE_COLUMNS } from "@/lib/db/table-select-columns";
++import { ORDINI_FORNITORI_RIGHE_COLUMNS } from "@/lib/db/table-select-columns";
+ import {
+   aggregateInTransitByRicambioId,
+   type OrdineFornitoreInTransitDetailRow,

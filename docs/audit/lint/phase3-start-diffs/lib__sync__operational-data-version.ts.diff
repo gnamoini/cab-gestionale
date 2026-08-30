@@ -1,0 +1,13 @@
+diff --git a/lib/sync/operational-data-version.ts b/lib/sync/operational-data-version.ts
+index 6cb9e70b..9c24d2fb 100644
+--- a/lib/sync/operational-data-version.ts
++++ b/lib/sync/operational-data-version.ts
+@@ -17,7 +17,7 @@ const VERSION_BASELINE_STORAGE_KEY = "cab-operational-versions-v1";
+ 
+ let lastTableVersions: OperationalTableVersions | null = null;
+ const pendingBaselineAck = new Set<string>();
+-let pendingAckTables = new Set<string>();
++const pendingAckTables = new Set<string>();
+ let ackDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+ let ackInFlight: Promise<void> | null = null;
+ let fetchVersionsOverride: (() => Promise<OperationalTableVersions>) | null = null;

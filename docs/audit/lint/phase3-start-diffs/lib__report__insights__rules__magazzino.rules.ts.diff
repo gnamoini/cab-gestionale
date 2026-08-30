@@ -1,0 +1,12 @@
+diff --git a/lib/report/insights/rules/magazzino.rules.ts b/lib/report/insights/rules/magazzino.rules.ts
+index 375f3ec4..01b39a14 100644
+--- a/lib/report/insights/rules/magazzino.rules.ts
++++ b/lib/report/insights/rules/magazzino.rules.ts
+@@ -2,7 +2,6 @@ import type { InsightRuleDefinition } from "@/lib/report/insights/insight-rule-t
+ import {
+   MAG_COVERAGE_CRITICAL_DAYS,
+   MAG_PARTS_SPIKE_RATIO,
+-  detectMagazzinoConsumoSpike,
+ } from "@/lib/report/magazzino-analytics";
+ import { fire, makeCandidate, skipFalse, skipMissing } from "@/lib/report/insights/rules/rule-helpers";
+ 

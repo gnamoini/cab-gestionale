@@ -16,17 +16,62 @@ export type DocumentAiIndexRow = {
 
 export async function enqueueDocumentAiIndex(
   sb: SupabaseClient,
-  input: { documentoId: string; contentHash: string },
-): Promise<{ id: string; created: boolean }> {
+  input: { documentoId: string; contentHash: string; forceReindex?: boolean },
+): Promise<{ id: string; created: boolean; requeued?: boolean }> {
   const { data: existing } = await sb
     .from("document_ai_index")
-    .select("id, status, understanding_status, content_hash")
+    .select("id, status, understanding_status, content_hash, is_active")
     .eq("documento_id", input.documentoId)
     .eq("content_hash", input.contentHash)
     .maybeSingle();
 
-  if (existing?.status === "indexed" && existing.understanding_status === "ready") {
-    return { id: existing.id as string, created: false };
+  if (
+    existing?.is_active &&
+    existing.status === "indexed" &&
+    (existing.understanding_status === "ready" || existing.understanding_status === "ready_with_warnings") &&
+    !input.forceReindex
+  ) {
+    const { count } = await sb
+      .from("document_ai_part_references")
+      .select("id", { count: "exact", head: true })
+      .eq("index_id", existing.id);
+    if ((count ?? 0) > 0) {
+      return { id: existing.id as string, created: false };
+    }
+    const now = new Date().toISOString();
+    await sb
+      .from("document_ai_index")
+      .update({
+        understanding_status: "pending",
+        error_code: null,
+        error_message: null,
+        next_retry_at: null,
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+    return { id: existing.id as string, created: false, requeued: true };
+  }
+
+  if (input.forceReindex && existing?.id && existing.is_active) {
+    const now = new Date().toISOString();
+    const { error } = await sb
+      .from("document_ai_index")
+      .update({
+        status: "pending",
+        understanding_status: "pending",
+        attempt_count: 0,
+        error_code: null,
+        error_message: null,
+        next_retry_at: null,
+        index_quality: null,
+        document_capabilities: {},
+        extraction_reliability: null,
+        metadata_json: {},
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { id: existing.id as string, created: false, requeued: true };
   }
 
   await sb
@@ -57,6 +102,9 @@ export async function enqueueDocumentAiIndex(
         understanding_status: "pending",
         is_active: true,
         attempt_count: 0,
+        error_code: null,
+        error_message: null,
+        next_retry_at: null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "documento_id,content_hash" },
@@ -102,6 +150,70 @@ export async function claimDocumentIndexJobs(
   return claimed;
 }
 
+/** Claim esplicito per retry UI — ignora backoff `next_retry_at`. */
+export async function claimDocumentIndexJobById(
+  sb: SupabaseClient,
+  indexId: string,
+): Promise<DocumentAiIndexRow | null> {
+  const { data: row } = await sb
+    .from("document_ai_index")
+    .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
+    .eq("id", indexId)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!row) return null;
+  if (row.status !== "pending" && row.status !== "failed") return null;
+  if ((row.attempt_count as number) >= SPARE_PARTS_INDEX_MAX_ATTEMPTS) return null;
+
+  const now = new Date().toISOString();
+  const { data: updated, error } = await sb
+    .from("document_ai_index")
+    .update({
+      status: "processing",
+      attempt_count: (row.attempt_count as number) + 1,
+      next_retry_at: null,
+      error_code: null,
+      error_message: null,
+      updated_at: now,
+    })
+    .eq("id", indexId)
+    .in("status", ["pending", "failed"])
+    .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
+    .maybeSingle();
+  if (error || !updated) return null;
+  return updated as DocumentAiIndexRow;
+}
+
+export async function claimUnderstandingJobById(
+  sb: SupabaseClient,
+  indexId: string,
+): Promise<DocumentAiIndexRow | null> {
+  const { data: row } = await sb
+    .from("document_ai_index")
+    .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
+    .eq("id", indexId)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!row || row.status !== "indexed") return null;
+  if (row.understanding_status !== "pending" && row.understanding_status !== "failed") return null;
+
+  const now = new Date().toISOString();
+  const { data: updated, error } = await sb
+    .from("document_ai_index")
+    .update({
+      understanding_status: "processing",
+      error_code: null,
+      error_message: null,
+      updated_at: now,
+    })
+    .eq("id", indexId)
+    .in("understanding_status", ["pending", "failed"])
+    .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
+    .maybeSingle();
+  if (error || !updated) return null;
+  return updated as DocumentAiIndexRow;
+}
+
 export async function claimUnderstandingJobs(
   sb: SupabaseClient,
   limit: number,
@@ -112,7 +224,8 @@ export async function claimUnderstandingJobs(
     .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
     .eq("is_active", true)
     .eq("status", "indexed")
-    .eq("understanding_status", "pending")
+    .in("understanding_status", ["pending", "failed"])
+    .or(`next_retry_at.is.null,next_retry_at.lte.${now}`)
     .order("created_at", { ascending: true })
     .limit(limit * 3);
 
@@ -121,9 +234,9 @@ export async function claimUnderstandingJobs(
     if (claimed.length >= limit) break;
     const { data: updated, error } = await sb
       .from("document_ai_index")
-      .update({ understanding_status: "processing", updated_at: now })
+      .update({ understanding_status: "processing", updated_at: now, error_code: null, error_message: null })
       .eq("id", row.id)
-      .eq("understanding_status", "pending")
+      .in("understanding_status", ["pending", "failed"])
       .select("id, documento_id, version, content_hash, status, understanding_status, is_active, attempt_count")
       .maybeSingle();
     if (!error && updated) claimed.push(updated as DocumentAiIndexRow);

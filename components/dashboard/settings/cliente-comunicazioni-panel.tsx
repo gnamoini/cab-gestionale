@@ -23,8 +23,10 @@ export function ClienteComunicazioniPanel({ clienteId }: { clienteId: string }) 
   const [items, setItems] = useState<CommLogItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+   
   useEffect(() => {
     if (!clienteId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLoading(true);
     fetch(`/api/communications/log?clienteId=${encodeURIComponent(clienteId)}&limit=50`)
       .then(async (res) => {

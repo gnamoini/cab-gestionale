@@ -160,6 +160,7 @@ function CaptureManualAssignPicker({
   useEffect(() => {
     if (!selectedId) return;
     const idx = filteredAttive.findIndex((lav) => lav.id === selectedId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (idx >= 0) setActiveIndex(idx);
   }, [filteredAttive, selectedId]);
 
@@ -170,7 +171,7 @@ function CaptureManualAssignPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <h4 className="text-sm font-semibold text-[color:var(--cab-fg)]">Scegli lavorazione</h4>
         <span className="text-xs text-[color:var(--cab-text-muted)]">
           {attive.length} lavorazioni in corso
@@ -180,7 +181,7 @@ function CaptureManualAssignPicker({
         Cerca
         <input
           type="search"
-          className={`${dsSearchFieldInput} mt-1 block w-full`}
+          className={`${dsSearchFieldInput} mt-1 block w-full min-w-0`}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={handleListKeyDown}
@@ -313,6 +314,7 @@ export function CaptureMezzoMatchStep({
 
   useEffect(() => {
     if (pendingAssignLavorazioneId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setAssignState(completeManualAssignReview(pendingAssignLavorazioneId));
       setManualPickOpen(true);
     }
@@ -409,9 +411,9 @@ export function CaptureMezzoMatchStep({
               </LoadingButton>
             </div>
             <div className="relative flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-[color:var(--cab-border)]" aria-hidden />
+              <div className="h-px flex-1 bg-[color:var(--cab-border)] min-w-0" aria-hidden />
               <span className="shrink-0 text-xs text-[color:var(--cab-text-muted)]">oppure</span>
-              <div className="h-px flex-1 bg-[color:var(--cab-border)]" aria-hidden />
+              <div className="h-px flex-1 bg-[color:var(--cab-border)] min-w-0" aria-hidden />
             </div>
             {!manualPickOpen ? (
               <button

@@ -16,7 +16,6 @@ import {
 } from "@/lib/form-ux-migration/form-ux-execution-token";
 import {
   getFormUxRegistryEntry,
-  isFormUxRolloutEnabled,
 } from "@/lib/form-ux-migration/form-ux-registry";
 import {
   resolveConsumerGovernanceView,

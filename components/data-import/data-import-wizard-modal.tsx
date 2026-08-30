@@ -22,6 +22,7 @@ import { formatImportRowLabel, getImportEntityClientConfig } from "@/lib/data-im
 import { dsBtnNeutralForm, dsInput, dsPageToolbarBtn } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsScrollX } from "@/lib/ui/scroll-system";
+import { globalTableTheadSticky } from "@/lib/ui/global-table";
 import { ImportHistoryDrawer } from "@/components/data-import/import-history-drawer";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
@@ -192,7 +193,7 @@ export function DataImportWizardModal({
         {fields.map((field) => {
           const col = mapping.columns.find((c) => c.targetField === field.key);
           return (
-            <li key={field.key} className="flex flex-wrap items-center gap-2 text-sm">
+            <li key={field.key} className="flex items-center gap-2 text-sm min-w-0 flex-nowrap sm:flex-wrap">
               <span className="min-w-0 shrink-0 font-medium sm:min-w-[10rem]">{field.label}</span>
               <select
                 className={`${dsInput} min-w-0 max-w-full flex-1`}
@@ -220,7 +221,7 @@ export function DataImportWizardModal({
       </ul>
       <FormFieldDuplicateDefault value={defaultDupAction} onChange={setDefaultDupAction} />
       <FormFieldStrategy value={strategy} options={entityConfig.supportedStrategies} onChange={setStrategy} />
-      <div className="flex flex-wrap items-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
+      <div className="flex items-end gap-2 border-t border-[color:var(--cab-border)] pt-3 min-w-0 flex-nowrap sm:flex-wrap">
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
           <span className="font-medium">Salva mapping preset</span>
           <input className={dsInput} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Nome preset" />
@@ -335,7 +336,7 @@ export function DataImportWizardModal({
           {step === "validation" && preview ? (
             <section className="space-y-3">
               <p className="text-sm">{summaryLine}</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                 <button
                   type="button"
                   className={dsBtnNeutralForm}
@@ -369,7 +370,7 @@ export function DataImportWizardModal({
               </div>
               <div className={`${dsScrollX} max-h-80 rounded border border-[color:var(--cab-border)]`}>
                 <table className="min-w-full text-xs">
-                  <thead className="sticky top-0 bg-[color:var(--cab-surface)]">
+                  <thead className={`${globalTableTheadSticky} bg-[color:var(--cab-surface)]`}>
                     <tr>
                       <th className="p-2 text-left">Riga</th>
                       <th className="p-2 text-left">Stato</th>
@@ -479,7 +480,7 @@ function FormFieldDuplicateDefault({
   onChange: (v: ImportDuplicateAction) => void;
 }) {
   return (
-    <label className="flex flex-wrap items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 text-sm min-w-0 flex-nowrap sm:flex-wrap">
       <span>Regola globale duplicati:</span>
       <select
         className={dsInput}
@@ -512,7 +513,7 @@ function FormFieldStrategy({
     replace: "Sostituzione completa",
   };
   return (
-    <label className="flex flex-wrap items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 text-sm min-w-0 flex-nowrap sm:flex-wrap">
       <span>Strategia import:</span>
       <select className={dsInput} value={value} onChange={(e) => onChange(e.target.value as ImportStrategy)}>
         {options.map((o) => (

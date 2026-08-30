@@ -1,0 +1,12 @@
+diff --git a/src/lib/global-list/global-settings-list-keys.ts b/src/lib/global-list/global-settings-list-keys.ts
+index ea410142..d2986455 100644
+--- a/src/lib/global-list/global-settings-list-keys.ts
++++ b/src/lib/global-list/global-settings-list-keys.ts
+@@ -21,7 +21,6 @@ import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
+ import type { ListSelectItem } from "@/lib/ui/list-select-items";
+ import type { CSSProperties } from "react";
+ import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+-import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+ import { mergeFornitoriOrdineOptions } from "@/lib/magazzino/fornitori-ordine-options";
+ import { registerMarcaInMagazzinoMaster } from "@/lib/magazzino/marca-fornitore-sconto";
+ import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";

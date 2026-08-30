@@ -71,14 +71,6 @@ const full = computeHealthScoreFromSnapshot({
   computedAt: anchor.toISOString(),
 });
 
-const adminBreakdown = filterBreakdownForViewer(full.breakdown, {
-  lavorazioni: { canRead: true, canWrite: false },
-  magazzino: { canRead: true, canWrite: false },
-  dipendenti: { canRead: true, canWrite: false },
-  preventivi: { canRead: true, canWrite: false },
-  fatturazione: { canRead: true, canWrite: false },
-});
-
 const operatoreBreakdown = filterBreakdownForViewer(full.breakdown, {
   lavorazioni: { canRead: true, canWrite: false },
   magazzino: { canRead: true, canWrite: false },

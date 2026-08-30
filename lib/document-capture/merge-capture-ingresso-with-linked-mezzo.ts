@@ -4,7 +4,6 @@ import {
   MEZZO_PERMANENT_FIELDS,
   type MezzoPermanentFieldKey,
 } from "@/lib/schede/scheda-ingresso-field-roles";
-import { isSchedaIngressoFieldEmpty } from "@/lib/schede/scheda-ingresso-typed-fields";
 import { captureFieldValuesEquivalent } from "@/lib/document-capture/capture-ingresso-field-hints";
 import { isStrongIdentityField } from "@/lib/document-capture/capture-mezzo-match-state";
 import type { MezzoGestito } from "@/lib/mezzi/types";

@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/magazzino/magazzino-manual-label-modal.tsx b/components/gestionale/magazzino/magazzino-manual-label-modal.tsx
+index 5be68c31..7fa2c226 100644
+--- a/components/gestionale/magazzino/magazzino-manual-label-modal.tsx
++++ b/components/gestionale/magazzino/magazzino-manual-label-modal.tsx
+@@ -239,7 +239,7 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void })
+           </label>
+ 
+           {previewUrl ? (
+-            // eslint-disable-next-line @next/next/no-img-element
++            // eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- blob label preview URL
+             <img
+               src={previewUrl}
+               alt="Anteprima etichetta"

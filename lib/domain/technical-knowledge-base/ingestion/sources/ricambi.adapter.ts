@@ -1,6 +1,5 @@
 import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { precedenceForSource } from "../../merge/source-precedence";
-import type { TkbIngestionContext } from "../adapter-types";
 import type { TkbSourceAdapter } from "../adapter-registry";
 import { registerTkbAdapter } from "../adapter-registry";
 import { activityIdFromText, tkbSlugFromLabel } from "../slug";
@@ -35,7 +34,6 @@ export const ricambiAdapter: TkbSourceAdapter = {
     }
     const rows = data ?? [];
     const out: TkbSourceFragment[] = [];
-    let sort = 0;
     for (const row of rows) {
       const nome = String(row.nome ?? "").trim();
       if (!nome) {
@@ -73,14 +71,12 @@ export const ricambiAdapter: TkbSourceAdapter = {
           updatedAt: row.updated_at ?? undefined,
         }),
       );
-      sort++;
     }
     return out;
   },
   async collectIncremental(ctx, hints) {
     const ids = hints.filter((h) => h.entityType === "magazzino_ricambi").map((h) => h.entityId);
     if (!ids.length) return this.collect(ctx);
-    const { data } = await ctx.supabase.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).in("id", ids);
     const partial = { ...ctx, mode: "full" as const };
     const all = await this.collect(partial);
     const idSet = new Set(ids);

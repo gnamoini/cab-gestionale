@@ -1,0 +1,12 @@
+diff --git a/lib/configurazione/settings-workspace-snapshot.ts b/lib/configurazione/settings-workspace-snapshot.ts
+index 8a45f0fc..62e3bbcb 100644
+--- a/lib/configurazione/settings-workspace-snapshot.ts
++++ b/lib/configurazione/settings-workspace-snapshot.ts
+@@ -1,7 +1,6 @@
+ import {
+   defaultDipendentiRecords,
+   serializeDipendentiRecordsForPayload,
+-  type DipendenteRecord,
+ } from "@/lib/dipendenti/dipendente-record";
+ import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
+ import { resolveAddettiRecordsFromDipendenti } from "@/lib/dipendenti/dipendente-record";

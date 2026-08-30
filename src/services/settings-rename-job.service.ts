@@ -44,6 +44,9 @@ export type SettingsRenameJobRow = {
   error_message: string | null;
 };
 
+const SETTINGS_RENAME_JOB_COLUMNS =
+  "id,correlation_id,kind,entity_id,entity_key,old_label,new_label,plan_version,engine_version,status,execution_mode,propagation_status,source,plan_json,impact_json,validation_json,metrics_json,entity_snapshot,health_json,created_by,created_at,completed_at,parent_job_id,error_message" as const;
+
 export type SettingsRenameJobDetailRow = {
   id: string;
   job_id: string;
@@ -91,7 +94,7 @@ export const settingsRenameJobService = {
           parent_job_id: input.parentJobId ?? null,
           created_by: input.createdBy,
         })
-        .select("*")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
         .single();
       if (error) return err(error.message);
       return success(data as SettingsRenameJobRow);
@@ -181,7 +184,11 @@ export const settingsRenameJobService = {
   async getJob(jobId: string): Promise<ServiceResult<SettingsRenameJobRow | null>> {
     try {
       const c = await sb();
-      const { data, error } = await c.from("settings_rename_jobs").select("*").eq("id", jobId).maybeSingle();
+      const { data, error } = await c
+        .from("settings_rename_jobs")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
+        .eq("id", jobId)
+        .maybeSingle();
       if (error) return err(error.message);
       return success((data as SettingsRenameJobRow | null) ?? null);
     } catch (e) {
@@ -194,7 +201,7 @@ export const settingsRenameJobService = {
       const c = await sb();
       const { data, error } = await c
         .from("settings_rename_jobs")
-        .select("*")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
         .eq("entity_key", entityKey)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -211,7 +218,7 @@ export const settingsRenameJobService = {
       const c = await sb();
       const { data, error } = await c
         .from("settings_rename_jobs")
-        .select("*")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) return err(error.message);
@@ -226,7 +233,7 @@ export const settingsRenameJobService = {
       const c = await sb();
       let q = c
         .from("settings_rename_jobs")
-        .select("*")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
         .in("propagation_status", ["pending_propagation", "configuration_only"])
         .order("created_at", { ascending: false })
         .limit(100);
@@ -248,7 +255,7 @@ export const settingsRenameJobService = {
       const c = await sb();
       const { data, error } = await c
         .from("settings_rename_jobs")
-        .select("*")
+        .select(SETTINGS_RENAME_JOB_COLUMNS)
         .eq("kind", input.kind)
         .eq("old_label", input.oldLabel)
         .eq("new_label", input.newLabel)

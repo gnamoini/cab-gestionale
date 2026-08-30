@@ -1,4 +1,5 @@
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
+import { Q_MEZZO_QR_TOKEN } from "@/lib/navigation/dashboard-log-links";
 import type { RbacSnapshotBound } from "@/src/lib/rbac/rbac-snapshot-access";
 import { snapshotHasPageRead } from "@/src/lib/rbac/rbac-snapshot-access";
 
@@ -10,6 +11,12 @@ export function userHasClientLavorazioniAccessFromSnapshot(snap: RbacSnapshotBou
 
 export function clientLavorazioniListPath(): string {
   return CLIENTE_HOME_PATH;
+}
+
+export function buildClientPortalMezzoQrHref(token: string): string {
+  const sp = new URLSearchParams();
+  sp.set(Q_MEZZO_QR_TOKEN, token.trim());
+  return `${CLIENTE_HOME_PATH}?${sp.toString()}`;
 }
 
 export function clientLavorazioniDetailPath(lavorazioneId: string): string {

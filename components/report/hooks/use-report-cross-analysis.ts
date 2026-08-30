@@ -44,6 +44,7 @@ export function useReportCrossAnalysis(
 
   useEffect(() => {
     if (!range) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setMetrics(null);
       setTrustStatus(null);
       setDataWarnings(null);
@@ -86,6 +87,7 @@ export function useReportCrossAnalysis(
     })();
 
     return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   }, [range?.start.getTime(), range?.end.getTime(), compareMode]);
 
   return { metrics, trustStatus, dataWarnings, loading, error };

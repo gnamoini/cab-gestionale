@@ -1,0 +1,12 @@
+diff --git a/app/api/report/business-report/route.ts b/app/api/report/business-report/route.ts
+index a68ef17f..700166fc 100644
+--- a/app/api/report/business-report/route.ts
++++ b/app/api/report/business-report/route.ts
+@@ -1,7 +1,6 @@
+ import {
+   handleBusinessReportGeneratePost,
+   handleBusinessReportGet,
+-  handleBusinessReportHistoryGet,
+ } from "@/lib/report/business-report/api/report-business-report-api";
+ 
+ export const GET = handleBusinessReportGet;

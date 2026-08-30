@@ -1,0 +1,13 @@
+diff --git a/lib/domain/mezzo-attrezzatura/backfill-rules.ts b/lib/domain/mezzo-attrezzatura/backfill-rules.ts
+index 0a87ddb6..7000396a 100644
+--- a/lib/domain/mezzo-attrezzatura/backfill-rules.ts
++++ b/lib/domain/mezzo-attrezzatura/backfill-rules.ts
+@@ -53,7 +53,7 @@ export function mapLegacyMezzoToAttrezzatura(row: LegacyMezzoBackfillInput): Att
+ 
+ export function mapMetaToMezzoTelaioPatch(
+   meta: MezzoAnagraficaMeta,
+-  targa: string | null,
++  
+ ): MezzoTelaioBackfillPatch {
+   return {
+     marca_telaio: trimOrNull(meta.marcaTelaio),

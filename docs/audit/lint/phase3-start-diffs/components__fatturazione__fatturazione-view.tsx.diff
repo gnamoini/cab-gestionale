@@ -1,0 +1,17 @@
+diff --git a/components/fatturazione/fatturazione-view.tsx b/components/fatturazione/fatturazione-view.tsx
+index 008bfae5..452e490d 100644
+--- a/components/fatturazione/fatturazione-view.tsx
++++ b/components/fatturazione/fatturazione-view.tsx
+@@ -180,10 +180,12 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
+   const canWriteFatturazione = perms.canWrite;
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (fattOpenId) void openDetail(fattOpenId);
+   }, [fattOpenId, openDetail]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (nuovoRequested && canWriteFatturazione) setWizardOpen(true);
+   }, [nuovoRequested, canWriteFatturazione]);
+ 

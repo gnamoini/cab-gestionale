@@ -93,6 +93,7 @@ export function DashboardPromemoriaFormModal({
     const nextTime = promemoriaEventTimeInputValue(editing?.event_time);
     const nextTitle = editing?.title ?? "";
     const nextDescription = editing?.description ?? "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setEventDate(nextDate);
     setEventTime(nextTime);
     setTitle(nextTitle);
@@ -117,6 +118,7 @@ export function DashboardPromemoriaFormModal({
 
   useEffect(() => {
     if (!repeatEnabled || editing) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setUntilYmd((prev) => {
       if (prev && prev >= eventDate) return prev;
       return maxRecurrenceUntilYmd(eventDate);

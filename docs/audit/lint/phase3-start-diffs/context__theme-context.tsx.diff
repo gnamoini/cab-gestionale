@@ -1,0 +1,43 @@
+diff --git a/context/theme-context.tsx b/context/theme-context.tsx
+index f715c687..2e9fd056 100644
+--- a/context/theme-context.tsx
++++ b/context/theme-context.tsx
+@@ -41,21 +41,23 @@ function ThemePrefsController() {
+     [],
+   );
+ 
+-  toggleLightDarkRef.current = () => {
+-    const next: PersistedThemeMode = getThemeRuntimeState().resolved === "dark" ? "light" : "dark";
+-    optimisticThemeRef.current = next;
+-    applyResolved(next);
+-
+-    if (!userId) return;
+-
+-    patchThemeRuntimeState({ themeSaving: true });
+-    themeMutation.mutate(next, {
+-      onSettled: () => {
+-        optimisticThemeRef.current = null;
+-        patchThemeRuntimeState({ themeSaving: false });
+-      },
+-    });
+-  };
++  useEffect(() => {
++    toggleLightDarkRef.current = () => {
++      const next: PersistedThemeMode = getThemeRuntimeState().resolved === "dark" ? "light" : "dark";
++      optimisticThemeRef.current = next;
++      applyResolved(next);
++
++      if (!userId) return;
++
++      patchThemeRuntimeState({ themeSaving: true });
++      themeMutation.mutate(next, {
++        onSettled: () => {
++          optimisticThemeRef.current = null;
++          patchThemeRuntimeState({ themeSaving: false });
++        },
++      });
++    };
++  }, [applyResolved, userId, themeMutation]);
+ 
+   useEffect(() => {
+     const boot = resolveBootThemeMode();

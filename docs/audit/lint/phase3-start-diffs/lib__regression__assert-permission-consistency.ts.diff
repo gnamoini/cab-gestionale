@@ -1,0 +1,9 @@
+diff --git a/lib/regression/assert-permission-consistency.ts b/lib/regression/assert-permission-consistency.ts
+index a125f1e5..4e6e1a73 100644
+--- a/lib/regression/assert-permission-consistency.ts
++++ b/lib/regression/assert-permission-consistency.ts
+@@ -1,3 +1,4 @@
++/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
+ import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
+ import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
+ 

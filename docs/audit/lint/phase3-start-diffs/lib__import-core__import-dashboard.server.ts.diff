@@ -1,0 +1,12 @@
+diff --git a/lib/import-core/import-dashboard.server.ts b/lib/import-core/import-dashboard.server.ts
+index 7cbfc977..a5c7827b 100644
+--- a/lib/import-core/import-dashboard.server.ts
++++ b/lib/import-core/import-dashboard.server.ts
+@@ -35,7 +35,6 @@ export async function loadImportDashboardStats(): Promise<ImportDashboardStats>
+   const list = rows ?? [];
+   const recent24h = list.filter((r) => String(r.created_at) >= since);
+   const failed24h = recent24h.filter((r) => r.status === "failed").length;
+-  const completed24h = recent24h.filter((r) => r.status === "completed" || r.status === "ready_to_commit").length;
+   const durations = recent24h
+     .map((r) => (r.duration_ms != null ? Number(r.duration_ms) : null))
+     .filter((v): v is number => v != null)

@@ -1,0 +1,21 @@
+diff --git a/components/gestionale/page-header-toolbar.tsx b/components/gestionale/page-header-toolbar.tsx
+index e7ae5864..c596ac26 100644
+--- a/components/gestionale/page-header-toolbar.tsx
++++ b/components/gestionale/page-header-toolbar.tsx
+@@ -120,6 +120,7 @@ export function GestionalePageToolbarActions({
+   const hasOverflowMenu = Boolean(overflowActions) || logInOverflowOnMobile;
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (smUp && overflowOpen) closeOverflow();
+   }, [smUp, overflowOpen, closeOverflow]);
+ 
+@@ -153,7 +154,7 @@ export function GestionalePageToolbarActions({
+ 
+   return (
+     <>
+-      <div className={`${gestionalePageToolbarActionsInnerClass}${className ? ` ${className}` : ""}`}>
++      <div className={[gestionalePageToolbarActionsInnerClass, className].filter(Boolean).join(" ")}>
+         {leading}
+         {showUndo ? (
+           <OptionalTooltip content={undoInactive ? "Non disponibile" : undefined}>

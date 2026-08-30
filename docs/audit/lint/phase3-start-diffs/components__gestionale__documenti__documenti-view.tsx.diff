@@ -1,0 +1,237 @@
+diff --git a/components/gestionale/documenti/documenti-view.tsx b/components/gestionale/documenti/documenti-view.tsx
+index 2f1dd70f..99b11554 100644
+--- a/components/gestionale/documenti/documenti-view.tsx
++++ b/components/gestionale/documenti/documenti-view.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
++
+ import { OptionalTooltip, TruncatedTextTooltip, Tooltip } from "@/components/ui";
+ import { LoadingSpinner } from "@/components/design-system/loading";
+ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+@@ -8,6 +10,8 @@ import { useSearchParams } from "next/navigation";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { documentiEntry } from "@/lib/domain/documenti-entry";
+ import { useDocumentiListQuery, useLogListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
++import { useDocumentAiIndexStatusMap } from "@/src/hooks/gestionale/use-document-ai-index-status-map";
++import type { DocumentAiIndexRow } from "@/lib/documents/document-ai-list-status";
+ import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
+ import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
+ import { requestDocumentSparePartsIndex } from "@/lib/documents/document-spare-parts-enqueue.client";
+@@ -19,6 +23,7 @@ import {
+ } from "@/lib/documenti/documenti-db-mapper";
+ import { buildDocumentPreviewUrl } from "@/lib/documents/document-preview-url";
+ import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
++import { DocumentAiRowStatus } from "@/components/gestionale/documenti/document-ai-row-status";
+ import { useUploadFeedback } from "@/context/upload-feedback-context";
+ import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
+ import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
+@@ -238,6 +243,7 @@ function ArchiveDocRow({
+   doc,
+   selected,
+   eagerPreview,
++  aiIndex,
+   onSelect,
+   onInfo,
+   onFileUnavailable,
+@@ -248,6 +254,7 @@ function ArchiveDocRow({
+   doc: DocumentoGestionale;
+   selected: boolean;
+   eagerPreview?: boolean;
++  aiIndex?: DocumentAiIndexRow | null;
+   onSelect: () => void;
+   onInfo: () => void;
+   onFileUnavailable?: (message: string) => void;
+@@ -272,7 +279,8 @@ function ArchiveDocRow({
+   const actionButtons = (
+     <>
+       <IconActionButton
+-        label={canOpen ? "Apri" : unavailableHint}
++        label={canOpen ? "Apri documento" : unavailableHint}
++        tooltipForce
+         className={dsTableActionBtnPrimary}
+         disabled={!canOpen}
+         onClick={() => {
+@@ -287,6 +295,7 @@ function ArchiveDocRow({
+       {showImportListino && onImportListino ? (
+         <IconActionButton
+           label="Importa in magazzino"
++          tooltipForce
+           className={dsTableActionBtnSecondary}
+           onClick={onImportListino}
+         >
+@@ -299,7 +308,7 @@ function ArchiveDocRow({
+           </svg>
+         </IconActionButton>
+       ) : null}
+-      <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={onInfo}>
++      <IconActionButton label="Dettagli documento" tooltipForce className={dsTableActionBtnInfo} onClick={onInfo}>
+         <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+         </svg>
+@@ -352,6 +361,7 @@ function ArchiveDocRow({
+                 Senza marca
+               </span></Tooltip>
+             ) : null}
++            <DocumentAiRowStatus doc={doc} index={aiIndex} />
+           </div>
+           <p className="mt-0.5 truncate text-[11px] text-[color:var(--cab-text-muted)]">
+             {formatDocumentoRigaSintetica(doc)} · {labelCategoria(doc.categoria)} · {labelTipoFile(doc.tipoFile)}
+@@ -398,7 +408,7 @@ export function DocumentiView() {
+   const mezziQuery = useMezziListQuery();
+   const documentiQuery = useDocumentiListQuery();
+   const documentiInitialLoading = documentiQuery.isLoading && documentiQuery.data === undefined;
+-  const mezziSnap = mezziQuery.data ?? [];
++  const mezziSnap = useMemo(() => mezziQuery.data ?? [], [mezziQuery.data]);
+   const { runUpload, isUploading: docUploadInFlight } = useUploadFeedback();
+   const [docMutating, setDocMutating] = useState(false);
+   const docBusy = docMutating || docUploadInFlight;
+@@ -416,6 +426,16 @@ export function DocumentiView() {
+     [documentiQuery.data],
+   );
+ 
++  const aiEnabledDocIds = useMemo(
++    () => docs.filter((d) => d.aiSparePartsEnabled).map((d) => d.id),
++    [docs],
++  );
++  const { map: aiIndexStatusMap } = useDocumentAiIndexStatusMap(aiEnabledDocIds);
++  const aiIndexForDoc = useCallback(
++    (docId: string) => aiIndexStatusMap.get(docId) ?? null,
++    [aiIndexStatusMap],
++  );
++
+   const [searchApplied, setSearchApplied] = useState("");
+   const [searchClearSignal, setSearchClearSignal] = useState(0);
+   const [urlSearchHydrate, setUrlSearchHydrate] = useState<string | null>(null);
+@@ -455,6 +475,18 @@ export function DocumentiView() {
+   const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentoGestionale | null>(null);
+   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+   const gestToast = useGestionaleToast();
++  const enqueueDocumentAiIndex = useCallback(
++    async (documentoId: string) => {
++      const result = await requestDocumentSparePartsIndex(documentoId);
++      if (!result.ok) {
++        gestToast.warning(result.error ?? "Impossibile avviare l'indicizzazione Ricambi AI.");
++        return;
++      }
++      if (result.warning) gestToast.info(result.warning);
++      void qc.invalidateQueries({ queryKey: ["document-ai-index-status"] });
++    },
++    [gestToast, qc],
++  );
+   const { confirm, confirmDialog } = useGestionaleConfirm();
+   const [logOpen, setLogOpen] = useState(false);
+   const logQuery = useLogListQuery({ entita: "documenti", limit: 100 }, { enabled: logOpen });
+@@ -497,7 +529,7 @@ export function DocumentiView() {
+ 
+     if (!mar) return;
+     setExpandedMarche((p) => new Set(p).add(mar.id));
+-  }, [searchParams, mezziSnap, catalog]);
++  }, [searchParams, mezziSnap, catalog, setExpandedMarche]);
+ 
+   useEffect(() => {
+     if (!userId || catalog.length === 0 || legacyExpandAllDone.current) return;
+@@ -587,7 +619,7 @@ export function DocumentiView() {
+   }, [logOpen, logDisplayEntries.length, listPageSize, resetDocLogPage]);
+   const pagedDocLogEntries = useMemo(
+     () => sliceDocLogEntries(logDisplayEntries),
+-    [logDisplayEntries, sliceDocLogEntries, docLogPage],
++    [logDisplayEntries, sliceDocLogEntries],
+   );
+ 
+   const hasDocumentiInLista = totalDocs > 0;
+@@ -630,6 +662,7 @@ export function DocumentiView() {
+             dbVersion,
+           }),
+       );
++      void qc.invalidateQueries({ queryKey: ["document-ai-index-status"] });
+     },
+     [qc],
+   );
+@@ -693,7 +726,7 @@ export function DocumentiView() {
+           refreshDocumenti(row.id, uploadedAt || row.caricatoIl);
+           warmupDocumentPreview(row.id, { source: "archive" });
+           if (row.aiSparePartsEnabled && row.tipoFile === "pdf") {
+-            void requestDocumentSparePartsIndex(row.id);
++            void enqueueDocumentAiIndex(row.id);
+           }
+           uploadSourceFileRef.current = null;
+           return row;
+@@ -705,7 +738,7 @@ export function DocumentiView() {
+       }
+       return result.data;
+     },
+-    [authorTrim, gestToast, refreshDocumenti, canUploadDocuments, runUpload],
++    [gestToast, refreshDocumenti, canUploadDocuments, runUpload, enqueueDocumentAiIndex],
+   );
+ 
+   const handleSaveEdit = useCallback(
+@@ -725,7 +758,7 @@ export function DocumentiView() {
+         if (old) {
+           const saved = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
+           if (saved.aiSparePartsEnabled && saved.tipoFile === "pdf") {
+-            void requestDocumentSparePartsIndex(saved.id);
++            void enqueueDocumentAiIndex(saved.id);
+           }
+           const changes = diffDocumentiMetadati(old, saved);
+           if (changes.length > 0) {
+@@ -739,7 +772,7 @@ export function DocumentiView() {
+         setDocMutating(false);
+       }
+     },
+-    [docs, authorTrim, gestToast, refreshDocumenti, canUploadDocuments],
++    [docs, gestToast, refreshDocumenti, canUploadDocuments, enqueueDocumentAiIndex],
+   );
+ 
+   const executeDelete = useCallback(
+@@ -771,7 +804,7 @@ export function DocumentiView() {
+         setDeleteConfirmDoc(null);
+       }
+     },
+-    [authorTrim, gestToast, refreshDocumenti],
++    [gestToast, refreshDocumenti],
+   );
+ 
+   const handleDelete = useCallback(
+@@ -820,7 +853,7 @@ export function DocumentiView() {
+     setSortPhase("natural");
+     setMarcaPage(1);
+     resetRicerca();
+-  }, [resetRicerca]);
++  }, [resetRicerca, setFiltriEspansi]);
+ 
+   const hasAdvancedPanelFilters = documentiAdvancedFiltersActive(advancedFilters);
+   const hasPageClientFilters = searchActive || hasAdvancedPanelFilters;
+@@ -994,6 +1027,7 @@ export function DocumentiView() {
+                     <ArchiveDocRow
+                       key={d.id}
+                       doc={d}
++                      aiIndex={aiIndexForDoc(d.id)}
+                       eagerPreview={i < 3}
+                       selected={selectedDocId === d.id}
+                       onSelect={() => setSelectedDocId(d.id)}
+@@ -1025,6 +1059,7 @@ export function DocumentiView() {
+                     <ArchiveDocRow
+                       key={d.id}
+                       doc={d}
++                      aiIndex={aiIndexForDoc(d.id)}
+                       selected={selectedDocId === d.id}
+                       onSelect={() => setSelectedDocId(d.id)}
+                       onInfo={() => setInfoDoc(d)}
+@@ -1062,6 +1097,7 @@ export function DocumentiView() {
+                         <ArchiveDocRow
+                           key={d.id}
+                           doc={d}
++                          aiIndex={aiIndexForDoc(d.id)}
+                           selected={selectedDocId === d.id}
+                           onSelect={() => setSelectedDocId(d.id)}
+                           onInfo={() => setInfoDoc(d)}
+@@ -1095,6 +1131,7 @@ export function DocumentiView() {
+                     <ArchiveDocRow
+                       key={d.id}
+                       doc={d}
++                      aiIndex={aiIndexForDoc(d.id)}
+                       selected={selectedDocId === d.id}
+                       onSelect={() => setSelectedDocId(d.id)}
+                       onInfo={() => setInfoDoc(d)}

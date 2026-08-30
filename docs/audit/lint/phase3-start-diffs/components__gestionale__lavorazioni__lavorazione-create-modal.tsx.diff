@@ -1,0 +1,36 @@
+diff --git a/components/gestionale/lavorazioni/lavorazione-create-modal.tsx b/components/gestionale/lavorazioni/lavorazione-create-modal.tsx
+index c66cd2a9..97d16ac4 100644
+--- a/components/gestionale/lavorazioni/lavorazione-create-modal.tsx
++++ b/components/gestionale/lavorazioni/lavorazione-create-modal.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/refs -- submit hook exposes formRef/formProps for JSX wiring */
+ import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
+ import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+ import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
+@@ -16,6 +17,7 @@ import {
+   SchedaIngressoFormModalShell,
+ } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
+ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
++import { globalTableTheadSticky } from "@/lib/ui/global-table";
+ import type { LavorazioneMezzoEntryOrigin } from "@/lib/lavorazioni/selected-mezzo-context";
+ import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
+ 
+@@ -111,7 +113,7 @@ export function LavorazioneCreateModal({
+           {create.schedaSyncError ? (
+             <div
+               role="alert"
+-              className="sticky top-0 z-10 shrink-0 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
++              className={`${globalTableTheadSticky} z-10 shrink-0 border-b border-red-200 !bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:!bg-red-950/40 dark:text-red-300`}
+             >
+               {create.schedaSyncError}
+             </div>
+@@ -156,6 +158,7 @@ export function LavorazioneCreateModal({
+         onCancel={() => create.setPartialCloseConfirmOpen(false)}
+         onConfirm={() => {
+           create.setPartialCloseConfirmOpen(false);
++  // eslint-disable-next-line react-hooks/immutability -- lint phase2: preserve existing hook contract
+           create.partialSuccessRef.current = false;
+           create.createdLavorazioneIdRef.current = null;
+           onClose();

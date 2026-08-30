@@ -1,0 +1,19 @@
+diff --git a/lib/entity-resolution/resolve-capture-graph.ts b/lib/entity-resolution/resolve-capture-graph.ts
+index e6ca10ed..8daf7739 100644
+--- a/lib/entity-resolution/resolve-capture-graph.ts
++++ b/lib/entity-resolution/resolve-capture-graph.ts
+@@ -92,14 +92,12 @@ function restrictedPoolForField(
+   resolved: Map<string, EntityResolutionResult>,
+   ctx: ResolutionRuntimeContext,
+ ): import("@/lib/entity-resolution/entity-resolution-types").EntityCandidate[] | undefined {
+-  const binding = bindingForFieldKey(fieldKey);
+   const marca =
+     parentResolvedLabel(fieldKey, resolved) ??
+     [...resolved.entries()].find(([k]) => k.includes("marca"))?.[1]?.resolvedLabel ??
+     null;
+ 
+   if (entityType === "MODELLO" && marca) {
+-    const hierarchy = binding?.hierarchy ?? "attrezzature";
+     return restrictedModelPool(marca, ctx.sources.settings.mezziListe);
+   }
+ 

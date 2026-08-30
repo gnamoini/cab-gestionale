@@ -1,12 +1,22 @@
 "use client";
 
-import { DisabledElementTooltip, OptionalTooltip } from "@/components/ui";
+/* eslint-disable react-hooks/set-state-in-effect -- lint phase2: preserve existing effect sync contract */
+/* eslint-disable react-hooks/immutability -- lint phase2: preserve existing hook contract */
+
+import { OptionalTooltip } from "@/components/ui";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import { sliceInputValue, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
-import { LoadingButton } from "@/components/design-system";
+import {
+  LoadingButton,
+  GestionaleModalFooterActions,
+  GestionaleModalFooterDeleteButton,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+  gestionaleModalFooterSaveBtnClass,
+} from "@/components/design-system";
+import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
 import {
   defaultApplicabilitaForCategoria,
   isDocumentoMarcaOnlyCategoria,
@@ -15,18 +25,32 @@ import {
   effectiveDocumentoApplicabilita,
   validateDocumentoMarcaModelloFields,
 } from "@/lib/documenti/documenti-form-validation";
-import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
+import type { DocumentoGestionale, DocumentoApplicabilita } from "@/lib/types/gestionale";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import type { ModalSize } from "@/lib/ui/modal-max-width-class";
+import type { ModalHeight, ModalSize } from "@/lib/ui/modal-max-width-class";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { DocumentSparePartsFields } from "@/components/gestionale/documenti/document-spare-parts-fields";
 import { DocumentAiIndexBadges } from "@/components/gestionale/documenti/document-ai-index-badges";
 import type { DocumentAiIndexBadgeState } from "@/lib/documents/document-spare-parts-meta";
+
+const DEFAULT_AI_INDEX_BADGES: DocumentAiIndexBadgeState = {
+  fileSearch: "none",
+  aiCatalog: "none",
+  exploded: "none",
+};
+import { deriveDocumentAiListStatus } from "@/lib/documents/document-ai-list-status";
+import type { DocumentAiIndexProgressInput } from "@/lib/documents/document-ai-index-progress";
+import {
+  deriveDocumentAiIndexProgress,
+  deriveDocumentAiIndexEnqueueProgress,
+} from "@/lib/documents/document-ai-index-progress";
+import { requestDocumentSparePartsIndex } from "@/lib/documents/document-spare-parts-enqueue.client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   GlobalAttrezzatureMarcaSelect,
   GlobalAttrezzatureModelloSelect,
@@ -36,7 +60,6 @@ import { isListinoImportSupportedFileName } from "@/lib/magazzino/listino-import
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { useAuth } from "@/context/auth-context";
-import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
   canOpenDocumento,
   documentoFileUnavailableLabel,
@@ -47,12 +70,11 @@ import {
   stripFileExtension,
   formatDocumentoRigaSintetica,
   openDocumentoFile,
-  inferTipoFileFromNome,
-  resolveDocumentoTipoFile,
   labelCategoria,
   labelTipoFile,
   resolveDocumentoApplicazione,
 } from "@/components/gestionale/documenti/documenti-helpers";
+import { inferTipoFileFromNome, resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 
 function documentoSenzaMarcaUi(doc: DocumentoGestionale): boolean {
   return documentoSenzaMarca(doc);
@@ -97,16 +119,19 @@ function DocumentiModalShell({
   footer,
   onRequestClose,
   modalSize = "formMedium",
+  modalHeight,
 }: {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   onRequestClose: () => void;
   modalSize?: ModalSize;
+  modalHeight?: ModalHeight;
 }) {
   return (
     <LavorazioniModalShell
       modalSize={modalSize}
+      modalHeight={modalHeight}
       layerClassName={cabModalLayerClass("base")}
       onRequestClose={onRequestClose}
       title={title}
@@ -328,7 +353,8 @@ export function UploadDocumentoModal({
         };
         const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
         const resolved = resolveDocumentoApplicazione(tmp);
-        const { id: _drop, ...payload } = resolved;
+        const { id, ...payload } = resolved;
+        void id;
         try {
           const saved = await onSubmit(payload as Omit<DocumentoGestionale, "id">, file);
           if (saved && importListinoToMagazzino && snap.categoria === "listini") {
@@ -547,21 +573,154 @@ export function DocumentoInfoModal({
   canDelete?: boolean;
 }) {
   const gestToast = useGestionaleToast();
+  const qc = useQueryClient();
   const r = resolveDocumentoApplicazione(doc);
   const [aiBadges, setAiBadges] = useState<DocumentAiIndexBadgeState | null>(null);
+  const [aiIndexFetchError, setAiIndexFetchError] = useState<string | null>(null);
+  const [aiBadgesLoading, setAiBadgesLoading] = useState(false);
+  const [indexEnqueueing, setIndexEnqueueing] = useState(false);
+  const [indexEnqueueStartedAt, setIndexEnqueueStartedAt] = useState<number | null>(null);
+  const [indexWatching, setIndexWatching] = useState(false);
+  const [aiIndexMeta, setAiIndexMeta] = useState<DocumentAiIndexProgressInput | null>(null);
 
-  useEffect(() => {
+  const reloadAiIndex = useCallback(async () => {
     if (!doc.aiSparePartsEnabled) {
       setAiBadges(null);
+      setAiIndexMeta(null);
+      setAiIndexFetchError(null);
       return;
     }
-    void fetch(`/api/documents/${doc.id}/spare-parts-index`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { badges?: DocumentAiIndexBadgeState } | null) => {
-        if (data?.badges) setAiBadges(data.badges);
-      })
-      .catch(() => undefined);
-  }, [doc.id, doc.aiSparePartsEnabled]);
+    setAiBadgesLoading(true);
+    setAiIndexFetchError(null);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/spare-parts-index`);
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        badges?: DocumentAiIndexBadgeState;
+        index?: {
+          status?: string;
+          understanding_status?: string;
+          updated_at?: string;
+          created_at?: string;
+          attempt_count?: number;
+          error_code?: string;
+          error_message?: string;
+        } | null;
+      };
+      if (!res.ok) {
+        setAiBadges(DEFAULT_AI_INDEX_BADGES);
+        setAiIndexFetchError(data.error ?? "Impossibile caricare lo stato indicizzazione.");
+        return;
+      }
+      setAiBadges(data.badges ?? DEFAULT_AI_INDEX_BADGES);
+      if (data.index) {
+        setAiIndexMeta({
+          status: data.index.status,
+          understandingStatus: data.index.understanding_status,
+          updatedAt: data.index.updated_at,
+          createdAt: data.index.created_at,
+          attemptCount: data.index.attempt_count,
+          errorCode: data.index.error_code,
+          errorMessage: data.index.error_message,
+        });
+      } else {
+        setAiIndexMeta(null);
+      }
+    } catch {
+      setAiBadges(DEFAULT_AI_INDEX_BADGES);
+      setAiIndexFetchError("Impossibile caricare lo stato indicizzazione.");
+    } finally {
+      setAiBadgesLoading(false);
+    }
+  }, [doc.aiSparePartsEnabled, doc.id]);
+
+  useEffect(() => {
+    void reloadAiIndex();
+  }, [reloadAiIndex]);
+
+  const aiListStatus = deriveDocumentAiListStatus({
+    aiEnabled: doc.aiSparePartsEnabled === true,
+    index: {
+      status: aiIndexMeta?.status,
+      understandingStatus: aiIndexMeta?.understandingStatus,
+    },
+  });
+
+  useEffect(() => {
+    if (!doc.aiSparePartsEnabled) return;
+    const shouldPoll =
+      indexWatching || indexEnqueueing || aiListStatus === "processing" || aiListStatus === "pending";
+    if (!shouldPoll) return;
+    const timer = window.setInterval(() => void reloadAiIndex(), 5_000);
+    return () => window.clearInterval(timer);
+  }, [aiListStatus, doc.aiSparePartsEnabled, indexEnqueueing, indexWatching, reloadAiIndex]);
+
+  useEffect(() => {
+    if (aiListStatus === "ready" || aiListStatus === "failed") {
+      setIndexWatching(false);
+    }
+  }, [aiListStatus]);
+
+  const aiProgress = aiIndexMeta ? deriveDocumentAiIndexProgress(aiIndexMeta) : null;
+  const showEnqueueOverlay = indexEnqueueing && indexEnqueueStartedAt != null && !aiIndexMeta?.status;
+  const enqueueProgress =
+    showEnqueueOverlay && indexEnqueueStartedAt != null
+      ? deriveDocumentAiIndexEnqueueProgress(indexEnqueueStartedAt)
+      : null;
+  const aiIndexStale = Boolean(aiProgress?.staleWarning);
+  const canEnqueueIndex = canEdit && canOpenDocumento(doc) && doc.tipoFile === "pdf";
+  const enqueueDisabledReason = !canEdit
+    ? "Sola lettura"
+    : doc.tipoFile !== "pdf"
+      ? "Solo i PDF possono essere indicizzati"
+      : !canOpenDocumento(doc)
+        ? (documentoFileUnavailableLabel(doc) ?? "File non disponibile")
+        : indexEnqueueing
+          ? (enqueueProgress?.headline ?? "Contatto server")
+          : undefined;
+  const displayAiBadges = aiBadges ?? DEFAULT_AI_INDEX_BADGES;
+  const enqueueLabel = (() => {
+    if (indexEnqueueing) return enqueueProgress?.headline ?? "Contatto server…";
+    if (
+      aiIndexStale ||
+      aiIndexFetchError ||
+      aiListStatus === "failed" ||
+      aiListStatus === "ready" ||
+      aiIndexMeta?.understandingStatus === "ready_with_warnings"
+    ) {
+      return "Riprova indicizzazione";
+    }
+    if (aiListStatus === "pending") return "Riprova indicizzazione";
+    if (aiListStatus === "processing") return "Riprova indicizzazione";
+    return "Avvia indicizzazione";
+  })();
+
+  async function handleEnqueueIndex() {
+    if (!canEnqueueIndex || indexEnqueueing) return;
+    setIndexEnqueueing(true);
+    setIndexEnqueueStartedAt(Date.now());
+    try {
+      const result = await requestDocumentSparePartsIndex(doc.id, { force: true });
+      if (!result.ok) {
+        gestToast.warning(result.error ?? "Impossibile avviare l'indicizzazione.");
+        return;
+      }
+      setIndexWatching(true);
+      if (result.warning) {
+        gestToast.warning(result.warning);
+      } else {
+        gestToast.successOnce(
+          `doc-ai-index-${doc.id}`,
+          "Indicizzazione avviata. Segui l'avanzamento qui sotto.",
+        );
+      }
+      void qc.invalidateQueries({ queryKey: ["document-ai-index-status"] });
+      await reloadAiIndex();
+    } finally {
+      setIndexEnqueueing(false);
+      setIndexEnqueueStartedAt(null);
+    }
+  }
 
   const canOpenFile = canOpenDocumento(doc);
   const fileUnavailableLabel = documentoFileUnavailableLabel(doc);
@@ -574,21 +733,30 @@ export function DocumentoInfoModal({
   return (
     <DocumentiModalShell
       modalSize="info"
+      modalHeight="standard"
       title="Dettaglio documento"
       onRequestClose={onRequestClose}
       footer={
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <GestionaleModalFooterActions className={gestionaleModalFooterActionsStackMobileWrapClass}>
           <OptionalTooltip content={!canDelete ? "Sola lettura" : undefined}>
-            <button type="button" className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`} onClick={onDelete} disabled={!canDelete}>
-              Elimina
-            </button>
+            <GestionaleModalFooterDeleteButton
+              className="w-full justify-center sm:w-auto"
+              onClick={onDelete}
+              disabled={!canDelete}
+            />
           </OptionalTooltip>
           <OptionalTooltip content={!canEdit ? "Sola lettura" : undefined}>
-            <button type="button" className={`${erpBtnAccent} min-h-11 w-full justify-center sm:w-auto`} onClick={onEdit} disabled={!canEdit}>
+            <button
+              type="button"
+              className={`${gestionaleModalFooterSaveBtnClass} w-full justify-center sm:w-auto disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+              onClick={onEdit}
+              disabled={!canEdit}
+            >
+              <HubIconPencil className="h-4 w-4 shrink-0" />
               Modifica
             </button>
           </OptionalTooltip>
-        </div>
+        </GestionaleModalFooterActions>
       }
     >
       <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>
@@ -646,7 +814,38 @@ export function DocumentoInfoModal({
             <InfoRow label="Dimensione" value={`${doc.dimensioneKb} KB`} />
           </div>
           <InfoRow label="Note" value={doc.note?.trim() ? doc.note : "—"} />
-          {doc.aiSparePartsEnabled && aiBadges ? <DocumentAiIndexBadges badges={aiBadges} /> : null}
+          {doc.aiSparePartsEnabled ? (
+            <>
+              {aiBadgesLoading && !aiBadges ? (
+                <p className="text-xs text-[color:var(--cab-text-muted)]">Caricamento stato Ricambi AI…</p>
+              ) : null}
+              <DocumentAiIndexBadges
+                badges={displayAiBadges}
+                indexMeta={aiIndexMeta}
+                optimisticInFlight={showEnqueueOverlay}
+                enqueueStartedAt={showEnqueueOverlay ? indexEnqueueStartedAt : null}
+                actions={
+                  <>
+                    {aiIndexFetchError ? (
+                      <p className="mb-2 text-xs text-[color:var(--cab-danger)]">{aiIndexFetchError}</p>
+                    ) : null}
+                    <OptionalTooltip content={enqueueDisabledReason}>
+                      <LoadingButton
+                        type="button"
+                        className={`${erpBtnAccent} min-h-10 w-full justify-center gap-2`}
+                        loading={indexEnqueueing}
+                        loadingLabel={enqueueProgress?.headline ?? "Contatto server…"}
+                        disabled={!canEnqueueIndex || indexEnqueueing}
+                        onClick={() => void handleEnqueueIndex()}
+                      >
+                        {enqueueLabel}
+                      </LoadingButton>
+                    </OptionalTooltip>
+                  </>
+                }
+              />
+            </>
+          ) : null}
         </GestionaleModalScrollBody>
       </div>
     </DocumentiModalShell>

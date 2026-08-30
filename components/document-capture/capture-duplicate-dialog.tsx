@@ -67,8 +67,10 @@ export function CaptureDuplicateDialog({
   const [forceOpen, setForceOpen] = useState(false);
   const [reason, setReason] = useState("");
 
+   
   useEffect(() => {
     if (!open || !duplicateCaptureId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setCtx(null);
       setForceOpen(false);
       setReason("");

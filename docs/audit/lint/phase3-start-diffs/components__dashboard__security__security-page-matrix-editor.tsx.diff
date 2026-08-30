@@ -1,0 +1,49 @@
+diff --git a/components/dashboard/security/security-page-matrix-editor.tsx b/components/dashboard/security/security-page-matrix-editor.tsx
+index 81e96051..b271c3bc 100644
+--- a/components/dashboard/security/security-page-matrix-editor.tsx
++++ b/components/dashboard/security/security-page-matrix-editor.tsx
+@@ -9,13 +9,13 @@ import { SecurityRoleBadge } from "@/components/dashboard/security/security-role
+ import {
+   dsScrollbar,
+   dsTable,
+-  dsTableHeadCell,
+   dsTableRow,
+   dsTableRowZebra,
+   dsTableTd,
+   dsTableTdCompact,
+   dsTableWrap,
+ } from "@/lib/ui/design-system";
++import { globalTableThCell } from "@/lib/ui/global-table";
+ 
+ type Props = {
+   matrix: PageAccessMatrix;
+@@ -42,14 +42,16 @@ export function SecurityPageMatrixEditor({ matrix, draft, onDraftChange, readOnl
+         <thead>
+           <tr className={dsTableRow}>
+             <th
+-              className={`${dsTableHeadCell} sticky left-0 z-20 min-w-[9rem] bg-[var(--cab-surface-2)] shadow-[inset_-1px_0_0_var(--cab-border)]`}
++              className={`${globalTableThCell} sticky left-0 z-20 min-w-[9rem] bg-[var(--cab-surface-2)] shadow-[inset_-1px_0_0_var(--cab-border)]`}
+             >
+               Ruolo
+             </th>
+             {matrix.pages.map((p) => (
+-              <Tooltip content={p.label}><th key={p.key} className={`${dsTableHeadCell} w-10 min-w-[2.5rem] max-w-[3.25rem] px-1 text-center normal-case tracking-normal`}>
+-                <span className="block text-[10px] font-semibold leading-tight">{pageMatrixColumnLabel(p.label)}</span>
+-              </th></Tooltip>
++              <Tooltip key={p.key} content={p.label}>
++                <th className={`${globalTableThCell} w-10 min-w-[2.5rem] max-w-[3.25rem] px-1 text-center normal-case tracking-normal`}>
++                  <span className="block text-[10px] font-semibold leading-tight">{pageMatrixColumnLabel(p.label)}</span>
++                </th>
++              </Tooltip>
+             ))}
+           </tr>
+         </thead>
+@@ -64,7 +66,7 @@ export function SecurityPageMatrixEditor({ matrix, draft, onDraftChange, readOnl
+               >
+                 <div className="flex min-w-0 flex-col gap-0.5">
+                   <span className="truncate text-[13px] font-medium">{row.role.name}</span>
+-                  <div className="flex flex-wrap items-center gap-1.5">
++                  <div className="flex items-center gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">
+                     <SecurityRoleBadge role={row.role.key} />
+                     {row.locked ? (
+                       <span className="text-[10px] text-[color:var(--cab-text-muted)]">sistema</span>

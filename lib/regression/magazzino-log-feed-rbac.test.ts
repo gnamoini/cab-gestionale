@@ -77,7 +77,6 @@ function stockLogRow(overrides?: Partial<LogModificaRow>): LogModificaWithProfil
 }
 
 {
-  const catalog = new Map([[RICAMBIO_ID, ricambio()]]);
   const feed = buildControlTowerActivityFeedSlice({
     lavRows: [],
     ricambi: [ricambio()],

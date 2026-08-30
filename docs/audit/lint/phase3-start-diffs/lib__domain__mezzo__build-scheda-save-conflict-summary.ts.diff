@@ -1,0 +1,16 @@
+diff --git a/lib/domain/mezzo/build-scheda-save-conflict-summary.ts b/lib/domain/mezzo/build-scheda-save-conflict-summary.ts
+index 00986282..46c7c600 100644
+--- a/lib/domain/mezzo/build-scheda-save-conflict-summary.ts
++++ b/lib/domain/mezzo/build-scheda-save-conflict-summary.ts
+@@ -51,11 +51,6 @@ export const MEZZO_PERMANENT_FIELD_LABELS: Record<MezzoPermanentFieldKey, string
+   targa: "Targa",
+ };
+ 
+-function fieldStr(v: unknown): string {
+-  if (v === undefined || v === null) return "";
+-  return String(v).trim();
+-}
+-
+ export function buildSchedaSaveConflictSummary(input: {
+   fields: SchedaIngressoFields;
+   linkedSnapshot: LinkedMezzoSnapshot | null;

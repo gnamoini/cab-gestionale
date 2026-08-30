@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/mezzi/mezzo-qr-label-actions.tsx b/components/gestionale/mezzi/mezzo-qr-label-actions.tsx
+index 8b3b6c59..61954d5c 100644
+--- a/components/gestionale/mezzi/mezzo-qr-label-actions.tsx
++++ b/components/gestionale/mezzi/mezzo-qr-label-actions.tsx
+@@ -19,7 +19,7 @@ type MezzoQrLabelActionsProps = {
+ 
+ export function MezzoQrLabelActions({
+   mezzoId,
+-  targa,
++  
+   canRead,
+   canWrite,
+   compact = false,

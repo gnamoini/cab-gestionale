@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";

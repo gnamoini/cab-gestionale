@@ -86,7 +86,7 @@ export function ReportAskMessage({
         </div>
 
         {!isUser && message.response?.citations?.length ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 flex-nowrap sm:flex-wrap">
             {message.response.citations.map((c) => (
               <ReportAskCitation key={`${c.type}-${c.id}`} citation={c} />
             ))}
@@ -94,7 +94,7 @@ export function ReportAskMessage({
         ) : null}
 
         {!isUser && message.response?.followUps?.length ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 flex-nowrap sm:flex-wrap">
             {message.response.followUps.map((f) => (
               <button
                 key={f.label}

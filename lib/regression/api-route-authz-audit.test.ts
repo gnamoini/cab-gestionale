@@ -43,6 +43,7 @@ const KNOWN_UNGUARDED_ROUTES = new Set([
   "app/api/report/operational-brief/history/route.ts",
   "app/api/report/operational-brief/pdf/route.ts",
   "app/api/report/operational-brief/route.ts",
+  "app/api/auth/request-password-reset/route.ts",
 ]);
 
 function walk(dir: string, out: string[]): void {

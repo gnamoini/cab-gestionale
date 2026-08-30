@@ -1,0 +1,13 @@
+diff --git a/lib/domain/intervento-context/build-intervento-context.ts b/lib/domain/intervento-context/build-intervento-context.ts
+index 5050da70..6478e005 100644
+--- a/lib/domain/intervento-context/build-intervento-context.ts
++++ b/lib/domain/intervento-context/build-intervento-context.ts
+@@ -136,7 +136,7 @@ function schedaIngressoSnapshotFromInputs(
+ function detectIdentMismatch(
+   scheda: SchedaIngressoSnapshot,
+   mezzo: MezzoSnapshot,
+-  ident: InterventoIdent,
++  
+ ): boolean {
+   if (!scheda.present || !mezzo.present || !scheda.campi) return false;
+   const fromScheda: InterventoIdent = {

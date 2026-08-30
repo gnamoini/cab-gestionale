@@ -32,7 +32,7 @@ export function RichiedenteFirmaDisplay({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         {!buttonOnly && hasFirma ? (
           <button
             type="button"
@@ -43,7 +43,7 @@ export function RichiedenteFirmaDisplay({
             aria-label={consultable ? `Visualizza firma ${label}` : `Firma ${label}`}
             onClick={() => consultable && setViewOpen(true)}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- inline signature data URL */}
             <img src={src} alt={`Firma ${label}`} className={`object-contain ${thumbClass}`} />
           </button>
         ) : null}
@@ -71,7 +71,7 @@ export function RichiedenteFirmaDisplay({
           <div className="space-y-3 p-4">
             <p className={dsTypoCaption}>Firma acquisita alla scheda ingresso.</p>
             <div className="overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- inline signature data URL */}
               <img src={src} alt={`Firma ${label} ingrandita`} className="mx-auto max-h-[min(40vh,280px)] w-full object-contain" />
             </div>
           </div>

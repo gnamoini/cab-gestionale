@@ -239,7 +239,7 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
           </label>
 
           {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- blob label preview URL
             <img
               src={previewUrl}
               alt="Anteprima etichetta"

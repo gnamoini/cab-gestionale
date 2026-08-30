@@ -1,7 +1,7 @@
 export { reportAiPageMetadata as metadata } from "@/lib/site/app-page-metadata";
 
 import { PageLayout } from "@/components/design-system";
-import { ReportAreaAiView } from "@/components/report/areas/report-area-ai-view";
+import { ReportAreaAiViewLazy } from "@/components/report/lazy-report-area-views";
 import { ReportAreaPage } from "@/components/report/report-area-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
@@ -9,7 +9,7 @@ export default function ReportAiPage() {
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.report}>
       <ReportAreaPage areaId="ai" showAskButton>
-        <ReportAreaAiView />
+        <ReportAreaAiViewLazy />
       </ReportAreaPage>
     </PageLayout>
   );

@@ -8,20 +8,14 @@ import {
 } from "@/lib/documenti/documento-file-access";
 import { archiveDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
 import { openSafePopup, tryOpenViaTemporaryAnchor } from "@/lib/browser/popup-guard";
-import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
   labelApplicabilitaBreve,
   legacyAssocRefs,
   resolveDocumentoApplicazione,
 } from "@/lib/documenti/documenti-applicabilita";
-import {
-  inferTipoFileFromNome,
-  resolveDocumentoTipoFile,
-} from "@/lib/documenti/documento-tipo-file";
 import type { DocumentoAssocRef, DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
 
-export { inferTipoFileFromNome, resolveDocumentoTipoFile };
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export function labelCategoria(c: DocumentoGestionale["categoria"]): string {
@@ -199,7 +193,6 @@ function sameModello(a: string, b: string, marcaName?: string): boolean {
 export function documentoCollocatoInCatalogo(
   doc: DocumentoGestionale,
   catalog: CatalogMarca[],
-  _mezzi: MezzoGestito[],
 ): boolean {
   if (documentoSenzaMarca(doc)) return false;
   const r = resolveDocumentoApplicazione(doc);
@@ -296,7 +289,6 @@ export function documentoFileUnavailableLabel(doc: DocumentoGestionale): string 
 /** Apre il file via proxy server (RBAC + cache) o blob locale pre-save. */
 export async function openDocumentoFile(
   doc: DocumentoGestionale,
-  _row?: Pick<DocumentoRow, "url_file">,
 ): Promise<DocumentoFileOpenResult> {
   const access = getDocumentoFileAccessState(doc);
   if (access.hasLocalBlob && doc.urlBlob?.trim()) {

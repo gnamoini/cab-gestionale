@@ -66,6 +66,7 @@ export function ClientLavorazionePhotoStrip({
 
   useEffect(() => {
     if (!lazy) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setLoaded(true);
       return;
     }
@@ -95,7 +96,7 @@ export function ClientLavorazionePhotoStrip({
 
   return (
     <>
-      <div ref={rootRef} className="flex min-w-0 flex-wrap items-center gap-1">
+      <div ref={rootRef} className="flex min-w-0 items-center gap-1 flex-nowrap sm:flex-wrap">
         {images.map((img) => (
           <PhotoThumb key={img.baseName} image={img} sizeClass={sizeClass} onOpen={() => setPreview(img)} />
         ))}
@@ -165,7 +166,7 @@ export function ClientLavorazionePhotoGallery({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         {images.map((img) => (
           <PhotoThumb key={img.baseName} image={img} sizeClass="h-16 w-16 sm:h-20 sm:w-20" onOpen={() => setPreview(img)} />
         ))}

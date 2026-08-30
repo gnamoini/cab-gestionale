@@ -2,7 +2,7 @@
 
 import { getBrowserSupabase, type SupabaseClient } from "@/src/lib/supabase/browser-client";
 import { auditDiff, writeModificaLog } from "@/src/services/internal/audit-log";
-import { err, success, type ServiceResult } from "@/src/services/service-result";
+import { success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SettingsRenameEntry, SettingsRenameKind, SettingsRenamePropagationResult } from "@/lib/settings/settings-rename-types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";

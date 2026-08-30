@@ -1,0 +1,13 @@
+diff --git a/e2e/document-capture/apply-gates.spec.ts b/e2e/document-capture/apply-gates.spec.ts
+index 271d2a95..7483e3b6 100644
+--- a/e2e/document-capture/apply-gates.spec.ts
++++ b/e2e/document-capture/apply-gates.spec.ts
+@@ -101,7 +101,7 @@ test.describe("document capture apply gates", () => {
+     }
+   });
+ 
+-  test("apply without lavorazioni write returns forbidden for read-only role", async ({ browser }) => {
++  test("apply without lavorazioni write returns forbidden for read-only role", async ({}) => {
+     test.skip(true, "Requires dedicated read-only document_capture fixture");
+   });
+ });

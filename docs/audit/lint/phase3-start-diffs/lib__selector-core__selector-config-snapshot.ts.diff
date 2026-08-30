@@ -1,0 +1,12 @@
+diff --git a/lib/selector-core/selector-config-snapshot.ts b/lib/selector-core/selector-config-snapshot.ts
+index 20030c80..0bc24621 100644
+--- a/lib/selector-core/selector-config-snapshot.ts
++++ b/lib/selector-core/selector-config-snapshot.ts
+@@ -7,7 +7,6 @@ import type {
+   SelectorConfigProposal,
+   SelectorEngineConfigShape,
+   SelectorRuntimeSnapshot,
+-  SheetRolloutStatus,
+ } from "@/lib/selector-core/types";
+ 
+ export const SELECTOR_ENGINE_CONFIG_BASE: SelectorConfigMergeSlice = {

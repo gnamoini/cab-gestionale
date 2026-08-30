@@ -18,8 +18,10 @@ export function ImportHistoryDrawer({
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
 
+   
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLoading(true);
     void fetchImportBatches(entity)
       .then((b) => setRows(b as Array<Record<string, unknown>>))

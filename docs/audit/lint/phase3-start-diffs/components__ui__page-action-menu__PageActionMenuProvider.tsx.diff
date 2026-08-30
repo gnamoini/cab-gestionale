@@ -1,0 +1,12 @@
+diff --git a/components/ui/page-action-menu/PageActionMenuProvider.tsx b/components/ui/page-action-menu/PageActionMenuProvider.tsx
+index e0966695..b5100eb0 100644
+--- a/components/ui/page-action-menu/PageActionMenuProvider.tsx
++++ b/components/ui/page-action-menu/PageActionMenuProvider.tsx
+@@ -6,7 +6,6 @@ import {
+   useContext,
+   useMemo,
+   useState,
+-  type ReactNode,
+ } from "react";
+ import type {
+   PageActionItem,

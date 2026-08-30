@@ -1,0 +1,13 @@
+diff --git a/lib/domain/technical-knowledge-base/quality-gates/quality-gates.ts b/lib/domain/technical-knowledge-base/quality-gates/quality-gates.ts
+index 55187e82..b69231bb 100644
+--- a/lib/domain/technical-knowledge-base/quality-gates/quality-gates.ts
++++ b/lib/domain/technical-knowledge-base/quality-gates/quality-gates.ts
+@@ -4,7 +4,7 @@ import { validateTkbDraftBundle } from "../tkb-snapshot-builder";
+ import { runTdeBenchmark } from "../benchmark/run-benchmark";
+ import { kbStatsFromBuildReport } from "../ingestion/builder";
+ import { loadQualityGateThresholds } from "./thresholds";
+-import type { BenchmarkReport, TkbBuildReport, TkbDraftBundle, TkbKbStats } from "../types";
++import type { BenchmarkReport, TkbDraftBundle, TkbKbStats } from "../types";
+ 
+ export type QualityGateResult =
+   | { ok: true; benchmark: BenchmarkReport; kbStats: TkbKbStats }

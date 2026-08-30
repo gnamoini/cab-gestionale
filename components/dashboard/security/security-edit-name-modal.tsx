@@ -61,8 +61,10 @@ export function SecurityEditNameModal({
   const [username, setUsername] = useState(initialUsername);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
+   
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setNome(initialNome);
       setCognome(initialCognome ?? "");
       setUsername(initialUsername);

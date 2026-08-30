@@ -406,7 +406,7 @@ export async function fetchLavorazioniListRowsByIds(
   const mezziCols = mezziEmbedColumnsForMode(fetchMode);
   const mezziSelect = lavorazioniMezziEmbedSelect(mezziCols, { inner: !!clienteRefScope });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
   let q: any = applyLavorazioniNotDeletedFilter(
     sb
       .from("lavorazioni")

@@ -64,6 +64,7 @@ export function CalendarMonthYearPicker({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDraftYear(viewYear);
     setDraftMonth(viewMonth);
   }, [open, viewYear, viewMonth]);

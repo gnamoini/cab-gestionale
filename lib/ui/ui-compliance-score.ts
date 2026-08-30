@@ -10,7 +10,7 @@ import {
   UI_PRIMITIVE_VERSIONS,
 } from "@/lib/ui-design-system-lock/component-contracts";
 import {
-  auditUiConsistencyRepo,
+
   countBySeverity,
   findingsByCategory,
   type UiAuditFinding,

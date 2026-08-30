@@ -5,7 +5,7 @@ import { mezzoDomainQueryKeys } from "@/src/services/domain/mezzo-domain.queries
 import {
   fetchMezzoAnagraficaHistory,
   type MezzoAnagraficaHistoryRow,
-} from "@/src/services/mezzo-anagrafica-history.service";
+} from "@/lib/domain/mezzo-anagrafica-history-entry";
 
 export function useMezzoAnagraficaHistory(
   mezzoId: string | undefined,

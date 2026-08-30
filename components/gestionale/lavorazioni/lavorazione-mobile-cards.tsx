@@ -53,7 +53,6 @@ import {
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import { IconActionButton } from "@/components/design-system";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -122,12 +121,12 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
     statiOpts,
     statiRapidiPillOpts,
     prioritaPillOpts,
-    tablePillOptions,
+    
     statoPillStyle,
     prioritaPillStyle,
     addetti,
     addettiRecords,
-    addettoColors,
+    
     ultimaModificaInfo,
     concludiDisabled,
     concludiClassName,

@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/interventi-from-lavorazioni-db.ts b/lib/mezzi/interventi-from-lavorazioni-db.ts
+index fb7e2761..c543aad0 100644
+--- a/lib/mezzi/interventi-from-lavorazioni-db.ts
++++ b/lib/mezzi/interventi-from-lavorazioni-db.ts
+@@ -21,7 +21,7 @@ export function labelLavorazioneStatoDb(stato: string): string {
+ }
+ 
+ /** @deprecated Usare `isLavorazioneArchived(row)` — l'archivio non dipende dallo stato. */
+-export function isLavorazioneStoricoDb(_stato: string): boolean {
++export function isLavorazioneStoricoDb(): boolean {
+   return false;
+ }
+ 

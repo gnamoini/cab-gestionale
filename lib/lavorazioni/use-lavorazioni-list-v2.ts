@@ -82,6 +82,7 @@ export function useLavorazioniListV2(
   const pages = query.data?.pages ?? EMPTY_PAGES;
   const list = useMemo(
     () => flattenLavorazioneListPages(pages) as LavorazioneListRow[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataUpdatedAt busts flatten after refetch
     [pages, query.dataUpdatedAt],
   );
 

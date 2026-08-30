@@ -16,7 +16,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import {
   dsBtnDanger,
-  dsPageToolbarBtn,
+
   dsPageToolbarMetaActionBtn,
   dsScrollbar,
   dsSectionTitle,
@@ -336,7 +336,7 @@ export function SecurityMonitoringSection({
               />
             </div>
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <button type="button" className={dsPageToolbarMetaActionBtn} onClick={onResetRange}>
               Reimposta filtri
             </button>

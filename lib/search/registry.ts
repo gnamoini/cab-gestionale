@@ -5,7 +5,7 @@ import { preventiviSearchConfig } from "@/lib/search/domains/preventivi.config";
 import { securityUsersSearchConfig } from "@/lib/search/domains/security-users.config";
 import type { SearchDomainConfig, SearchDomainId, SearchExecutionMode } from "@/lib/search/types";
 
-const REGISTRY: Record<SearchDomainId, SearchDomainConfig<any, any>> = {
+const REGISTRY = {
   lavorazioni: lavorazioniSearchConfig,
   preventivi: preventiviSearchConfig,
   magazzino: magazzinoSearchConfig,
@@ -40,7 +40,7 @@ const REGISTRY: Record<SearchDomainId, SearchDomainConfig<any, any>> = {
     fields: [],
     buildDocument: () => "",
   },
-};
+} as Record<SearchDomainId, SearchDomainConfig>;
 
 export function getSearchConfig(domain: SearchDomainId): SearchDomainConfig {
   return REGISTRY[domain];

@@ -1,0 +1,13 @@
+diff --git a/lib/observability/mezzo-mutation-save-trace.ts b/lib/observability/mezzo-mutation-save-trace.ts
+index 40bc8420..e6fc47fa 100644
+--- a/lib/observability/mezzo-mutation-save-trace.ts
++++ b/lib/observability/mezzo-mutation-save-trace.ts
+@@ -44,7 +44,7 @@ export function logMezzoMutationSaveTrace(
+     if (started != null) durationMs = Date.now() - started;
+   }
+ 
+-  // eslint-disable-next-line no-console -- opt-in debug flag
++   
+   console.debug("[mezzo-mutation-save]", event, {
+     timestamp,
+     ...(durationMs != null ? { durationMs } : {}),

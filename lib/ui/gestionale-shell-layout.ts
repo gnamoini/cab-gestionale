@@ -57,7 +57,7 @@ export type ResolveHostLayoutWidthOptions = {
 };
 
 /** Larghezza host — min tra innerWidth, visualViewport e document client (no shell: evita feedback loop CSS). */
-export function resolveHostLayoutWidth(_opts: ResolveHostLayoutWidthOptions = {}): number {
+export function resolveHostLayoutWidth(): number {
   if (typeof window === "undefined") return 0;
 
   const inner = window.innerWidth;

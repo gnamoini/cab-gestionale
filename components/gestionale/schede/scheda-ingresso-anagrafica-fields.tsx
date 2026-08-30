@@ -91,7 +91,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   onDismissMezzoHint,
   onDismissAmbiguousHint,
   onSelectAmbiguousCandidate,
-  onVerifyMezzoConflict,
+  
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
   mezzoLinked = false,
@@ -182,6 +182,7 @@ function SchedaIngressoAnagraficaFieldsInner({
 
   useEffect(() => {
     if (!mezzoId.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setAttrezzature([]);
       return;
     }

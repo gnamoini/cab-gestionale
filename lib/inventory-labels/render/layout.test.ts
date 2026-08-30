@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { wrapLines, wrapChars, wrapLabelLines, maxCharsForWrap, maxCharsForWidth, linesFitWrapWidth } from "@/lib/inventory-labels/render/layout";
+import { wrapLines, wrapChars, wrapLabelLines, maxCharsForWrap, maxCharsForWidth } from "@/lib/inventory-labels/render/layout";
 
 const lines = wrapLines("alpha beta gamma delta epsilon zeta", 6, 10);
 assert.ok(lines.length >= 3);

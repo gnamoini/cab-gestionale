@@ -170,7 +170,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     canReadDipendentiPage,
     activityVisible,
     headerVisible,
-    visibleIds,
+    
     dipendentiOpts,
   } = shell;
 
@@ -277,7 +277,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     dash.movLogs,
     magLog,
     useMovimentiMagLog,
-    movimentiQ.data,
     preventiviQ.records,
     invoicesQ.invoices,
     timesheetQ.data,
@@ -327,7 +326,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
   }, [
     modules,
     dash.lavRows,
-    dash.globalOpts.lavorazioni.addetti,
     dash.ricambi,
     dash.magRecentMovements,
     magLog,

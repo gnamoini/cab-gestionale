@@ -1,0 +1,12 @@
+diff --git a/lib/regression/compatibility-policy.test.ts b/lib/regression/compatibility-policy.test.ts
+index f8559689..845abfb0 100644
+--- a/lib/regression/compatibility-policy.test.ts
++++ b/lib/regression/compatibility-policy.test.ts
+@@ -12,7 +12,6 @@ function exists(rel: string): boolean {
+   return fs.existsSync(path.join(ROOT, rel));
+ }
+ 
+-const layout = read("app/layout.tsx");
+ const siteViewport = read("lib/site/site-viewport.ts");
+ assert.match(siteViewport, /viewportFit:\s*"cover"/);
+ assert.match(siteViewport, /width:\s*"device-width"/);

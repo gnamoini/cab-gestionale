@@ -142,7 +142,6 @@ export function buildOptionsFingerprint(options: BuildOrchestratorOptions = {}):
 }
 
 export function readBuildCheckpoint(
-  _checkpointPath = DEFAULT_BUILD_CHECKPOINT_PATH,
   optionsFingerprint?: string,
 ): BuildCheckpoint | null {
   return readReconciledBuildCheckpoint(optionsFingerprint);
@@ -150,14 +149,11 @@ export function readBuildCheckpoint(
 
 export function writeBuildCheckpoint(
   checkpoint: BuildCheckpoint,
-  _checkpointPath = DEFAULT_BUILD_CHECKPOINT_PATH,
 ): void {
   recordNodeCheckpoint(checkpoint);
 }
 
-export function clearBuildCheckpoint(
-  _checkpointPath = DEFAULT_BUILD_CHECKPOINT_PATH,
-): void {
+export function clearBuildCheckpoint(): void {
   clearDistributedCheckpointManifest();
 }
 
@@ -255,8 +251,9 @@ export function validatePhase(
 }
 
 export function unifiedPolicyCheckPhase(
-  options: BuildOrchestratorOptions = {},
+  _options: BuildOrchestratorOptions = {},
 ): BuildPhaseResult<{ report: UnifiedPolicyCheckResult }> {
+  void _options;
   try {
     const report = runUnifiedPolicyCheck({ mode: resolveEnforcerMode() });
     if (report.shouldFail) {
@@ -429,7 +426,7 @@ function executeBuildPipeline(
   const skipPhase = (phase: BuildPhaseName): boolean =>
     resume && isPhaseCompleteInCheckpoint(phase, fingerprint, checkpoint);
 
-  let validate = skipPhase("validate")
+  const validate = skipPhase("validate")
     ? { ok: true, phase: "validate" as const, retryable: true }
     : validatePhase(options);
   if (!skipPhase("validate")) {
@@ -443,7 +440,7 @@ function executeBuildPipeline(
     throw new Error("validatePhase failed: missing classification");
   }
 
-  let build = skipPhase("build")
+  const build = skipPhase("build")
     ? { ok: true, phase: "build" as const, retryable: true, result: { published: false } }
     : buildPhase(options);
   if (!skipPhase("build")) {
@@ -473,7 +470,7 @@ function executeBuildPipeline(
     throw new Error(`verifyPhase failed: ${verify.error}`);
   }
 
-  let unifiedPolicy = skipPhase("unifiedPolicyCheck")
+  const unifiedPolicy = skipPhase("unifiedPolicyCheck")
     ? { ok: true, phase: "unifiedPolicyCheck" as const, retryable: true }
     : unifiedPolicyCheckPhase(options);
   if (!skipPhase("unifiedPolicyCheck")) {

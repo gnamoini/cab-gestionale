@@ -18,7 +18,7 @@ type GenerateObjectInput = {
 export async function generateObjectWithGeminiFailover(
   input: GenerateObjectInput,
 ): Promise<Awaited<ReturnType<typeof generateObject>>> {
-  const { abortSignal, model: _override, ...rest } = input;
+  const { abortSignal, ...rest } = input;
   const timeoutMs =
     abortSignal != null && typeof AbortSignal.timeout === "function" ? 90_000 : readTimeout(abortSignal);
   const result = await aiService.generateObject({

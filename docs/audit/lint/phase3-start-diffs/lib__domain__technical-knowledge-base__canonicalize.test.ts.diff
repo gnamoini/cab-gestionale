@@ -1,0 +1,11 @@
+diff --git a/lib/domain/technical-knowledge-base/canonicalize.test.ts b/lib/domain/technical-knowledge-base/canonicalize.test.ts
+index fd11c1e5..7cd786dd 100644
+--- a/lib/domain/technical-knowledge-base/canonicalize.test.ts
++++ b/lib/domain/technical-knowledge-base/canonicalize.test.ts
+@@ -1,5 +1,5 @@
+ import assert from "node:assert/strict";
+-import { canonicalizeDraftBundle, canonicalizeSlug } from "./canonicalize";
++import { canonicalizeSlug } from "./canonicalize";
+ import { hashDraftBundle } from "./tkb-snapshot-builder";
+ import type { TkbDraftBundle } from "./types";
+ 

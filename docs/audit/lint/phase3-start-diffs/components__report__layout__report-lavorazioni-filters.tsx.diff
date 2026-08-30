@@ -1,0 +1,13 @@
+diff --git a/components/report/layout/report-lavorazioni-filters.tsx b/components/report/layout/report-lavorazioni-filters.tsx
+index 89d4e369..bf2d9a4d 100644
+--- a/components/report/layout/report-lavorazioni-filters.tsx
++++ b/components/report/layout/report-lavorazioni-filters.tsx
+@@ -22,7 +22,7 @@ export function ReportLavorazioniFilters({
+   onChange: (next: LavorazioniReportFilters) => void;
+ }) {
+   return (
+-    <div className="flex min-w-0 flex-wrap items-end gap-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3">
++    <div className="flex min-w-0 items-end gap-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 flex-nowrap sm:flex-wrap">
+       <label className="min-w-[10rem] flex-1">
+         <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+           Cliente

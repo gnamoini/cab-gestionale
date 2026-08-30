@@ -290,6 +290,81 @@
         "SEC-07"
       ]
     },
+    "cab_claim_communication_draft_send(p_draft_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_get_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_get_communication_draft_by_id(p_draft_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_release_communication_draft(p_draft_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
+    "cab_upsert_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid, p_sender_email text, p_sender_display_name text, p_to_emails jsonb, p_cc_emails jsonb, p_bcc_emails jsonb, p_subject text, p_body_text text, p_attachment_refs jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03",
+        "SEC-06",
+        "SEC-07"
+      ]
+    },
     "cab_claim_delivery_queue_batch(p_job_phase text, p_limit integer)": {
       "classification": "SERVER_ONLY",
       "grants": [

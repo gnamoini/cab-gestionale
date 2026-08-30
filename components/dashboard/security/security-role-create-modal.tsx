@@ -14,11 +14,11 @@ import {
   dsLabel,
   dsScrollbar,
   dsTable,
-  dsTableHeadCell,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
 } from "@/lib/ui/design-system";
+import { globalTableThCell } from "@/lib/ui/global-table";
 import type { RoleRow } from "@/src/types/supabase-tables";
 
 type Props = {
@@ -52,6 +52,7 @@ export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Pro
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setName("");
     setCloneFrom("");
     setPageAccess(emptyPageAccess());
@@ -59,6 +60,7 @@ export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Pro
 
   useEffect(() => {
     if (!cloneFrom) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setPageAccess(emptyPageAccess());
       return;
     }
@@ -131,7 +133,7 @@ export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Pro
         </div>
 
         <div>
-          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <div className="mb-2 flex items-end justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <p className={dsLabel}>Permessi per pagina</p>
             <PageAccessLegend />
           </div>
@@ -139,8 +141,8 @@ export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Pro
             <table className={dsTable}>
               <thead>
                 <tr className={dsTableRow}>
-                  <th className={`${dsTableHeadCell} text-left`}>Pagina</th>
-                  <th className={`${dsTableHeadCell} w-16 text-center`}>Accesso</th>
+                  <th className={`${globalTableThCell} text-left`}>Pagina</th>
+                  <th className={`${globalTableThCell} w-16 text-center`}>Accesso</th>
                 </tr>
               </thead>
               <tbody>

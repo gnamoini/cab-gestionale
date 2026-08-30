@@ -28,12 +28,12 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   "report-magazzino-section.tsx": {
     patterns: ["card", "table", "chart", "matrix"],
     mustInclude: [
-      "ReportDomainMetricsGrid",
-      "ReportBarChart",
+      "ReportMagazzinoHeroKpiSection",
       "ReportDataTable",
       "ReportMatrix",
-      "ReportUnifiedKpiGrid",
       "ReportMagazzinoStockAlerts",
+      "MagazzinoEntrateUsciteStackedBars",
+      "MagazzinoCapitalLineChart",
     ],
   },
   "report-ore-section.tsx": {
@@ -61,8 +61,7 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
       "ReportUnifiedKpiGrid",
       "ReportTopMezzi",
       "ReportFleetAlerts",
-      "DisponibilitaClienteBarChart",
-      "GuastiTipoDonutChart",
+      "KpiPerformanceFleet",
       "ClientiParetoChart",
       "KpiPerformanceCompliance",
       "ReportClientiMezziDettaglioTabs",
@@ -70,11 +69,29 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   },
   "report-cross-section.tsx": {
     patterns: ["card"],
-    mustInclude: ["ReportDomainMetricsGrid"],
+    mustInclude: [
+      "ReportBarChart",
+      "ReportDataTable",
+      "ReportMatrix",
+      "ReportMultiSeriesLineChart",
+      "CrossTrustBanner",
+    ],
   },
   "report-ai-section.tsx": {
     patterns: [],
     mustInclude: ["ReportNarrativeBlock", "ReportEmbeddedModule"],
+  },
+};
+
+const LAYOUT_DELEGATE_EXPECTATIONS: Record<string, { mustInclude: readonly string[] }> = {
+  "report-magazzino-hero-kpi-section.tsx": {
+    mustInclude: ["ReportDomainMetricsGrid", "ReportUnifiedKpiGrid"],
+  },
+};
+
+const KPI_MODULE_DELEGATE_EXPECTATIONS: Record<string, { mustInclude: readonly string[] }> = {
+  "kpi-performance-fleet.tsx": {
+    mustInclude: ["DisponibilitaClienteBarChart", "GuastiTipoDonutChart"],
   },
 };
 
@@ -84,6 +101,22 @@ for (const [file, spec] of Object.entries(SECTION_PATTERN_EXPECTATIONS)) {
     assert.ok(text.includes(component), `${file} deve usare ${component}`);
   }
   assert.match(text, /@\/components\/report\/design-system/, `${file} deve importare composition API`);
+}
+
+const LAYOUT_DIR = path.join(ROOT, "components/report/layout");
+for (const [file, spec] of Object.entries(LAYOUT_DELEGATE_EXPECTATIONS)) {
+  const text = fs.readFileSync(path.join(LAYOUT_DIR, file), "utf8");
+  for (const component of spec.mustInclude) {
+    assert.ok(text.includes(component), `${file} deve usare ${component}`);
+  }
+}
+
+const KPI_DIR = path.join(ROOT, "components/report/kpi-performance");
+for (const [file, spec] of Object.entries(KPI_MODULE_DELEGATE_EXPECTATIONS)) {
+  const text = fs.readFileSync(path.join(KPI_DIR, file), "utf8");
+  for (const component of spec.mustInclude) {
+    assert.ok(text.includes(component), `${file} deve usare ${component}`);
+  }
 }
 
 console.log("report-data-patterns-audit.test.ts OK");

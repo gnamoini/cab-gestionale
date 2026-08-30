@@ -2,7 +2,7 @@ export { magazzinoCarichiPageMetadata as metadata } from "@/lib/site/app-page-me
 
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
-import { ReceivingListView } from "@/components/gestionale/magazzino/carichi/receiving-list-view";
+import { ReceivingListViewLazy } from "@/components/gestionale/lazy-route-views";
 import { fetchInventoryReceivingDocumentsServer } from "@/lib/inventory-receiving/inventory-receiving-list-fetch.server";
 import { inventoryReceivingListQueryKey } from "@/lib/inventory-receiving/inventory-receiving-list-query-keys";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
@@ -17,7 +17,7 @@ export default async function MagazzinoCarichiPage() {
   return (
     <PageLayout title="Carichi da DDT">
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <ReceivingListView />
+        <ReceivingListViewLazy />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

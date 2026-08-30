@@ -1,0 +1,21 @@
+diff --git a/components/report/bi-center/advanced/report-cross-catena-section.tsx b/components/report/bi-center/advanced/report-cross-catena-section.tsx
+index bdad0af2..9c4ca062 100644
+--- a/components/report/bi-center/advanced/report-cross-catena-section.tsx
++++ b/components/report/bi-center/advanced/report-cross-catena-section.tsx
+@@ -25,8 +25,14 @@ export function ReportCrossCatenaChart() {
+     includeSeries: false,
+   });
+ 
+-  const invoices = invoicesQ.isError ? [] : invoicesQ.invoices;
+-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
++  const invoices = useMemo(
++    () => (invoicesQ.isError ? [] : invoicesQ.invoices),
++    [invoicesQ.isError, invoicesQ.invoices],
++  );
++  const preventivi = useMemo(
++    () => (preventiviQ.isError ? [] : preventiviQ.records),
++    [preventiviQ.isError, preventiviQ.records],
++  );
+ 
+   const catenaValore = useMemo(
+     () =>

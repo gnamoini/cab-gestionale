@@ -7,7 +7,6 @@ import type {
   SelectorConfigProposal,
   SelectorEngineConfigShape,
   SelectorRuntimeSnapshot,
-  SheetRolloutStatus,
 } from "@/lib/selector-core/types";
 
 export const SELECTOR_ENGINE_CONFIG_BASE: SelectorConfigMergeSlice = {

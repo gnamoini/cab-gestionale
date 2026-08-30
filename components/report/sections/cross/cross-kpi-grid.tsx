@@ -3,7 +3,6 @@
 import { ReportKpiCard } from "@/components/report/report-kpi-card";
 import {
   resolveInsightDrillDownElementId,
-  resolveInsightDrillDownHref,
 } from "@/components/report/insight-strip/insight-drill-down-nav";
 import { CROSS_METRIC_UI, crossTrustToKpiTrust } from "@/lib/report/cross-analysis/cross-metric-ui-meta";
 import type { CrossP0MetricId } from "@/lib/report/cross-analysis/cross-metric-registry";
@@ -176,6 +175,3 @@ export function CrossKpiGrid({ cards }: { cards: readonly CrossKpiCardModel[] })
     </div>
   );
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _hrefHelper = resolveInsightDrillDownHref;

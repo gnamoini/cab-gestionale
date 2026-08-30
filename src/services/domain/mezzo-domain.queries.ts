@@ -77,7 +77,6 @@ export function useMezzoDocumenti(mezzoId: string | undefined) {
   const id = mezzoIdOrEmpty(mezzoId);
   const base = useMezzoBase(mezzoId);
   const marca = base.data?.marca?.trim() ?? "";
-  const modello = base.data?.modello?.trim() ?? "";
   return useServiceQuery(
     mezzoDomainQueryKeys.documenti(id, marca || "__pending__"),
     async () => {

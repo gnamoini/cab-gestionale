@@ -72,6 +72,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!showLoadingGate) {
       loadingGateStartedRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setLoadingFailsafe(false);
       return;
     }

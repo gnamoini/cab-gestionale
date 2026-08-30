@@ -53,7 +53,8 @@ function runFinalizeStage(idempotencyKey: string, lavorazioneId: string, mezzoId
   logInterventoTelemetry("intervento_write_finalized", { lavorazioneId, stage: "finalize" });
 }
 
-function wrapShadowDeps(deps: InterventoWriteDeps): InterventoWriteDeps {
+function wrapShadowDeps(_deps: InterventoWriteDeps): InterventoWriteDeps {
+  void _deps;
   return {
     upsertMezzo: async () => ({ mezzoId: "shadow-noop", created: false, updated: false }),
     createLavorazione: async () => ({ id: "shadow-lav" } as never),

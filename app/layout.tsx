@@ -106,7 +106,7 @@ export default async function RootLayout({
           aria-busy="true"
           suppressHydrationWarning
         >
-          {/* ponytail: src statico pre-React — logo senza next/image per primo paint immediato */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- static boot logo for first paint before Next/Image hydrates */}
           <img src="/cab-logo.png" alt="C.A.B." width={196} height={56} />
           <div className="cab-app-boot-spinner" aria-hidden="true" />
           <p id="cab-app-boot-msg" suppressHydrationWarning>

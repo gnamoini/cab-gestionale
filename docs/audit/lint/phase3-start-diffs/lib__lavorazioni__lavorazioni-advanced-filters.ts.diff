@@ -1,0 +1,13 @@
+diff --git a/lib/lavorazioni/lavorazioni-advanced-filters.ts b/lib/lavorazioni/lavorazioni-advanced-filters.ts
+index d22c2e50..07a918a5 100644
+--- a/lib/lavorazioni/lavorazioni-advanced-filters.ts
++++ b/lib/lavorazioni/lavorazioni-advanced-filters.ts
+@@ -340,7 +340,7 @@ export function loadGestionaleAdvancedFiltersPersisted(): LavorazioniAdvancedFil
+ export function saveGestionaleAdvancedFiltersPersisted(f: LavorazioniAdvancedFilters): void {
+   if (typeof window === "undefined") return;
+   try {
+-    const { section: _s, ...rest } = f;
++    const { ...rest } = f;
+     window.sessionStorage.setItem(GESTIONALE_STORAGE_KEY, JSON.stringify(rest));
+   } catch {
+     /* ignore */

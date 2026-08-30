@@ -147,7 +147,7 @@ export async function mezziListPartialIdentityCandidates(
   const cliente = normCliente(input.cliente);
   if (!cliente) return [];
 
-  let q = client.from("mezzi").select(MEZZI_COLUMNS).ilike("cliente", input.cliente!.trim());
+  const q = client.from("mezzi").select(MEZZI_COLUMNS).ilike("cliente", input.cliente!.trim());
   const { data, error } = await q.order("created_at", { ascending: true });
   if (error) throw error;
 

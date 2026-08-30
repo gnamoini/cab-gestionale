@@ -31,6 +31,7 @@ const textarea = read("components/gestionale/gestionale-textarea.tsx");
 const textareaViewport = read("lib/ui/gestionale-textarea-viewport.ts");
 const settingsNavShell = read("components/dashboard/settings/settings-nav-shell.tsx");
 const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
+const schedaRicambiBody = read("components/lavorazioni/schede/scheda-ricambi-form-body.tsx");
 const mezzoAc = read("components/gestionale/gestionale-mezzo-autocomplete.tsx");
 const bottomSheet = read("components/gestionale/gestionale-mobile-bottom-sheet.tsx");
 const searchableSheet = read("components/gestionale/global-input/gestionale-searchable-sheet-select.tsx");
@@ -109,7 +110,7 @@ assert.doesNotMatch(settingsNavShell, /absolute left-0 right-0 top-full/);
 
 assert.doesNotMatch(schedeModal, /data-cab-ios-no-focus-scroll/);
 assert.doesNotMatch(schedeModal, /absolute left-0 right-0 top-full/);
-assert.match(schedeModal, /RicambiMagSearchPortal/);
+assert.match(schedaRicambiBody, /RicambioRowAutocompletePortal/);
 
 assert.match(mezzoAc, /useGlobalDropdownPortal/);
 assert.doesNotMatch(mezzoAc, /absolute left-0 right-0 top-full/);

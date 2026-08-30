@@ -14,8 +14,10 @@ export function ordineFornitoreEmailDraftSubject(record: Pick<OrdineFornitoreRec
   return num ? `Ordine fornitore #${num}` : "Ordine fornitore";
 }
 
-export function ordineFornitoreEmailDraftBody(): string {
-  return "Buongiorno, in allegato trasmettiamo il nostro ordine.";
+export function ordineFornitoreEmailDraftBody(record: Pick<OrdineFornitoreRecord, "numero">): string {
+  const num = record.numero?.trim();
+  const ordineRef = num ? `l'ordine ${num}` : "l'ordine in allegato";
+  return `Spett.le fornitore,\n\nin allegato trasmettiamo ${ordineRef}.\n\nCordiali saluti.`;
 }
 
 export function ordineFornitoreEmailAttachmentFileName(record: Pick<OrdineFornitoreRecord, "numero">): string {
@@ -28,7 +30,7 @@ export function buildOrdineFornitoreMailtoHref(
   record: Pick<OrdineFornitoreRecord, "numero">,
 ): string {
   const subject = ordineFornitoreEmailDraftSubject(record);
-  const body = ordineFornitoreEmailDraftBody();
+  const body = ordineFornitoreEmailDraftBody(record);
   const params = new URLSearchParams();
   params.set("subject", subject);
   params.set("body", body);

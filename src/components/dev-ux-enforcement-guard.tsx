@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable no-restricted-properties -- dev-only shim that patches legacy window.alert/confirm/prompt */
 import { useEffect } from "react";
 import {
   isUxEnforcementDevMode,

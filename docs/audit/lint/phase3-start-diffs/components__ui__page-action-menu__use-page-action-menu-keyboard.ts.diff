@@ -1,0 +1,24 @@
+diff --git a/components/ui/page-action-menu/use-page-action-menu-keyboard.ts b/components/ui/page-action-menu/use-page-action-menu-keyboard.ts
+index 373cff7f..6278e279 100644
+--- a/components/ui/page-action-menu/use-page-action-menu-keyboard.ts
++++ b/components/ui/page-action-menu/use-page-action-menu-keyboard.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useEffect, useRef, type RefObject } from "react";
++import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+ 
+ const MENUITEM_SELECTOR = '[role="menuitem"], a[role="menuitem"], a[data-testid^="page-action-menu-item"]';
+ 
+@@ -24,7 +24,10 @@ export function usePageActionMenuKeyboard({
+   setActiveIndex: (index: number) => void;
+ }): void {
+   const activeIndexRef = useRef(activeIndex);
+-  activeIndexRef.current = activeIndex;
++
++  useLayoutEffect(() => {
++    activeIndexRef.current = activeIndex;
++  }, [activeIndex]);
+ 
+   const focusItemAt = useCallback(
+     (index: number) => {

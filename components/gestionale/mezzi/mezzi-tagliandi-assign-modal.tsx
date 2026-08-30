@@ -174,7 +174,7 @@ export function MezziTagliandiAssignModal({
         titleId="tagliandi-assign-title"
         modalSize="formMedium"
         footer={
-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
+          <div className="flex w-full items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <button type="button" className={dsBtnNeutral} onClick={onClose}>
               Annulla
             </button>

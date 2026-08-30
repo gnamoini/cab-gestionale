@@ -1,0 +1,58 @@
+diff --git a/components/report/kpi-charts/kpi-chart-config-panel.tsx b/components/report/kpi-charts/kpi-chart-config-panel.tsx
+index b35103d1..0431cfd1 100644
+--- a/components/report/kpi-charts/kpi-chart-config-panel.tsx
++++ b/components/report/kpi-charts/kpi-chart-config-panel.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { getPlottableMetrics } from "@/lib/report/kpi-series/capability-matrix";
+ import type { KpiChartDraftConfig } from "@/components/report/kpi-charts/use-kpi-chart-series";
+-import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
++import { erpBtnAccent } from "@/components/report/report-buttons";
+ import { REPORT_PRESET_LABELS } from "@/lib/report/report-period-presets";
+ import type { ReportPeriodPreset } from "@/lib/report/date-ranges";
+ 
+@@ -42,7 +42,7 @@ export function KpiChartConfigPanel({
+     <div className="min-w-0 space-y-4 rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] p-4">
+       <div>
+         <p className="mb-2 text-sm font-medium text-[color:var(--cab-text)]">KPI (min 2, max 5)</p>
+-        <div className="flex flex-wrap gap-2">
++        <div className="flex gap-2 flex-nowrap sm:flex-wrap">
+           {plottable.map((m) => {
+             const selected = draft.metricIds.includes(m.metricId);
+             return (
+@@ -66,7 +66,7 @@ export function KpiChartConfigPanel({
+ 
+       <div>
+         <p className="mb-2 text-sm font-medium text-[color:var(--cab-text)]">Periodo grafico</p>
+-        <div className="flex flex-wrap gap-2">
++        <div className="flex gap-2 flex-nowrap sm:flex-wrap">
+           {TIMEFRAME_PRESETS.map((preset) => (
+             <button
+               key={preset}
+@@ -84,7 +84,7 @@ export function KpiChartConfigPanel({
+           ))}
+         </div>
+         {draft.preset === "custom" ? (
+-          <div className="mt-2 flex flex-wrap items-center gap-2">
++          <div className="mt-2 flex items-center gap-2 flex-nowrap sm:flex-wrap">
+             <label className="text-sm text-[color:var(--cab-text-muted)]">
+               Da
+               <input
+@@ -109,7 +109,7 @@ export function KpiChartConfigPanel({
+ 
+       <div>
+         <p className="mb-2 text-sm font-medium text-[color:var(--cab-text)]">Visualizzazione</p>
+-        <div className="flex flex-wrap gap-2">
++        <div className="flex gap-2 flex-nowrap sm:flex-wrap">
+           <button
+             type="button"
+             aria-pressed={draft.displayMode === "indexed"}
+@@ -150,7 +150,7 @@ export function KpiChartConfigPanel({
+         </ul>
+       ) : null}
+ 
+-      <div className="flex flex-wrap gap-2">
++      <div className="flex gap-2 flex-nowrap sm:flex-wrap">
+         {needsAbsoluteConfirm ? (
+           <button type="button" className={erpBtnAccent} onClick={onConfirmAbsolute}>
+             Conferma valori assoluti

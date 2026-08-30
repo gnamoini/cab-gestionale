@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { buildReportAIContextDto } from "@/lib/report/ai-context/build-report-ai-context";
-import type { InsightEvaluationResult } from "@/lib/report/insights/types";
-import type { InsightTelemetrySummary } from "@/lib/report/insights/observability/insight-telemetry-summary";
 
 const FORBIDDEN_IMPORTS = [
   /\bINSIGHT_RULE_REGISTRY\b/,

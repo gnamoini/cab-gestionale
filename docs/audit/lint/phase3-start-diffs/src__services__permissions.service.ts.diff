@@ -1,0 +1,13 @@
+diff --git a/src/services/permissions.service.ts b/src/services/permissions.service.ts
+index c9de880b..ece6798c 100644
+--- a/src/services/permissions.service.ts
++++ b/src/services/permissions.service.ts
+@@ -8,7 +8,7 @@ import {
+   mergeRolePageAccessWithSeed,
+ } from "@/src/lib/rbac/load-rbac-data";
+ import { resolveRole } from "@/lib/auth/rbac";
+-import { err, success, type ServiceResult } from "@/src/services/service-result";
++import { success, type ServiceResult } from "@/src/services/service-result";
+ import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
+ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+ 

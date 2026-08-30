@@ -1,0 +1,19 @@
+diff --git a/components/report/sections/use-section-publish.ts b/components/report/sections/use-section-publish.ts
+index dcda579c..d034eb4a 100644
+--- a/components/report/sections/use-section-publish.ts
++++ b/components/report/sections/use-section-publish.ts
+@@ -44,10 +44,13 @@ export function usePublishWhenReady(
+   const requestRef = useRef(0);
+   const publishRef = useRef(publish);
+   const lastDepsKeyRef = useRef<string | null>(null);
+-  publishRef.current = publish;
+ 
+   const depsKey = publishWhenReadyDepsKey(deps);
+ 
++  useEffect(() => {
++    publishRef.current = publish;
++  }, [publish]);
++
+   useEffect(() => {
+     if (!enabled) {
+       lastDepsKeyRef.current = null;

@@ -1,11 +1,8 @@
 import type { LabelPayload, LabelRenderOptions, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
 import { mmToPx } from "@/lib/inventory-labels/domain/templates";
-import { generateCode128SvgString } from "@/lib/inventory-labels/render/barcode-core";
 import { cutBorderRectSvg } from "@/lib/inventory-labels/render/cut-border";
-import { nestedSvgAt, parseSvgFragment, cropSvgFragmentToInkBounds } from "@/lib/inventory-labels/render/svg-embed";
+import { nestedSvgAt, parseSvgFragment } from "@/lib/inventory-labels/render/svg-embed";
 import { generateQrSvgString } from "@/lib/inventory-labels/qr/generator";
-import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
-import { fieldValue } from "@/lib/inventory-labels/render/layout";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
 import {
@@ -32,6 +29,8 @@ function labelBoldStrokeWidthPx(_template: LabelTemplateDefinition, fontSizePx: 
 }
 
 function labelBoldInkOffsetPx(_template: LabelTemplateDefinition, _fontSizePx: number): number {
+  void _template;
+  void _fontSizePx;
   return 0;
 }
 
@@ -169,7 +168,6 @@ export async function renderLabelSvg(
   const h = mmToPx(template.heightMm, template.dpi);
   const textAsPaths = options?.textAsPaths ?? false;
   const embedFonts = !textAsPaths && (options?.embedFonts ?? true);
-  const includeBarcode = options?.includeBarcode === true;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
@@ -263,20 +261,6 @@ export async function renderLabelSvg(
         }
       });
       continue;
-    }
-
-    if (el.type === "barcode") {
-      if (!includeBarcode) continue;
-      const value = labelDisplayCaps(fieldValue(payload, el.field));
-      if (!value) continue;
-      const qrEl = template.elements.find((e) => e.type === "qr");
-      const barcodeWidthMm =
-        el.widthMm ?? (qrEl?.type === "qr" ? qrEl.sizeMm : template.widthMm - el.xMm - 2);
-      const bw = mmToPx(barcodeWidthMm, template.dpi);
-      const bh = mmToPx(el.heightMm, template.dpi);
-      const barcodeSvg = generateCode128SvgString(value, barcodeWidthMm, el.heightMm);
-      const frag = cropSvgFragmentToInkBounds(parseSvgFragment(barcodeSvg));
-      parts.push(nestedSvgAt(x, y, bw, bh, frag, "none"));
     }
   }
 

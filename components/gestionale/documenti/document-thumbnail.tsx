@@ -67,7 +67,7 @@ export function DocumentThumbnail({
   return (
     <div ref={rootRef} className="shrink-0">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- proxy thumbnail URL, not static import
+        // eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- proxy thumbnail URL, not static import
         <img
           src={src}
           alt={alt}

@@ -15,6 +15,7 @@ export function useUsernameAvailability(
 
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setState("idle");
       return;
     }

@@ -6,7 +6,6 @@ import {
   GESTIONALE_PAGES,
   pageAccessFromLevel,
   pathnameToPage,
-  type GestionalePage,
   type GestionalePageKey,
   type PageAccessLevel,
 } from "@/src/lib/permissions/gestionale-pages";

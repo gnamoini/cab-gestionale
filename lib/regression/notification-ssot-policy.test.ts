@@ -23,8 +23,14 @@ for (const file of migrationGlob) {
       blockers.push(`${file}: must drop legacy push enqueue trigger`);
     }
   }
-  if (file > "20261019120000" && /cab_enqueue_push_delivery/.test(src)) {
-    blockers.push(`${file}: must not reintroduce cab_enqueue_push_delivery`);
+  if (file > "20261019120000") {
+    const withoutDrops = src.replace(
+      /drop\s+function\s+if\s+exists\s+public\.cab_enqueue_push_delivery[^;]*;/gi,
+      "",
+    );
+    if (/cab_enqueue_push_delivery/.test(withoutDrops)) {
+      blockers.push(`${file}: must not reintroduce cab_enqueue_push_delivery`);
+    }
   }
 }
 

@@ -1,0 +1,15 @@
+diff --git a/lib/inventory-receiving/matching/confidence-gate.ts b/lib/inventory-receiving/matching/confidence-gate.ts
+index f7c831fc..cb72fab0 100644
+--- a/lib/inventory-receiving/matching/confidence-gate.ts
++++ b/lib/inventory-receiving/matching/confidence-gate.ts
+@@ -37,9 +37,8 @@ export function lineRequiresReview(input: {
+ export function defaultLineActionWithGate(
+   matchStatus: InventoryLineMatchStatus,
+   matchConfidence: number | null,
+-  method?: MatchCandidate["method"] | null,
++  _method?: MatchCandidate["method"] | null,
+ ): "add" | "create" | "skip" {
+-  const resolvedMethod = method ?? inferMatchMethod({ matchStatus, matchConfidence });
+   const conf = matchConfidence ?? 0;
+   if (matchStatus === "NEW_ITEM" && conf < CONFIDENCE_DESCRIPTION_CANDIDATE_MIN) return "create";
+   return defaultLineAction(matchStatus);

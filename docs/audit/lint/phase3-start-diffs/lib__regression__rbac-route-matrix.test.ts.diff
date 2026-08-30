@@ -1,0 +1,9 @@
+diff --git a/lib/regression/rbac-route-matrix.test.ts b/lib/regression/rbac-route-matrix.test.ts
+index 8a4aac6e..055c43bc 100644
+--- a/lib/regression/rbac-route-matrix.test.ts
++++ b/lib/regression/rbac-route-matrix.test.ts
+@@ -1,4 +1,3 @@
+-import assert from "node:assert/strict";
+ import { assertRouteProtection } from "@/lib/regression/assert-route-protection";
+ import { assertPermissionConsistency } from "@/lib/regression/assert-permission-consistency";
+ import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";

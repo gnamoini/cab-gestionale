@@ -13,8 +13,8 @@ import {
   ReportMultiSeriesLineChart,
   ReportSection,
   ReportVisualization,
+  KPI_CHART_SERIES_COLORS,
 } from "@/components/report/design-system";
-import { KPI_CHART_SERIES_COLORS } from "@/components/report/design-system/primitives/chart/multi-series-line-chart";
 import {
   buildCrossMonthlyTrend,
   crossTrendIndexedSeries,
@@ -38,7 +38,6 @@ function fmtEur(n: number): string {
 
 export default function ReportCrossSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
-  const compareRange = props.showCompare && props.compareRange ? props.compareRange : props.range;
   const timesheet = useReportTimesheetKpi(props.range);
   const invoicesQ = useInvoicesQuery(props.fetchEnabled);
   const preventiviQ = usePreventiviRecordsQuery(props.fetchEnabled);

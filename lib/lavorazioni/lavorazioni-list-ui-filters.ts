@@ -1,4 +1,3 @@
-import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
 import {
   lavRowMatchesAdvancedFilters,
@@ -85,6 +84,6 @@ export function lavRowMatchesPageFilters(
   options?: { skipSearchFilter?: boolean },
 ): boolean {
   if (!options?.skipSearchFilter && !lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
-  const { search: _s, ...advanced } = filters;
+  const { ...advanced } = filters;
   return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
 }

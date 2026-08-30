@@ -7,7 +7,7 @@ import {
 } from "@/lib/control/suites/security-rbac.suite";
 
 export const P0_MIN = 35;
-export const P0_MAX = 60;
+export const P0_MAX = 95;
 
 const RBAC_SUITE_SET = new Set([...SECURITY_RBAC_SUITE, ...SECURITY_RBAC_HARDENING_SUITE]);
 
@@ -43,6 +43,10 @@ const P0_PATTERNS = [
   /data-import/i,
   /billing/i,
   /ddt/i,
+  /stock-/i,
+  /spare-parts/i,
+  /identifica-ricambio/i,
+  /page-metadata-policy/i,
 ];
 
 const P2_PATTERNS = [

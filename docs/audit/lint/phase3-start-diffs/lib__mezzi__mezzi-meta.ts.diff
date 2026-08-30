@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/mezzi-meta.ts b/lib/mezzi/mezzi-meta.ts
+index 9997b755..b2e534db 100644
+--- a/lib/mezzi/mezzi-meta.ts
++++ b/lib/mezzi/mezzi-meta.ts
+@@ -43,7 +43,7 @@ export function parseMezzoMeta(raw: unknown): MezzoAnagraficaMeta {
+ }
+ 
+ /** @deprecated ponytail: v1 matrice tagliandi disabilitata — sempre false. */
+-export function mezzoTagliandiEnabled(_m: { tagliandi?: boolean }): boolean {
++export function mezzoTagliandiEnabled(): boolean {
+   return false;
+ }
+ 

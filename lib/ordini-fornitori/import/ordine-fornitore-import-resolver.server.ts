@@ -88,7 +88,7 @@ export function resolveImportRighe(
     let prezzo = prezzoRaw;
     let scontoFinal = sconto;
     let ricambioId: string | null = null;
-    let ivaFinal = iva;
+    const ivaFinal = iva;
 
     if (match) {
       ricambioId = match.id;

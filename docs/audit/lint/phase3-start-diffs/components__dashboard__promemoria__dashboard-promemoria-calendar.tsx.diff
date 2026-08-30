@@ -1,0 +1,14 @@
+diff --git a/components/dashboard/promemoria/dashboard-promemoria-calendar.tsx b/components/dashboard/promemoria/dashboard-promemoria-calendar.tsx
+index fb01971c..6073de4c 100644
+--- a/components/dashboard/promemoria/dashboard-promemoria-calendar.tsx
++++ b/components/dashboard/promemoria/dashboard-promemoria-calendar.tsx
+@@ -65,7 +65,9 @@ export function DashboardPromemoriaCalendar({
+   const [navDir, setNavDir] = useState<-1 | 0 | 1>(0);
+   const prevMonthKeyRef = useRef(viewMonthKey);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setMounted(true);
+     setTodayYmd(toYmd(new Date()));
+   }, []);

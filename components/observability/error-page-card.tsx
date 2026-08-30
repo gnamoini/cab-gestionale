@@ -56,7 +56,7 @@ function SecondaryLinks({
 
   return (
     <div className="mt-3 min-w-0">
-      <p className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
+      <p className="flex min-w-0 items-center justify-center gap-x-2 gap-y-1 text-sm flex-nowrap sm:flex-wrap">
         {onBack ? (
           <button type="button" onClick={onBack} className={`select-none ${actionClass}`}>
             Indietro

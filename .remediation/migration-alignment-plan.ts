@@ -31,7 +31,6 @@ for (const f of localFiles) {
 
 const localVersionSet = new Set(localVersions);
 const remoteByVersion = new Map(remote.map((r) => [r.version, r]));
-const remoteNames = new Set(remote.map((r) => r.name));
 
 // Versions on remote without a local file (MCP ghosts blocking db push)
 const revertVersions = remote
@@ -42,14 +41,6 @@ const revertVersions = remote
 // After reverting ghosts, local versions missing from remote need repair applied
 // except true pending (never applied to DB)
 const TRUE_PENDING = new Set(["20260704130100"]);
-
-const remoteVersionsAfterRevert = new Set(
-  remote.map((r) => r.version).filter((v) => localVersionSet.has(v)),
-);
-
-const appliedVersions = localVersions
-  .filter((v) => !remoteVersionsAfterRevert.has(v) && !TRUE_PENDING.has(v))
-  .sort();
 
 // Name mismatches at same version (anomaly report)
 const versionNameMismatch = [...localByVersion.entries()]

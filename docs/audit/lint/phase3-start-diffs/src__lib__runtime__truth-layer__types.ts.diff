@@ -1,0 +1,11 @@
+diff --git a/src/lib/runtime/truth-layer/types.ts b/src/lib/runtime/truth-layer/types.ts
+index ba2d0e25..7b5b3a09 100644
+--- a/src/lib/runtime/truth-layer/types.ts
++++ b/src/lib/runtime/truth-layer/types.ts
+@@ -1,5 +1,5 @@
+ import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
+-import type { AppRole, RequiredRbacContext } from "@/lib/auth/rbac";
++import type { AppRole } from "@/lib/auth/rbac";
+ import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
+ import type { PilotSettingsState } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
+ import type { RbacEvaluationContext } from "@/lib/rbac";

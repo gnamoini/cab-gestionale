@@ -4,7 +4,7 @@ import {
   applyOreLavoroStorageToCampi,
   resolveOreLavoroFields,
 } from "@/lib/schede/resolve-ore-lavoro-fields";
-import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_LONG, TEXT_MEDIUM, TEXT_SHORT } from "@/lib/validation/text-field-limits";
+import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type {
   LavorazioneSchedeBundle,
   SchedaIngressoFields,

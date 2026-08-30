@@ -19,7 +19,7 @@ export function getActualLaborHoursFromRow(row: LavorazioneWithActualHours): Ana
   const sourceFlag = row.actual_labor_hours_source;
   const anomalies: string[] = [];
   let confidence: AnalyticsHoursResult["confidence"] = "high";
-  let consistency: AnalyticsHoursResult["consistency"] = hours > 0 ? "ok" : "missing";
+  const consistency: AnalyticsHoursResult["consistency"] = hours > 0 ? "ok" : "missing";
 
   if (sourceFlag === "safety_net_trigger") {
     confidence = "warning";

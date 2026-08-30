@@ -1,0 +1,30 @@
+diff --git a/lib/ai/runtime/ai-runtime.test.ts b/lib/ai/runtime/ai-runtime.test.ts
+index bfbeebc8..d5e4d5e5 100644
+--- a/lib/ai/runtime/ai-runtime.test.ts
++++ b/lib/ai/runtime/ai-runtime.test.ts
+@@ -5,6 +5,7 @@ import {
+   orderKeysForFailover,
+   scoreKey,
+   selectBestKey,
++  buildNoSelectableKeyError,
+ } from "@/lib/ai/runtime/key-manager";
+ import { classifyAiError, isFailoverEligible } from "@/lib/ai/runtime/errors";
+ import { resetKeyCacheForTests } from "@/lib/ai/runtime/key-cache";
+@@ -43,6 +44,17 @@ assert.equal(ordered[0]!.id, "1");
+ const invalid = mockKey({ id: "3", apiKey: "key-c", status: "invalid" });
+ assert.equal(selectBestKey([invalid]), null);
+ 
++const cooled = mockKey({
++  id: "4",
++  apiKey: "key-d",
++  status: "cooldown",
++  cooldownUntil: new Date(Date.now() + 120_000),
++});
++const cooledErr = buildNoSelectableKeyError([cooled]);
++assert.equal(cooledErr.code, "AI_QUOTA_EXCEEDED");
++assert.match(cooledErr.message, /Quota API Gemini/i);
++assert.equal(buildNoSelectableKeyError([]).code, "AI_CONFIG_MISSING");
++
+ assert.equal(classifyAiError(new Error("401 API KEY invalid")), "AI_KEY_INVALID");
+ assert.equal(classifyAiError(new Error("429 quota")), "AI_QUOTA_EXCEEDED");
+ assert.equal(classifyAiError(new Error("TimeoutError")), "AI_TIMEOUT");

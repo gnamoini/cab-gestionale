@@ -1,7 +1,7 @@
 import "server-only";
 
 import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
-import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   PREVENTIVO_ANALISI_ECONOMICA_VERSION,
@@ -33,7 +33,7 @@ async function fetchMagazzinoRowsByIdsServer(
 
   const map = new Map<string, RicambioMagazzino>();
   for (const row of (data ?? []) as MagazzinoRicambioRow[]) {
-    map.set(row.id, magazzinoRowToRicambioUI(row));
+    map.set(row.id, ricambioUiFromMagazzinoRow(row));
   }
   return success(map);
 }

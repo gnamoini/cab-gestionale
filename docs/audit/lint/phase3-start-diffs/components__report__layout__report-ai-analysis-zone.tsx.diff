@@ -1,0 +1,132 @@
+diff --git a/components/report/layout/report-ai-analysis-zone.tsx b/components/report/layout/report-ai-analysis-zone.tsx
+index 72ee570b..64d89596 100644
+--- a/components/report/layout/report-ai-analysis-zone.tsx
++++ b/components/report/layout/report-ai-analysis-zone.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
++
+ import { useCallback, useMemo, type ReactNode } from "react";
+ import { Button } from "@/components/design-system/button";
+ import { GestionaleAiActionButton } from "@/components/design-system/gestionale-ai-action-button";
+@@ -128,6 +130,39 @@ export function ReportAiAnalysisZone({
+     perfReady: !perfLoading && perf != null,
+   });
+ 
++  const legacyAnalysis = source.type === "legacy" ? source.legacy : null;
++
++  const copyAnalysis = useCallback(async () => {
++    if (!legacyAnalysis?.data) return;
++    try {
++      await navigator.clipboard.writeText(formatReportAnalysisPlainText(legacyAnalysis.data));
++      gestToast.successOnce("report-ai-copy", "Analisi copiata negli appunti.");
++    } catch {
++      gestToast.warning("Copia non disponibile: seleziona e copia manualmente il testo.");
++    }
++  }, [legacyAnalysis?.data, gestToast]);
++
++  const legacyHeaderActions = useMemo(() => {
++    if (!legacyAnalysis?.data || (legacyAnalysis.status !== "success" && legacyAnalysis.status !== "stale")) {
++      return null;
++    }
++    return (
++      <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
++        <Button variant="secondary" size="sm" onClick={() => void copyAnalysis()} disabled={!legacyAnalysis.data}>
++          Copia
++        </Button>
++        <GestionaleAiActionButton
++          variant="secondary"
++          size="sm"
++          onClick={() => void legacyAnalysis.generate()}
++          disabled={!legacyAnalysis.canGenerate}
++        >
++          Rigenera
++        </GestionaleAiActionButton>
++      </div>
++    );
++  }, [legacyAnalysis, copyAnalysis]);
++
+   if (source.type === "operational-brief") {
+     const showEmpty = !source.data && !source.loading;
+     const showLoading = source.loading && !source.data;
+@@ -302,33 +337,7 @@ export function ReportAiAnalysisZone({
+     );
+   }
+ 
+-  const analysis = source.legacy;
+-
+-  const copyAnalysis = useCallback(async () => {
+-    if (!analysis.data) return;
+-    try {
+-      await navigator.clipboard.writeText(formatReportAnalysisPlainText(analysis.data));
+-      gestToast.successOnce("report-ai-copy", "Analisi copiata negli appunti.");
+-    } catch {
+-      gestToast.warning("Copia non disponibile: seleziona e copia manualmente il testo.");
+-    }
+-  }, [analysis.data, gestToast]);
+-
+-  const headerActions = useMemo(() => {
+-    if (!analysis.data || (analysis.status !== "success" && analysis.status !== "stale")) {
+-      return null;
+-    }
+-    return (
+-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+-        <Button variant="secondary" size="sm" onClick={() => void copyAnalysis()} disabled={!analysis.data}>
+-          Copia
+-        </Button>
+-        <GestionaleAiActionButton variant="secondary" size="sm" onClick={() => void analysis.generate()} disabled={!analysis.canGenerate}>
+-          Rigenera
+-        </GestionaleAiActionButton>
+-      </div>
+-    );
+-  }, [analysis, copyAnalysis]);
++  const analysis = legacyAnalysis!;
+ 
+   const showEmpty =
+     analysis.status === "idle" || (analysis.status === "error" && !analysis.data);
+@@ -392,7 +401,7 @@ export function ReportAiAnalysisZone({
+       {showResults && analysis.data ? (
+         <div className="min-w-0 space-y-4">
+           {analysis.isStale ? (
+-            <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_6%,var(--cab-card))] px-3 py-2.5">
++            <div className="flex min-w-0 items-center gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_6%,var(--cab-card))] px-3 py-2.5 flex-nowrap sm:flex-wrap">
+               <p className="min-w-0 flex-1 text-xs text-[color:var(--cab-text)]">
+                 I dati del report sono cambiati rispetto all&apos;ultima analisi.
+               </p>
+@@ -469,7 +478,7 @@ export function ReportAiAnalysisZone({
+                   key: `anom-${i}`,
+                   node: (
+                     <div className={`rounded-[var(--ds-radius-lg)] border px-3 py-2.5 ${gravitaToneClass[a.gravita]}`}>
+-                      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
++                      <div className="flex min-w-0 items-baseline justify-between gap-x-2 gap-y-0.5 flex-nowrap sm:flex-wrap">
+                         <p className="text-sm font-semibold text-[color:var(--cab-text)]">{a.titolo}</p>
+                         <ConfidenzaBadge confidenza={a.confidenza} />
+                       </div>
+@@ -504,7 +513,7 @@ export function ReportAiAnalysisZone({
+                   key: `crit-${i}`,
+                   node: (
+                     <div className={`rounded-[var(--ds-radius-lg)] border px-3 py-2.5 ${gravitaToneClass[c.gravita]}`}>
+-                      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
++                      <div className="flex min-w-0 items-baseline justify-between gap-x-2 gap-y-0.5 flex-nowrap sm:flex-wrap">
+                         <p className="text-sm font-semibold text-[color:var(--cab-text)]">{c.titolo}</p>
+                         <ConfidenzaBadge confidenza={c.confidenza} />
+                       </div>
+@@ -574,7 +583,7 @@ export function ReportAiAnalysisZone({
+   if (embed) {
+     return (
+       <div className="min-w-0 space-y-4">
+-        {headerActions ? <div className="flex min-w-0 flex-wrap justify-end gap-2">{headerActions}</div> : null}
++        {legacyHeaderActions ? <div className="flex min-w-0 justify-end gap-2 flex-nowrap sm:flex-wrap">{legacyHeaderActions}</div> : null}
+         {body}
+       </div>
+     );
+@@ -586,7 +595,7 @@ export function ReportAiAnalysisZone({
+       title="Analisi AI"
+       subtitle="Report intelligente su KPI, trend e criticità del periodo selezionato"
+       className={reportZoneShellClass}
+-      headerActions={headerActions}
++      headerActions={legacyHeaderActions}
+     >
+       {body}
+     </ShellCard>

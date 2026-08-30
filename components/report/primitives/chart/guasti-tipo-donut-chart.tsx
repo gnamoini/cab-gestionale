@@ -30,8 +30,9 @@ function GuastiTipoDonutChartInner({
   const r = 72;
   const ir = 44;
   let angle = -Math.PI / 2;
-
-  const slices = data.map((item, idx) => {
+  const slices: Array<{ tipo: string; count: number; d: string; color: string; pct: number }> = [];
+  for (let idx = 0; idx < data.length; idx++) {
+    const item = data[idx]!;
     const frac = item.count / total;
     const next = angle + frac * Math.PI * 2;
     const x1 = cx + r * Math.cos(angle);
@@ -46,8 +47,8 @@ function GuastiTipoDonutChartInner({
     const d = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${ir} ${ir} 0 ${large} 0 ${xi2} ${yi2} Z`;
     angle = next;
     const color = PALETTE[idx % PALETTE.length]!;
-    return { ...item, d, color, pct: Math.round(frac * 1000) / 10 };
-  });
+    slices.push({ ...item, d, color, pct: Math.round(frac * 1000) / 10 });
+  }
 
   return (
     <div className={`${reportChartShellClass} flex flex-col gap-3 sm:flex-row sm:items-center`}>

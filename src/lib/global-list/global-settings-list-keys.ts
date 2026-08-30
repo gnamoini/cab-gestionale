@@ -21,7 +21,6 @@ import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import type { CSSProperties } from "react";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { mergeFornitoriOrdineOptions } from "@/lib/magazzino/fornitori-ordine-options";
 import { registerMarcaInMagazzinoMaster } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";

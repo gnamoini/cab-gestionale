@@ -35,7 +35,8 @@ export function resolveOrdineFornitoreSupplierEmail(
   magazzinoMaster?: MagazzinoMasterPrefs | null,
   settingsRows?: AppSettingRow[] | null,
 ): string {
-  let email = resolveSupplierEmailFromSnapshot(record.fornitoreSnapshot ?? {});
+  const snapshot = record.fornitoreSnapshot ?? {};
+  let email = resolveSupplierEmailFromSnapshot(snapshot);
   if (email) return email;
 
   if (settingsRows?.length) {
@@ -55,4 +56,15 @@ export function resolveOrdineFornitoreSupplierEmail(
     }
   }
   return "";
+}
+
+export function resolveOrdineFornitoreSupplierEmailAggiuntive(
+  record: Pick<OrdineFornitoreRecord, "fornitoreLabel" | "fornitoreSnapshot">,
+): string[] {
+  const snapshot = record.fornitoreSnapshot ?? {};
+  const fromSnapshot = snapshot.emailAggiuntive;
+  if (Array.isArray(fromSnapshot)) {
+    return fromSnapshot.filter((e): e is string => typeof e === "string" && isValidEmail(e));
+  }
+  return [];
 }

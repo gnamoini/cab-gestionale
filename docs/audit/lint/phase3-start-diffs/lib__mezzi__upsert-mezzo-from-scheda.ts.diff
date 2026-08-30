@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/upsert-mezzo-from-scheda.ts b/lib/mezzi/upsert-mezzo-from-scheda.ts
+index 28b9a594..0bdf9fda 100644
+--- a/lib/mezzi/upsert-mezzo-from-scheda.ts
++++ b/lib/mezzi/upsert-mezzo-from-scheda.ts
+@@ -85,7 +85,7 @@ export async function upsertMezzoFromSchedaIngresso(
+   const {
+     fields,
+     mezziCatalog,
+-    create,
++    
+     update,
+     applyAssociationChange,
+     preferredMezzoId,

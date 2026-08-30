@@ -1,108 +1,108 @@
 {
-  "generatedAt": "2026-08-24T18:36:09.297Z",
+  "generatedAt": "2026-08-30T19:08:47.252Z",
   "failures": [
     {
       "route": "*",
       "metric": "firstLoadJsKb",
-      "value": 2795.8,
+      "value": 1930.9,
       "max": 1900,
-      "message": "Global first load 2795.8KB > 1900KB"
+      "message": "Global first load 1930.9KB > 1900KB"
     },
     {
       "route": "/lavorazioni",
       "metric": "maxFirstLoadJsKb",
-      "value": 2010.1,
+      "value": 1914.8,
       "max": 1900,
-      "message": "/lavorazioni first load 2010.1KB > 1900KB"
+      "message": "/lavorazioni first load 1914.8KB > 1900KB"
     },
     {
       "route": "/report",
       "metric": "maxFirstLoadJsKb",
-      "value": 2027.1,
+      "value": 1930.9,
       "max": 1900,
-      "message": "/report first load 2027.1KB > 1900KB"
+      "message": "/report first load 1930.9KB > 1900KB"
     },
     {
       "route": "/mezzi",
       "metric": "maxFirstLoadJsKb",
-      "value": 2009.6,
+      "value": 1914.3,
       "max": 1900,
-      "message": "/mezzi first load 2009.6KB > 1900KB"
+      "message": "/mezzi first load 1914.3KB > 1900KB"
     },
     {
       "route": "/magazzino",
       "metric": "maxFirstLoadJsKb",
-      "value": 2010.1,
+      "value": 1914.8,
       "max": 1900,
-      "message": "/magazzino first load 2010.1KB > 1900KB"
+      "message": "/magazzino first load 1914.8KB > 1900KB"
     },
     {
       "route": "/dashboard",
       "metric": "maxFirstLoadJsKb",
-      "value": 2009.6,
+      "value": 1914.3,
       "max": 1900,
-      "message": "/dashboard first load 2009.6KB > 1900KB"
+      "message": "/dashboard first load 1914.3KB > 1900KB"
     },
     {
       "route": "/documenti",
       "metric": "maxFirstLoadJsKb",
-      "value": 2009.6,
+      "value": 1914.3,
       "max": 1900,
-      "message": "/documenti first load 2009.6KB > 1900KB"
+      "message": "/documenti first load 1914.3KB > 1900KB"
     },
     {
       "route": "/impostazioni",
       "metric": "maxFirstLoadJsKb",
-      "value": 2010.3,
+      "value": 1915,
       "max": 1900,
-      "message": "/impostazioni first load 2010.3KB > 1900KB"
+      "message": "/impostazioni first load 1915KB > 1900KB"
     },
     {
       "route": "/sicurezza",
       "metric": "maxFirstLoadJsKb",
-      "value": 2009.6,
+      "value": 1914.3,
       "max": 1900,
-      "message": "/sicurezza first load 2009.6KB > 1900KB"
+      "message": "/sicurezza first load 1914.3KB > 1900KB"
     },
     {
       "route": "/lavorazioni-clienti",
       "metric": "maxFirstLoadJsKb",
-      "value": 2009.6,
+      "value": 1914.3,
       "max": 1400,
-      "message": "/lavorazioni-clienti first load 2009.6KB > 1400KB"
+      "message": "/lavorazioni-clienti first load 1914.3KB > 1400KB"
     },
     {
       "route": "/login",
       "metric": "maxFirstLoadJsKb",
-      "value": 1817.4,
+      "value": 1825.6,
       "max": 1700,
-      "message": "/login first load 1817.4KB > 1700KB"
+      "message": "/login first load 1825.6KB > 1700KB"
     },
     {
       "route": "/privacy-policy",
       "metric": "maxFirstLoadJsKb",
-      "value": 1819.8,
+      "value": 1828,
       "max": 1700,
-      "message": "/privacy-policy first load 1819.8KB > 1700KB"
+      "message": "/privacy-policy first load 1828KB > 1700KB"
     },
     {
       "route": "/termini-e-condizioni",
       "metric": "maxFirstLoadJsKb",
-      "value": 1819.8,
+      "value": 1828,
       "max": 1700,
-      "message": "/termini-e-condizioni first load 1819.8KB > 1700KB"
+      "message": "/termini-e-condizioni first load 1828KB > 1700KB"
     },
     {
       "route": "/offline",
       "metric": "maxFirstLoadJsKb",
-      "value": 1817.4,
+      "value": 1825.6,
       "max": 1700,
-      "message": "/offline first load 1817.4KB > 1700KB"
+      "message": "/offline first load 1825.6KB > 1700KB"
     }
   ],
   "warnings": [],
   "snapshot": {
-    "firstLoadJsKb": 2795.8,
-    "vendorChunkKb": 448.9
+    "firstLoadJsKb": 1930.9,
+    "vendorChunkKb": 457.8
   }
 }

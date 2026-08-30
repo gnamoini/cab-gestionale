@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/gestionale-top-notice.tsx b/components/gestionale/gestionale-top-notice.tsx
+index d452644c..54068857 100644
+--- a/components/gestionale/gestionale-top-notice.tsx
++++ b/components/gestionale/gestionale-top-notice.tsx
+@@ -156,6 +156,7 @@ export function useGestionaleTopNotice(id: string, options: UseGestionaleTopNoti
+ 
+   useEffect(() => {
+     if (!visible) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setDelayedVisible(false);
+       return;
+     }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { TruncatedTextTooltip } from "@/components/ui";
 import { gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog-styles";
 import {
   GestionaleModalFooterCancelButton,
@@ -52,10 +53,12 @@ export function OrdineFornitoreDeliveryModal({
   const gestToast = useGestionaleToast();
   const [lines, setLines] = useState<LineState[]>(() => buildLineStates(record));
   const [pending, setPending] = useState(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const batchIdRef = useMemo(() => crypto.randomUUID(), [record.id, open]);
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLines(buildLineStates(record));
   }, [open, record]);
 
@@ -125,9 +128,7 @@ export function OrdineFornitoreDeliveryModal({
                   className="border-b border-[color:color-mix(in_srgb,var(--cab-border)_55%,transparent)]"
                 >
                   <td className="max-w-[14rem] py-1.5 pe-2">
-                    <div className="truncate font-medium" title={line.descrizione}>
-                      {line.descrizione}
-                    </div>
+                    <TruncatedTextTooltip text={line.descrizione} className="truncate font-medium" />
                     {line.codice ? (
                       <div className="font-mono text-[10px] text-[color:var(--cab-text-muted)]">{line.codice}</div>
                     ) : null}

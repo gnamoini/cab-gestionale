@@ -1,0 +1,12 @@
+diff --git a/lib/theme/theme-runtime-store.test.ts b/lib/theme/theme-runtime-store.test.ts
+index df3310ec..a0266fbc 100644
+--- a/lib/theme/theme-runtime-store.test.ts
++++ b/lib/theme/theme-runtime-store.test.ts
+@@ -1,7 +1,6 @@
+ import assert from "node:assert/strict";
+ import {
+   DEFAULT_PERSISTED_THEME_MODE,
+-  type PersistedThemeMode,
+ } from "@/lib/theme/user-theme-prefs";
+ import {
+   getThemeRuntimeState,

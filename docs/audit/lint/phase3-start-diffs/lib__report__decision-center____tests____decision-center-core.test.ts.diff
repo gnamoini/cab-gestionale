@@ -1,0 +1,12 @@
+diff --git a/lib/report/decision-center/__tests__/decision-center-core.test.ts b/lib/report/decision-center/__tests__/decision-center-core.test.ts
+index 02443975..30258d3a 100644
+--- a/lib/report/decision-center/__tests__/decision-center-core.test.ts
++++ b/lib/report/decision-center/__tests__/decision-center-core.test.ts
+@@ -1,7 +1,6 @@
+ import assert from "node:assert/strict";
+ import {
+   buildCandidateFingerprint,
+-  buildConditionHash,
+ } from "@/lib/report/decision-center/fingerprint/decision-fingerprint";
+ import { canTransitionDecisionStatus } from "@/lib/report/decision-center/state/decision-status-transitions";
+ import { mergeCandidatesWithPersistence } from "@/lib/report/decision-center/engine/merge-decision-with-persistence";

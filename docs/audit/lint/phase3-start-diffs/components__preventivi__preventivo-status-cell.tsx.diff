@@ -1,0 +1,31 @@
+diff --git a/components/preventivi/preventivo-status-cell.tsx b/components/preventivi/preventivo-status-cell.tsx
+index a286077a..fb1e05f4 100644
+--- a/components/preventivi/preventivo-status-cell.tsx
++++ b/components/preventivi/preventivo-status-cell.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
++import { Tooltip } from "@/components/ui";
+ import { statoPillShellClass } from "@/lib/lavorazioni/lavorazioni-pill-styles";
+ import {
+   PREVENTIVO_STATO_EDITOR_ITEMS,
+@@ -28,13 +29,11 @@ export function PreventivoStatusCell({
+ 
+   if (!canWrite) {
+     return (
+-      <span
+-        className={statoPillShellClass()}
+-        style={preventivoWorkflowPillStyle(workflow)}
+-        title={preventivoWorkflowLabel(workflow)}
+-      >
+-        {preventivoWorkflowLabel(workflow)}
+-      </span>
++      <Tooltip content={preventivoWorkflowLabel(workflow)}>
++        <span className={statoPillShellClass()} style={preventivoWorkflowPillStyle(workflow)}>
++          {preventivoWorkflowLabel(workflow)}
++        </span>
++      </Tooltip>
+     );
+   }
+ 

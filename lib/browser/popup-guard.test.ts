@@ -7,7 +7,6 @@ import {
   openSafePopup,
   registerPopupBlockedDialogHandler,
   resolvePopupRetrySessionUrl,
-  retryPopupFromSession,
 } from "@/lib/browser/popup-guard";
 import {
   clearPopupRetrySession,

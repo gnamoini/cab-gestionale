@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-dashboard-promemoria.ts b/src/hooks/use-dashboard-promemoria.ts
+index de042407..409fb63f 100644
+--- a/src/hooks/use-dashboard-promemoria.ts
++++ b/src/hooks/use-dashboard-promemoria.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useEffect, useMemo } from "react";
++import { useMemo } from "react";
+ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+ import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
+ import {

@@ -1,0 +1,13 @@
+diff --git a/lib/observability/runtime-coordination-tracer.ts b/lib/observability/runtime-coordination-tracer.ts
+index 66ef42aa..a15318eb 100644
+--- a/lib/observability/runtime-coordination-tracer.ts
++++ b/lib/observability/runtime-coordination-tracer.ts
+@@ -2,7 +2,7 @@ import { isRuntimeCoordinationTraceEnabled } from "@/lib/observability/config";
+ import { getActiveCorrelationId } from "@/lib/observability/runtime-correlation-context";
+ import type {
+   RuntimeCoordinationEvent,
+-  RuntimeCoordinationEventType,
++
+   RuntimeTraceFilter,
+ } from "@/lib/observability/runtime-coordination-types";
+ import { RUNTIME_TRACE_RING_MAX } from "@/lib/observability/runtime-coordination-types";

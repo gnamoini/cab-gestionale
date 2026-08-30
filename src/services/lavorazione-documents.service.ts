@@ -3,7 +3,7 @@
 import { LAVORAZIONE_DOCUMENTS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
+import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 /** @deprecated Upload manuali rimossi — documenti ufficiali via pdf_artifacts SSOT. */
@@ -25,19 +25,16 @@ export const lavorazioneDocumentsService = {
     }
   },
 
-  async upload(
-    _lavorazioneId: string,
-    _tipo: LavorazioneDocumentTipo,
-    _file: File,
-  ): Promise<ServiceResult<LavorazioneDocumentRow>> {
+  async upload(): Promise<ServiceResult<LavorazioneDocumentRow>> {
     return err("Upload documenti lavorazione non più supportato. Usare preventivi/DDT ufficiali.");
   },
 
-  async remove(_lavorazioneId: string, _tipo: LavorazioneDocumentTipo): Promise<ServiceResult<null>> {
+  async remove(): Promise<ServiceResult<null>> {
     return err("Rimozione documenti lavorazione non più supportata.");
   },
 
-  async purgeForLavorazione(_lavorazioneId: string): Promise<ServiceResult<null>> {
+  async purgeForLavorazione(lavorazioneId: string): Promise<ServiceResult<null>> {
+    void lavorazioneId;
     return success(null);
   },
 };

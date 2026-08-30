@@ -99,7 +99,7 @@ assert.doesNotMatch(bellSrc, /100vw/);
 
 assert.match(dispatchSrc, /isCabSyncToastSuppressed/);
 assert.match(magBridgeSrc, /markCabSyncToastSuppressed/);
-assert.match(realtimeSrc, /Impostazioni aggiornate da un altro utente/);
+assert.match(realtimeSrc, /remoteSettingsNotifyMessage/);
 
 assert.doesNotMatch(magBridgeSrc, /publishNotification/);
 assert.doesNotMatch(lavBridgeSrc, /publishNotification/);

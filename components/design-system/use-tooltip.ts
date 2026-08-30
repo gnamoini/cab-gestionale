@@ -164,7 +164,7 @@ export function useTooltip({
       refs.setFloating(node);
       contentRef.current = node;
     },
-    [contentRef, refs.setFloating],
+    [contentRef, refs],
   );
 
   const setReferenceRef = refs.setReference;
@@ -260,10 +260,12 @@ export function useTooltip({
     };
   }, [hideImmediate]);
 
+   
   useLayoutEffect(() => {
     if (!open) {
       const node = contentRef.current;
       if (node?.isConnected) hideTooltipPopover(node);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setVisible((v) => (v ? false : v));
       return;
     }
@@ -298,7 +300,7 @@ export function useTooltip({
   }, [clearShowTimer, clearHideTimer, clearTouchTimer, clearTouchGhostTimer]);
 
   const onMouseEnter = useCallback(
-    (_e: MouseEvent<HTMLElement>) => {
+    () => {
       if (coarsePointerRef.current) return;
       if (touchGhostRef.current) return;
       show();
@@ -307,7 +309,7 @@ export function useTooltip({
   );
 
   const onMouseLeave = useCallback(
-    (_e: MouseEvent<HTMLElement>) => {
+    () => {
       if (coarsePointerRef.current) return;
       pointerActivatedRef.current = false;
       hide();
@@ -326,7 +328,7 @@ export function useTooltip({
   );
 
   const onBlur = useCallback(
-    (_e: FocusEvent<HTMLElement>) => {
+    () => {
       pointerActivatedRef.current = false;
       hide();
     },
@@ -353,7 +355,7 @@ export function useTooltip({
   }, [hideImmediate]);
 
   const onTouchStart = useCallback(
-    (_e: TouchEvent<HTMLElement>) => {
+    () => {
       if (!canShow) return;
       clearTouchTimer();
       touchTimerRef.current = setTimeout(() => {
@@ -364,7 +366,7 @@ export function useTooltip({
   );
 
   const onTouchEnd = useCallback(
-    (_e: TouchEvent<HTMLElement>) => {
+    () => {
       clearTouchTimer();
       armTouchGhostMouseGuard();
       hide();
@@ -373,7 +375,7 @@ export function useTooltip({
   );
 
   const onTouchCancel = useCallback(
-    (_e: TouchEvent<HTMLElement>) => {
+    () => {
       clearTouchTimer();
       armTouchGhostMouseGuard();
       hide();
@@ -382,7 +384,7 @@ export function useTooltip({
   );
 
   const onTouchMove = useCallback(
-    (_e: TouchEvent<HTMLElement>) => {
+    () => {
       clearTouchTimer();
     },
     [clearTouchTimer],

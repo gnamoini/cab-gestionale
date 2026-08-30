@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
 import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
 import {

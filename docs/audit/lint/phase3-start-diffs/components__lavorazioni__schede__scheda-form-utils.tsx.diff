@@ -1,0 +1,12 @@
+diff --git a/components/lavorazioni/schede/scheda-form-utils.tsx b/components/lavorazioni/schede/scheda-form-utils.tsx
+index 81bd04db..53445934 100644
+--- a/components/lavorazioni/schede/scheda-form-utils.tsx
++++ b/components/lavorazioni/schede/scheda-form-utils.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
++import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from "react";
+ import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
+ import { GestionaleTextarea, type GestionaleTextareaProps } from "@/components/gestionale/gestionale-textarea";
+ import { GlobalDatePicker } from "@/components/gestionale/global-input";

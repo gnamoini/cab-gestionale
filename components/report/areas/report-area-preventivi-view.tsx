@@ -39,7 +39,10 @@ function PreventiviDettaglioTable() {
   const { canReadPage } = useRbac();
   const canPreventivi = canReadPage("preventivi");
   const preventiviQ = usePreventiviRecordsQuery(canPreventivi);
-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
+  const preventivi = useMemo(
+    () => (preventiviQ.isError ? [] : preventiviQ.records),
+    [preventiviQ.isError, preventiviQ.records],
+  );
 
   const rows = useMemo(() => {
     return buildPreventiviFunnel(preventivi, range).map((r) => ({

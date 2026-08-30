@@ -25,7 +25,7 @@ import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 export function ReportMaintenanceZone({
   attive,
   completate,
-  manualEntries,
+  
   anchor,
   filterRange,
   compareDetail,

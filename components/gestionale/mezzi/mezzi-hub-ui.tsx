@@ -1,6 +1,5 @@
 "use client";
 
-import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 
 export type MezziHubTabId =

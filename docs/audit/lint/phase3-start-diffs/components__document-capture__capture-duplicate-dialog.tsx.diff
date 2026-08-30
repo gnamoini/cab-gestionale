@@ -1,0 +1,15 @@
+diff --git a/components/document-capture/capture-duplicate-dialog.tsx b/components/document-capture/capture-duplicate-dialog.tsx
+index 27e93aa6..4ca4b7f9 100644
+--- a/components/document-capture/capture-duplicate-dialog.tsx
++++ b/components/document-capture/capture-duplicate-dialog.tsx
+@@ -67,8 +67,10 @@ export function CaptureDuplicateDialog({
+   const [forceOpen, setForceOpen] = useState(false);
+   const [reason, setReason] = useState("");
+ 
++   
+   useEffect(() => {
+     if (!open || !duplicateCaptureId) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setCtx(null);
+       setForceOpen(false);
+       setReason("");

@@ -1,7 +1,6 @@
 "use client";
 
-import { TruncatedTextTooltip } from "@/components/design-system/truncated-text-tooltip";
-import { Tooltip } from "@/components/design-system";
+import { TruncatedTextTooltip, Tooltip } from "@/components/ui";
 import { useMemo, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";

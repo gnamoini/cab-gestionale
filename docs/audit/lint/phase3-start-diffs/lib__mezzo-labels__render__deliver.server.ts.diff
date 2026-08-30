@@ -1,0 +1,128 @@
+diff --git a/lib/mezzo-labels/render/deliver.server.ts b/lib/mezzo-labels/render/deliver.server.ts
+index 0fad1d8c..ef528d30 100644
+--- a/lib/mezzo-labels/render/deliver.server.ts
++++ b/lib/mezzo-labels/render/deliver.server.ts
+@@ -2,6 +2,8 @@ import "server-only";
+ 
+ import { after } from "next/server";
+ import type { SupabaseClient } from "@supabase/supabase-js";
++import { MEZZO_LABEL_ENTITY_TYPE } from "@/lib/mezzo-labels/domain/types";
++import { computeMezzoLabelFingerprint } from "@/lib/mezzo-labels/domain/fingerprint";
+ import { buildMezzoQrUrl } from "@/lib/mezzo-labels/domain/tokens";
+ import { ensureActiveMezzoQrToken } from "@/lib/mezzo-labels/domain/tokens.server";
+ import type { MezzoLabelFormat, MezzoLabelPayload } from "@/lib/mezzo-labels/domain/types";
+@@ -9,6 +11,12 @@ import { writeMezzoLabelEvent } from "@/lib/mezzo-labels/audit/events.server";
+ import { renderMezzoLabelsPdf, renderSingleMezzoLabelPdf } from "@/lib/mezzo-labels/render/pdf";
+ import { renderMezzoLabelPng } from "@/lib/mezzo-labels/render/png";
+ import { renderMezzoLabelSvgBytes } from "@/lib/mezzo-labels/render/svg";
++import {
++  downloadLabelArtifact,
++  getLabelArtifactByHash,
++  uploadLabelArtifactBestEffort,
++} from "@/lib/inventory-labels/storage/artifacts.server";
++import { MEZZO_LABEL_TEMPLATE } from "@/lib/mezzo-labels/domain/template";
+ 
+ export type DeliverMezzoLabelInput = {
+   sb: SupabaseClient;
+@@ -25,6 +33,7 @@ export type DeliverMezzoLabelResult = {
+   contentType: string;
+   fileName: string;
+   token: string;
++  cacheStatus: "HIT" | "MISS";
+ };
+ 
+ function contentTypeForFormat(format: MezzoLabelFormat): string {
+@@ -38,11 +47,75 @@ function fileNameForMezzo(payload: MezzoLabelPayload, format: MezzoLabelFormat):
+   return `etichetta-mezzo-${safe}.${format}`;
+ }
+ 
++async function tryMezzoLabelCache(
++  sb: SupabaseClient,
++  mezzoId: string,
++  hash: string,
++  format: MezzoLabelFormat,
++): Promise<Uint8Array | null> {
++  const cached = await getLabelArtifactByHash(sb, {
++    entityType: MEZZO_LABEL_ENTITY_TYPE,
++    entityId: mezzoId,
++    hash,
++    format,
++  });
++  if (!cached) return null;
++  return downloadLabelArtifact(cached.storage_path);
++}
++
++async function storeMezzoLabelCache(
++  sb: SupabaseClient,
++  mezzoId: string,
++  hash: string,
++  format: MezzoLabelFormat,
++  bytes: Uint8Array,
++): Promise<void> {
++  const storagePath = await uploadLabelArtifactBestEffort({
++    entityType: MEZZO_LABEL_ENTITY_TYPE,
++    entityId: mezzoId,
++    hash,
++    format,
++    bytes,
++  });
++  if (!storagePath) return;
++  await sb.from("inventory_label_artifacts").upsert(
++    {
++      entity_type: MEZZO_LABEL_ENTITY_TYPE,
++      entity_id: mezzoId,
++      hash,
++      format,
++      preset: "mezzo-keychain-50x22",
++      template_id: MEZZO_LABEL_TEMPLATE.id,
++      storage_path: storagePath,
++      generator_version: MEZZO_LABEL_TEMPLATE.version,
++      template_version: MEZZO_LABEL_TEMPLATE.version,
++    },
++    { onConflict: "entity_type,entity_id,hash,format", ignoreDuplicates: true },
++  );
++}
++
+ export async function deliverMezzoLabel(input: DeliverMezzoLabelInput): Promise<DeliverMezzoLabelResult> {
+   const tokenRow = await ensureActiveMezzoQrToken(input.sb, input.mezzoId, input.userId);
++  const canonicalOrigin = input.origin.replace(/\/+$/, "");
+   const qrUrl = buildMezzoQrUrl(tokenRow.token, input.origin);
+-  const slot = { payload: input.payload, qrUrl };
++  const hash = computeMezzoLabelFingerprint({
++    payload: input.payload,
++    qrToken: tokenRow.token,
++    canonicalOrigin,
++  });
+ 
++  const cachedBytes = await tryMezzoLabelCache(input.sb, input.mezzoId, hash, input.format);
++  if (cachedBytes) {
++    return {
++      bytes: cachedBytes,
++      contentType: contentTypeForFormat(input.format),
++      fileName: fileNameForMezzo(input.payload, input.format),
++      token: tokenRow.token,
++      cacheStatus: "HIT",
++    };
++  }
++
++  const slot = { payload: input.payload, qrUrl };
+   let bytes: Uint8Array;
+   if (input.format === "pdf") {
+     bytes = await renderSingleMezzoLabelPdf(slot);
+@@ -52,6 +125,8 @@ export async function deliverMezzoLabel(input: DeliverMezzoLabelInput): Promise<
+     bytes = new Uint8Array(await renderMezzoLabelPng(input.payload, qrUrl));
+   }
+ 
++  await storeMezzoLabelCache(input.sb, input.mezzoId, hash, input.format, bytes);
++
+   scheduleMezzoLabelPrintedAudit(input.sb, {
+     mezzoId: input.mezzoId,
+     userId: input.userId,
+@@ -65,6 +140,7 @@ export async function deliverMezzoLabel(input: DeliverMezzoLabelInput): Promise<
+     contentType: contentTypeForFormat(input.format),
+     fileName: fileNameForMezzo(input.payload, input.format),
+     token: tokenRow.token,
++    cacheStatus: "MISS",
+   };
+ }
+ 

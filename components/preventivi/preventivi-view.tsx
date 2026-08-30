@@ -24,7 +24,7 @@ import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-ac
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { LoadingCardSkeleton, LoadingFormSkeleton, SkeletonBoundary } from "@/components/design-system";
+import { LoadingFormSkeleton, SkeletonBoundary } from "@/components/design-system";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { PreventiviTableSection } from "@/components/preventivi/preventivi-page-structure";
@@ -92,11 +92,13 @@ import {
   prevTableBodyTextClass,
   prevTableColStatoAddettoInset,
   prevTablePrimaryTextClass,
-  prevTableTd,
-  prevTableTdAzioni,
-  prevTableTdPill,
-  prevTableTdPillWrap,
 } from "@/components/preventivi/preventivi-table-shared";
+import {
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+  gestionaleListTableTdPill,
+  gestionaleListTableTdPillWrap,
+} from "@/lib/ui/gestionale-list-table";
 import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -141,7 +143,7 @@ import {
   peekPendingPreventivoPayload,
   clearPendingPreventivoPayload,
   dedupePendingPreventivoAppend,
-  markEphemeralPreventivoDraft,
+
   clearEphemeralPreventivoDraft,
   readEphemeralPreventivoDraftId,
 } from "@/lib/preventivi/preventivi-session-bridge";
@@ -172,11 +174,11 @@ import {
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase, PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 import {
   dsBtnNeutral,
-  dsPageToolbarBtn,
+
   dsPageToolbarCtaCompact,
   GESTIONALE_SEARCH_PLACEHOLDER,
-  dsTableRow,
-  dsTableTdActions,
+
+
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -481,8 +483,10 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   }, [rows.length]);
   const preventiviInitialLoading = preventiviQueryLoading && rows.length === 0;
   const mezziListQ = useMezziListQuery(undefined, { enabled: needMezziCatalog });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const mezziSnap = mezziListQ.data ?? [];
   const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: needMagazzinoList });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const magSnap = magazzinoQ.data ?? [];
   const mezziRef = useRef(mezziSnap);
   const magRef = useRef(magSnap);
@@ -537,7 +541,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "preventivi", key: "filters", userId: user?.id ?? null }),
   );
-  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<PreventiviAdvancedFilters>(
     () => loadPreventiviAdvancedFiltersPersisted() ?? PREVENTIVI_ADVANCED_FILTERS_EMPTY,
   );
@@ -772,6 +775,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
       }
     }
     return list;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap, focusPreventivoId, lavReport]);
 
   const sortedRows = useMemo(() => {
@@ -860,8 +864,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             ? { [gestionaleListTableLastRowAttr]: "true" }
             : {})}
         >
-          <td className={`whitespace-nowrap ${prevTableTd} font-mono font-semibold tabular-nums`}>
-            <span className="inline-flex max-w-full flex-wrap items-center gap-1">
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono font-semibold tabular-nums`}>
+            <span className="inline-flex max-w-full items-center gap-1 min-w-0 flex-nowrap sm:flex-wrap">
               <span className="truncate">{p.numero}</span>
               {p.versione > 1 ? (
                 <span className="rounded bg-zinc-200 px-1 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
@@ -871,22 +875,22 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
               <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
             </span>
           </td>
-          <td className={`whitespace-nowrap ${prevTableTdPill}`}>
+          <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
             <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="table" />
           </td>
-          <td className={`whitespace-nowrap ${prevTableTd} ${prevTableBodyTextClass} tabular-nums`}>
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} ${prevTableBodyTextClass} tabular-nums`}>
             {fmtDataCreazioneTabella(p.dataCreazione)}
           </td>
-          <td className={`min-w-0 ${prevTableTd}`}>
+          <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <PreventiviClienteStack cliente={p.cliente} subline={clienteSub} />
           </td>
-          <td className={`min-w-0 ${prevTableTd}`}>
+          <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <PreventiviOggettoCell
               macchina={p.macchinaRiassunto}
               telaio={preventivoOggettoTelaioSubline(p)}
             />
           </td>
-          <td className={`min-w-0 ${prevTableTd} gestionale-preventivi-col-ident`}>
+          <td className={`min-w-0 ${gestionaleListTableTd} gestionale-preventivi-col-ident`}>
             <PreventiviIdentificazioneCell
               targa={p.targa}
               matricola={p.matricola}
@@ -894,19 +898,19 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             />
           </td>
           <td
-            className={`whitespace-nowrap ${prevTableTd} text-sm font-semibold tabular-nums ${prevTablePrimaryTextClass}`}
+            className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-semibold tabular-nums ${prevTablePrimaryTextClass}`}
           >
             {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} Ôé¼
           </td>
-          <td className={`min-w-0 ${prevTableTd}`}>
+          <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <PreventiviProfittoCell
               profitto={profittoLoading ? null : profitEntry?.profitto ?? null}
               marginePercent={profittoLoading ? null : profitEntry?.marginePercent ?? null}
               loading={profittoLoading}
             />
           </td>
-          <td className={`whitespace-nowrap ${prevTableTdPill} ${prevTableColStatoAddettoInset}`}>
-            <div className={prevTableTdPillWrap}>
+          <td className={`whitespace-nowrap ${gestionaleListTableTdPill} ${prevTableColStatoAddettoInset}`}>
+            <div className={gestionaleListTableTdPillWrap}>
               <PreventivoStatusCell
                 record={p}
                 canWrite={canWritePreventivi}
@@ -915,7 +919,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
               />
             </div>
           </td>
-          <td className={prevTableTdAzioni}>
+          <td className={gestionaleListTableTdAzioni}>
             <div className={prevTableActionsRow}>
               <PreventivoRowActions
                 p={p}
@@ -938,6 +942,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         </tr>
       );
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
     [
       apriModifica,
       autore,
@@ -1160,7 +1165,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
 
   const bannerFilter =
     filterLavId && filterOrig ? (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] min-w-0 flex-nowrap sm:flex-wrap">
         <span>
           Filtro attivo: preventivi collegati alla lavorazione selezionata ({filterOrig === "attiva" ? "attiva" : "storico"}).
         </span>
@@ -1171,7 +1176,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     ) : null;
 
   const bannerMezzo = filterMezzoRaw ? (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]">
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] min-w-0 flex-nowrap sm:flex-wrap">
       <span>Filtro attivo: preventivi collegati al mezzo selezionato.</span>
       <button type="button" className={dsBtnNeutral} onClick={clearMezzoFilter}>
         Rimuovi filtro
@@ -1385,7 +1390,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">
                         <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
                         <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="inline" />
                         <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />

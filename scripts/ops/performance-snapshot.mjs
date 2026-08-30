@@ -103,7 +103,6 @@ async function main() {
 
   const linkedDb = canRunLinkedDb();
   const explainQueries = buildExplainQueries();
-  const explainById = Object.fromEntries(explainQueries.map((q) => [q.id, q]));
 
   let explainSummary = [];
   if (linkedDb) {

@@ -1,6 +1,5 @@
 import type { AssetComplianceRuleRow, AssetTimelineProjectionRow } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import { ymdFromDate } from "@/lib/report/date-ranges";
 
 export type AssetLifecycleKpiModel = {
   mezziWithUpcomingCompliance: Array<{
@@ -43,7 +42,6 @@ function daysBetween(from: Date, to: Date): number {
 
 export function buildAssetLifecycleKpiModel(input: BuildAssetLifecycleKpiInput): AssetLifecycleKpiModel {
   const anchor = input.anchor;
-  const todayYmd = ymdFromDate(anchor);
 
   const mezziWithUpcomingCompliance = input.complianceRules
     .filter((r) => r.is_active && r.next_due_at)

@@ -1,0 +1,11 @@
+diff --git a/components/gestionale/magazzino/magazzino-modals.tsx b/components/gestionale/magazzino/magazzino-modals.tsx
+index 231571c2..4d00034e 100644
+--- a/components/gestionale/magazzino/magazzino-modals.tsx
++++ b/components/gestionale/magazzino/magazzino-modals.tsx
+@@ -1,6 +1,5 @@
+ "use client";
+ 
+-import { useEffect, type ReactElement } from "react";
+ import { DisabledElementTooltip } from "@/components/ui";
+ import { gestionaleModalFooterSaveBtnClass } from "@/components/design-system";
+ import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";

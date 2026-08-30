@@ -1,0 +1,13 @@
+diff --git a/src/shared/selectors/lavorazioni-stati-db.ts b/src/shared/selectors/lavorazioni-stati-db.ts
+index 27874541..1b761236 100644
+--- a/src/shared/selectors/lavorazioni-stati-db.ts
++++ b/src/shared/selectors/lavorazioni-stati-db.ts
+@@ -76,7 +76,7 @@ export function statiLavorazioniRapidiOptions(stati: StatoLavorazioneConfig[]):
+ }
+ 
+ /** @deprecated Enum pool rimosso — aggiunta libera in impostazioni. */
+-export function statiEnumDisponibiliDaAggiungere(_configured: StatoLavorazioneConfig[]): StatoLavorazioneConfig[] {
++export function statiEnumDisponibiliDaAggiungere(): StatoLavorazioneConfig[] {
+   return [];
+ }
+ 

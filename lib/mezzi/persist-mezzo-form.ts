@@ -19,7 +19,7 @@ function formToMezzoTelaioPayload(f: MezzoFormState): MezzoInsert {
 
 function formToMezzoUpdateWithoutAssociation(f: MezzoFormState): MezzoUpdate {
   const full = formToMezzoTelaioPayload(f);
-  const { cliente: _c, utilizzatore: _u, meta, ...rest } = full;
+  const { meta, ...rest } = full;
   const metaObj =
     meta && typeof meta === "object" && !Array.isArray(meta)
       ? { ...(meta as Record<string, unknown>) }

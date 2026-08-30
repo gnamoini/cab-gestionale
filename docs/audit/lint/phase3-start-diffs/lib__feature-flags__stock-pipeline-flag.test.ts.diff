@@ -1,0 +1,37 @@
+diff --git a/lib/feature-flags/stock-pipeline-flag.test.ts b/lib/feature-flags/stock-pipeline-flag.test.ts
+index 4b4c7878..bf539eab 100644
+--- a/lib/feature-flags/stock-pipeline-flag.test.ts
++++ b/lib/feature-flags/stock-pipeline-flag.test.ts
+@@ -3,7 +3,7 @@ import {
+   isStockPipelineClientEnabled,
+   isStockPipelineEmergencyFallback,
+   isStockPipelineServerEnabled,
+-  useDeterministicStockPipeline,
++  isDeterministicStockPipelineActive,
+ } from "@/lib/feature-flags/stock-pipeline";
+ 
+ const origClient = process.env.NEXT_PUBLIC_STOCK_PIPELINE_V3;
+@@ -16,19 +16,19 @@ try {
+   delete process.env.STOCK_PIPELINE_EMERGENCY;
+   assert.equal(isStockPipelineClientEnabled(), true);
+   assert.equal(isStockPipelineServerEnabled(), true);
+-  assert.equal(useDeterministicStockPipeline(), true);
++  assert.equal(isDeterministicStockPipelineActive(), true);
+ 
+   process.env.NEXT_PUBLIC_STOCK_PIPELINE_V3 = "false";
+   assert.equal(isStockPipelineClientEnabled(), false);
+-  assert.equal(useDeterministicStockPipeline(), false);
++  assert.equal(isDeterministicStockPipelineActive(), false);
+ 
+   process.env.STOCK_PIPELINE_EMERGENCY = "true";
+   assert.equal(isStockPipelineEmergencyFallback(), true);
+-  assert.equal(useDeterministicStockPipeline(), false);
++  assert.equal(isDeterministicStockPipelineActive(), false);
+ 
+   process.env.NEXT_PUBLIC_STOCK_PIPELINE_V3 = "true";
+   delete process.env.STOCK_PIPELINE_EMERGENCY;
+-  assert.equal(useDeterministicStockPipeline(), true);
++  assert.equal(isDeterministicStockPipelineActive(), true);
+ } finally {
+   if (origClient === undefined) delete process.env.NEXT_PUBLIC_STOCK_PIPELINE_V3;
+   else process.env.NEXT_PUBLIC_STOCK_PIPELINE_V3 = origClient;

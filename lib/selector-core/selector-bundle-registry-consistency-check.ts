@@ -150,7 +150,6 @@ export function checkBundleRegistryConsistency(
   const bundledSet = new Set(
     options.bundledVersions ?? listBundleFiles(generatedSnapshotsDir),
   );
-  const bundleVersions = [...bundledSet].sort();
   const registryKeys = parseRegistryKeys(registryGeneratedPath);
   const registryKeySet = new Set(registryKeys);
 

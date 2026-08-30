@@ -27,7 +27,7 @@ function defineKpi(partial: Omit<HealthKpiDefinition, "normalizer"> & {
   invertTrend?: boolean;
   invertLevel?: boolean;
 }): HealthKpiDefinition {
-  const { invertTrend: _it, invertLevel: _il, ...rest } = partial;
+  const { ...rest } = partial;
   return {
     ...rest,
     trendWeight: partial.trendWeight ?? 0,

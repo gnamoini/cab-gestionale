@@ -1,0 +1,13 @@
+diff --git a/lib/preventivi/preventivi-learning-sync.ts b/lib/preventivi/preventivi-learning-sync.ts
+index 05731d6d..b48f16d3 100644
+--- a/lib/preventivi/preventivi-learning-sync.ts
++++ b/lib/preventivi/preventivi-learning-sync.ts
+@@ -3,7 +3,7 @@
+ import { PREVENTIVI_LEARNING_STORAGE_KEY } from "@/lib/preventivi/constants";
+ import {
+   loadPreventiviLearning,
+-  savePreventiviLearning,
++
+   type PreventivoLearningStore,
+ } from "@/lib/preventivi/preventivi-learning-storage";
+ import { settingsService } from "@/src/services/settings.service";

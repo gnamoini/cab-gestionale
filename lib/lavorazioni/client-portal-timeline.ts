@@ -2,7 +2,6 @@ import {
   buildClientPortalRowFields,
   clientPortalCantiereLabel,
   clientPortalClienteLabel,
-  clientPortalDataIngressoLabel,
 } from "@/lib/lavorazioni/client-portal-row-fields";
 import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";

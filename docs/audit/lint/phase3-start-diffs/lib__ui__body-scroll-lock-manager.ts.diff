@@ -1,0 +1,27 @@
+diff --git a/lib/ui/body-scroll-lock-manager.ts b/lib/ui/body-scroll-lock-manager.ts
+index ee815cf3..53e594fc 100644
+--- a/lib/ui/body-scroll-lock-manager.ts
++++ b/lib/ui/body-scroll-lock-manager.ts
+@@ -304,12 +304,11 @@ function releaseBodyScrollLock(lockId: number, epoch: number, hadMainLock: boole
+ }
+ 
+ /** Pulisce lock fantasma: stack vuoto ma stili inline o attr residui. */
+-export function healBodyScrollLockState(_reason?: string): void {
++export function healBodyScrollLockState(__reason?: string): void {
+   if (typeof document === "undefined") return;
+   if (lockStack.length > 0) return;
+ 
+   const attr = document.body.getAttribute(BODY_LOCK_ATTR);
+-  const hadAttr = Boolean(attr);
+   const wasDomLocked = isDomScrollLocked();
+   if (attr) {
+     document.body.removeAttribute(BODY_LOCK_ATTR);
+@@ -330,7 +329,7 @@ export function healBodyScrollLockState(_reason?: string): void {
+   syncLockAttr();
+ }
+ /** Reset totale — route change, error boundary, stuck probe. */
+-export function forceReleaseAllBodyScrollLocks(_reason?: string): void {
++export function forceReleaseAllBodyScrollLocks(__reason?: string): void {
+   if (typeof document === "undefined") return;
+   lockEpoch += 1;
+   lockStack = [];

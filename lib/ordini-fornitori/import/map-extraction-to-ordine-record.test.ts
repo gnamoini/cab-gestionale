@@ -16,6 +16,8 @@ const mag: MagazzinoMasterPrefs = {
       codiceFiscale: "",
       indirizzo: "Via Roma 1",
       telefono: "+39 02 0000000",
+      email: "",
+      emailAggiuntive: [],
     },
   },
 };

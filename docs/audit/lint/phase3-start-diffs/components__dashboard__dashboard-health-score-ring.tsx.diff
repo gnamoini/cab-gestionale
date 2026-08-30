@@ -1,0 +1,43 @@
+diff --git a/components/dashboard/dashboard-health-score-ring.tsx b/components/dashboard/dashboard-health-score-ring.tsx
+index b8beb53c..53ffa5a8 100644
+--- a/components/dashboard/dashboard-health-score-ring.tsx
++++ b/components/dashboard/dashboard-health-score-ring.tsx
+@@ -208,7 +208,7 @@ function HealthScoreCard({
+   );
+ }
+ 
+-function HealthScoreCardSkeleton({ title, className = "" }: { title: string; className?: string }) {
++function HealthScoreCardSkeleton({ className = "" }: { title: string; className?: string }) {
+   return (
+     <article
+       className={`${reportMetricCardCompactClass} flex min-h-0 min-w-0 flex-col ${className}`.trim()}
+@@ -307,7 +307,7 @@ function HealthScoreSynthesisCard({ calc }: { calc: NonNullable<OperationalHealt
+   return (
+     <>
+       <HealthScoreCard title="Sintesi calcolo">
+-        <div className="flex min-h-0 flex-1 flex-col">
++        <div className="flex min-h-0 flex-1 flex-col min-w-0">
+           <HealthScoreSynthesisBody calc={calc} />
+           <div className="mt-auto flex shrink-0 items-center gap-2 border-t border-[color:color-mix(in_srgb,var(--cab-border)_70%,transparent)] pt-3">
+             <HealthScoreSynthesisIntro withTitle />
+@@ -496,20 +496,6 @@ function HealthScoreSectionsBody({
+   );
+ }
+ 
+-function HealthScoreCalculationSummary({ score }: { score: OperationalHealthScore }) {
+-  const calc = score.calculation;
+-  if (!calc) return null;
+-
+-  return (
+-    <>
+-      <HealthScoreSynthesisBody calc={calc} />
+-      <div className="mt-3">
+-        <HealthScoreSynthesisIntro withTitle />
+-      </div>
+-    </>
+-  );
+-}
+-
+ export function HealthScoreSummarySkeleton() {
+   return (
+     <HealthScoreLayout

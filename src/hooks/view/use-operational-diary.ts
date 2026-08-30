@@ -24,6 +24,8 @@ export function useOperationalDiaryQuery(
 }
 
 export function useOperationalDiaryUpsertMutation(_fromYmd?: string, _toYmd?: string) {
+  void _fromYmd;
+  void _toYmd;
   return useServiceMutation((payload: OperationalDiaryUpsert) => operationalDiaryEntry.upsert(payload), {
     invalidateQueryKeys: [QK.operationalDiary],
   });

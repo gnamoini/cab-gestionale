@@ -10,7 +10,6 @@ import { ordineFornitoreLogisticaToRecord } from "@/lib/ordini-fornitori/ordine-
 import { defaultOrdineRigaMeta, patchRigaMeta } from "@/lib/ordini-fornitori/ordine-fornitore-riga-meta";
 import {
   buildEmptyOrdineSpesaVariaRiga,
-  ORDINE_RIGA_META_SPESA_VARIA,
 } from "@/lib/ordini-fornitori/ordine-fornitore-spesa-varia";
 import { calcolaTotaliOrdineFornitore, totaleNettoRigaOrdine } from "@/lib/ordini-fornitori/ordine-fornitore-totals";
 import type { OrdineFornitoreRecord, OrdineFornitoreRiga } from "@/lib/ordini-fornitori/types";
@@ -160,7 +159,9 @@ export function mapExtractionToOrdineRecord(input: {
         codiceFiscale,
         indirizzo: fieldValue(f?.indirizzo),
         telefono: fieldValue(f?.telefono) || "+39",
-      } as OrdineFornitoreFornitoreSnapshot);
+        email: fieldValue(f?.email),
+        emailAggiuntive: [],
+      } satisfies OrdineFornitoreFornitoreSnapshot);
     record = {
       ...record,
       fornitoreLabel: fornitoreMatch.label,

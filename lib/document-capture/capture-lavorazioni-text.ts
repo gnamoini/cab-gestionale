@@ -109,7 +109,7 @@ function polishCaptureLavorazioniLine(line: string): string {
   for (const [pattern, replacement] of INLINE_WORKSHOP_ABBREVS) {
     body = body.replace(pattern, replacement);
   }
-  let result = formatCaptureMultilineText(body);
+  const result = formatCaptureMultilineText(body);
   return result.replace(/\bpto\b/gi, "PTO");
 }
 

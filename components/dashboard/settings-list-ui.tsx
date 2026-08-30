@@ -720,7 +720,7 @@ export function SettingsEditableStringRow({
 
   return (
     <li ref={rowRef} className={footer ? `${rowClass} !block !py-0` : rowClass}>
-      <div className="flex min-h-11 min-w-0 w-full flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:gap-x-3">
+      <div className="flex min-h-11 min-w-0 w-full items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:gap-x-3 sm:flex-wrap">
         <div className="flex min-w-0 flex-1 items-center">
         {isEditing ? (
           <input

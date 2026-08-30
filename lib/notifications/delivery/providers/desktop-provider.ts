@@ -3,7 +3,7 @@ import type { DeliveryProvider } from "@/lib/notifications/delivery/providers/de
 export const desktopProvider: DeliveryProvider = {
   id: "desktop",
   channel: "desktop",
-  async deliver(ctx) {
+  async deliver() {
     return {
       success: true,
       channel: "desktop",

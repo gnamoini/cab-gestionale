@@ -1,0 +1,20 @@
+diff --git a/components/gestionale/dipendenti/dipendenti-view.tsx b/components/gestionale/dipendenti/dipendenti-view.tsx
+index 1e7cf8d3..af366124 100644
+--- a/components/gestionale/dipendenti/dipendenti-view.tsx
++++ b/components/gestionale/dipendenti/dipendenti-view.tsx
+@@ -92,7 +92,6 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
+   const [editorTarget, setEditorTarget] = useState<TimesheetEditorTarget | null>(null);
+   const [detailEmployee, setDetailEmployee] = useState<DipendenteTimesheetEmployeeRow | null>(null);
+   const [bootstrapPending, setBootstrapPending] = useState(false);
+-  const [pdfExporting, setPdfExporting] = useState(false);
+   const [accentDateYmd, setAccentDateYmd] = useState<string | null>(null);
+   const [accentFadingOut, setAccentFadingOut] = useState(false);
+   const [fillTodayBulkPending, setFillTodayBulkPending] = useState(false);
+@@ -119,6 +118,7 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
+   useEffect(() => {
+     if (!filterEmployeeId) return;
+     if (!ts.displayEmployees.some((e) => e.id === filterEmployeeId)) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setFilterEmployeeId("");
+     }
+   }, [filterEmployeeId, ts.displayEmployees]);

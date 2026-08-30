@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-08-30T03:05:17.810Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "node": "v24.15.0",
+  "npm": "11.12.1",
+  "lint": {
+    "errors": 0,
+    "warnings": 6
+  },
+  "contract": "PASS",
+  "workingTreeDirty": true,
+  "certifiableTree": {
+    "dirtyFileCount": 808,
+    "knownPreexistingCount": 744,
+    "knownPhase4Count": 64,
+    "unknownChanges": 0,
+    "untrackedUnknown": 0,
+    "gitIgnoredUntrackedSample": [
+      ".ai-prod-keys.tmp",
+      ".cursor/debug-929eab.log",
+      ".cursor/debug-a427f4.log",
+      ".cursor/debug-b7cbef.log",
+      ".cursor/debug-bd086a.log"
+    ]
+  },
+  "phase3Reference": "F:/Projects/gestionale-cab/docs/audit/lint/phase3-final-2026-08-30.json"
+}

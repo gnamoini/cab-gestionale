@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { readSection, writeSection } from "@/lib/ui/collapsible-prefs/storage";
 import type { CollapsiblePrefValue } from "@/lib/ui/collapsible-prefs/types";
 
@@ -43,9 +43,12 @@ export function useCollapsiblePreference<T>(
   const serializeRef = useRef(serialize);
   const deserializeRef = useRef(deserialize);
   const defaultValueRef = useRef(defaultValue);
-  serializeRef.current = serialize;
-  deserializeRef.current = deserialize;
-  defaultValueRef.current = defaultValue;
+
+  useLayoutEffect(() => {
+    serializeRef.current = serialize;
+    deserializeRef.current = deserialize;
+    defaultValueRef.current = defaultValue;
+  }, [serialize, deserialize, defaultValue]);
 
   const [value, setValueState] = useState<T>(defaultValue);
   const [hydrated, setHydrated] = useState(!shouldPersist);

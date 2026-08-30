@@ -52,7 +52,6 @@ export function ReportAgingBacklogStackedChart({
           const y = padT + ri * rowH + rowH * 0.15;
           const barH = rowH * 0.7;
           let x = padL;
-          const color = row.color ?? FALLBACK_COLORS[ri % FALLBACK_COLORS.length]!;
           return (
             <g key={row.statoId}>
               <text

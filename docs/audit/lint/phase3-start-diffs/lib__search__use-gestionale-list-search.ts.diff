@@ -1,0 +1,16 @@
+diff --git a/lib/search/use-gestionale-list-search.ts b/lib/search/use-gestionale-list-search.ts
+index e9e4d27e..7770b851 100644
+--- a/lib/search/use-gestionale-list-search.ts
++++ b/lib/search/use-gestionale-list-search.ts
+@@ -33,7 +33,10 @@ export function useGestionaleListSearch(
+   const [searchApplied, setSearchApplied] = useState(initialSearch.trim());
+   const flushPendingRef = useRef(false);
+   const searchInputRef = useRef(searchInput);
+-  searchInputRef.current = searchInput;
++
++  useEffect(() => {
++    searchInputRef.current = searchInput;
++  }, [searchInput]);
+ 
+   const setSearchInputLive = useCallback((value: string) => {
+     searchInputRef.current = value;

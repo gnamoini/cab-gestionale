@@ -1,0 +1,17 @@
+diff --git a/lib/lavorazioni/lavorazioni-list-ui-filters.ts b/lib/lavorazioni/lavorazioni-list-ui-filters.ts
+index 1f63019c..7e65d9ec 100644
+--- a/lib/lavorazioni/lavorazioni-list-ui-filters.ts
++++ b/lib/lavorazioni/lavorazioni-list-ui-filters.ts
+@@ -1,4 +1,3 @@
+-import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
+ import { normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
+ import {
+   lavRowMatchesAdvancedFilters,
+@@ -85,6 +84,6 @@ export function lavRowMatchesPageFilters(
+   options?: { skipSearchFilter?: boolean },
+ ): boolean {
+   if (!options?.skipSearchFilter && !lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
+-  const { search: _s, ...advanced } = filters;
++  const { ...advanced } = filters;
+   return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
+ }

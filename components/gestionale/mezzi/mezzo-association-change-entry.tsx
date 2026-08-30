@@ -29,7 +29,7 @@ export function MezzoAssociationChangeEntry({
 
   const content = (
     <>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="flex items-center gap-x-2 gap-y-1 min-w-0 flex-nowrap sm:flex-wrap">
         <p className="text-sm font-semibold text-[color:var(--cab-text)]">{title}</p>
         <span className="text-xs text-[color:var(--cab-text-muted)]" aria-hidden>
           ·

@@ -1,0 +1,25 @@
+diff --git a/lib/inventory-labels/domain/label-display.test.ts b/lib/inventory-labels/domain/label-display.test.ts
+index 214fd757..2e286e34 100644
+--- a/lib/inventory-labels/domain/label-display.test.ts
++++ b/lib/inventory-labels/domain/label-display.test.ts
+@@ -17,7 +17,19 @@ assert.equal(formatLabelMarcaSecondariaLine("omb"), "OMB");
+ assert.equal(formatLabelMarcaLine("BTE", ""), "BTE");
+ assert.equal(formatLabelMarcaLine("", "OMB"), "");
+ assert.equal(formatLabelMarcaLine("—", "OMB"), "");
+-assert.equal(formatLabelCodiceLine("8FSNS030000001", "BTE"), "8FSNS030000001 (BTE)");
++assert.equal(formatLabelCodiceLine("8FSNS030000001", "BTE"), "8FSNS030000001");
++assert.equal(
++  formatLabelCodiceLine("8FSNS030000001", "BTE", { ricambioMarca: "BTE", multipleMarche: true }),
++  "8FSNS030000001 (BTE)",
++);
++assert.equal(
++  formatLabelCodiceLine("YYYY", "OMB", { ricambioMarca: "BTE", multipleMarche: false }),
++  "YYYY (OMB)",
++);
++assert.equal(
++  formatLabelCodiceLine("YYYY", "BTE", { ricambioMarca: "BTE", multipleMarche: false }),
++  "YYYY",
++);
+ assert.equal(formatLabelCodiceLine("ABC", ""), "ABC");
+ assert.equal(labelMarcaToken("Nessuna marca"), "");
+ 

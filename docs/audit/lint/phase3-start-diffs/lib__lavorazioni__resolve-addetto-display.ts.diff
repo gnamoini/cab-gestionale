@@ -1,0 +1,15 @@
+diff --git a/lib/lavorazioni/resolve-addetto-display.ts b/lib/lavorazioni/resolve-addetto-display.ts
+index 5f0bfd9c..0a0df93f 100644
+--- a/lib/lavorazioni/resolve-addetto-display.ts
++++ b/lib/lavorazioni/resolve-addetto-display.ts
+@@ -8,8 +8,8 @@ import {
+   resolveAddettoRecord,
+ } from "@/lib/lavorazioni/addetto-display";
+ import {
+-  findAddettoById,
+-  findAddettoByStoredName,
++
++
+   type AddettoRecord,
+ } from "@/lib/lavorazioni/addetto-model";
+ import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";

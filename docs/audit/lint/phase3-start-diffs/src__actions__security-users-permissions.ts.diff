@@ -1,0 +1,24 @@
+diff --git a/src/actions/security-users-permissions.ts b/src/actions/security-users-permissions.ts
+index b49c7dc6..b50bd1dc 100644
+--- a/src/actions/security-users-permissions.ts
++++ b/src/actions/security-users-permissions.ts
+@@ -18,8 +18,8 @@ import type { SecurityUserAdminRow } from "@/src/actions/admin-users.types";
+ import { isUserBanned } from "@/lib/auth/user-ban-state";
+ import {
+   loadAllRolePageAccess,
+-  loadAllUserPageOverrideRows,
+-  listAllRoles,
++
++
+   deleteUserPageOverride,
+   upsertUserPageOverride,
+ } from "@/src/lib/rbac/load-rbac-data";
+@@ -100,7 +100,7 @@ function roleGrantsClientPortal(rolePageAccess: Record<string, PageAccessLevel>,
+   return access === "read" || access === "write";
+ }
+ 
+-function toPermissionRow(
++function _toPermissionRow(
+   user: SecurityUserAdminRow,
+   userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[],
+   rolePageAccessByRole: Map<string, Record<string, PageAccessLevel>>,

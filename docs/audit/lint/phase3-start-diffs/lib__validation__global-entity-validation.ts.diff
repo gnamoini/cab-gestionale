@@ -1,0 +1,13 @@
+diff --git a/lib/validation/global-entity-validation.ts b/lib/validation/global-entity-validation.ts
+index 228a14b2..01d69a69 100644
+--- a/lib/validation/global-entity-validation.ts
++++ b/lib/validation/global-entity-validation.ts
+@@ -262,7 +262,7 @@ export function findSimilarEntityInPool(
+   pool: readonly string[],
+   options?: FuzzyMatchEntityOptions,
+ ): string | null {
+-  const { exclude: _exclude, ...matchOptions } = options ?? {};
++  const { ...matchOptions } = options ?? {};
+   if (findExactEntityInPool(candidate, pool, matchOptions)) return null;
+   return fuzzyMatchEntity(candidate, pool, options)?.entity ?? null;
+ }

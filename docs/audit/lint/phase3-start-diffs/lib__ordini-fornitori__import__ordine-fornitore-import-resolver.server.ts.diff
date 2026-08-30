@@ -1,0 +1,13 @@
+diff --git a/lib/ordini-fornitori/import/ordine-fornitore-import-resolver.server.ts b/lib/ordini-fornitori/import/ordine-fornitore-import-resolver.server.ts
+index 941616f0..7c5fdd56 100644
+--- a/lib/ordini-fornitori/import/ordine-fornitore-import-resolver.server.ts
++++ b/lib/ordini-fornitori/import/ordine-fornitore-import-resolver.server.ts
+@@ -88,7 +88,7 @@ export function resolveImportRighe(
+     let prezzo = prezzoRaw;
+     let scontoFinal = sconto;
+     let ricambioId: string | null = null;
+-    let ivaFinal = iva;
++    const ivaFinal = iva;
+ 
+     if (match) {
+       ricambioId = match.id;

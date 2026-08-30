@@ -12,7 +12,6 @@ export function useCabSyncListener(
   handler: (event: CabSyncEvent) => void,
 ): void {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
 
   const entities =
     entity === "settings"
@@ -20,6 +19,10 @@ export function useCabSyncListener(
       : Array.isArray(entity)
         ? entity
         : [entity];
+
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
 
   useEffect(() => {
     const targets = entities;

@@ -1,4 +1,3 @@
-import { precedenceForSource } from "../../merge/source-precedence";
 import type { TkbSourceAdapter } from "../adapter-registry";
 import { registerTkbAdapter } from "../adapter-registry";
 

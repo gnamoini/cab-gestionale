@@ -20,6 +20,7 @@ export function labelDisplayCaps(text: string): string {
 
 /** Riga marca principale (senza secondaria). */
 export function formatLabelMarcaLine(marca: string, _marcaSecondaria?: string): string {
+  void _marcaSecondaria;
   return labelDisplayCaps(labelMarcaToken(marca));
 }
 
@@ -52,10 +53,36 @@ export function formatLabelCodiceCliente(codice: string): string {
   return labelDisplayCaps(codice.trim());
 }
 
-/** Riga codice: `XXXX (BTE)` se marca presente. */
-export function formatLabelCodiceLine(codice: string, marca?: string): string {
+export type LabelCodiceLineOptions = {
+  /** Marca anagrafica del ricambio (payload.marca). */
+  ricambioMarca?: string;
+  /** Doppia marca OE visibile sull'etichetta. */
+  multipleMarche?: boolean;
+};
+
+function shouldShowCodiceMarcaSuffix(
+  marcaCodice: string,
+  options?: LabelCodiceLineOptions,
+): boolean {
+  const m = labelMarcaToken(marcaCodice);
+  if (!m) return false;
+  if (options?.multipleMarche) return true;
+  const ricambio = labelMarcaToken(options?.ricambioMarca);
+  if (!ricambio) return false;
+  return m.toLocaleLowerCase("it-IT") !== ricambio.toLocaleLowerCase("it-IT");
+}
+
+/** Riga codice: `XXXX (BTE)` solo se più marche o marca codice ≠ marca ricambio. */
+export function formatLabelCodiceLine(
+  codice: string,
+  marca?: string,
+  options?: LabelCodiceLineOptions,
+): string {
   const c = codice.trim();
   if (!c) return "";
   const m = labelMarcaToken(marca);
-  return labelDisplayCaps(m ? `${c} (${m})` : c);
+  if (!m || !shouldShowCodiceMarcaSuffix(marca ?? "", options)) {
+    return labelDisplayCaps(c);
+  }
+  return labelDisplayCaps(`${c} (${m})`);
 }

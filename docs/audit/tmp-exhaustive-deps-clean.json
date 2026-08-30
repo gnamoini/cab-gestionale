@@ -1,0 +1,11 @@
+{
+  "total": 0,
+  "allDeps": 112,
+  "byOwnership": {
+    "DIRTY_NO_OVERLAP": 91,
+    "DIRTY_MIXED": 16,
+    "DIRTY_LINT_OVERLAP": 5
+  },
+  "entries": [],
+  "dirtyFileCount": 686
+}

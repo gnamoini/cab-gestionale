@@ -1,0 +1,38 @@
+diff --git a/components/ordini-fornitori/ordine-fornitore-editor-modal.tsx b/components/ordini-fornitori/ordine-fornitore-editor-modal.tsx
+index 3c59a969..21caea25 100644
+--- a/components/ordini-fornitori/ordine-fornitore-editor-modal.tsx
++++ b/components/ordini-fornitori/ordine-fornitore-editor-modal.tsx
+@@ -6,7 +6,7 @@ import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestiona
+ import {
+   IconActionButton,
+   GestionaleCollapsibleSection,
+-  GestionaleModalFooterActions,
++
+   GestionaleModalFooterCancelButton,
+   GestionaleModalFooterDeleteButton,
+   GestionaleModalFooterSaveButton,
+@@ -72,7 +72,7 @@ import type {
+ } from "@/lib/ordini-fornitori/types";
+ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+ import {
+-  dsBtnDanger,
++
+   dsInput,
+   dsScrollbar,
+   dsTable,
+@@ -252,6 +252,7 @@ export function OrdineFornitoreEditorModal({
+ 
+   useEffect(() => {
+     baselineRef.current = initialRecord;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setRecord(initialRecord);
+     setUnsavedExitOpen(false);
+   }, [initialRecord]);
+@@ -301,6 +302,7 @@ export function OrdineFornitoreEditorModal({
+   const { oggetti: righeOggetti, speseVarie } = useMemo(() => splitOrdineRighe(record.righe), [record.righe]);
+ 
+   const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: !viewMode });
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const prodottiMagazzino = magazzinoQ.data ?? [];
+   const [magAcRowId, setMagAcRowId] = useState<string | null>(null);
+   const [magAcField, setMagAcField] = useState<"codice" | "descrizione" | null>(null);

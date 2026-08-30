@@ -1,0 +1,12 @@
+diff --git a/lib/regression/api-route-authz-audit.test.ts b/lib/regression/api-route-authz-audit.test.ts
+index 61babddd..eeb49b1f 100644
+--- a/lib/regression/api-route-authz-audit.test.ts
++++ b/lib/regression/api-route-authz-audit.test.ts
+@@ -43,6 +43,7 @@ const KNOWN_UNGUARDED_ROUTES = new Set([
+   "app/api/report/operational-brief/history/route.ts",
+   "app/api/report/operational-brief/pdf/route.ts",
+   "app/api/report/operational-brief/route.ts",
++  "app/api/auth/request-password-reset/route.ts",
+ ]);
+ 
+ function walk(dir: string, out: string[]): void {

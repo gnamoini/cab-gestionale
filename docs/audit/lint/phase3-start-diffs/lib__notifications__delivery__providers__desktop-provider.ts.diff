@@ -1,0 +1,13 @@
+diff --git a/lib/notifications/delivery/providers/desktop-provider.ts b/lib/notifications/delivery/providers/desktop-provider.ts
+index 11f4b82a..cb991f92 100644
+--- a/lib/notifications/delivery/providers/desktop-provider.ts
++++ b/lib/notifications/delivery/providers/desktop-provider.ts
+@@ -3,7 +3,7 @@ import type { DeliveryProvider } from "@/lib/notifications/delivery/providers/de
+ export const desktopProvider: DeliveryProvider = {
+   id: "desktop",
+   channel: "desktop",
+-  async deliver(ctx) {
++  async deliver() {
+     return {
+       success: true,
+       channel: "desktop",

@@ -217,7 +217,7 @@ export function ReportPrimaryTrendContent() {
         </div>
 
         {!isLoading && envelope ? (
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex items-end justify-between gap-3 flex-nowrap sm:flex-wrap">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--cab-text-muted)]">
                 Totale periodo

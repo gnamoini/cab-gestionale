@@ -1,0 +1,20 @@
+diff --git a/src/hooks/gestionale/use-notification-center.ts b/src/hooks/gestionale/use-notification-center.ts
+index b332e490..f5db25db 100644
+--- a/src/hooks/gestionale/use-notification-center.ts
++++ b/src/hooks/gestionale/use-notification-center.ts
+@@ -7,7 +7,6 @@ import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/noti
+ import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
+ import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+ import { RealtimeInboxCoordinator, type InboxCoordinatorHealth } from "@/lib/notifications/realtime-inbox-coordinator";
+-import { notificationsV2ReadsDb } from "@/lib/notifications/notifications-v2-flag";
+ import { notificationsEntry } from "@/lib/domain/notifications-entry";
+ import { QK } from "@/src/lib/react-query/invalidate-related";
+ import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+@@ -184,6 +183,7 @@ export function useNotificationCenter(drawerOpen = false) {
+       coord.stop();
+       coordinatorRef.current = null;
+     };
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- drawerOpen synced via setDrawerOpen effect
+   }, [enabled, userId, queryClient]);
+ 
+   useEffect(() => {

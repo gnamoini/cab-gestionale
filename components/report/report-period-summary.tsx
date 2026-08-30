@@ -45,7 +45,7 @@ export function ReportPeriodMeta({
       aria-live="polite"
       aria-label={ariaLabel}
     >
-      <div className={`${reportPeriodMetaClass} flex min-w-0 flex-1 flex-wrap items-center gap-2`}>
+      <div className={`${reportPeriodMetaClass} flex min-w-0 flex-1 items-center gap-2 flex-nowrap sm:flex-wrap`}>
         <span className={reportHealthChipClass}>{REPORT_PRESET_LABELS[preset]}</span>
         <span className={reportPeriodMetaRangeClass}>{rangeLine}</span>
         <span aria-hidden="true">·</span>

@@ -29,7 +29,6 @@ export function LavorazioniAdvancedFilterPanel({
   filters,
   onChange,
   catalog,
-  addettiRecords = [],
   variant = "staff",
   restrictUtilizzatoriToCatalog = false,
 }: {

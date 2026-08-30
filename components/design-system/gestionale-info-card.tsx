@@ -62,7 +62,9 @@ export function GestionaleInfoCard({
   const hasHeaderRow = Boolean(subtitle || actions);
   const expanded = forceExpanded || !collapsed;
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (forceExpanded) setCollapsedState(false);
   }, [forceExpanded]);
 
@@ -125,7 +127,7 @@ export function GestionaleInfoCard({
             ) : null}
           </div>
           {actions ? (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>
+            <div className="flex shrink-0 items-center justify-end gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">{actions}</div>
           ) : null}
         </div>
         {children ? <div className="mt-3">{children}</div> : null}

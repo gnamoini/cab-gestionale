@@ -3,7 +3,6 @@ import type { SkeletonMode } from "@/components/design-system/loading/skeleton-c
 import { LavorazioniRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
 import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
-import { ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 
 export function LavorazioniPageStructure({
   mode = "skeleton",

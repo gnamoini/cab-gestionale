@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/app-shell.tsx b/components/gestionale/app-shell.tsx
+index 080fc753..986dcecc 100644
+--- a/components/gestionale/app-shell.tsx
++++ b/components/gestionale/app-shell.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable react-hooks/preserve-manual-memoization -- lint phase2: preserve manual memoization contract */
++
+ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+ import { useAuth } from "@/context/auth-context";
+ import { buildGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";

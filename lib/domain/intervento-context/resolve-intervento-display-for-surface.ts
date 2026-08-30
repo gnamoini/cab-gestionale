@@ -3,7 +3,6 @@ import {
   resolveInterventoCanonical,
   type InterventoCanonicalInputs,
 } from "@/lib/domain/intervento-context/resolve-intervento-canonical";
-import { resolveInterventoIdent } from "@/lib/domain/intervento-context/resolve-intervento-display";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoRow } from "@/src/types/supabase-tables";

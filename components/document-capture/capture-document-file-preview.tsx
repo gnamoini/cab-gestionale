@@ -93,7 +93,9 @@ function CaptureDocumentFilePreviewInner({
     }
   }, [captureId]);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     void load();
   }, [load]);
 
@@ -287,7 +289,7 @@ function CaptureDocumentFilePreviewInner({
               <iframe
                 title={meta.file_name}
                 src={pdfFullscreenUrl}
-                className="min-h-0 h-full w-full flex-1 border-0 bg-[color:var(--cab-surface-muted)]"
+                className="min-h-0 h-full w-full flex-1 border-0 bg-[color:var(--cab-surface-muted)] min-w-0"
               />
             )}
           </div>

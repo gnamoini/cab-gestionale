@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 import { createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
-import { resolveFirstAccessibleNavHref, resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
+import {
+  isMezzoQrEntryPath,
+  resolveFirstAccessibleNavHref,
+  resolvePostLoginRedirectPath,
+} from "@/lib/auth/resolve-post-login-redirect";
 
 const adminSnap = buildTestSnapshot({ userId: "a1", roleKey: "admin" });
 const adminNav = createRbacNavAccess(adminSnap);
@@ -59,6 +63,20 @@ assert.equal(
     requestedPath: "/dashboard",
   }),
   "/lavorazioni-clienti",
+);
+
+assert.equal(isMezzoQrEntryPath("/m/q/CAB-TEST"), true);
+assert.equal(isMezzoQrEntryPath("/m/q/errore"), false);
+assert.equal(isMezzoQrEntryPath("/m/q/errore?reason=forbidden"), false);
+
+assert.equal(
+  resolvePostLoginRedirectPath({
+    user: { ruolo: "cliente", id: "c1" },
+    navAccess: clienteNav,
+    snapshot: clienteSnap,
+    requestedPath: "/m/q/CAB-TESTTOKEN",
+  }),
+  "/m/q/CAB-TESTTOKEN",
 );
 
 assert.equal(adminNav.canAccessHref("/sicurezza"), true);

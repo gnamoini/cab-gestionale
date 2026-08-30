@@ -1,0 +1,109 @@
+diff --git a/lib/inventory-labels/jobs/bulk-label-job.server.ts b/lib/inventory-labels/jobs/bulk-label-job.server.ts
+index 88c7c8de..7fae6407 100644
+--- a/lib/inventory-labels/jobs/bulk-label-job.server.ts
++++ b/lib/inventory-labels/jobs/bulk-label-job.server.ts
+@@ -93,7 +93,6 @@ async function renderBulkPdf(
+   compact: BulkLabelCompactItem[],
+   uniqueItems: BulkLabelItem[],
+   preset: string,
+-  includeBarcode: boolean,
+   clienteLabel: boolean,
+   jobId: string | null,
+   onProgress?: (done: number, total: number) => void | Promise<void>,
+@@ -102,7 +101,6 @@ async function renderBulkPdf(
+ 
+   try {
+     return await renderBulkLabelPdfWithCache(sb, template, compact, uniqueItems, preset, {
+-      includeBarcode,
+       clienteLabel,
+       chunkSize: 25,
+       onChunkHeartbeat: heartbeat,
+@@ -115,9 +113,9 @@ async function renderBulkPdf(
+     console.warn("[label-pdf] cache assembly failed, fallback pipeline", {
+       message: cacheError instanceof Error ? cacheError.message : String(cacheError),
+     });
+-    const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, includeBarcode, clienteLabel);
++    const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, clienteLabel);
+     const result = await renderMultiLabelPdfWithPipeline(template, slots, {
+-      includeBarcode: clienteLabel ? false : includeBarcode,
++      labelKind: clienteLabel ? "cliente" : "internal",
+       onProgress: async (done, total) => {
+         await heartbeat();
+         await onProgress?.(done, total);
+@@ -135,18 +133,13 @@ async function renderBulkPdf(
+ export async function createBulkLabelJob(input: {
+   items: BulkLabelCompactItem[];
+   preset: string;
+-  includeBarcode?: boolean;
+   clienteLabel?: boolean;
+   userId: string;
+   origin: string;
+ }): Promise<string> {
+   const sb = await createSupabaseServerUserClient();
+   const now = new Date().toISOString();
+-  const storedPreset = formatLabelJobPreset(
+-    input.preset,
+-    input.includeBarcode === true,
+-    input.clienteLabel === true,
+-  );
++  const storedPreset = formatLabelJobPreset(input.preset, input.clienteLabel === true);
+   const entityIds = uniqueBulkEntityIds(input.items);
+   const { data, error } = await sb
+     .from("label_generation_jobs")
+@@ -174,7 +167,6 @@ async function processBulkLabelJob(
+   input: {
+     items: BulkLabelCompactItem[];
+     preset: string;
+-    includeBarcode?: boolean;
+     clienteLabel?: boolean;
+     userId: string;
+     origin: string;
+@@ -193,7 +185,6 @@ async function processBulkLabelJob(
+     await auditBulkPdfStarted(sb, { userId: input.userId, count: totalLabels, mode: "async", jobId });
+ 
+     const { preset, clienteLabel } = parseLabelJobPreset(input.preset);
+-    const includeBarcode = false;
+     const template = getLabelTemplate(preset, clienteLabel ? "cliente" : "internal");
+     if (!template) throw new Error("Template non valido");
+ 
+@@ -209,7 +200,6 @@ async function processBulkLabelJob(
+       input.items,
+       uniqueItems,
+       preset,
+-      includeBarcode,
+       clienteLabel,
+       jobId,
+       async (done, total) => {
+@@ -342,7 +332,7 @@ export async function retryBulkLabelJob(
+   waitUntil(
+     processBulkLabelJob(jobId, {
+       items,
+-      preset: formatLabelJobPreset(preset, false, clienteLabel),
++      preset: formatLabelJobPreset(preset, clienteLabel),
+       userId: input.userId,
+       origin: input.origin,
+     }),
+@@ -352,7 +342,6 @@ export async function retryBulkLabelJob(
+ export async function renderBulkLabelPdfSync(input: {
+   items: BulkLabelCompactItem[];
+   preset: string;
+-  includeBarcode?: boolean;
+   clienteLabel?: boolean;
+   userId: string;
+   origin: string;
+@@ -370,7 +359,6 @@ export async function renderBulkLabelPdfSync(input: {
+   const clienteLabel = input.clienteLabel === true;
+   const template = getLabelTemplate(input.preset, clienteLabel ? "cliente" : "internal");
+   if (!template) throw new Error("Template non valido");
+-  const includeBarcode = clienteLabel ? false : input.includeBarcode === true;
+   const totalLabels = totalBulkLabelCount(input.items);
+ 
+   const { items: uniqueItems, skippedIds } = await buildBulkLabelItems(sb, input.items, input.userId, input.origin, {
+@@ -388,7 +376,6 @@ export async function renderBulkLabelPdfSync(input: {
+       input.items,
+       uniqueItems,
+       input.preset,
+-      includeBarcode,
+       clienteLabel,
+       null,
+     );

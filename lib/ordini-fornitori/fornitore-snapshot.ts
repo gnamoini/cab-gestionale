@@ -1,5 +1,8 @@
 /** Snapshot fornitore ordine — label + anagrafica minima (persistita su ordine). */
 
+import { parseFornitoreEmailAggiuntive } from "@/lib/magazzino/fornitore-anagrafica";
+import { isValidEmail } from "@/lib/validation/email";
+
 export type OrdineFornitoreFornitoreSnapshot = {
   label: string;
   ragioneSociale: string;
@@ -7,6 +10,8 @@ export type OrdineFornitoreFornitoreSnapshot = {
   partitaIva: string;
   codiceFiscale: string;
   telefono: string;
+  email: string;
+  emailAggiuntive: string[];
 };
 
 function strField(value: unknown): string {
@@ -23,6 +28,8 @@ export function emptyOrdineFornitoreFornitoreSnapshot(label = ""): OrdineFornito
     partitaIva: "",
     codiceFiscale: "",
     telefono: ORDINE_FORNITORE_TELEFONO_DEFAULT,
+    email: "",
+    emailAggiuntive: [],
   };
 }
 
@@ -31,6 +38,7 @@ export function parseOrdineFornitoreFornitoreSnapshot(
   fallbackLabel = "",
 ): OrdineFornitoreFornitoreSnapshot {
   if (!raw || typeof raw !== "object") return emptyOrdineFornitoreFornitoreSnapshot(fallbackLabel);
+  const emailRaw = strField(raw.email ?? raw.email_fornitore).trim();
   return {
     label: strField(raw.label) || fallbackLabel,
     ragioneSociale: strField(raw.ragioneSociale ?? raw.ragione_sociale) || strField(raw.label) || fallbackLabel,
@@ -38,6 +46,8 @@ export function parseOrdineFornitoreFornitoreSnapshot(
     partitaIva: strField(raw.partitaIva ?? raw.partita_iva),
     codiceFiscale: strField(raw.codiceFiscale ?? raw.codice_fiscale),
     telefono: strField(raw.telefono),
+    email: isValidEmail(emailRaw) ? emailRaw : "",
+    emailAggiuntive: parseFornitoreEmailAggiuntive(raw.emailAggiuntive ?? raw.email_aggiuntive),
   };
 }
 
@@ -69,6 +79,8 @@ export function ordineFornitoreFornitoreSnapshotToRecord(
     partitaIva: snapshot.partitaIva.trim(),
     codiceFiscale: snapshot.codiceFiscale.trim(),
     telefono: snapshot.telefono.trim(),
+    email: snapshot.email.trim(),
+    emailAggiuntive: [...snapshot.emailAggiuntive],
   };
 }
 

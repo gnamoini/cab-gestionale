@@ -1,0 +1,24 @@
+diff --git a/lib/inventory-labels/render/print-layout.ts b/lib/inventory-labels/render/print-layout.ts
+index 8d172b16..7ddae7fd 100644
+--- a/lib/inventory-labels/render/print-layout.ts
++++ b/lib/inventory-labels/render/print-layout.ts
+@@ -23,9 +23,16 @@ export function computeA4Grid(template: LabelTemplateDefinition, marginMm = 5, g
+   const page = labelPdfPageSizeMm(template);
+   const usableW = page.widthMm - marginMm * 2;
+   const usableH = page.heightMm - marginMm * 2;
+-  const cols = Math.max(1, Math.floor((usableW + gapMm) / (template.widthMm + gapMm)));
+-  const rows = Math.max(1, Math.floor((usableH + gapMm) / (template.heightMm + gapMm)));
+-  return { cols, rows, marginMm, gapMm };
++  let cols = Math.max(1, Math.floor((usableW + gapMm) / (template.widthMm + gapMm)));
++  let gap = gapMm;
++  // ponytail: 100×36 mm — gap 0 per 2 colonne su A4 portrait (200 mm utili)
++  const colsTight = Math.max(1, Math.floor(usableW / template.widthMm));
++  if (cols === 1 && colsTight >= 2) {
++    cols = colsTight;
++    gap = cols > 1 ? Math.max(0, (usableW - cols * template.widthMm) / (cols - 1)) : gapMm;
++  }
++  const rows = Math.max(1, Math.floor((usableH + gap) / (template.heightMm + gap)));
++  return { cols, rows, marginMm, gapMm: gap };
+ }
+ 
+ export function labelsPerA4Page(template: LabelTemplateDefinition): number {

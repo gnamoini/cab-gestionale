@@ -1,15 +1,60 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FormField, formInputClass, formTextareaClass } from "@/components/design-system/form-field";
+import { OptionalTooltip, TruncatedTextTooltip } from "@/components/ui";
+import { PageLayout } from "@/components/design-system";
+import { FormField, formInputClass } from "@/components/design-system/form-field";
+import { HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import { GestionaleAiActionButton } from "@/components/design-system/gestionale-ai-action-button";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GlobalHierarchyMarcaSelect, GlobalHierarchyModelloSelect } from "@/components/gestionale/global-input";
 import { GestionaleImageUploadButton } from "@/components/gestionale/upload/gestionale-image-upload-button";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal-shell";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { confidenceBandLabel } from "@/lib/ai/spare-parts/ranking/score";
-import type { SparePartIdentificationResult } from "@/lib/ai/spare-parts/types/schemas";
+import {
+  formatPartPriceLine,
+  partCatalogDescription,
+  partCatalogSource,
+  partCodeLabel,
+  resolvePartPrice,
+} from "@/lib/ai/spare-parts/part-candidate-display";
+import type {
+  SparePartIdentificationResult,
+  ConfidenceBand,
+  CandidatePart,
+} from "@/lib/ai/spare-parts/types/schemas";
 import { SPARE_PARTS_UPLOAD_LIMITS } from "@/lib/ai/spare-parts/constants";
-import { storageUpload, STORAGE_BUCKETS } from "@/src/services/storage.service";
+import {
+  deriveIdentificaSearchProgress,
+  type IdentificaSubmitPhase,
+} from "@/lib/ai/spare-parts/identifica-search-progress";
+import {
+  fetchIdentificaCandidates,
+  resolveIdentificaOrderPrefillClient,
+} from "@/lib/ordini-fornitori/identifica-ricambio/identifica-ordine-client";
+import type {
+  IdentificaCandidateListItem,
+  OrdineFornitoreEditorIdentificaMeta,
+  SparePartOrderPrefill,
+} from "@/lib/ordini-fornitori/identifica-ricambio/types";
+import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
+import { dsBtnPrimary, dsBtnSubtle } from "@/lib/ui/design-system";
+import { storageUpload, STORAGE_BUCKETS } from "@/lib/domain/storage-entry";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+
+const OrdineFornitoreEditorModal = dynamic(
+  () =>
+    import("@/components/ordini-fornitori/ordine-fornitore-editor-modal").then(
+      (m) => m.OrdineFornitoreEditorModal,
+    ),
+  { ssr: false },
+);
 
 type Stage = { key: string; label: string; status: string; at?: string };
 
@@ -23,6 +68,230 @@ type SearchPollResponse = {
 };
 
 const POLL_INTERVALS_MS = [1000, 2000, 3000, 5000];
+const POLL_MAX_ATTEMPTS = 90;
+const LIST_SELECT_WRAP = "w-full";
+const IDENTIFICA_PANEL_CLASS =
+  "flex flex-col gap-4 rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,var(--cab-surface))] p-4 shadow-[var(--cab-shadow-sm)]";
+const IDENTIFICA_SUBPANEL_CLASS =
+  "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,transparent)]";
+
+type OrderDraftState = {
+  candidateKey: string;
+  candidateId: string;
+  searchId: string;
+  record: OrdineFornitoreRecord;
+  prefill: SparePartOrderPrefill;
+  warnings: string[];
+};
+
+function PartCandidateDetails({ part, emphasize = false }: { part: CandidatePart; emphasize?: boolean }) {
+  const code = partCodeLabel(part);
+  const priceLine = formatPartPriceLine(resolvePartPrice(part));
+  const description = partCatalogDescription(part);
+  const source = partCatalogSource(part);
+  const codeVerified = Boolean(part.verifiedPartNumber);
+
+  return (
+    <div className="space-y-2.5">
+      {code || priceLine ? (
+        <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-start justify-between gap-x-4 gap-y-2 sm:flex-wrap">
+          {code ? (
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                {codeVerified ? "Codice verificato" : "Codice candidato"}
+              </p>
+              <p
+                className={`font-mono font-semibold tracking-wide ${
+                  emphasize ? "text-lg" : "text-sm"
+                } ${
+                  codeVerified ? "text-[color:var(--cab-success)]" : "text-[color:var(--cab-warning)]"
+                }`}
+              >
+                {code}
+              </p>
+            </div>
+          ) : null}
+          {priceLine ? (
+            <div className="min-w-0 text-left sm:text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                Prezzo
+              </p>
+              <p
+                className={`font-semibold tabular-nums text-[color:var(--cab-text)] ${
+                  emphasize ? "text-base" : "text-sm"
+                }`}
+              >
+                {priceLine}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {description ? (
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+            Descrizione{source ? ` · ${source}` : ""}
+          </p>
+          <p
+            className={`leading-snug text-[color:var(--cab-text)] ${
+              emphasize ? "text-base font-semibold" : "text-sm"
+            }`}
+          >
+            {description}
+          </p>
+        </div>
+      ) : null}
+      {part.manufacturer ? (
+        <p className="text-xs text-[color:var(--cab-text-muted)]">Marca: {part.manufacturer}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function PartCandidateCard({
+  part,
+  emphasize = false,
+  selected,
+  orderModalOpen,
+  resolving,
+  canOrder,
+  onSelectAndOrder,
+}: {
+  part: CandidatePart;
+  candidateKey: string;
+  emphasize?: boolean;
+  selected: boolean;
+  orderModalOpen: boolean;
+  resolving: boolean;
+  canOrder: boolean;
+  onSelectAndOrder: () => void;
+}) {
+  const ctaLabel =
+    selected && orderModalOpen ? "Modifica ordine" : resolving && selected ? "Preparazione…" : "Seleziona e ordina";
+  const disabled = !canOrder || (orderModalOpen && !selected) || (resolving && !selected);
+
+  return (
+    <div
+      className={`${IDENTIFICA_SUBPANEL_CLASS} space-y-3 p-4 ${
+        emphasize
+          ? "ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-success)_28%,var(--cab-border))]"
+          : ""
+      } ${selected ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        {selected ? (
+          <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-primary)]">
+            Selezionato per ordine
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className={confidenceBandClass(part.confidenceBand)}>{confidenceBandLabel(part.confidenceBand)}</span>
+      </div>
+      <PartCandidateDetails part={part} emphasize={emphasize} />
+      <OptionalTooltip content={!canOrder ? READONLY_PERMISSION_HINT : undefined}>
+        <button
+          type="button"
+          className={`${emphasize ? dsBtnPrimary : dsBtnSubtle} min-h-10 w-full justify-center`}
+          disabled={disabled}
+          onClick={onSelectAndOrder}
+        >
+          {resolving && selected ? (
+            <span className="inline-flex items-center gap-2">
+              <LoadingSpinner size="sm" label="Preparazione ordine" />
+              {ctaLabel}
+            </span>
+          ) : (
+            ctaLabel
+          )}
+        </button>
+      </OptionalTooltip>
+    </div>
+  );
+}
+
+function stageStatusLabel(status: string): string {
+  switch (status) {
+    case "running":
+      return "In corso";
+    case "completed":
+      return "Completato";
+    case "skipped":
+      return "Non richiesto";
+    case "failed":
+      return "Errore";
+    default:
+      return status;
+  }
+}
+
+function stageStatusPillClass(status: string): string {
+  const base = "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide";
+  if (status === "completed") {
+    return `${base} bg-[color:color-mix(in_srgb,var(--cab-success)_16%,transparent)] text-[color:var(--cab-success)]`;
+  }
+  if (status === "running") {
+    return `${base} bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] text-[color:var(--cab-primary)]`;
+  }
+  if (status === "failed") {
+    return `${base} bg-[color:color-mix(in_srgb,var(--cab-danger)_14%,transparent)] text-[color:var(--cab-danger)]`;
+  }
+  return `${base} bg-[color:color-mix(in_srgb,var(--cab-text-muted)_12%,transparent)] text-[color:var(--cab-text-muted)]`;
+}
+
+function confidenceBandClass(band: ConfidenceBand): string {
+  const base =
+    "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset";
+  if (band === "high") {
+    return `${base} bg-[color:color-mix(in_srgb,var(--cab-success)_14%,var(--cab-surface))] text-[color:var(--cab-success)] ring-[color:color-mix(in_srgb,var(--cab-success)_35%,var(--cab-border))]`;
+  }
+  if (band === "medium") {
+    return `${base} bg-[color:color-mix(in_srgb,var(--cab-warning)_14%,var(--cab-surface))] text-[color:var(--cab-warning)] ring-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))]`;
+  }
+  return `${base} bg-[color:color-mix(in_srgb,var(--cab-text-muted)_10%,var(--cab-surface))] text-[color:var(--cab-text-muted)] ring-[color:var(--cab-border)]`;
+}
+
+function StageStatusIcon({ status }: { status: string }) {
+  if (status === "running") {
+    return <LoadingSpinner size="sm" label="In corso" />;
+  }
+  if (status === "completed") {
+    return (
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-success)_20%,transparent)] text-[11px] text-[color:var(--cab-success)]"
+        aria-hidden
+      >
+        ✓
+      </span>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,transparent)] text-[11px] text-[color:var(--cab-danger)]"
+        aria-hidden
+      >
+        !
+      </span>
+    );
+  }
+  if (status === "skipped") {
+    return (
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-text-muted)_12%,transparent)] text-[11px] text-[color:var(--cab-text-muted)]"
+        aria-hidden
+      >
+        −
+      </span>
+    );
+  }
+  return (
+    <span
+      className="h-5 w-5 shrink-0 rounded-full border border-[color:var(--cab-border)]"
+      aria-hidden
+    />
+  );
+}
 
 type HistoryRow = {
   id: string;
@@ -34,19 +303,34 @@ type HistoryRow = {
 };
 
 export function IdentificaRicambioView() {
+  const gestToast = useGestionaleToast();
+  const { modules: permModules } = usePermissionsSnapshot();
+  const canOrder = Boolean(permModules.ordini_fornitori?.canWrite);
   const searchParams = useSearchParams();
   const [marca, setMarca] = useState(searchParams.get("marca") ?? "");
   const [modello, setModello] = useState(searchParams.get("modello") ?? "");
-  const [anno, setAnno] = useState(searchParams.get("anno") ?? "");
   const [descrizione, setDescrizione] = useState("");
   const [extra, setExtra] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<IdentificaSubmitPhase | null>(null);
+  const [submitStartedAt, setSubmitStartedAt] = useState<number | null>(null);
+  const [submitTick, setSubmitTick] = useState(() => Date.now());
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [searchId, setSearchId] = useState<string | null>(null);
   const [pollData, setPollData] = useState<SearchPollResponse | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [candidateList, setCandidateList] = useState<IdentificaCandidateListItem[]>([]);
+  const [orderDraft, setOrderDraft] = useState<OrderDraftState | null>(null);
+  const [resolvingOrder, setResolvingOrder] = useState(false);
   const pollGen = useRef(0);
+
+  useEffect(() => {
+    if (!submitting) return;
+    const timer = window.setInterval(() => setSubmitTick(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [submitting]);
 
   useEffect(() => {
     void fetch("/api/identifica-ricambio/searches")
@@ -57,23 +341,118 @@ export function IdentificaRicambioView() {
       .catch(() => undefined);
   }, [pollData?.status]);
 
+  useEffect(() => {
+    if (!searchId || pollData?.status !== "completed") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset candidates when search incomplete
+      setCandidateList([]);
+      return;
+    }
+    void fetchIdentificaCandidates(searchId)
+      .then((data) => setCandidateList(data.candidates))
+      .catch(() => setCandidateList([]));
+  }, [searchId, pollData?.status]);
+
+  const candidateIdByRank = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const c of candidateList) map.set(c.rankOrder, c.id);
+    return map;
+  }, [candidateList]);
+
+  const handleSelectAndOrder = useCallback(
+    async (candidateKey: string, rankOrder: number) => {
+      if (!searchId || resolvingOrder) return;
+      if (orderDraft?.candidateKey === candidateKey && orderDraft) {
+        return;
+      }
+      const candidateId = candidateIdByRank.get(rankOrder);
+      if (!candidateId) {
+        gestToast.error("Candidato non ancora disponibile. Attendi il completamento della ricerca.");
+        return;
+      }
+      setResolvingOrder(true);
+      try {
+        const resolved = await resolveIdentificaOrderPrefillClient(searchId, candidateId);
+        setOrderDraft({
+          candidateKey,
+          candidateId,
+          searchId,
+          record: resolved.record,
+          prefill: resolved.prefill,
+          warnings: resolved.warnings,
+        });
+      } catch (e) {
+        gestToast.error(e instanceof Error ? e.message : "Prefill ordine non disponibile.");
+      } finally {
+        setResolvingOrder(false);
+      }
+    },
+    [candidateIdByRank, gestToast, orderDraft, resolvingOrder, searchId],
+  );
+
+  const identificaMeta: OrdineFornitoreEditorIdentificaMeta | undefined = useMemo(() => {
+    if (!orderDraft) return undefined;
+    return {
+      fornitoreMode: orderDraft.prefill.fornitoreMode,
+      fornitoreNeedsVerification: orderDraft.prefill.fornitoreMode === "suggested",
+      prezzoSuggerito: orderDraft.prefill.prezzoSuggerito,
+      prezzoSource: orderDraft.prefill.prezzoSource,
+      prefillWarnings: orderDraft.warnings,
+      saveContext: {
+        sourceSearchId: orderDraft.searchId,
+        sourceCandidateId: orderDraft.candidateId,
+      },
+    };
+  }, [orderDraft]);
+
   const onPhotoPick = useCallback((file: File) => {
+    setSubmitError(null);
     setPhotos((prev) => {
       if (prev.length >= SPARE_PARTS_UPLOAD_LIMITS.maxPhotos) return prev;
-      if (file.size > SPARE_PARTS_UPLOAD_LIMITS.maxPhotoBytes) return prev;
+      if (file.size > SPARE_PARTS_UPLOAD_LIMITS.maxPhotoBytes) {
+        setSubmitError(`La foto supera ${Math.round(SPARE_PARTS_UPLOAD_LIMITS.maxPhotoBytes / (1024 * 1024))} MB.`);
+        return prev;
+      }
       return [...prev, file];
     });
+  }, []);
+
+  const removePhoto = useCallback((index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const pollSearch = useCallback(async (id: string, gen: number) => {
     let attempt = 0;
     while (gen === pollGen.current) {
       const res = await fetch(`/api/identifica-ricambio/searches/${id}`);
-      if (!res.ok) break;
+      if (!res.ok) {
+        setSubmitError("Impossibile recuperare lo stato della ricerca. Riprova.");
+        setSubmitting(false);
+        return;
+      }
       const data = (await res.json()) as SearchPollResponse;
       setPollData(data);
-      if (data.status === "completed" || data.status === "failed" || data.status === "cancelled") {
+      if (data.status === "failed") {
+        setSubmitError(data.error_message?.trim() || "Identificazione non riuscita.");
         setSubmitting(false);
+        setSubmitPhase(null);
+        setSubmitStartedAt(null);
+        return;
+      }
+      if (data.status === "completed" || data.status === "cancelled") {
+        setSubmitting(false);
+        setSubmitPhase(null);
+        setSubmitStartedAt(null);
+        return;
+      }
+      if (attempt >= POLL_MAX_ATTEMPTS) {
+        setSubmitError(
+          data.status === "pending"
+            ? "La ricerca è ancora in coda. Attendi qualche minuto e ricarica la pagina, oppure contatta l'amministratore."
+            : "Identificazione in timeout. Riprova tra poco.",
+        );
+        setSubmitting(false);
+        setSubmitPhase(null);
+        setSubmitStartedAt(null);
         return;
       }
       const delay = POLL_INTERVALS_MS[Math.min(attempt, POLL_INTERVALS_MS.length - 1)];
@@ -83,9 +462,14 @@ export function IdentificaRicambioView() {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (submitting || photos.length === 0 || !descrizione.trim()) return;
+    if (submitting || !descrizione.trim()) return;
     setSubmitting(true);
+    setSubmitError(null);
     setPollData(null);
+    setOrderDraft(null);
+    setCandidateList([]);
+    setSubmitPhase("creating");
+    setSubmitStartedAt(Date.now());
     pollGen.current += 1;
     const gen = pollGen.current;
 
@@ -98,44 +482,75 @@ export function IdentificaRicambioView() {
           additionalInfo: extra.trim() || undefined,
           vehicleBrand: marca.trim() || undefined,
           vehicleModel: modello.trim() || undefined,
-          vehicleYear: anno.trim() || undefined,
           assetStoragePaths: [],
         }),
       });
-      if (!createRes.ok) throw new Error("Avvio ricerca fallito");
+      if (!createRes.ok) {
+        const body = (await createRes.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Avvio ricerca fallito");
+      }
       const { searchId: id } = (await createRes.json()) as { searchId: string };
       setSearchId(id);
 
-      const assetPaths: string[] = [];
-      for (const file of photos) {
-        const policyRes = await fetch("/api/identifica-ricambio/uploads/policy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            searchId: id,
-            fileName: file.name,
-            fileSize: file.size,
-            mimeType: file.type || "image/jpeg",
-          }),
-        });
-        if (!policyRes.ok) throw new Error("Upload policy negata");
-        const policy = (await policyRes.json()) as { path: string; bucket: string };
-        await storageUpload(policy.bucket as typeof STORAGE_BUCKETS.images, policy.path, file, {
-          contentType: file.type || "image/jpeg",
-          upsert: false,
-        });
-        assetPaths.push(policy.path);
+      if (photos.length > 0) {
+        setSubmitPhase("uploading");
+        for (const file of photos) {
+          const policyRes = await fetch("/api/identifica-ricambio/uploads/policy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              searchId: id,
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type || "image/jpeg",
+            }),
+          });
+          if (!policyRes.ok) throw new Error("Caricamento foto non autorizzato");
+          const policy = (await policyRes.json()) as { path: string; bucket: string };
+          await storageUpload(policy.bucket as typeof STORAGE_BUCKETS.images, policy.path, file, {
+            contentType: file.type || "image/jpeg",
+            upsert: false,
+          });
+        }
       }
 
-      await fetch(`/api/identifica-ricambio/searches/${id}/start`, { method: "POST" });
       void pollSearch(id, gen);
-    } catch {
+      setSubmitPhase("starting");
+      const startRes = await fetch(`/api/identifica-ricambio/searches/${id}/start`, { method: "POST" });
+      if (!startRes.ok) {
+        pollGen.current += 1;
+        const body = (await startRes.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Avvio pipeline fallito");
+      }
+      setSubmitPhase(null);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Errore durante l'identificazione.");
       setSubmitting(false);
+      setSubmitPhase(null);
+      setSubmitStartedAt(null);
     }
-  }, [anno, descrizione, extra, marca, modello, photos, pollSearch, submitting]);
+  }, [descrizione, extra, marca, modello, photos, pollSearch, submitting]);
 
   const result = pollData?.result_json ?? null;
   const stages = useMemo(() => (Array.isArray(pollData?.stages) ? pollData!.stages : []), [pollData]);
+
+  const progress = useMemo(() => {
+    if (!stages.length) return 0;
+    const done = stages.filter((s) => s.status === "completed" || s.status === "skipped").length;
+    return Math.round((done / stages.length) * 100);
+  }, [stages]);
+
+  const searchProgress = useMemo(
+    () =>
+      deriveIdentificaSearchProgress({
+        submitPhase,
+        submitStartedAt,
+        pollStatus: pollData?.status,
+        stagesCount: stages.length,
+        nowMs: submitTick,
+      }),
+    [pollData?.status, stages.length, submitPhase, submitStartedAt, submitTick],
+  );
 
   const confirmCode = useCallback(async () => {
     if (!searchId) return;
@@ -155,151 +570,375 @@ export function IdentificaRicambioView() {
     });
   }, [searchId]);
 
+  const canAddPhoto = photos.length < SPARE_PARTS_UPLOAD_LIMITS.maxPhotos;
+
   return (
-    <div className="grid min-h-0 gap-6">
-      <details
-        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4"
-        open={historyOpen}
-        onToggle={(e) => setHistoryOpen((e.target as HTMLDetailsElement).open)}
-      >
-        <summary className="cursor-pointer text-sm font-semibold text-zinc-200">Storico ricerche</summary>
-        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
-          {history.length === 0 ? <li>Nessuna ricerca precedente.</li> : null}
-          {history.map((h) => (
-            <li key={h.id} className="flex flex-wrap items-center gap-2">
-              <span>{new Date(h.created_at).toLocaleString("it-IT")}</span>
-              <span>— {h.status}</span>
-              {h.confirmed_at ? <span className="text-emerald-400">confermata</span> : null}
-              {h.rejected_at ? <span className="text-amber-400">rifiutata</span> : null}
-              {h.result_json?.bestMatch?.verifiedPartNumber ? (
-                <span className="text-zinc-200">{h.result_json.bestMatch.verifiedPartNumber}</span>
-              ) : h.result_json?.bestMatch?.candidatePartNumber ? (
-                <span className="text-amber-300">{h.result_json.bestMatch.candidatePartNumber}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </details>
-
-      <div className="grid min-h-0 gap-6 lg:grid-cols-2">
-      <section className="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-        <h2 className="text-sm font-semibold text-zinc-200">Dati ricerca</h2>
-        <div className="flex flex-wrap gap-2">
-          {photos.map((p, i) => (
-            <div key={`${p.name}-${i}`} className="rounded-lg border border-zinc-700 px-2 py-1 text-xs text-zinc-300">
-              {p.name}
-            </div>
-          ))}
-          <GestionaleImageUploadButton onImagePicked={onPhotoPick} buttonLabel="Aggiungi foto" />
-        </div>
-        <FormField label="Marca">
-          <GlobalHierarchyMarcaSelect tree="attrezzature" value={marca} onChange={setMarca} className={formInputClass} />
-        </FormField>
-        <FormField label="Modello">
-          <GlobalHierarchyModelloSelect
-            tree="attrezzature"
-            marcaNome={marca}
-            value={modello}
-            onChange={setModello}
-            inputClassName={formInputClass}
-          />
-        </FormField>
-        <FormField label="Anno">
-          <input className={formInputClass} value={anno} onChange={(e) => setAnno(e.target.value)} />
-        </FormField>
-        <FormField label="Descrivi il ricambio">
-          <textarea className={formTextareaClass} rows={4} value={descrizione} onChange={(e) => setDescrizione(e.target.value)} />
-        </FormField>
-        <FormField label="Informazioni aggiuntive">
-          <textarea className={formTextareaClass} rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} />
-        </FormField>
-        <GestionaleAiActionButton
-          type="button"
-          disabled={submitting || photos.length === 0 || !descrizione.trim()}
-          onClick={() => void handleSubmit()}
-        >
-          {submitting ? "Identificazione in corso…" : "Identifica ricambio"}
-        </GestionaleAiActionButton>
-      </section>
-
-      <section className="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-        <h2 className="text-sm font-semibold text-zinc-200">Risultato</h2>
-        {stages.length > 0 ? (
-          <ul className="space-y-1 text-sm text-zinc-400">
-            {stages.map((s) => (
-              <li key={s.key} className={s.status === "completed" ? "text-emerald-400" : undefined}>
-                {s.label} — {s.status}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {!result && !submitting ? (
-          <p className="text-sm text-zinc-500">Compila il form e avvia l&apos;identificazione.</p>
-        ) : null}
-
-        {result ? (
-          <div className="space-y-4 text-sm">
-            {result.bestMatch ? (
-              <div className="space-y-2 rounded-lg border border-zinc-700 p-3">
-                <p className="font-medium text-zinc-100">{result.bestMatch.description}</p>
-                <p>
-                  {result.bestMatch.verifiedPartNumber ? (
-                    <>
-                      <span className="text-emerald-400">Codice verificato: </span>
-                      {result.bestMatch.verifiedPartNumber}
-                    </>
-                  ) : result.bestMatch.candidatePartNumber ? (
-                    <>
-                      <span className="text-amber-400">Codice candidato: </span>
-                      {result.bestMatch.candidatePartNumber}
-                    </>
-                  ) : (
-                    <span className="text-zinc-500">Codice non verificato</span>
-                  )}
-                </p>
-                <p className="text-zinc-400">
-                  {confidenceBandLabel(result.bestMatch.confidenceBand)}
-                </p>
-              </div>
-            ) : (
-              <p className="text-zinc-400">Ricambio non identificato con sufficiente affidabilità.</p>
-            )}
-
-            {result.warnings.length > 0 ? (
-              <ul className="list-disc pl-5 text-amber-300/90">
-                {result.warnings.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
+    <>
+      <PageLayout
+        title="Identifica ricambio"
+        actions={
+          <button
+            type="button"
+            className={`${dsBtnSubtle} min-h-10 gap-2`}
+            onClick={() => setHistoryOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={historyOpen}
+          >
+            Storico ricerche
+            {history.length > 0 ? (
+              <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,transparent)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--cab-primary)]">
+                {history.length}
+              </span>
             ) : null}
+          </button>
+        }
+      >
+        <div className="grid min-h-0 gap-6 lg:grid-cols-2">
+        <section className={IDENTIFICA_PANEL_CLASS}>
+          <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati ricerca</h2>
 
-            <div>
-              <h3 className="mb-2 font-medium text-zinc-200">Fonti consultate</h3>
-              <ul className="space-y-1 text-zinc-400">
-                {(result.sourcesConsulted ?? []).map((s) => (
-                  <li key={`${s.documentId ?? s.title}`}>
-                    {s.status === "ready" ? "✓" : "○"} {s.title}
-                    {s.indexQuality ? ` (${s.indexQuality})` : ""}
+          <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,transparent)] p-3">
+            <p className="mb-2 text-xs font-medium text-[color:var(--cab-text)]">Foto del ricambio</p>
+            <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-start gap-2 sm:flex-wrap">
+              {photos.map((p, i) => (
+                <div
+                  key={`${p.name}-${i}`}
+                  className="group relative flex max-w-[9rem] flex-col gap-1 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-2"
+                >
+                  <TruncatedTextTooltip text={p.name} className="truncate text-[11px] font-medium text-[color:var(--cab-text)]" />
+                  <span className="text-[10px] text-[color:var(--cab-text-muted)]">
+                    {(p.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-xs font-bold text-[color:var(--cab-text-muted)] shadow-sm group-hover:flex"
+                    onClick={() => removePhoto(i)}
+                    aria-label={`Rimuovi ${p.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {canAddPhoto ? (
+                <GestionaleImageUploadButton
+                  onImagePicked={onPhotoPick}
+                  disabled={submitting}
+                  buttonClassName={`${dsBtnSubtle} !h-auto min-h-[4.25rem] min-w-[6.5rem] flex-col gap-1 border border-dashed border-[color:var(--cab-border)] px-3 py-2.5`}
+                  buttonLabel={
+                    <span className="inline-flex flex-col items-center gap-1 text-center">
+                      <HubIconPhoto className="h-5 w-5 text-[color:var(--cab-primary)]" />
+                      <span className="text-[11px] font-semibold leading-tight">Aggiungi foto</span>
+                      <span className="text-[10px] font-normal text-[color:var(--cab-text-muted)]">Opzionale</span>
+                    </span>
+                  }
+                  wrapperClassName="shrink-0"
+                />
+              ) : null}
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+              Fino a {SPARE_PARTS_UPLOAD_LIMITS.maxPhotos} foto · senza immagini si cerca per testo nei cataloghi indicizzati
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              label="Marca attrezzatura"
+              hint="Filtra cataloghi e listini per questa marca"
+            >
+              <GlobalHierarchyMarcaSelect
+                tree="attrezzature"
+                value={marca}
+                onChange={(v) => {
+                  setMarca(v);
+                  if (!v.trim()) setModello("");
+                }}
+                className={LIST_SELECT_WRAP}
+                inputClassName={formInputClass}
+                placeholder="Es. Schmidt, Bobcat…"
+                aria-label="Marca attrezzatura"
+              />
+            </FormField>
+            <FormField label="Modello">
+              <GlobalHierarchyModelloSelect
+                tree="attrezzature"
+                marcaNome={marca}
+                value={modello}
+                onChange={setModello}
+                className={LIST_SELECT_WRAP}
+                inputClassName={formInputClass}
+                placeholder={marca.trim() ? "Es. Swingo 200…" : "Seleziona prima la marca"}
+                aria-label="Modello attrezzatura"
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Descrivi il ricambio" hint="Nome, funzione o caratteristiche visibili">
+            <GestionaleTextarea
+              value={descrizione}
+              onChange={setDescrizione}
+              rows={4}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              placeholder="Es. vetro laterale cabina, filtro olio motore…"
+            />
+          </FormField>
+          <FormField label="Informazioni aggiuntive">
+            <GestionaleTextarea
+              value={extra}
+              onChange={setExtra}
+              rows={3}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              placeholder="Codici visibili, posizione sul mezzo, note officina…"
+            />
+          </FormField>
+
+          {submitError ? (
+            <p
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              role="alert"
+            >
+              {submitError}
+            </p>
+          ) : null}
+
+          <GestionaleAiActionButton
+            type="button"
+            disabled={submitting || !descrizione.trim()}
+            onClick={() => void handleSubmit()}
+          >
+            {submitting ? `${searchProgress.headline}…` : "Identifica ricambio"}
+          </GestionaleAiActionButton>
+        </section>
+
+        <section className={IDENTIFICA_PANEL_CLASS}>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">Risultato</h2>
+            {result?.bestMatch ? (
+              <span className={confidenceBandClass(result.bestMatch.confidenceBand)}>
+                {confidenceBandLabel(result.bestMatch.confidenceBand)}
+              </span>
+            ) : null}
+          </div>
+
+          {submitting || stages.length > 0 ? (
+            <div className={`${IDENTIFICA_SUBPANEL_CLASS} space-y-3 p-3`} role="status" aria-live="polite" aria-busy={submitting}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                  {searchProgress.headline}
+                </span>
+                {stages.length > 0 ? (
+                  <span className="text-xs font-semibold tabular-nums text-[color:var(--cab-text)]">{progress}%</span>
+                ) : null}
+              </div>
+              <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">{searchProgress.hint}</p>
+              {searchProgress.warning ? (
+                <p className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_14%,transparent)] px-2 py-1.5 text-xs text-[color:var(--cab-text)]">
+                  <span aria-hidden>⚠ </span>
+                  {searchProgress.warning}
+                </p>
+              ) : null}
+              {stages.length > 0 ? (
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--cab-border)_55%,transparent)]"
+                  aria-hidden
+                >
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-300 ease-out ${
+                      progress >= 100
+                        ? "bg-[color:var(--cab-success)]"
+                        : "bg-[color:var(--cab-primary)]"
+                    }`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-[color:var(--cab-text-muted)]">
+                  <LoadingSpinner size="sm" label={searchProgress.headline} />
+                  <span>In corso…</span>
+                </div>
+              )}
+              {stages.length > 0 ? (
+                <ol className="divide-y divide-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)] rounded-md border border-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-card)_55%,transparent)]">
+                  {stages.map((s) => (
+                    <li key={s.key} className="flex items-center gap-2.5 px-2.5 py-2 text-sm">
+                      <StageStatusIcon status={s.status} />
+                      <span className="min-w-0 flex-1 text-[color:var(--cab-text)]">{s.label}</span>
+                      <span className={stageStatusPillClass(s.status)}>{stageStatusLabel(s.status)}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!result && !submitting && !submitError ? (
+            <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
+              Descrivi il ricambio e avvia la ricerca. Le foto sono opzionali per affinare il match visivo.
+            </p>
+          ) : null}
+
+          {result ? (
+            <div className="flex-safe-col min-w-0 min-h-0 flex-1 gap-4 text-sm">
+              {result.bestMatch ? (
+                <PartCandidateCard
+                  part={result.bestMatch}
+                  candidateKey="best"
+                  emphasize
+                  selected={orderDraft?.candidateKey === "best"}
+                  orderModalOpen={orderDraft != null}
+                  resolving={resolvingOrder}
+                  canOrder={canOrder}
+                  onSelectAndOrder={() => void handleSelectAndOrder("best", 0)}
+                />
+              ) : (
+                <p className={`${IDENTIFICA_SUBPANEL_CLASS} p-4 text-[color:var(--cab-text-muted)]`}>
+                  Ricambio non identificato con sufficiente affidabilità.
+                </p>
+              )}
+
+              {result.alternatives.length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                    Altri candidati
+                  </h3>
+                  <ul className="space-y-2">
+                    {result.alternatives.map((alt, i) => {
+                      const key = `alt:${i}`;
+                      return (
+                        <li key={`${partCodeLabel(alt) ?? alt.description}-${i}`}>
+                          <PartCandidateCard
+                            part={alt}
+                            candidateKey={key}
+                            selected={orderDraft?.candidateKey === key}
+                            orderModalOpen={orderDraft != null}
+                            resolving={resolvingOrder}
+                            canOrder={canOrder}
+                            onSelectAndOrder={() => void handleSelectAndOrder(key, i + 1)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              {result.warnings.length > 0 ? (
+                <ul className={`${IDENTIFICA_SUBPANEL_CLASS} list-disc space-y-1 p-3 pl-8 text-[color:var(--cab-warning)]`}>
+                  {result.warnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {(result.sourcesConsulted ?? []).length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                    Fonti consultate
+                  </h3>
+                  <ul className={`${IDENTIFICA_SUBPANEL_CLASS} divide-y divide-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)]`}>
+                    {(result.sourcesConsulted ?? []).map((s) => (
+                      <li
+                        key={`${s.documentId ?? s.title}`}
+                        className="flex items-center gap-2.5 px-3 py-2 text-[color:var(--cab-text-muted)]"
+                      >
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${
+                            s.status === "ready"
+                              ? "bg-[color:color-mix(in_srgb,var(--cab-success)_18%,transparent)] text-[color:var(--cab-success)]"
+                              : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_10%,transparent)] text-[color:var(--cab-text-muted)]"
+                          }`}
+                          aria-hidden
+                        >
+                          {s.status === "ready" ? "✓" : "○"}
+                        </span>
+                        <TruncatedTextTooltip text={s.title} className="min-w-0 flex-1 truncate text-[color:var(--cab-text)]" />
+                        {s.indexQuality ? (
+                          <span className="shrink-0 text-[10px] font-medium uppercase text-[color:var(--cab-text-muted)]">
+                            {s.indexQuality}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {result.bestMatch ? (
+                <div className="mt-auto flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-4 sm:flex-row">
+                  <button
+                    type="button"
+                    className={`${dsBtnPrimary} min-h-11 w-full justify-center sm:min-w-0 sm:flex-1`}
+                    onClick={() => void confirmCode()}
+                  >
+                    Conferma codice
+                  </button>
+                  <button
+                    type="button"
+                    className={`${dsBtnSubtle} min-h-11 w-full justify-center sm:min-w-0 sm:flex-1`}
+                    onClick={() => void rejectCode()}
+                  >
+                    Codice errato
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+        </div>
+      </PageLayout>
+
+      {historyOpen ? (
+        <GestionaleModalShell
+          modalSize="info"
+          title="Storico ricerche"
+          onRequestClose={() => setHistoryOpen(false)}
+        >
+          <GestionaleModalScrollBody className="space-y-2 text-sm">
+            {history.length === 0 ? (
+              <p className="text-[color:var(--cab-text-muted)]">Nessuna ricerca precedente.</p>
+            ) : (
+              <ul className="space-y-2">
+                {history.map((h) => (
+                  <li
+                    key={h.id}
+                    className={`${IDENTIFICA_SUBPANEL_CLASS} flex-safe-row min-w-0 max-w-full flex-nowrap items-center gap-x-2 gap-y-1 p-3 text-[color:var(--cab-text-muted)] sm:flex-wrap`}
+                  >
+                    <span className="font-medium text-[color:var(--cab-text)]">
+                      {new Date(h.created_at).toLocaleString("it-IT")}
+                    </span>
+                    <span>· {h.status}</span>
+                    {h.confirmed_at ? <span className="text-[color:var(--cab-success)]">confermata</span> : null}
+                    {h.rejected_at ? <span className="text-[color:var(--cab-warning)]">rifiutata</span> : null}
+                    {h.result_json?.bestMatch?.verifiedPartNumber ? (
+                      <span className="font-mono text-[color:var(--cab-text)]">
+                        {h.result_json.bestMatch.verifiedPartNumber}
+                      </span>
+                    ) : h.result_json?.bestMatch?.candidatePartNumber ? (
+                      <span className="font-mono text-[color:var(--cab-warning)]">
+                        {h.result_json.bestMatch.candidatePartNumber}
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
-            </div>
+            )}
+          </GestionaleModalScrollBody>
+        </GestionaleModalShell>
+      ) : null}
 
-            {result.bestMatch ? (
-              <div className="flex gap-2">
-                <button type="button" className="rounded-md bg-emerald-700 px-3 py-2 text-white" onClick={() => void confirmCode()}>
-                  Conferma codice
-                </button>
-                <button type="button" className="rounded-md border border-zinc-600 px-3 py-2" onClick={() => void rejectCode()}>
-                  Codice errato
-                </button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
-      </div>
-    </div>
+      {orderDraft ? (
+        <OrdineFornitoreEditorModal
+          record={orderDraft.record}
+          isNew
+          canWrite={canOrder}
+          identificaMeta={identificaMeta}
+          onClose={() => setOrderDraft(null)}
+          onSaved={() => setOrderDraft(null)}
+        />
+      ) : null}
+    </>
   );
 }

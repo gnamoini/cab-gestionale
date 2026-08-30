@@ -17,7 +17,7 @@ export function ReportTimelineEventCard({ event }: { event: ReportOperationalEve
 
   return (
     <li className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 shadow-[var(--cab-shadow-sm)]">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 flex-nowrap sm:flex-wrap">
         <p className="text-sm font-medium text-[color:var(--cab-text)]">{event.title}</p>
         {event.severity === "attention" || event.severity === "negative" ? (
           <span className="text-xs text-[color:var(--cab-warning)]">Attenzione</span>

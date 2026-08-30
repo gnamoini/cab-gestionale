@@ -47,7 +47,7 @@ assert.match(dispatchSrc, /acknowledgeOperationalTableVersions/);
 assert.match(dirtyFlushSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(invalidateRelatedSrc, /cabSyncEventForEntity\("scheda_lavorazione"/);
 assert.match(policySrc, /isOperationalSessionWarmingUp/);
-assert.match(policySrc, /user_permissions/);
+assert.match(policySrc, /CAB_SYNC_TABLE_USER_PERMISSIONS/);
 assert.match(policySrc, /profiles/);
 
 console.log("sync-invalidation-policy.test.ts OK");

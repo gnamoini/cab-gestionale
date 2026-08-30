@@ -10,6 +10,7 @@ import {
   buildCommunicationSendEmailInput,
   readCommunicationPrefsFromRows,
   resolveCommunicationEmailEnvelope,
+  type CommunicationEmailLayoutOptions,
 } from "@/lib/communications/email/communication-email-envelope";
 import type { SendEmailInput } from "@/lib/communications/providers/email-transport";
 import type { CommunicationSettings } from "@/lib/communications/settings/communication-settings";
@@ -42,6 +43,7 @@ export async function prepareCommunicationEmailSendInput(input: {
   text: string;
   settingsRows?: AppSettingsRowLike[];
   attachments?: SendEmailInput["attachments"];
+  layout?: CommunicationEmailLayoutOptions;
 }): Promise<SendEmailInput | null> {
   const commSettings = readCommunicationPrefsFromRows(input.settingsRows);
   const envelope = resolveCommunicationEmailEnvelope(commSettings, input.settingsRows);
@@ -58,6 +60,7 @@ export async function prepareCommunicationEmailSendInput(input: {
     branding,
     envelope,
     attachments: input.attachments,
+    layout: input.layout,
   });
 }
 

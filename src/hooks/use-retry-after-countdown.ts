@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs, react-hooks/purity -- lint phase2: countdown deadline synced from retryAfterSec during render */
+
 import { useEffect, useRef, useState } from "react";
 
 export function useRetryAfterCountdown(retryAfterSec: number | null): {
@@ -7,22 +9,22 @@ export function useRetryAfterCountdown(retryAfterSec: number | null): {
   ready: boolean;
 } {
   const deadlineRef = useRef<number | null>(null);
-  const [remainingSec, setRemainingSec] = useState(0);
+  const lastRetryRef = useRef(retryAfterSec);
+  const [, setTick] = useState(0);
+
+  if (lastRetryRef.current !== retryAfterSec) {
+    lastRetryRef.current = retryAfterSec;
+    deadlineRef.current =
+      retryAfterSec != null && retryAfterSec > 0 ? Date.now() + retryAfterSec * 1000 : null;
+  }
+
+  const remainingSec = deadlineRef.current
+    ? Math.max(0, (deadlineRef.current - Date.now()) / 1000)
+    : 0;
 
   useEffect(() => {
-    if (retryAfterSec == null || retryAfterSec <= 0) {
-      deadlineRef.current = null;
-      setRemainingSec(0);
-      return;
-    }
-    deadlineRef.current = Date.now() + retryAfterSec * 1000;
-    const tick = () => {
-      const deadline = deadlineRef.current;
-      if (!deadline) return;
-      setRemainingSec(Math.max(0, (deadline - Date.now()) / 1000));
-    };
-    tick();
-    const id = window.setInterval(tick, 250);
+    if (!deadlineRef.current) return;
+    const id = window.setInterval(() => setTick((t) => t + 1), 250);
     return () => window.clearInterval(id);
   }, [retryAfterSec]);
 

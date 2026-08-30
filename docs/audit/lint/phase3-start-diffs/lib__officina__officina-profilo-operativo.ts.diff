@@ -1,0 +1,13 @@
+diff --git a/lib/officina/officina-profilo-operativo.ts b/lib/officina/officina-profilo-operativo.ts
+index 87e102e3..ac4e3698 100644
+--- a/lib/officina/officina-profilo-operativo.ts
++++ b/lib/officina/officina-profilo-operativo.ts
+@@ -30,7 +30,7 @@ export function defaultTargetTypeForProfilo(profilo: OfficinaProfiloOperativo) {
+ 
+ export type SchedaIngressoMezzoSectionKind = "attrezzatura" | "telaio";
+ 
+-export function showTelaioSections(_profilo: OfficinaProfiloOperativo): boolean {
++export function showTelaioSections(): boolean {
+   return true;
+ }
+ 

@@ -1,0 +1,12 @@
+diff --git a/lib/schede/schede-bundles-fetch.ts b/lib/schede/schede-bundles-fetch.ts
+index 56f59018..b3e987c5 100644
+--- a/lib/schede/schede-bundles-fetch.ts
++++ b/lib/schede/schede-bundles-fetch.ts
+@@ -1,6 +1,6 @@
+ import { SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
+ import { schedaRowsToBundle, schedaRowsToStore } from "@/lib/schede/schede-db-mapper";
+-import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
++import type { LavorazioneSchedeStore } from "@/types/schede";
+ import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
+ import { err, success, type ServiceResult } from "@/src/services/service-result";
+ import type { SupabaseClient } from "@supabase/supabase-js";

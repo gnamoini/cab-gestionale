@@ -46,15 +46,12 @@ function sectionBodyPadClass(variant: GestionaleCollapsibleSectionVariant): stri
   return variant === "flat" ? gestionaleCollapsibleSectionFlatBodyPadClass : `pt-2 ${gestionaleCollapsibleSectionBodyPadClass}`;
 }
 
-export function gestionaleCollapsibleSectionTitleClass(
-  _tone: GestionaleCollapsibleSectionTitleTone = "primary",
-): string {
+export function gestionaleCollapsibleSectionTitleClass(): string {
   return gestionaleCollapsibleSectionTitleClassName;
 }
 
 export function GestionaleCollapsibleSection({
   title,
-  titleTone = "primary",
   defaultCollapsed = true,
   forceExpanded = false,
   unmountOnCollapse = false,
@@ -101,9 +98,12 @@ export function GestionaleCollapsibleSection({
   const titleId = `${panelId}-title`;
   const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
 
+   
   useEffect(() => {
     if (forceExpanded) {
+       
       if (usePersistence) setPersistedCollapsed(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       else setLocalCollapsed(false);
     }
   }, [forceExpanded, usePersistence, setPersistedCollapsed]);

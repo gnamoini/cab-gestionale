@@ -5,7 +5,7 @@ import {
   acquireDebouncedScortaSubscriber,
   clearDebouncedScortaStoreForTest,
   commitDebouncedScortaNow,
-  DEBOUNCED_SCORTA_MS,
+
   decrementDebouncedScorta,
   incrementDebouncedScorta,
   getDebouncedScortaSnapshot,

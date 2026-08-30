@@ -22,7 +22,7 @@ export function normalizePreventivoEditorRecord(
 
 /** Snapshot stabile — esclude timestamp volatile. */
 export function preventivoEditorSnapshot(record: PreventivoRecord): string {
-  const { aggiornatoAt: _aggiornatoAt, ...rest } = record;
+  const { ...rest } = record;
   return JSON.stringify(rest);
 }
 

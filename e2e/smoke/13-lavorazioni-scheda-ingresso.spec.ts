@@ -58,7 +58,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   test.setTimeout(900_000);
   const fixture = buildSchedaIngressoAuditFixture();
   const capture = attachSchedaPayloadCapture(page);
-  const { ingresso, ingressoEdit, lavorazioni, lavorazioneNote, lavorazioneNoteEdit, token } = fixture;
+  const { ingresso, ingressoEdit, lavorazioni, lavorazioneNote, token } = fixture;
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");

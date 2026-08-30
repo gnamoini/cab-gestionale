@@ -86,7 +86,7 @@ export function useShadowFieldEvaluation({
   );
 
   const onBlur = useCallback(
-    (_e: FocusEvent<HTMLInputElement>) => {
+    () => {
       if (!enabled) return;
       clearDebounce();
       const value = latestValueRef.current;

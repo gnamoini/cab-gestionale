@@ -120,7 +120,7 @@ export function SettingsMagazzinoMarcheList({
                 onRenameBlur={tryRename}
                 onRemove={() => setPendingDelete(nome)}
                 trailing={
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <div className="flex shrink-0 items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                     <ColorSwatchButton
                       value={getMarcaBadgeColorHex(mag, nome) ?? MAGAZZINO_MARCA_BADGE_GRAY}
                       onChange={(hex) => {

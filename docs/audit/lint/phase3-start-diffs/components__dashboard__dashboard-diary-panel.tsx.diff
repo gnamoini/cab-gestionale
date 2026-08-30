@@ -1,0 +1,38 @@
+diff --git a/components/dashboard/dashboard-diary-panel.tsx b/components/dashboard/dashboard-diary-panel.tsx
+index 790df278..49cd0349 100644
+--- a/components/dashboard/dashboard-diary-panel.tsx
++++ b/components/dashboard/dashboard-diary-panel.tsx
+@@ -94,12 +94,14 @@ function DiaryInlineWeekCalendar({
+   const [todayYmd, setTodayYmd] = useState("");
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setMounted(true);
+     setTodayYmd(toYmd(new Date()));
+   }, []);
+ 
+   useEffect(() => {
+     const v = initialViewFromYmd(weekFromYmd);
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setViewYear(v.year);
+     setViewMonth(v.month);
+   }, [weekFromYmd]);
+@@ -345,7 +347,9 @@ export function DashboardDiaryPanel() {
+ 
+   const byDate = useMemo(() => new Map(weekEntries.map((e) => [e.work_date, e.body])), [weekEntries]);
+   const draftsRef = useRef(drafts);
+-  draftsRef.current = drafts;
++  useEffect(() => {
++    draftsRef.current = drafts;
++  }, [drafts]);
+ 
+   const entriesFingerprint = useMemo(
+     () => weekEntries.map((e) => `${e.work_date}\0${e.body}`).join("\n"),
+@@ -353,6 +357,7 @@ export function DashboardDiaryPanel() {
+   );
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDrafts({});
+     lastSavedRef.current = {};
+     for (const t of Object.values(debounceRef.current)) clearTimeout(t);

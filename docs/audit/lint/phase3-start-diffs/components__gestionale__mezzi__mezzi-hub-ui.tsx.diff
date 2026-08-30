@@ -1,0 +1,11 @@
+diff --git a/components/gestionale/mezzi/mezzi-hub-ui.tsx b/components/gestionale/mezzi/mezzi-hub-ui.tsx
+index 9204f26d..eca47581 100644
+--- a/components/gestionale/mezzi/mezzi-hub-ui.tsx
++++ b/components/gestionale/mezzi/mezzi-hub-ui.tsx
+@@ -1,6 +1,5 @@
+ "use client";
+ 
+-import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
+ import type { ReactNode } from "react";
+ 
+ export type MezziHubTabId =

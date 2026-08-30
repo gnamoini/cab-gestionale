@@ -1,0 +1,13 @@
+diff --git a/lib/regression/pwa-phase5-policy.test.ts b/lib/regression/pwa-phase5-policy.test.ts
+index fbb7bd88..65e6d0d2 100644
+--- a/lib/regression/pwa-phase5-policy.test.ts
++++ b/lib/regression/pwa-phase5-policy.test.ts
+@@ -3,7 +3,7 @@ import fs from "node:fs";
+ import path from "node:path";
+ import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
+ import {
+-  PWA_OFFLINE_WRITE_BLOCKED,
++
+   PWA_OFFLINE_WRITE_MESSAGE,
+ } from "@/lib/pwa/pwa-connectivity";
+ import {

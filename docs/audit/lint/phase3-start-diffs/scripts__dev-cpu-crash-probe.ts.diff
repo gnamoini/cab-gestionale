@@ -1,0 +1,13 @@
+diff --git a/scripts/dev-cpu-crash-probe.ts b/scripts/dev-cpu-crash-probe.ts
+index 3b28d9e0..d9c62902 100644
+--- a/scripts/dev-cpu-crash-probe.ts
++++ b/scripts/dev-cpu-crash-probe.ts
+@@ -88,7 +88,7 @@ async function main(): Promise<void> {
+   let readyCount = 0;
+   let compileCount = 0;
+   let firstReadyAt: number | null = null;
+-  let errorLines: string[] = [];
++  const errorLines: string[] = [];
+   const stdoutBuf: string[] = [];
+ 
+   const onChunk = (chunk: Buffer, stream: "stdout" | "stderr"): void => {

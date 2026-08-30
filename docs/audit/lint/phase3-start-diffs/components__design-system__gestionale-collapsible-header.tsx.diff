@@ -1,0 +1,13 @@
+diff --git a/components/design-system/gestionale-collapsible-header.tsx b/components/design-system/gestionale-collapsible-header.tsx
+index 5729d553..958f135b 100644
+--- a/components/design-system/gestionale-collapsible-header.tsx
++++ b/components/design-system/gestionale-collapsible-header.tsx
+@@ -22,7 +22,7 @@ import {
+ /** Header collapsible SSOT — stesso trigger di ShellCard Lavorazioni. */
+ export function GestionaleCollapsibleHeader({
+   panelId,
+-  titleId,
++  
+   expanded,
+   toggleLabel,
+   onToggle,

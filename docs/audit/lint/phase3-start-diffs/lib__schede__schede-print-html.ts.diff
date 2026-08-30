@@ -1,0 +1,13 @@
+diff --git a/lib/schede/schede-print-html.ts b/lib/schede/schede-print-html.ts
+index fa90ce59..b41c6c9d 100644
+--- a/lib/schede/schede-print-html.ts
++++ b/lib/schede/schede-print-html.ts
+@@ -14,7 +14,7 @@ export function isAllowedLegacySchedaBlobMime(mime: string): boolean {
+   return ALLOWED_LEGACY_BLOB_MIMES.has(mime.trim().toLowerCase());
+ }
+ 
+-export function openBlobInNewTab(mime: string, base64: string, _fileName: string): void {
++export function openBlobInNewTab(mime: string, base64: string): void {
+   const normalized = mime.trim().toLowerCase();
+   if (!isAllowedLegacySchedaBlobMime(normalized)) {
+     return;

@@ -1,0 +1,13 @@
+diff --git a/lib/maintenance-plans/fetch-mezzo-metering.ts b/lib/maintenance-plans/fetch-mezzo-metering.ts
+index 577f8877..5f23a8c3 100644
+--- a/lib/maintenance-plans/fetch-mezzo-metering.ts
++++ b/lib/maintenance-plans/fetch-mezzo-metering.ts
+@@ -76,7 +76,7 @@ export async function resolveCurrentMezzoMeteringBatch(
+   );
+   const mileageActive = isAssetLifecycleSubFlagActive(lifecycleFlags, "mileage_history");
+ 
+-  let latestKmByMezzo = new Map<string, number>();
++  const latestKmByMezzo = new Map<string, number>();
+   if (mileageActive) {
+     const { data: readings } = await client
+       .from("asset_mileage_readings")

@@ -1,0 +1,11 @@
+diff --git a/lib/report/cross-analysis/build-cross-breakdowns.ts b/lib/report/cross-analysis/build-cross-breakdowns.ts
+index a4185c1d..a62b7096 100644
+--- a/lib/report/cross-analysis/build-cross-breakdowns.ts
++++ b/lib/report/cross-analysis/build-cross-breakdowns.ts
+@@ -1,6 +1,5 @@
+ import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
+ import { computeLavorazioneCosto } from "@/lib/lavorazioni/lavorazione-costo";
+-import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+ import type { MezzoGestito } from "@/lib/mezzi/types";
+ import { topMezziByEstimatedCost } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+ import { isoInRange, type DateRange } from "@/lib/report/date-ranges";

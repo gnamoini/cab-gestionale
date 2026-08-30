@@ -1,5 +1,4 @@
-import { resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
-import type { RbacEvaluationContext } from "@/lib/auth/rbac";
+import { resolveRole, type RbacEvaluationContext } from "@/lib/auth/rbac";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
 /** Policy A: guest e cliente esclusi dall'inbox. */

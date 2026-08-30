@@ -1,0 +1,57 @@
+diff --git a/components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx b/components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx
+index 207e075f..09475635 100644
+--- a/components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx
++++ b/components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx
+@@ -27,7 +27,6 @@ import {
+ import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
+ 
+ /** Allineato a `preventivi-view` (archivio). */
+-const prevTableTd = gestionaleListTableTd;
+ const prevTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
+ 
+ type LavorazionePreventiviHubListProps = {
+@@ -161,29 +160,29 @@ export function LavorazionePreventiviHubList({
+         {rows.map((p) => (
+           <tr key={p.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
+             <td
+-              className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}
++              className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}
+             >
+               <div className="flex flex-col items-center gap-1">
+                 <span>{p.numero}</span>
+                 {isPreventivoCollegato(p, lavorazioneId) ? <PreventivoCollegatoBadge /> : null}
+               </div>
+             </td>
+-            <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
++            <td className={`whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
+               {fmtPreventivoDataTabella(p.dataCreazione)}
+             </td>
+             <td className={prevTableTdText}>
+               <span className="line-clamp-2 break-words text-sm leading-snug">{p.cliente || "—"}</span>
+             </td>
+-            <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
++            <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+               <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
+             </td>
+-            <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
++            <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+               <span className="line-clamp-2 break-words text-xs leading-snug">{p.utilizzatore || "—"}</span>
+             </td>
+-            <td className={`min-w-0 max-w-[1px] ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
++            <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+               <span className="line-clamp-2 break-words text-sm leading-snug">{fmtPreventivoMarcaModello(p)}</span>
+             </td>
+-            <td className={`min-w-0 ${prevTableTd}`}>
++            <td className={`min-w-0 ${gestionaleListTableTd}`}>
+               <PreventivoIdentCell p={p} />
+             </td>
+             <td className={dsTableTdActions}>
+@@ -208,7 +207,7 @@ export function LavorazionePreventiviHubList({
+           <CardMobile key={p.id}>
+             <div className="flex items-start justify-between gap-3">
+               <div className="min-w-0 flex-1">
+-                <div className="flex flex-wrap items-center gap-2">
++                <div className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+                   <p className="font-mono text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]">{p.numero}</p>
+                   {isPreventivoCollegato(p, lavorazioneId) ? <PreventivoCollegatoBadge /> : null}
+                 </div>

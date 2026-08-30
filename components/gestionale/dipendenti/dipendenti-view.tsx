@@ -92,7 +92,6 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   const [editorTarget, setEditorTarget] = useState<TimesheetEditorTarget | null>(null);
   const [detailEmployee, setDetailEmployee] = useState<DipendenteTimesheetEmployeeRow | null>(null);
   const [bootstrapPending, setBootstrapPending] = useState(false);
-  const [pdfExporting, setPdfExporting] = useState(false);
   const [accentDateYmd, setAccentDateYmd] = useState<string | null>(null);
   const [accentFadingOut, setAccentFadingOut] = useState(false);
   const [fillTodayBulkPending, setFillTodayBulkPending] = useState(false);
@@ -119,6 +118,7 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   useEffect(() => {
     if (!filterEmployeeId) return;
     if (!ts.displayEmployees.some((e) => e.id === filterEmployeeId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setFilterEmployeeId("");
     }
   }, [filterEmployeeId, ts.displayEmployees]);
@@ -168,12 +168,11 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   }, []);
 
   const handleExportPdfComplessivo = useCallback(() => {
-    if (pdfExporting || ts.displayEmployees.length === 0) return;
+    if (ts.displayEmployees.length === 0) return;
     openPdfArtifactFromUserClick("dipendenti-aziendale", { month: monthKey });
-  }, [pdfExporting, monthKey, ts.displayEmployees.length]);
+  }, [monthKey, ts.displayEmployees.length]);
 
   const handleExportPdfDipendente = useCallback(() => {
-    if (pdfExporting) return;
     if (!filterEmployeeId) {
       toastValidation(GESTIONALE_TOAST.dipendentiSelectAddettoForPdf);
       return;
@@ -187,7 +186,7 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
       month: monthKey,
       employeeId: employee.id,
     });
-  }, [pdfExporting, monthKey, ts.displayEmployees, filterEmployeeId, toastValidation]);
+  }, [monthKey, ts.displayEmployees, filterEmployeeId, toastValidation]);
 
   const handleBootstrap = useCallback(async () => {
     setBootstrapPending(true);
@@ -339,7 +338,6 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
       label: "PDF complessivo",
       description: "Esporta presenze di tutti i dipendenti",
       onSelect: handleExportPdfComplessivo,
-      loading: pdfExporting,
     },
     {
       id: "pdf-dipendente",
@@ -347,9 +345,8 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
       description: filterEmployeeId ? "Esporta presenze del dipendente selezionato" : "Seleziona un dipendente",
       onSelect: handleExportPdfDipendente,
       disabled: !filterEmployeeId,
-      loading: pdfExporting,
     },
-  ], [filterEmployeeId, pdfExporting, handleExportPdfComplessivo, handleExportPdfDipendente]);
+  ], [filterEmployeeId, handleExportPdfComplessivo, handleExportPdfDipendente]);
 
   return (
     <GestionaleSectionGate module="dipendenti">

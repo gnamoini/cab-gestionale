@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx b/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx
+index cc3bd03d..afb4a16d 100644
+--- a/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx
++++ b/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx
+@@ -29,7 +29,7 @@ export function LavorazioniAdvancedFilterPanel({
+   filters,
+   onChange,
+   catalog,
+-  addettiRecords = [],
++  _addettiRecords = [],
+   variant = "staff",
+   restrictUtilizzatoriToCatalog = false,
+ }: {

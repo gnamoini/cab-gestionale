@@ -2,9 +2,7 @@ import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import type { DocumentoAssocRef, DocumentoGestionale, DocumentoApplicabilita } from "@/lib/types/gestionale";
 
 /** Tutte le categorie supportano marca intera o modello specifico. */
-export function allowedApplicabilitaForCategoria(
-  _c: DocumentoGestionale["categoria"],
-): DocumentoApplicabilita[] {
+export function allowedApplicabilitaForCategoria(): DocumentoApplicabilita[] {
   return ["marca", "modello"];
 }
 

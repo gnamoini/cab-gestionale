@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/mezzi/mezzi-tagliandi-assign-modal.tsx b/components/gestionale/mezzi/mezzi-tagliandi-assign-modal.tsx
+index 20e6d45d..e50b183c 100644
+--- a/components/gestionale/mezzi/mezzi-tagliandi-assign-modal.tsx
++++ b/components/gestionale/mezzi/mezzi-tagliandi-assign-modal.tsx
+@@ -174,7 +174,7 @@ export function MezziTagliandiAssignModal({
+         titleId="tagliandi-assign-title"
+         modalSize="formMedium"
+         footer={
+-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
++          <div className="flex w-full items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+             <button type="button" className={dsBtnNeutral} onClick={onClose}>
+               Annulla
+             </button>

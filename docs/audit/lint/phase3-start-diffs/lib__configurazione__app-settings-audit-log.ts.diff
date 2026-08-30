@@ -1,0 +1,13 @@
+diff --git a/lib/configurazione/app-settings-audit-log.ts b/lib/configurazione/app-settings-audit-log.ts
+index 055f9908..5a8326dd 100644
+--- a/lib/configurazione/app-settings-audit-log.ts
++++ b/lib/configurazione/app-settings-audit-log.ts
+@@ -1,7 +1,7 @@
+ import { profileDisplayName } from "@/lib/auth/profile-display-name";
+ import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+ import {
+-  CONFIGURAZIONE_SECTION_LABELS,
++
+   describeConfigurazioneSectionChanges,
+   type ConfigurazioneSectionId,
+ } from "@/lib/configurazione/settings-snapshot-log";

@@ -21,6 +21,7 @@ export function useLoadingFailsafe(active: boolean, timeoutMs: number): boolean 
   useEffect(() => {
     if (!active) {
       startedRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset failsafe when loading ends
       setFailsafe(false);
       return;
     }
@@ -44,6 +45,7 @@ export function usePendingQueryTimeout(pending: boolean, timeoutMs: number): boo
   useEffect(() => {
     if (!pending) {
       startedRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset timeout flag when query completes
       setTimedOut(false);
       return;
     }

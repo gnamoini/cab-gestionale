@@ -1,0 +1,13 @@
+diff --git a/lib/ui/global-input.ts b/lib/ui/global-input.ts
+index 259bdd3a..9fb75eb9 100644
+--- a/lib/ui/global-input.ts
++++ b/lib/ui/global-input.ts
+@@ -158,7 +158,7 @@ export function globalAutocompleteOptionClass(active: boolean, selected?: boolea
+ export function globalAutocompleteOptionPillClass(
+   active: boolean,
+   selected: boolean,
+-  _pillStyle?: import("react").CSSProperties,
++  __pillStyle?: import("react").CSSProperties,
+ ): string {
+   const ring = active
+     ? "ring-2 ring-inset ring-white/35"

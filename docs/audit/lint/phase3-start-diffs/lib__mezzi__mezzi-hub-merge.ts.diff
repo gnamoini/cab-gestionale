@@ -1,0 +1,13 @@
+diff --git a/lib/mezzi/mezzi-hub-merge.ts b/lib/mezzi/mezzi-hub-merge.ts
+index 734d2fa7..98a58151 100644
+--- a/lib/mezzi/mezzi-hub-merge.ts
++++ b/lib/mezzi/mezzi-hub-merge.ts
+@@ -113,7 +113,7 @@ export function mergeMezziHubRows(
+   attive: LavorazioneAttiva[],
+   storico: LavorazioneArchiviata[],
+   preventivi: PreventivoRecord[],
+-  _documenti: DocumentoGestionale[],
++  
+ ): MezzoGestito[] {
+   const rows: MezzoGestito[] = baseMezzi.map((m) => ({ ...m }));
+ 

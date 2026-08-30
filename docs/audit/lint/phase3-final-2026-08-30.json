@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2026-08-30T01:47:10.676Z",
+  "baselineReference": {
+    "phase2Warnings": 260,
+    "phase2Errors": 0,
+    "phase2Files": 155
+  },
+  "phase3Start": {
+    "errors": 0,
+    "warnings": 260,
+    "files": 155
+  },
+  "phase3Final": {
+    "errors": 0,
+    "warnings": 0,
+    "files": 0,
+    "rules": []
+  },
+  "delta": {
+    "warningsResolved": 260,
+    "errorsDelta": 0
+  },
+  "eslintDisables": {
+    "phase2Reference": 220,
+    "current": 327,
+    "fileWide": 47,
+    "unexplained": 0,
+    "topRules": [
+      {
+        "rule": "react-hooks/set-state-in-effect",
+        "count": 154
+      },
+      {
+        "rule": "react-hooks/exhaustive-deps",
+        "count": 82
+      },
+      {
+        "rule": "react-hooks/refs",
+        "count": 22
+      },
+      {
+        "rule": "@next/next/no-img-element",
+        "count": 15
+      },
+      {
+        "rule": "react-hooks/preserve-manual-memoization",
+        "count": 14
+      },
+      {
+        "rule": "react-hooks/immutability",
+        "count": 10
+      },
+      {
+        "rule": "cab-perf/no-img-without-next-image",
+        "count": 8
+      },
+      {
+        "rule": "@next/next/no-assign-module-variable",
+        "count": 7
+      },
+      {
+        "rule": "react-hooks/incompatible-library",
+        "count": 6
+      },
+      {
+        "rule": "react-hooks/purity",
+        "count": 5
+      },
+      {
+        "rule": "@typescript-eslint/no-explicit-any",
+        "count": 3
+      },
+      {
+        "rule": "react-hooks/use-memo",
+        "count": 2
+      },
+      {
+        "rule": "cab-layout/no-native-title-tooltip",
+        "count": 2
+      },
+      {
+        "rule": "cab-rbac/no-auth-in-services",
+        "count": 2
+      },
+      {
+        "rule": "react/display-name",
+        "count": 1
+      }
+    ]
+  },
+  "lintStability": "HIGH",
+  "documentedExceptions": {
+    "count": 0,
+    "maxN": 0,
+    "items": []
+  },
+  "gateRecommendation": "NOT_READY_FOR_HARD_GATE",
+  "gateLintCriteriaMet": true,
+  "regressionSafety": {
+    "ciTsc": "FAIL_PRE_EXISTING",
+    "contract": "PASS",
+    "flexEslintGate": "PASS",
+    "dirtyCheck": "PASS",
+    "introducedByPhase3": 0
+  },
+  "lintConclusion": "LINT_CLEAN",
+  "remediationScopeGate": {
+    "inLintScope": true,
+    "note": ".remediation/ not in globalIgnores; 1 finding in migration-alignment-plan.ts"
+  }
+}

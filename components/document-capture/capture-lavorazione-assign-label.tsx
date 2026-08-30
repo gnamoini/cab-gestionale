@@ -8,7 +8,6 @@ export const CAPTURE_ASSIGN_CALLOUT_CLASS =
 export function LavorazioneAssignLabelLines({
   parts,
   fallback,
-  codiceClassName = "text-xs font-medium text-[color:var(--cab-text-muted)]",
   headlineClassName = "text-sm font-medium leading-snug text-[color:var(--cab-fg)]",
   identClassName = "text-xs leading-snug text-[color:var(--cab-text-muted)]",
 }: {

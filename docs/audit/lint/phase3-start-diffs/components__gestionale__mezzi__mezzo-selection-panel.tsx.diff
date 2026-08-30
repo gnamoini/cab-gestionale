@@ -1,0 +1,33 @@
+diff --git a/components/gestionale/mezzi/mezzo-selection-panel.tsx b/components/gestionale/mezzi/mezzo-selection-panel.tsx
+index a20ddbb4..437c1b92 100644
+--- a/components/gestionale/mezzi/mezzo-selection-panel.tsx
++++ b/components/gestionale/mezzi/mezzo-selection-panel.tsx
+@@ -20,6 +20,7 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
+ import type { MezzoSelectionSource, SelectedMezzoContext } from "@/lib/lavorazioni/selected-mezzo-context";
+ import { useSelectorListboxKeyboard } from "@/lib/selector-interaction/use-selector-listbox-keyboard";
+ import { dsBtnPrimary, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
++import { globalTableTheadSticky } from "@/lib/ui/global-table";
+ 
+ const SEARCH_DEBOUNCE_MS = 180;
+ const MEZZO_ROW_ESTIMATE_HEIGHT = 82;
+@@ -136,9 +137,11 @@ export function MezzoSelectionPanel({
+   }, [query]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setActiveIndex(-1);
+   }, [debouncedQuery]);
+ 
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const recentIds = useMemo(() => readMezzoSelectionRecents(userId), [userId, catalog.length]);
+ 
+   const searchResult = useMemo(
+@@ -304,7 +307,7 @@ export function MezzoSelectionPanel({
+                   if (item.kind === "section") {
+                     return (
+                       <div
+-                        className="sticky top-0 z-[1] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_38%,var(--cab-card))] px-2 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] backdrop-blur-[2px]"
++                        className={`${globalTableTheadSticky} z-[1] !bg-[color:color-mix(in_srgb,var(--cab-surface-2)_38%,var(--cab-card))] px-2 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] backdrop-blur-[2px]`}
+                         role="presentation"
+                       >
+                         {item.label}

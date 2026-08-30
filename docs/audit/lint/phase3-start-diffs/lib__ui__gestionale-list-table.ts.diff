@@ -1,0 +1,13 @@
+diff --git a/lib/ui/gestionale-list-table.ts b/lib/ui/gestionale-list-table.ts
+index 6e4c2341..37a31a36 100644
+--- a/lib/ui/gestionale-list-table.ts
++++ b/lib/ui/gestionale-list-table.ts
+@@ -38,7 +38,7 @@ import {
+   globalTableFixed,
+   globalTableHeadEdgeInset,
+   globalTableRow,
+-  globalTableTdActions,
++
+   globalTableTdBody,
+   globalTableTheadClass,
+   globalTableTheadSticky,

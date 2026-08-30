@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import { useEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -31,6 +33,7 @@ export function ObservabilityProviderLite({ children }: { children: ReactNode })
     });
     const handle = mountLongTaskObserver(() => routeRef.current);
     return () => handle?.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only hydration metric
   }, []);
 
   useEffect(() => {

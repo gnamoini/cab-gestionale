@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-username-availability.ts b/src/hooks/use-username-availability.ts
+index 42c5e068..f25d90e4 100644
+--- a/src/hooks/use-username-availability.ts
++++ b/src/hooks/use-username-availability.ts
+@@ -15,6 +15,7 @@ export function useUsernameAvailability(
+ 
+   useEffect(() => {
+     if (!enabled) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setState("idle");
+       return;
+     }

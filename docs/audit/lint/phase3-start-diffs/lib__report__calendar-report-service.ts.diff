@@ -1,0 +1,17 @@
+diff --git a/lib/report/calendar-report-service.ts b/lib/report/calendar-report-service.ts
+index 9b85701c..10a7ee03 100644
+--- a/lib/report/calendar-report-service.ts
++++ b/lib/report/calendar-report-service.ts
+@@ -6,10 +6,10 @@ import {
+   compareRangeFor,
+   dayRangeFromYmd,
+   deltaPct,
+-  endOfLocalDay,
++
+   isoInRange,
+   monthRangeFromKey,
+-  startOfLocalDay,
++
+   weekRangeFromYmd,
+   ymdFromDate,
+   type DateRange,

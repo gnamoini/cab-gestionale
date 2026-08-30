@@ -12,6 +12,7 @@ export function OrdineFornitoreInTransitPopoverContent({ ricambioId }: { ricambi
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLoading(true);
     fetchOrdineFornitoreInTransitDetailClient(ricambioId).then((res) => {
       if (cancelled) return;
@@ -31,7 +32,7 @@ export function OrdineFornitoreInTransitPopoverContent({ ricambioId }: { ricambi
   return (
     <ul className="space-y-1 text-xs">
       {rows.map((r) => (
-        <li key={r.rigaId} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <li key={r.rigaId} className="flex items-center gap-x-2 gap-y-0.5 min-w-0 flex-nowrap sm:flex-wrap">
           <Link
             href={`/ordini-fornitori?ordine=${encodeURIComponent(r.ordineId)}`}
             className="font-mono text-[color:var(--cab-primary)] hover:underline"

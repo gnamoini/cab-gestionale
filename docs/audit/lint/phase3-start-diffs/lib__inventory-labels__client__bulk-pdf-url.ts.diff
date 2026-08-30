@@ -1,0 +1,12 @@
+diff --git a/lib/inventory-labels/client/bulk-pdf-url.ts b/lib/inventory-labels/client/bulk-pdf-url.ts
+index 342351a0..2fdf3147 100644
+--- a/lib/inventory-labels/client/bulk-pdf-url.ts
++++ b/lib/inventory-labels/client/bulk-pdf-url.ts
+@@ -9,7 +9,6 @@ export function buildInventoryBulkPdfUrl(
+   const params = new URLSearchParams({
+     format: "pdf",
+     preset,
+-    includeBarcode: "false",
+     clienteLabel: clienteLabel ? "true" : "false",
+   });
+   for (const item of items) {

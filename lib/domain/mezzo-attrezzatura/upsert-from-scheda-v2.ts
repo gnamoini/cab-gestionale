@@ -6,12 +6,9 @@ import {
   stripAssociationFieldsFromPlan,
 } from "@/lib/domain/mezzo/mezzo-association";
 import type { ApplyAssociationChangeInput } from "@/lib/domain/mezzo/apply-association-change";
-import {
-  resolveOrCreateMezzo,
-  type ResolveOrCreateMezzoResult,
-} from "@/lib/domain/mezzo/resolve-or-create-mezzo";
-import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
+import { type ResolveOrCreateMezzoResult } from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
+import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -20,7 +17,7 @@ import type {
 } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
 import type { AttrezzaturaResolveInsert } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
-import type { AttrezzaturaRow, MezzoRow } from "@/src/types/supabase-tables";
+import type { MezzoRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import type { UpsertFromSchedaV2Result } from "@/lib/attrezzature/types";

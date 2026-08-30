@@ -1,0 +1,14 @@
+diff --git a/scripts/ops/bootstrap-pwa-push.mjs b/scripts/ops/bootstrap-pwa-push.mjs
+index 2a3a2208..11f9e9bc 100644
+--- a/scripts/ops/bootstrap-pwa-push.mjs
++++ b/scripts/ops/bootstrap-pwa-push.mjs
+@@ -88,8 +88,7 @@ async function setSupabaseEdgeSecrets(secrets) {
+   return true;
+ }
+ 
+-async function syncVaultCronSecret(serviceKey, cronSecret) {
+-  const url = `https://${PROJECT_REF}.supabase.co/rest/v1/rpc/cab_invoke_push_delivery_worker`;
++async function _syncVaultCronSecret(serviceKey, cronSecret) {
+   // vault update via SQL through Supabase Management — use execute_sql via fetch to pg not available.
+   // ponytail: POST /database/query Management API
+   const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();

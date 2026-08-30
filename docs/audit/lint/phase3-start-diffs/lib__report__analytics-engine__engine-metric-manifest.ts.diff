@@ -1,0 +1,18 @@
+diff --git a/lib/report/analytics-engine/engine-metric-manifest.ts b/lib/report/analytics-engine/engine-metric-manifest.ts
+index 1468db4e..5ab619c1 100644
+--- a/lib/report/analytics-engine/engine-metric-manifest.ts
++++ b/lib/report/analytics-engine/engine-metric-manifest.ts
+@@ -189,6 +189,13 @@ export const ENGINE_METRIC_MANIFEST: Record<string, EngineMetricManifestEntry> =
+     supportsCompare: true,
+     supportsSeries: false,
+   },
++  "cost-tot": {
++    metricId: "cost-tot",
++    calculatorId: "computeCostTot",
++    requiredSlices: { schede: true },
++    supportsCompare: true,
++    supportsSeries: false,
++  },
+   mag_orders: {
+     metricId: "mag_orders",
+     calculatorId: "computeMagOrders",

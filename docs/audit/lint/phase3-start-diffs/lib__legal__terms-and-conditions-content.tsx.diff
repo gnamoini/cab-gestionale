@@ -1,0 +1,12 @@
+diff --git a/lib/legal/terms-and-conditions-content.tsx b/lib/legal/terms-and-conditions-content.tsx
+index 62d5d9c4..980443ed 100644
+--- a/lib/legal/terms-and-conditions-content.tsx
++++ b/lib/legal/terms-and-conditions-content.tsx
+@@ -11,7 +11,6 @@ export type TermsAndConditionsSection = {
+ 
+ const bodyClass = dsTypoBody;
+ const listClass = `${bodyClass} list-disc space-y-1 pl-5`;
+-const subTitleClass = "text-sm font-semibold text-[color:var(--cab-text)]";
+ 
+ function P({ children }: { children: ReactNode }) {
+   return <p className={bodyClass}>{children}</p>;

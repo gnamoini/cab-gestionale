@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
-import {
-  LavorazioniModalShell,
-  type LavorazioniModalDialogSize,
-} from "@/components/gestionale/gestionale-modal-shell";
+import { LavorazioniModalShell } from "@/components/gestionale/gestionale-modal-shell";
 import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
-import type { MezzoGestito } from "@/lib/mezzi/types";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { isoToItDisplay } from "@/lib/lavorazioni/date-day-only";
 import {
@@ -16,7 +11,6 @@ import {
   parseOptionalItalianDayDisplayToIso,
 } from "@/lib/ui/italian-date-input-mask";
 import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
-import { LavorazioneMezzoPicker } from "@/components/gestionale/lavorazioni/lavorazione-mezzo-picker";
 import { AddettoPicker } from "@/components/domain/addetti";
 import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import {
@@ -173,8 +167,6 @@ export function EditLavorazioneModal({
   title,
   initial,
   stati,
-  addetti,
-  addettoColors,
   prioritaColors,
   onCommit,
   onRequestClose,
@@ -418,8 +410,6 @@ export function SettingsLavorazioniModal({
   onUpdateAddetto,
   onChangeAddettoColor,
   onRemoveAddetto,
-  attiviStatoIds,
-  storicoStatoIds,
   attiviAddetti,
   storicoAddetti,
   onRequestClose,
@@ -474,6 +464,7 @@ export function SettingsLavorazioniModal({
           : "Impostazioni lavorazioni";
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (lockedTab) setTab(lockedTab);
   }, [lockedTab]);
 

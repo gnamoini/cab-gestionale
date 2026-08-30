@@ -1,6 +1,10 @@
 import { isPdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
 import { deliverPdfArtifact } from "@/lib/pdf-artifacts/pdf-artifact-generate.server";
-import { pdfArtifactResponseHeaders } from "@/lib/pdf/pdf-artifact-response";
+import {
+  pdfArtifactNotModifiedHeaders,
+  pdfArtifactRequestEtagMatches,
+  pdfArtifactResponseHeaders,
+} from "@/lib/pdf/pdf-artifact-response";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -37,10 +41,18 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: message }, { status: artifactErrorStatus(message) });
     }
 
-    const { bytes, fileName, cacheStatus, generateMs, dataHash } = result.data;
+    const { bytes, fileName, cacheStatus, generateMs, dataHash, phases } = result.data;
+
+    if (pdfArtifactRequestEtagMatches(request, dataHash)) {
+      return new Response(null, {
+        status: 304,
+        headers: pdfArtifactNotModifiedHeaders(dataHash),
+      });
+    }
+
     return new Response(Buffer.from(bytes), {
       status: 200,
-      headers: pdfArtifactResponseHeaders({ fileName, cacheStatus, generateMs, dataHash }),
+      headers: pdfArtifactResponseHeaders({ fileName, cacheStatus, generateMs, dataHash, phases }),
     });
   } catch (error) {
     console.error("[pdf-artifact] route failed:", error);

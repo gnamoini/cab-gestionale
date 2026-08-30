@@ -8,7 +8,7 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 
-function run(label, cmd, args, { optional = false } = {}) {
+function run(label, cmd, args) {
   console.log(`\n[closure] ${label}...`);
   const r = execFileSync(cmd, args, { cwd: ROOT, stdio: "inherit", shell: true });
   return r;

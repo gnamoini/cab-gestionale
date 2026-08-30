@@ -29,6 +29,7 @@ export function BootInvestigationMount() {
       innerWidth: typeof window !== "undefined" ? window.innerWidth : null,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 80) : null,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only boot log
   }, []);
 
   useEffect(() => {

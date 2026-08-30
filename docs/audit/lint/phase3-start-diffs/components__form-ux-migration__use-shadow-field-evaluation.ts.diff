@@ -1,0 +1,13 @@
+diff --git a/components/form-ux-migration/use-shadow-field-evaluation.ts b/components/form-ux-migration/use-shadow-field-evaluation.ts
+index 5ca52e67..61b96b62 100644
+--- a/components/form-ux-migration/use-shadow-field-evaluation.ts
++++ b/components/form-ux-migration/use-shadow-field-evaluation.ts
+@@ -86,7 +86,7 @@ export function useShadowFieldEvaluation({
+   );
+ 
+   const onBlur = useCallback(
+-    (_e: FocusEvent<HTMLInputElement>) => {
++    () => {
+       if (!enabled) return;
+       clearDebounce();
+       const value = latestValueRef.current;

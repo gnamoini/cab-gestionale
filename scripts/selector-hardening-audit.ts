@@ -169,12 +169,6 @@ function resolveSelectorCorePath(importPath: string): string | null {
   return null;
 }
 
-function moduleSegment(importPath: string): string | null {
-  const resolved = resolveSelectorCorePath(importPath);
-  if (!resolved) return null;
-  return path.basename(resolved, ".ts");
-}
-
 function parseSmokeSelectorTests(): string[] {
   const source = fs.readFileSync(
     path.join(ROOT, "lib/regression/smoke-regression-lists.ts"),
@@ -428,9 +422,6 @@ function buildRuntimeSurfaceAudit(repoFiles: string[]): Record<string, unknown> 
 
   for (const [symbol, spec] of Object.entries(RUNTIME_SYMBOLS)) {
     const allImportPaths: string[] = [];
-    const importRe = new RegExp(
-      `from\\s+["']@/lib/selector-core/([^"']+)["'][^;]*\\b${symbol}\\b|import\\s*\\{[^}]*\\b${symbol}\\b`,
-    );
     const directRe = new RegExp(`\\b${symbol}\\b`);
 
     for (const file of repoFiles) {

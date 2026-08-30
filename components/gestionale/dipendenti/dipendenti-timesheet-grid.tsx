@@ -381,6 +381,7 @@ export function DipendentiTimesheetGrid({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- lint phase2: preserve existing hook contract
   const employeeVirtualizer = useVirtualizer({
     count: visibleEmployees.length,
     getScrollElement: () => scrollContainerRef.current,
@@ -421,8 +422,9 @@ export function DipendentiTimesheetGrid({
   }, []);
 
   useEffect(() => {
+    const grid = scrollContainerRef.current;
     return () => {
-      clearTimesheetCrosshair(scrollContainerRef.current);
+      clearTimesheetCrosshair(grid);
     };
   }, []);
 

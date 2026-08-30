@@ -1,0 +1,28 @@
+diff --git a/scripts/ops/rest-benchmark-roles.mjs b/scripts/ops/rest-benchmark-roles.mjs
+index 47753205..e04643f8 100644
+--- a/scripts/ops/rest-benchmark-roles.mjs
++++ b/scripts/ops/rest-benchmark-roles.mjs
+@@ -158,23 +158,6 @@ async function fetchWithSize(client, table, select, applyFilters) {
+   };
+ }
+ 
+-async function fetchGzipSize(restPath) {
+-  try {
+-    const res = await fetch(restPath, {
+-      headers: {
+-        apikey: anonKey,
+-        Authorization: `Bearer ${serviceKey || anonKey}`,
+-        Accept: "application/json",
+-        "Accept-Encoding": "gzip",
+-      },
+-    });
+-    const buf = await res.arrayBuffer();
+-    return { bytesGzip: buf.byteLength, contentEncoding: res.headers.get("content-encoding") };
+-  } catch {
+-    return { bytesGzip: null, contentEncoding: null };
+-  }
+-}
+-
+ function lavorazioniFilters(archived) {
+   return (q) =>
+     q.is("deleted_at", null).eq("archived", archived).order("created_at", { ascending: false });

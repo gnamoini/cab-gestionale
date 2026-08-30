@@ -22,8 +22,9 @@ export function markGestionaleFocusScrollCompleted(field: HTMLElement): void {
 
 export function shouldSkipRedundantGestionaleFocusScroll(
   field: HTMLElement,
-  _reason: "keyboard-open" | "textarea-grow",
+  reason: "keyboard-open" | "textarea-grow",
 ): boolean {
+  void reason;
   if (typeof performance === "undefined") return false;
   const target = resolveFocusScrollTarget(field);
   if (performance.now() - lastGestionaleFocusScrollAt > GESTIONALE_FOCUS_SCROLL_COALESCE_MS) return false;
@@ -600,7 +601,8 @@ export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
 }
 
 /** ponytail: pad via CSS var + cabModalScrollKeyboardPad — no inline doppio */
-export function applyKeyboardPadToScrollContainer(_container: HTMLElement | null): void {
+export function applyKeyboardPadToScrollContainer(container: HTMLElement | null): void {
+  void container;
   /* keyboard inset applied via --cab-keyboard-inset + [data-cab-modal-scroll] scroll-padding */
 }
 

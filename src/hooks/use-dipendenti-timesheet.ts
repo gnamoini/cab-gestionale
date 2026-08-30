@@ -10,8 +10,8 @@ import type {
   TimesheetMonthKey,
 } from "@/lib/dipendenti/types";
 import {
-  buildPeriodDays,
   monthKeyFromDate,
+  buildPeriodDays,
   resolvePeriodRange,
   shiftMonthKey,
   type TimesheetPeriodMode,
@@ -121,7 +121,10 @@ export function useDipendentiTimesheet(
   const previousMonthKey = useMemo(() => shiftMonthKey(monthKey, -1), [monthKey]);
 
   const dipendentiReady = dipendentiOpts.source === "app_settings" && !dipendentiOpts.isLoading;
-  const realDipendentiRecords = dipendentiReady ? dipendentiOpts.records : [];
+  const realDipendentiRecords = useMemo(
+    () => (dipendentiReady ? dipendentiOpts.records : []),
+    [dipendentiReady, dipendentiOpts.records],
+  );
 
   const currentDipendentiIds = useMemo(
     () => new Set(getActiveDipendentiRecords(realDipendentiRecords).map((r) => r.id)),
@@ -212,7 +215,7 @@ export function useDipendentiTimesheet(
       const msg = e instanceof Error ? e.message : "Sincronizzazione dipendenti non riuscita.";
       setSyncError(msg);
     });
-  }, [dipendentiOpts.source, dipendentiOpts.isLoading, dipendentiRecordsSyncKey, runSyncFromDipendenti, dipendentiOpts.records]);
+  }, [dipendentiOpts, dipendentiRecordsSyncKey, runSyncFromDipendenti]);
 
   const upsertMutation = useServiceMutation(
     (input: TimesheetEntryUpsert) =>
@@ -418,7 +421,7 @@ export function useDipendentiTimesheet(
 }
 
 export function useDefaultTimesheetMonthKey(): TimesheetMonthKey {
-  const [key, setKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
+  const [key] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   return key;
 }
 

@@ -41,7 +41,6 @@ const payload = modulePermissionsPayloadFromDraft(
 assert.ok(payload === null || Array.isArray(payload));
 
 const snapA = snapshotModuleDraft(draft);
-const snapB = snapshotModuleDraft([...draft]);
 assert.equal(modulePermissionDraftEquals(draft, [...draft]), true);
 assert.notEqual(snapA, snapshotModuleDraft(draft.map((r) => ({ ...r, canRead: !r.canRead }))));
 

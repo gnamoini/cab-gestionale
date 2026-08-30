@@ -1,0 +1,13 @@
+diff --git a/lib/ui/use-mobile-modal-keyboard.ts b/lib/ui/use-mobile-modal-keyboard.ts
+index 34780397..cfba5edb 100644
+--- a/lib/ui/use-mobile-modal-keyboard.ts
++++ b/lib/ui/use-mobile-modal-keyboard.ts
+@@ -4,7 +4,7 @@ import { useEffect, type RefObject } from "react";
+ import { subscribeGestionaleViewport } from "@/lib/ui/gestionale-viewport-orchestrator";
+ import {
+   applyKeyboardPadToScrollContainer,
+-  CAB_MODAL_ROOT_ATTR,
++
+   CAB_MODAL_SCROLL_ATTR,
+   isVirtualKeyboardClosing,
+ } from "@/lib/ui/mobile-modal-behavior";

@@ -1,0 +1,15 @@
+diff --git a/lib/observability/boot-investigation-gate.ts b/lib/observability/boot-investigation-gate.ts
+index a66f263c..1c3369b8 100644
+--- a/lib/observability/boot-investigation-gate.ts
++++ b/lib/observability/boot-investigation-gate.ts
+@@ -17,9 +17,6 @@ export function isBootInvestigationEnabled(): boolean {
+ }
+ 
+ /** No-op in critical graph — real mount logging lives in diagnostics pack. */
+-export function useBootInvestigationMount(
+-  _name: string,
+-  _meta?: Record<string, unknown>,
+-): void {
++export function useBootInvestigationMount(): void {
+   /* ponytail: gate-only hook avoids static edge to boot-investigation.ts */
+ }

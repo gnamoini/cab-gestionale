@@ -8,16 +8,15 @@
 import { useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { stockAdjustFetch, type StockAdjustRequest, type StockAdjustResponse } from "@/lib/magazzino/stock-adjust-client";
 import {
   getStockEntity,
   mergeStockEntity,
-  type StockEntity,
 } from "@/lib/magazzino/stock-entity-cache";
 import { applyOptimisticStockAdjust } from "@/lib/magazzino/apply-optimistic-stock-adjust";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
 import { movimentiListQueryKey } from "@/lib/render/query-key-factory";
+import { stockAdjustFetch } from "@/lib/magazzino/stock-adjust-client";
 import type {
   StockAdjustMutationInput,
   StockAdjustMutationContext,

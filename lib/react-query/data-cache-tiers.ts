@@ -7,7 +7,6 @@ import {
   GESTIONALE_CORE_STALE_MS,
   GESTIONALE_REPORT_GC_MS,
   GESTIONALE_REPORT_STALE_MS,
-  GESTIONALE_VIEW_GC_MS,
 } from "@/lib/react-query/query-layer-policies";
 
 export type DataCacheTier = "static" | "semi" | "dynamic";

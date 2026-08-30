@@ -1,0 +1,13 @@
+diff --git a/lib/report/lavorazioni-work-orders.ts b/lib/report/lavorazioni-work-orders.ts
+index b80ae018..7f878331 100644
+--- a/lib/report/lavorazioni-work-orders.ts
++++ b/lib/report/lavorazioni-work-orders.ts
+@@ -8,7 +8,7 @@ import {
+   countOpenedInRange,
+   type ReportManualByMonth,
+ } from "@/lib/report/lavorazioni-report-selectors";
+-import { monthKeysOverlappingRange, ymKey } from "@/lib/report/month-keys";
++import { monthKeysOverlappingRange } from "@/lib/report/month-keys";
+ import { KPI_OPEN_LATE_DAYS_THRESHOLD, KPI_RECIDIVA_WINDOW_DAYS } from "@/lib/report/kpi-performance/kpi-performance-constants";
+ 
+ export type AgingBacklogBucket = "0-7" | "8-14" | "15-30" | "30+";

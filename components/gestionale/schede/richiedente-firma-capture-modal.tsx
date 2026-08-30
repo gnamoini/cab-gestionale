@@ -95,6 +95,7 @@ export function RichiedenteFirmaCaptureModal({
 
   useLayoutEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     resetPad(true);
   }, [open, initialDataUrl, resetPad]);
 
@@ -228,7 +229,7 @@ export function RichiedenteFirmaCaptureModal({
           <p className={dsTypoCaption}>La firma verrà salvata nella scheda ingresso.</p>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-[color:var(--cab-border)] p-3">
+      <div className="flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] p-3 min-w-0 flex-nowrap sm:flex-wrap">
         <button type="button" className={dsBtnNeutral} onClick={() => resetPad(false)}>
           Cancella
         </button>

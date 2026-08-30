@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
 /** Validazione input server actions sicurezza / impostazioni portale clienti. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";

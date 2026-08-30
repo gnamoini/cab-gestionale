@@ -1,0 +1,12 @@
+diff --git a/lib/report/narrative/use-report-narrative.ts b/lib/report/narrative/use-report-narrative.ts
+index 017e8cd5..25872036 100644
+--- a/lib/report/narrative/use-report-narrative.ts
++++ b/lib/report/narrative/use-report-narrative.ts
+@@ -76,6 +76,7 @@ export function useReportNarrative(input: UseReportNarrativeInput): UseReportNar
+   }, [enabled, periodKey]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setData(null);
+     setError(null);
+     setCorrelationId(null);

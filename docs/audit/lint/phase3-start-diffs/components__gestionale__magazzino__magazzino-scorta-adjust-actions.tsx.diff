@@ -1,0 +1,72 @@
+diff --git a/components/gestionale/magazzino/magazzino-scorta-adjust-actions.tsx b/components/gestionale/magazzino/magazzino-scorta-adjust-actions.tsx
+index 444b481d..a8e33362 100644
+--- a/components/gestionale/magazzino/magazzino-scorta-adjust-actions.tsx
++++ b/components/gestionale/magazzino/magazzino-scorta-adjust-actions.tsx
+@@ -2,6 +2,7 @@
+ 
+ import { useEffect, useRef, useState } from "react";
+ import { IconActionButton } from "@/components/design-system";
++import { OptionalTooltip } from "@/components/ui";
+ import { dsFocus, dsTableActionBtnPrimary, dsTableActionBtnSecondary } from "@/lib/ui/design-system";
+ import { gestionaleListTableActionsGroupEnd } from "@/lib/ui/gestionale-list-table";
+ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+@@ -126,6 +127,7 @@ export function MagazzinoScortaInfoStepper({
+ 
+   useEffect(() => {
+     if (!editing) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+       setDraft(String(value));
+       committedRef.current = value;
+     }
+@@ -160,11 +162,11 @@ export function MagazzinoScortaInfoStepper({
+         aria-label="Scorta"
+         className={`${infoStepperShellClass}${successFlash ? ` ${infoStepperSuccessClass}` : ""}`}
+       >
++      <OptionalTooltip content={readonlyTitle}>
+       <button
+         type="button"
+         className={`${infoStepperBtnClass} ${btnTone} rounded-none border-r border-[color:var(--cab-border)]`}
+         aria-label={decreaseAria}
+-        title={readonlyTitle}
+         disabled={!canAdjust}
+         onClick={() => {
+           onDecrease();
+@@ -173,6 +175,8 @@ export function MagazzinoScortaInfoStepper({
+       >
+         <IconMinusScorta />
+       </button>
++      </OptionalTooltip>
++      <OptionalTooltip content={readonlyTitle}>
+       <input
+         type="number"
+         min={0}
+@@ -180,7 +184,6 @@ export function MagazzinoScortaInfoStepper({
+         inputMode="numeric"
+         value={draft}
+         disabled={!canAdjust}
+-        title={readonlyTitle}
+         aria-label="Scorta"
+         aria-live="polite"
+         className={`${infoStepperInputClass} ${valueTone}`}
+@@ -194,11 +197,12 @@ export function MagazzinoScortaInfoStepper({
+           }
+         }}
+       />
++      </OptionalTooltip>
++      <OptionalTooltip content={readonlyTitle}>
+       <button
+         type="button"
+         className={`${infoStepperBtnClass} ${btnTone} rounded-none border-l border-[color:var(--cab-border)]`}
+         aria-label={increaseAria}
+-        title={readonlyTitle}
+         disabled={!canAdjust}
+         onClick={() => {
+           onIncrease();
+@@ -207,6 +211,7 @@ export function MagazzinoScortaInfoStepper({
+       >
+         <IconPlusScorta />
+       </button>
++      </OptionalTooltip>
+       </div>
+     </div>
+   );

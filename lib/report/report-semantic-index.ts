@@ -17,7 +17,7 @@ import {
 import { buildCompletateDbMaps, mergeManualMonthMap } from "@/lib/report/report-completate-maps";
 import { buildLavorazioniYearMatrix } from "@/lib/report/lavorazioni-year-matrix";
 import type { LavorazioniYearRow } from "@/lib/report/lavorazioni-year-matrix";
-import { pctChange, round1 } from "@/lib/report/pct-utils";
+import { pctChange } from "@/lib/report/pct-utils";
 import {
   buildTopClientiPeriodo,
   buildTopMezziPeriodo,
@@ -142,8 +142,8 @@ export function buildReportSemanticIndex(source: ReportSemanticSource): ReportSe
       return buildTopClientiPeriodo(completate, range);
     },
 
-    buildYearMatrix(anchor, _filterRange?) {
-      const base = buildLavorazioniYearMatrix(completate, anchor, manualByMonth, completateByMonthDb);
+    buildYearMatrix(anchor?) {
+      const base = buildLavorazioniYearMatrix(completate, anchor ?? new Date(), manualByMonth, completateByMonthDb);
       return {
         ...base,
         forecastRows: base.rows,

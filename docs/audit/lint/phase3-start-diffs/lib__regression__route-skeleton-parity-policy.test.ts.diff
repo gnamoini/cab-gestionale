@@ -1,0 +1,13 @@
+diff --git a/lib/regression/route-skeleton-parity-policy.test.ts b/lib/regression/route-skeleton-parity-policy.test.ts
+index 2f9ed1db..bced3c09 100644
+--- a/lib/regression/route-skeleton-parity-policy.test.ts
++++ b/lib/regression/route-skeleton-parity-policy.test.ts
+@@ -44,7 +44,7 @@ assert.match(reportSkeleton, /report-area-content-skeleton/, "report area narrat
+ assert.match(reportSkeleton, /report-hub-route-skeleton/, "report hub skeleton");
+ assert.match(structuralRouteSkeleton, /ROUTE_PAGE_STRUCTURE/, "StructuralRouteSkeleton delega a PageStructure");
+ 
+-const violations: string[] = [];
++const _violations: string[] = [];
+ 
+ for (const route of MIGRATED_STRUCTURAL_ROUTES) {
+   const token = STRUCTURAL_ROUTE_PAGE_STRUCTURE[route];

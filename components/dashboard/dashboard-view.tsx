@@ -22,7 +22,9 @@ export function DashboardView() {
   const [stagingRouteHint, setStagingRouteHint] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (searchParams.get("staging_unavailable") === "1") setStagingRouteHint(true);
   }, [searchParams]);
 

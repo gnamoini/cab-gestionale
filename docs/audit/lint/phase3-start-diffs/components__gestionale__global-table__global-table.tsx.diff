@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/global-table/global-table.tsx b/components/gestionale/global-table/global-table.tsx
+index 17f992ff..c78bd594 100644
+--- a/components/gestionale/global-table/global-table.tsx
++++ b/components/gestionale/global-table/global-table.tsx
+@@ -70,6 +70,7 @@ const VirtualTableBody = memo(function VirtualTableBody({
+   // ponytail: wrap liste usa overflow-y-clip — padding virtuali = spazio vuoto hoverabile
+   const [forceFullRender, setForceFullRender] = useState(true);
+ 
++  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
+   const virtualizer = useVirtualizer({
+     count: virtualRows.rowCount,
+     getScrollElement: () => scrollRef.current,

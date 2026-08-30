@@ -138,7 +138,7 @@ function createHierarchyPlugin(input: {
       };
     },
 
-    async execute({ batchId, userId, decisions }) {
+    async execute({ batchId, decisions }) {
       const started = Date.now();
       const sb = await createSupabaseServerUserClient();
       await updateImportBatchProgress(batchId, { status: "running", started_at: new Date().toISOString() });

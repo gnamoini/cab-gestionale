@@ -26,7 +26,7 @@ export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?: 
   return (
     <div className="space-y-4">
       <ShellCard>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 min-w-0 flex-nowrap sm:flex-wrap">
           <h2 className={dsTypoSectionTitle}>Pagamenti da allocare ({unallocated.length})</h2>
           {canWrite ? (
             <button type="button" className={dsPageToolbarBtn} onClick={() => setMultiOpen(true)}>

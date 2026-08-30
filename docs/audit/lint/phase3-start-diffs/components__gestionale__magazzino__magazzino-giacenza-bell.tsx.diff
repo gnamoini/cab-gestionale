@@ -1,0 +1,14 @@
+diff --git a/components/gestionale/magazzino/magazzino-giacenza-bell.tsx b/components/gestionale/magazzino/magazzino-giacenza-bell.tsx
+index 76881f1a..e8932e46 100644
+--- a/components/gestionale/magazzino/magazzino-giacenza-bell.tsx
++++ b/components/gestionale/magazzino/magazzino-giacenza-bell.tsx
+@@ -6,8 +6,8 @@ import {
+   LogEntry,
+   NotificationBellTrigger,
+   NotificationOpenLink,
+-  Tooltip,
+ } from "@/components/design-system";
++import { Tooltip } from "@/components/ui";
+ import {
+   GestionaleLogEmpty,
+   GestionaleLogList,

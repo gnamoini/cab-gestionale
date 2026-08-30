@@ -1,0 +1,21 @@
+diff --git a/lib/magazzino/magazzino-db-ui-adapter.ts b/lib/magazzino/magazzino-db-ui-adapter.ts
+index df07eae7..b38296b2 100644
+--- a/lib/magazzino/magazzino-db-ui-adapter.ts
++++ b/lib/magazzino/magazzino-db-ui-adapter.ts
+@@ -29,7 +29,7 @@ function num(v: unknown, fallback = 0): number {
+ export function magazzinoRowToRicambioUI(
+   row: MagazzinoRicambioRow,
+   autore = "Sistema",
+-  mezziListe?: MezziListePrefs,
++  _mezziListe?: MezziListePrefs,
+ ): RicambioMagazzino {
+   const meta = parseMagazzinoRicambioMeta(row.meta ?? {});
+   const fromMeta = metaFieldsToRicambioUi(meta);
+@@ -94,6 +94,6 @@ export function ricambioUiToMagazzinoInsert(
+ 
+ export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino, mezziListe?: MezziListePrefs): MagazzinoUpdate {
+   const insert = ricambioUiToMagazzinoInsert(r, mezziListe) as MagazzinoInsert & { id?: string };
+-  const { quantita: _quantita, id: _id, ...patch } = insert;
++  const { ...patch } = insert;
+   return patch;
+ }

@@ -81,8 +81,12 @@ assert.match(lavPage, /UIPageAdapterGate/);
 
 assert.match(lavorazioniView, /LavorazioneCreateModal = dynamic/);
 
-assert.match(reportView, /dynamic\s*\(/);
-assert.match(reportView, /ReportAnalyticsView/);
+assert.match(reportView, /ReportHubView/);
+assert.doesNotMatch(reportView, /ReportAnalyticsView/);
+
+const reportPage = read("app/(gestionale)/report/page.tsx");
+assert.match(reportPage, /ReportViewLazy/);
+assert.match(read("components/gestionale/lazy-route-views.tsx"), /ReportViewLazy = dynamic/);
 
 const preventiviViewPdf = read("components/preventivi/preventivi-view.tsx");
 assert.doesNotMatch(
@@ -248,7 +252,11 @@ assert.match(proxyHandler, /no_auth_cookie/);
 
 const prefetchGestionale = read("src/lib/react-query/prefetch-gestionale-page.ts");
 assert.match(prefetchGestionale, /seedPrefetchedData/);
-assert.doesNotMatch(prefetchGestionale, /qc\.setQueryData\(/, "prefetch must use prefetchQuery tiers, not bare setQueryData");
+assert.match(
+  prefetchGestionale,
+  /qc\.setQueryData\(queryKey, data, \{ updatedAt: prefetchedAt \}\)/,
+  "prefetch seeds via seedPrefetchedData helper with prefetchedAt meta",
+);
 
 const gestionaleLoadingRoutes = [
   "app/(gestionale)/dashboard/loading.tsx",

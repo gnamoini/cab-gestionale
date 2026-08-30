@@ -1,0 +1,30 @@
+diff --git a/src/components/gestionale-realtime-bridge.tsx b/src/components/gestionale-realtime-bridge.tsx
+index acc1b2e3..73d9fd99 100644
+--- a/src/components/gestionale-realtime-bridge.tsx
++++ b/src/components/gestionale-realtime-bridge.tsx
+@@ -187,7 +187,7 @@ export function GestionaleRealtimeBridge() {
+       transport.activatePolling(reason);
+     };
+ 
+-    const stopPollingFallback = () => {
++    const _stopPollingFallback = () => {
+       transport.stopPolling();
+     };
+ 
+@@ -345,7 +345,7 @@ export function GestionaleRealtimeBridge() {
+       }
+     };
+ 
+-    const removeActiveChannel = async (reason: string) => {
++    const removeActiveChannel = async (_reason: string) => {
+       const sb = getBrowserSupabase();
+       if (activeChannel) {
+         try {
+@@ -512,6 +512,7 @@ export function GestionaleRealtimeBridge() {
+       setConnectionStatus("idle");
+       void removeActiveChannel("effect-cleanup");
+     };
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   }, [authReady, qc, setGestionaleStatus, setSettingsStatus, user?.id]);
+ 
+   return null;

@@ -13,7 +13,10 @@ export function ReportPreventiviChartsPanel() {
   const { canReadPage, isLoading: rbacLoading } = useRbac();
   const canPreventivi = canReadPage("preventivi");
   const preventiviQ = usePreventiviRecordsQuery(canPreventivi);
-  const preventivi = preventiviQ.isError ? [] : preventiviQ.records;
+  const preventivi = useMemo(
+    () => (preventiviQ.isError ? [] : preventiviQ.records),
+    [preventiviQ.isError, preventiviQ.records],
+  );
   const preventiviFailed = canPreventivi && !preventiviQ.isLoading && preventiviQ.isError;
 
   const funnelRows = useMemo(() => buildPreventiviFunnel(preventivi, range), [preventivi, range]);

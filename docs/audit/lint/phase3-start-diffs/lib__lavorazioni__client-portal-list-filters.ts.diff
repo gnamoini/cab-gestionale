@@ -1,0 +1,22 @@
+diff --git a/lib/lavorazioni/client-portal-list-filters.ts b/lib/lavorazioni/client-portal-list-filters.ts
+index 8a8d5084..0dfde5a3 100644
+--- a/lib/lavorazioni/client-portal-list-filters.ts
++++ b/lib/lavorazioni/client-portal-list-filters.ts
+@@ -40,7 +40,7 @@ const LEGACY_STORAGE_KEYS = [
+ type PersistedClientPortalFilters = Omit<ClientPortalListFilters, "section">;
+ 
+ function toPersisted(f: ClientPortalListFilters): PersistedClientPortalFilters {
+-  const { section: _s, ...rest } = f;
++  const { ...rest } = f;
+   return rest;
+ }
+ 
+@@ -189,7 +189,7 @@ export function clientPortalBundleMatchesFilters(
+ 
+   if (!lavRowMatchesGlobalSearch(row, f.search, schedeStore)) return false;
+ 
+-  const { search: _s, ...advanced } = f;
++  const { ...advanced } = f;
+   const isoRow = { ...row, data_ingresso: fields.dataIngressoIso || row.data_ingresso };
+   if (!lavRowMatchesAdvancedFilters(isoRow, advanced, schedeStore, variant)) return false;
+ 

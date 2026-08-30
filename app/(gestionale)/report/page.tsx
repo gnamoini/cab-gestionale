@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
 import { ReportDeferredHydration } from "@/components/gestionale/report/report-deferred-hydration";
-import { ReportHubView } from "@/components/report/report-hub-view";
+import { ReportViewLazy } from "@/components/gestionale/lazy-route-views";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
 import { UIPageAdapterGate } from "@/components/gestionale/ui-page-adapter-gate";
 import { getSuggestedSchema } from "@/lib/ui-os/ui-schema";
@@ -24,7 +24,7 @@ export default async function ReportPage() {
         <Suspense fallback={<ReportPageStructure mode="skeleton" variant="hub" />}>
           <ReportDeferredHydration>
             <UIPageAdapterGate page="/report" mode="os" fallback="legacy" schema={getSuggestedSchema("/report")}>
-              <ReportHubView />
+              <ReportViewLazy />
             </UIPageAdapterGate>
           </ReportDeferredHydration>
         </Suspense>

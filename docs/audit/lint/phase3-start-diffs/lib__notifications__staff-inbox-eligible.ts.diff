@@ -1,0 +1,9 @@
+diff --git a/lib/notifications/staff-inbox-eligible.ts b/lib/notifications/staff-inbox-eligible.ts
+index bd876458..ddf6cdc6 100644
+--- a/lib/notifications/staff-inbox-eligible.ts
++++ b/lib/notifications/staff-inbox-eligible.ts
+@@ -1,4 +1,3 @@
+-import { resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
+ import type { RbacEvaluationContext } from "@/lib/auth/rbac";
+ import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
+ 

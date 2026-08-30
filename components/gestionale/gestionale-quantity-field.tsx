@@ -1,6 +1,5 @@
 "use client";
 
-import type { InputHTMLAttributes } from "react";
 import { GestionaleNumericField, type GestionaleNumericFieldProps } from "@/components/gestionale/gestionale-numeric-field";
 import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";

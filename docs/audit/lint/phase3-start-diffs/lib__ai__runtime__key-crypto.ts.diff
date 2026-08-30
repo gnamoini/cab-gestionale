@@ -1,0 +1,13 @@
+diff --git a/lib/ai/runtime/key-crypto.ts b/lib/ai/runtime/key-crypto.ts
+index d9f6cb5e..a6ba7359 100644
+--- a/lib/ai/runtime/key-crypto.ts
++++ b/lib/ai/runtime/key-crypto.ts
+@@ -1,7 +1,7 @@
+ import "server-only";
+ 
+ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+-import { readMasterEncryptionKeyEnv, readRuntimeSecret } from "@/lib/ai/runtime/env-reader";
++import { readMasterEncryptionKeyEnv } from "@/lib/ai/runtime/env-reader";
+ 
+ const ALGO = "aes-256-gcm";
+ const IV_BYTES = 12;

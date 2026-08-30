@@ -47,7 +47,9 @@ export function ClienteAnagraficaHubModal({
   const [tab, setTab] = useState<TabId>("panoramica");
   const [draft, setDraft] = useState<ClienteAnagrafica | null>(null);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     if (data) setDraft(data);
   }, [data]);
 

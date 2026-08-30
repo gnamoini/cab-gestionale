@@ -44,7 +44,7 @@ export function logMezzoMutationSaveTrace(
     if (started != null) durationMs = Date.now() - started;
   }
 
-  // eslint-disable-next-line no-console -- opt-in debug flag
+   
   console.debug("[mezzo-mutation-save]", event, {
     timestamp,
     ...(durationMs != null ? { durationMs } : {}),

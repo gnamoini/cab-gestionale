@@ -75,7 +75,7 @@ export function ReportDecisionCenter() {
         persistKey="bi-decisions"
         defaultCollapsed
       >
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 flex items-center gap-2 flex-nowrap sm:flex-wrap">
           <select
             className={selectClass}
             value={priorityFilter}

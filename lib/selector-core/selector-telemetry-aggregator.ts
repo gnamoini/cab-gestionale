@@ -194,6 +194,6 @@ export function aggregateSelectorTelemetry(
 }
 
 export function toDomainUsageStats(stats: SelectorDomainUsageStatsWithPreferred): SelectorDomainUsageStats {
-  const { preferredSurface: _ignored, ...usageStats } = stats;
+  const { ...usageStats } = stats;
   return usageStats;
 }

@@ -23,6 +23,7 @@ export function useSelectorListboxKeyboard({
   onEnter,
   onTabCycle,
 }: UseSelectorListboxKeyboardParams) {
+  void activeIndex;
   return useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Escape") {

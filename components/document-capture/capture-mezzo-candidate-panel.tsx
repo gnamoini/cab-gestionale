@@ -134,7 +134,7 @@ export function CaptureMezzoCandidatePanel({
         >
           <p className="font-medium">Nessun mezzo corrispondente con sufficiente confidenza</p>
           <p className="mt-1 text-xs">{context.contextHint}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <button type="button" className={`${dsBtnPrimary} ${dsFocus} text-xs`} onClick={onForceNewMezzo}>
               Nuovo mezzo
             </button>
@@ -161,7 +161,7 @@ export function CaptureMezzoCandidatePanel({
             {mezzoIngressoSuggestLabel(selectedCandidate.mezzo)}
           </p>
           <CandidateReasonList candidate={selectedCandidate} />
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
             <button
               type="button"
               className={`${dsBtnPrimary} ${dsFocus} text-xs`}

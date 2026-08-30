@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
 
 /** Load budgets from TypeScript SSOT via export CLI. */
 export function loadPerformanceBudgets(cwd = process.cwd()) {

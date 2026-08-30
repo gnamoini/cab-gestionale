@@ -1,0 +1,12 @@
+diff --git a/app/api/ordini-fornitori/import/analyze/route.ts b/app/api/ordini-fornitori/import/analyze/route.ts
+index 24cef7fe..3408879b 100644
+--- a/app/api/ordini-fornitori/import/analyze/route.ts
++++ b/app/api/ordini-fornitori/import/analyze/route.ts
+@@ -136,7 +136,6 @@ export async function POST(request: Request) {
+         { status: httpStatusForOrdineFornitoreImportError(error.code), headers: importCorrelationHeaders(correlationId) },
+       );
+     }
+-    const message = error instanceof Error ? error.message : "Analisi import non riuscita.";
+     traceOrdineFornitoreImportOperation({
+       operation: "analyze",
+       importFileId,

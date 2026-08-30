@@ -1,12 +1,18 @@
 "use client";
 
-import { NotificationCenterBell } from "@/components/gestionale/notification-center-bell";
+import dynamic from "next/dynamic";
 import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { resolveRole } from "@/lib/auth/rbac";
 import { useAuth } from "@/context/auth-context";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+
+const NotificationCenterBell = dynamic(
+  () =>
+    import("@/components/gestionale/notification-center-bell").then((m) => m.NotificationCenterBell),
+  { ssr: false },
+);
 
 type NotificationCenterMountProps = {
   sidebarCollapsed?: boolean;

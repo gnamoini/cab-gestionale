@@ -1,0 +1,22 @@
+diff --git a/components/workshop-schedule/agenda-officina-view.tsx b/components/workshop-schedule/agenda-officina-view.tsx
+index 191215fc..2e20c8f8 100644
+--- a/components/workshop-schedule/agenda-officina-view.tsx
++++ b/components/workshop-schedule/agenda-officina-view.tsx
+@@ -231,7 +231,7 @@ export function AgendaOfficinaView() {
+         <AgendaToolbarShell>
+           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+             <AgendaFiltersBar filters={filters} onChange={setFilters} canWrite={canWriteAgenda} />
+-            <div className="flex min-w-0 flex-wrap items-center gap-2">
++            <div className="flex min-w-0 items-center gap-2 flex-nowrap sm:flex-wrap">
+               <AgendaViewTabs
+                 viewMode={viewMode}
+                 onViewModeChange={(v) => {
+@@ -387,7 +387,7 @@ export function AgendaOfficinaView() {
+                     Suggerimenti automatici — clic per precompilare il form (60 min)
+                   </p>
+                 </div>
+-                <div className="flex min-w-0 flex-wrap gap-2">
++                <div className="flex min-w-0 gap-2 flex-nowrap sm:flex-wrap">
+                   {suggestions.slice(0, 4).map((slot) => (
+                     <Tooltip
+                       key={slot.startAt}

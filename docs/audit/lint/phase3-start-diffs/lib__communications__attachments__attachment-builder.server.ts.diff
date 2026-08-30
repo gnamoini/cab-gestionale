@@ -1,0 +1,11 @@
+diff --git a/lib/communications/attachments/attachment-builder.server.ts b/lib/communications/attachments/attachment-builder.server.ts
+index 9c9e3ec3..93df2a8b 100644
+--- a/lib/communications/attachments/attachment-builder.server.ts
++++ b/lib/communications/attachments/attachment-builder.server.ts
+@@ -1,6 +1,5 @@
+ import "server-only";
+ 
+-import type { SupabaseClient } from "@supabase/supabase-js";
+ import { deliverPdfArtifact } from "@/lib/pdf-artifacts/pdf-artifact-generate.server";
+ import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
+ import type { CommunicationAttachmentRef } from "@/lib/communications/domain/communication-types";

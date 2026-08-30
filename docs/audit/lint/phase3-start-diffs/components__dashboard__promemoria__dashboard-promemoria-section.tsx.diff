@@ -1,0 +1,35 @@
+diff --git a/components/dashboard/promemoria/dashboard-promemoria-section.tsx b/components/dashboard/promemoria/dashboard-promemoria-section.tsx
+index 12c7243f..d26bed23 100644
+--- a/components/dashboard/promemoria/dashboard-promemoria-section.tsx
++++ b/components/dashboard/promemoria/dashboard-promemoria-section.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useMemo, useRef, useState } from "react";
++import { useCallback, useMemo, useState } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
+ import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
+@@ -46,7 +46,6 @@ export function DashboardPromemoriaSection() {
+   const [modalOpen, setModalOpen] = useState(false);
+   const [editing, setEditing] = useState<DashboardPromemoriaRow | null>(null);
+   const [deleteTarget, setDeleteTarget] = useState<DashboardPromemoriaRow | null>(null);
+-  const hasLoadedOnceRef = useRef(false);
+ 
+   const {
+     dayRows,
+@@ -61,12 +60,8 @@ export function DashboardPromemoriaSection() {
+     deleteMutation,
+   } = useDashboardPromemoriaDay(selectedYmd, monthKey);
+ 
+-  if (!isLoading && !isError) {
+-    hasLoadedOnceRef.current = true;
+-  }
+-
+-  const isMonthLoading = hasLoadedOnceRef.current && isFetching;
+-  const showInitialSkeleton = isLoading && !hasLoadedOnceRef.current;
++  const showInitialSkeleton = isLoading;
++  const isMonthLoading = !isLoading && isFetching;
+ 
+   const errorMessage = error instanceof Error ? error.message : null;
+ 

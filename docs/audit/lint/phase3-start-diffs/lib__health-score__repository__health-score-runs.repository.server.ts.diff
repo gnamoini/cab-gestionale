@@ -1,0 +1,12 @@
+diff --git a/lib/health-score/repository/health-score-runs.repository.server.ts b/lib/health-score/repository/health-score-runs.repository.server.ts
+index a905ad40..4f9618de 100644
+--- a/lib/health-score/repository/health-score-runs.repository.server.ts
++++ b/lib/health-score/repository/health-score-runs.repository.server.ts
+@@ -4,7 +4,6 @@ import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-ser
+ import type { HealthScoreResult, InputSnapshot } from "@/lib/health-score/types";
+ import {
+   HEALTH_SCORE_ENGINE_VERSION,
+-  HEALTH_SCORE_SCHEMA_VERSION,
+ } from "@/lib/health-score/versions";
+ import { hashInputSnapshot } from "@/lib/health-score/engine/determinism";
+ 

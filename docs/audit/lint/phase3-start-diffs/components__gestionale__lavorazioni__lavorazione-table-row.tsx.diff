@@ -1,0 +1,52 @@
+diff --git a/components/gestionale/lavorazioni/lavorazione-table-row.tsx b/components/gestionale/lavorazioni/lavorazione-table-row.tsx
+index 5ddbdfcd..e8dcfc5d 100644
+--- a/components/gestionale/lavorazioni/lavorazione-table-row.tsx
++++ b/components/gestionale/lavorazioni/lavorazione-table-row.tsx
+@@ -33,8 +33,8 @@ import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-dis
+ import {
+   lavorazioneAddettoId,
+   lavorazioneCantiereLabel,
+-  lavorazioneMacchinaLabel,
+-  lavorazioneOggettoLabel,
++
++
+   lavorazioneOggettoCellLines,
+   lavorazioneMezzoIdentParts,
+   formatLavorazioneSchedeBadge,
+@@ -58,7 +58,6 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+ import type { LogModificaRow } from "@/src/types/supabase-tables";
+ import type { StatoLavorazione } from "@/src/types/supabase-tables";
+ import type { LavorazioneSchedeBundle } from "@/types/schede";
+-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+ import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
+ 
+ const lavTablePillFillClass = "w-full min-w-0";
+@@ -146,10 +145,10 @@ function LavorazioneAttivaTableRowInner({
+   statiOpts,
+   statiRapidiPillOpts,
+   prioritaPillOpts,
+-  tablePillOptions,
++  tablePillOptions: 
+   statoPillStyle,
+   prioritaPillStyle,
+-  addettoColors,
++  addettoColors: 
+   addettiRecords,
+   addetti,
+   onStatoRow,
+@@ -163,7 +162,6 @@ function LavorazioneAttivaTableRowInner({
+   const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
+   const macchina = oggettoLines.primary;
+   const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
+-  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
+   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
+   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
+ 
+@@ -322,7 +320,6 @@ function LavorazioneArchivioTableRowInner({
+ }: LavorazioneArchivioTableRowProps) {
+   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
+   const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
+-  const macchina = oggettoLines.primary;
+   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
+   const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore, addettoLogs));
+ 

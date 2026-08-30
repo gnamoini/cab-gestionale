@@ -1,0 +1,11 @@
+{
+  "documentoId": "00000000-0000-0000-0000-000000000001",
+  "known_codes": ["ABC123", "XYZ-9"],
+  "codes_extracted": ["ABC123"],
+  "codes_retrieved_structured": ["ABC123"],
+  "codes_retrieved_file_search": ["XYZ-9"],
+  "pages_processed": 12,
+  "parts_extracted": 1,
+  "chunk_success_rate": 1,
+  "duration_ms": 1200
+}

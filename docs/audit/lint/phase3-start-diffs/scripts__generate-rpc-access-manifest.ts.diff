@@ -1,0 +1,9 @@
+diff --git a/scripts/generate-rpc-access-manifest.ts b/scripts/generate-rpc-access-manifest.ts
+index c772ae12..45beb551 100644
+--- a/scripts/generate-rpc-access-manifest.ts
++++ b/scripts/generate-rpc-access-manifest.ts
+@@ -1,3 +1,4 @@
++/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
+ /**
+  * Classify SECURITY DEFINER functions for rpc-access-manifest.json (SSOT).
+  * Run: npx tsx scripts/generate-rpc-access-manifest.ts

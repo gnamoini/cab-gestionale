@@ -30,27 +30,27 @@ const ROUTE_PAGE_STRUCTURE: Record<
   MigratedStructuralRoute,
   (props: { className?: string; scope?: RouteSkeletonScope }) => React.ReactNode
 > = {
-  login: ({ className }) => <LoginPageStructure mode="skeleton" />,
-  dashboard: ({ className, scope }) => <DashboardPageStructure mode="skeleton" scope={scope} />,
-  magazzino: ({ className, scope }) => <MagazzinoPageStructure mode="skeleton" scope={scope} />,
-  mezzi: ({ className, scope }) => <MezziPageStructure mode="skeleton" scope={scope} />,
-  documenti: ({ className, scope }) => <DocumentiPageStructure mode="skeleton" scope={scope} />,
-  preventivi: ({ className, scope }) => <PreventiviPageStructure mode="skeleton" scope={scope} />,
-  ordini_fornitori: ({ className, scope }) => (
+  login: ({}) => <LoginPageStructure mode="skeleton" />,
+  dashboard: ({ scope }) => <DashboardPageStructure mode="skeleton" scope={scope} />,
+  magazzino: ({ scope }) => <MagazzinoPageStructure mode="skeleton" scope={scope} />,
+  mezzi: ({ scope }) => <MezziPageStructure mode="skeleton" scope={scope} />,
+  documenti: ({ scope }) => <DocumentiPageStructure mode="skeleton" scope={scope} />,
+  preventivi: ({ scope }) => <PreventiviPageStructure mode="skeleton" scope={scope} />,
+  ordini_fornitori: ({ scope }) => (
     <OrdiniFornitoriPageStructure mode="skeleton" scope={scope} />
   ),
-  lavorazioni: ({ className, scope }) => <LavorazioniPageStructure mode="skeleton" scope={scope} />,
+  lavorazioni: ({ scope }) => <LavorazioniPageStructure mode="skeleton" scope={scope} />,
   report: ({ className, scope }) => <ReportPageStructure mode="skeleton" scope={scope ?? "full"} className={className} />,
-  agenda: ({ className, scope }) => <AgendaPageStructure mode="skeleton" scope={scope} />,
-  dipendenti: ({ className, scope }) => <DipendentiPageStructure mode="skeleton" scope={scope} />,
-  fatturazione: ({ className, scope }) => <FatturazionePageStructure mode="skeleton" scope={scope} />,
-  impostazioni: ({ className, scope }) => <ImpostazioniPageStructure mode="skeleton" scope={scope} />,
-  sicurezza: ({ className, scope }) => <SicurezzaPageStructure mode="skeleton" scope={scope} />,
-  "production-readiness": ({ className, scope }) => (
+  agenda: ({ scope }) => <AgendaPageStructure mode="skeleton" scope={scope} />,
+  dipendenti: ({ scope }) => <DipendentiPageStructure mode="skeleton" scope={scope} />,
+  fatturazione: ({ scope }) => <FatturazionePageStructure mode="skeleton" scope={scope} />,
+  impostazioni: ({ scope }) => <ImpostazioniPageStructure mode="skeleton" scope={scope} />,
+  sicurezza: ({ scope }) => <SicurezzaPageStructure mode="skeleton" scope={scope} />,
+  "production-readiness": ({ scope }) => (
     <ProductionReadinessPageStructure mode="skeleton" scope={scope} />
   ),
-  clienti: ({ className, scope }) => <ClientiPageStructure mode="skeleton" scope={scope} />,
-  "client-detail": ({ className, scope }) => <ClientDetailPageStructure mode="skeleton" scope={scope} />,
+  clienti: ({ scope }) => <ClientiPageStructure mode="skeleton" scope={scope} />,
+  "client-detail": ({ scope }) => <ClientDetailPageStructure mode="skeleton" scope={scope} />,
 };
 
 /** Skeleton body route — senza PageHeader (per Suspense sub-route). */

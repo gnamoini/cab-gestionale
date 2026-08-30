@@ -1,0 +1,13 @@
+diff --git a/lib/data-import/entities/listino/listino-import.plugin.server.ts b/lib/data-import/entities/listino/listino-import.plugin.server.ts
+index 68a66e63..4703aac1 100644
+--- a/lib/data-import/entities/listino/listino-import.plugin.server.ts
++++ b/lib/data-import/entities/listino/listino-import.plugin.server.ts
+@@ -3,7 +3,7 @@ import "server-only";
+ import type { ImportEntityPlugin } from "@/lib/data-import/core/import-plugin";
+ import { generateImportTemplateXlsx } from "@/lib/data-import/core/template-generator.server";
+ import {
+-  MAGAZZINO_FIELD_PATTERNS,
++
+   MAGAZZINO_IMPORT_FIELDS,
+ } from "@/lib/data-import/entities/magazzino/magazzino-import-schema";
+ import {

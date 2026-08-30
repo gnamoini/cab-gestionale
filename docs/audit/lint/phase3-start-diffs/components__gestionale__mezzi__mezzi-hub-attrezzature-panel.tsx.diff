@@ -1,0 +1,12 @@
+diff --git a/components/gestionale/mezzi/mezzi-hub-attrezzature-panel.tsx b/components/gestionale/mezzi/mezzi-hub-attrezzature-panel.tsx
+index e0edd622..a2cbb98f 100644
+--- a/components/gestionale/mezzi/mezzi-hub-attrezzature-panel.tsx
++++ b/components/gestionale/mezzi/mezzi-hub-attrezzature-panel.tsx
+@@ -96,6 +96,7 @@ export function MezziHubPanoramicaAttrezzaturaSection({
+   }, [mezzoId]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     void reload();
+   }, [reload]);
+ 

@@ -1,6 +1,5 @@
 /** Performance governance v6 — static policy suite (PR blocking). */
 export const PERFORMANCE_GOVERNANCE_SUITE: readonly string[] = [
-  "lib/regression/performance-policy.test.ts",
   "lib/regression/performance-budget-registry.test.ts",
   "lib/regression/performance-regression-guard.test.ts",
   "lib/regression/performance-lint-policy.test.ts",

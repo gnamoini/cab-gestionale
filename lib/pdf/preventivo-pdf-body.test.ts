@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import {
-  buildPreventivoAttrezzaturaPdfFields,
+
   buildPreventivoOggettoInterventoPdfFields,
   buildPreventivoSchedaIngressoAttrezzaturaPdfFields,
   buildPreventivoSchedaIngressoTelaioPdfFields,
-  buildPreventivoTelaioMezzoPdfFields,
 } from "@/lib/pdf/preventivo-pdf-layout";
 import { compactFieldRowCount, compactOggettoInterventoColumnStyles, padPdfFieldsToEqualRows, tripleFieldRowCount } from "@/lib/pdf/gestionale-section-table";
 import {

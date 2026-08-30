@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import {
-  PWA_OFFLINE_WRITE_BLOCKED,
+
   PWA_OFFLINE_WRITE_MESSAGE,
 } from "@/lib/pwa/pwa-connectivity";
 import {

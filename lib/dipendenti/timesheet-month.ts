@@ -124,7 +124,8 @@ export function yearOptions(count = 5, anchor: Date = new Date()): { value: numb
   return out;
 }
 
-export function monthOptionsForYear(year: number): { value: number; label: string }[] {
+export function monthOptionsForYear(_year: number): { value: number; label: string }[] {
+  void _year;
   return MONTH_NAMES_IT.map((label, i) => ({ value: i + 1, label }));
 }
 

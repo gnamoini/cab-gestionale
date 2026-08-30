@@ -17,8 +17,10 @@ export function useDelayedLoadingMessage(
 ): string | null {
   const [show, setShow] = useState(false);
 
+   
   useEffect(() => {
     if (!isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setShow(false);
       return;
     }

@@ -14,6 +14,9 @@ export function resolveSchedeConsumerScopesForMetrics(metricIds: readonly string
       scope.needsLaborCost = "completed_in_period";
       scope.needsMargin = "completed_in_period";
     }
+    if (id === "cost-tot") {
+      scope.needsLaborCost = "completed_in_period";
+    }
   }
   return scope;
 }

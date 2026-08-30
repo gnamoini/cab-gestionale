@@ -35,7 +35,6 @@ export async function loadImportDashboardStats(): Promise<ImportDashboardStats> 
   const list = rows ?? [];
   const recent24h = list.filter((r) => String(r.created_at) >= since);
   const failed24h = recent24h.filter((r) => r.status === "failed").length;
-  const completed24h = recent24h.filter((r) => r.status === "completed" || r.status === "ready_to_commit").length;
   const durations = recent24h
     .map((r) => (r.duration_ms != null ? Number(r.duration_ms) : null))
     .filter((v): v is number => v != null)

@@ -1,0 +1,13 @@
+diff --git a/app/(gestionale)/report/design-system-preview/page.tsx b/app/(gestionale)/report/design-system-preview/page.tsx
+index 27e84575..37ef3b6f 100644
+--- a/app/(gestionale)/report/design-system-preview/page.tsx
++++ b/app/(gestionale)/report/design-system-preview/page.tsx
+@@ -57,7 +57,7 @@ export default function ReportDesignSystemPreviewPage() {
+ 
+         <section className="space-y-3" data-ui-gallery="tooltip">
+           <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Tooltip (UI governance)</h2>
+-          <div className="flex flex-wrap gap-3">
++          <div className="flex gap-3 min-w-0 flex-nowrap sm:flex-wrap">
+             <Tooltip content="Azione">
+               <button type="button" className="rounded-lg border px-3 py-2 text-sm">
+                 Tooltip

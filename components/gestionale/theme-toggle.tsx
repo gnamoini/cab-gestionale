@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { OptionalTooltip } from "@/components/ui";
 import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 import { useTheme } from "@/context/theme-context";
 import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
+import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { dsBtnGhost, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 function IconSun({ className }: { className?: string }) {
@@ -27,9 +27,7 @@ function IconMoon({ className }: { className?: string }) {
 /** Icona stato tema corrente (sole = chiaro, luna = scuro) per sidebar e label. */
 export function ThemeModeIcon({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   const { resolved, themeReady } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useClientHydrated();
 
   if (!mounted || !themeReady) {
     return <span className={`inline-block rounded-full bg-zinc-300/80 dark:bg-zinc-600/80 ${className}`} aria-hidden />;
@@ -48,9 +46,7 @@ export function ThemeToggle({
   variant?: "button" | "switch" | "ghost";
 }) {
   const { resolved, themeReady, themeSaving, toggleLightDark } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useClientHydrated();
 
   const label = resolved === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro";
   const tip = resolveTooltipContent("", themeSaving ? "Salvataggio…" : label, {

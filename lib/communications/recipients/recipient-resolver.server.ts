@@ -118,7 +118,7 @@ export async function resolveRecipientForPolicy(
   if (policy.recipientType !== "customer") return null;
 
   let clienteLabel = "";
-  let clienteId: string | null = null;
+  const clienteId: string | null = null;
 
   if (entityType === "lavorazioni") {
     const { data: lav } = await client

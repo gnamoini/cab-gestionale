@@ -2,8 +2,6 @@ import { stripDictionaryTokens } from "@/lib/entity-resolution/dictionary-tokens
 import { LEGAL_SUFFIX_REPLACERS } from "@/lib/entity-resolution/legal-suffix";
 import {
   entityAutocompleteKey,
-  normalizeEntityString,
-  type NormalizeEntityStringOptions,
 } from "@/lib/validation/global-entity-validation";
 
 export type EntityNormalizeOptions = {
@@ -15,9 +13,6 @@ export type EntityNormalizeOptions = {
 };
 
 function baseNormalize(value: string, options?: EntityNormalizeOptions): string {
-  const opts: NormalizeEntityStringOptions = {
-    standardizeLegalSuffix: options?.stripLegalSuffix ?? false,
-  };
   let s = value.trim();
   if (!s) return "";
 

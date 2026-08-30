@@ -22,7 +22,7 @@ const key = buildLavorazioniListKey(normalizeLavorazioniFilters({ archived: fals
 function row(overrides: Partial<LavorazioneListRow> & { id?: string } = {}): LavorazioneListRow {
   const now = "2026-07-07T12:00:00.000Z";
   const id = overrides.id ?? ID;
-  const { id: _id, ...rest } = overrides;
+  const { ...rest } = overrides;
   return {
     id,
     codice: "26-0100",

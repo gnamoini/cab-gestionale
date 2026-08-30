@@ -1,0 +1,13 @@
+diff --git a/lib/preventivi/preventivo-editor-dirty.ts b/lib/preventivi/preventivo-editor-dirty.ts
+index 9abae0f2..be23461b 100644
+--- a/lib/preventivi/preventivo-editor-dirty.ts
++++ b/lib/preventivi/preventivo-editor-dirty.ts
+@@ -22,7 +22,7 @@ export function normalizePreventivoEditorRecord(
+ 
+ /** Snapshot stabile — esclude timestamp volatile. */
+ export function preventivoEditorSnapshot(record: PreventivoRecord): string {
+-  const { aggiornatoAt: _aggiornatoAt, ...rest } = record;
++  const { ...rest } = record;
+   return JSON.stringify(rest);
+ }
+ 

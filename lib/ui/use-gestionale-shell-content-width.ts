@@ -76,6 +76,7 @@ function subscribeShellContentWidth(onStoreChange: () => void): () => void {
 
 /** Larghezza colonna contenuto — letta da CSS var shell, bucket 8px (no context re-render). */
 export function useGestionaleShellContentWidth(): number {
+  // eslint-disable-next-line react-hooks/use-memo -- lint phase2: stable subscribe fn for useSyncExternalStore
   const subscribe = useCallback(subscribeShellContentWidth, []);
   return useSyncExternalStore(subscribe, readShellContentWidthFromDom, () => 0);
 }

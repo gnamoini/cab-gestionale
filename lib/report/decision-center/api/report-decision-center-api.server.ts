@@ -45,7 +45,7 @@ export async function handleDecisionCenterGet(request: Request): Promise<NextRes
 
   const period = parseRequestedPeriod(new URL(request.url).searchParams);
   const ctx = await buildDecisionCenterContext(period);
-  let candidates = buildDecisionCandidates(ctx);
+  const candidates = buildDecisionCandidates(ctx);
 
   const reportType = resolveBusinessReportType(period.preset);
   const logicalKey = buildLogicalReportKey({

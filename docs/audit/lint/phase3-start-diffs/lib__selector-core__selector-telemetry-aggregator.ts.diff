@@ -1,0 +1,12 @@
+diff --git a/lib/selector-core/selector-telemetry-aggregator.ts b/lib/selector-core/selector-telemetry-aggregator.ts
+index 3ca960a6..690707a2 100644
+--- a/lib/selector-core/selector-telemetry-aggregator.ts
++++ b/lib/selector-core/selector-telemetry-aggregator.ts
+@@ -194,6 +194,6 @@ export function aggregateSelectorTelemetry(
+ }
+ 
+ export function toDomainUsageStats(stats: SelectorDomainUsageStatsWithPreferred): SelectorDomainUsageStats {
+-  const { preferredSurface: _ignored, ...usageStats } = stats;
++  const { ...usageStats } = stats;
+   return usageStats;
+ }

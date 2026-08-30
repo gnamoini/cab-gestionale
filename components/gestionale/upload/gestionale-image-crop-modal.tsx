@@ -46,6 +46,7 @@ export function GestionaleImageCropModal({
 
   useEffect(() => {
     if (!file) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setObjectUrl(null);
       setNaturalSize(null);
       setLayout(null);
@@ -188,7 +189,7 @@ export function GestionaleImageCropModal({
           aria-label="Area ritaglio foto"
         >
           {objectUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Blob locale per ritaglio interattivo.
+            // eslint-disable-next-line @next/next/no-img-element, cab-perf/no-img-without-next-image -- Blob locale per ritaglio interattivo.
             <img
               src={objectUrl}
               alt=""

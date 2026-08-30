@@ -14,7 +14,10 @@ import {
 
 assert.equal(ordineFornitoreEmailDraftSubject({ numero: "123" }), "Ordine fornitore #123");
 assert.equal(ordineFornitoreEmailDraftSubject({ numero: "" }), "Ordine fornitore");
-assert.equal(ordineFornitoreEmailDraftBody(), "Buongiorno, in allegato trasmettiamo il nostro ordine.");
+assert.match(
+  ordineFornitoreEmailDraftBody({ numero: "123" }),
+  /in allegato trasmettiamo l'ordine 123/,
+);
 assert.equal(ordineFornitoreEmailAttachmentFileName({ numero: "12/24" }), "Ordine-12-24.pdf");
 assert.equal(ORDINE_FORNITORE_FALLBACK_MANUAL_MESSAGE, "PDF scaricato. Allegalo manualmente alla mail.");
 
@@ -40,7 +43,15 @@ assert.equal(
       fornitori: [],
       produttori: [],
       fornitoreAnagraficaByFornitore: {
-        forn1: { ragioneSociale: "", indirizzo: "", partitaIva: "", codiceFiscale: "", telefono: "", email: "mag@forn.it" } as never,
+        forn1: {
+          ragioneSociale: "",
+          indirizzo: "",
+          partitaIva: "",
+          codiceFiscale: "",
+          telefono: "",
+          email: "mag@forn.it",
+          emailAggiuntive: [],
+        },
       },
     },
   ),

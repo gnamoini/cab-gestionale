@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   applySourceHierarchyPenalty,
   computeConfidenceScore,
@@ -46,7 +48,23 @@ const badges = deriveDocumentAiIndexBadges({
 assert.equal(badges.fileSearch, "ready");
 assert.equal(badges.aiCatalog, "processing");
 
+const queued = deriveDocumentAiIndexBadges({
+  aiEnabled: true,
+  status: "pending",
+  understandingStatus: "pending",
+});
+assert.equal(queued.fileSearch, "none");
+assert.equal(queued.aiCatalog, "none");
+assert.equal(queued.exploded, "none");
+
 const disabled = deriveDocumentAiIndexBadges({ aiEnabled: false });
 assert.equal(disabled.fileSearch, "disabled");
+
+const fileSearchIndex = fs.readFileSync(
+  path.join(process.cwd(), "lib/ai/spare-parts/indexing/file-search-index.server.ts"),
+  "utf8",
+);
+assert.doesNotMatch(fileSearchIndex, /storageCreateSignedUrl/);
+assert.doesNotMatch(fileSearchIndex, /storage\.service/);
 
 console.log("spare-parts-policy.test.ts OK");

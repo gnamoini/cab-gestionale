@@ -241,8 +241,10 @@ export function AdminNotificationsBell() {
   const close = useCallback(() => setOpen(false), []);
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
+   
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setDesktopPermissionState(getDesktopNotificationPermissionState());
   }, [open]);
 

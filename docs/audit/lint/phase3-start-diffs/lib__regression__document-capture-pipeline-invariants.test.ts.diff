@@ -1,0 +1,13 @@
+diff --git a/lib/regression/document-capture-pipeline-invariants.test.ts b/lib/regression/document-capture-pipeline-invariants.test.ts
+index 29ff4dd3..cdd34461 100644
+--- a/lib/regression/document-capture-pipeline-invariants.test.ts
++++ b/lib/regression/document-capture-pipeline-invariants.test.ts
+@@ -19,7 +19,7 @@ import {
+ import { INITIAL_PIPELINE_STATE } from "@/lib/document-capture/model/pipeline-state";
+ import { markUploadUploaded } from "@/lib/document-capture/orchestrator/pipeline-state-advance";
+ import {
+-  createPipelineWatchdog,
++
+   watchdogTimeoutCodeForPhase,
+   PHASE_STALL_MS,
+ } from "@/lib/document-capture/orchestrator/pipeline-watchdog";

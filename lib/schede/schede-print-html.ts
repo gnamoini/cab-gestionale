@@ -15,6 +15,7 @@ export function isAllowedLegacySchedaBlobMime(mime: string): boolean {
 }
 
 export function openBlobInNewTab(mime: string, base64: string, _fileName: string): void {
+  void _fileName;
   const normalized = mime.trim().toLowerCase();
   if (!isAllowedLegacySchedaBlobMime(normalized)) {
     return;

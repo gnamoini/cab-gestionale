@@ -1,0 +1,27 @@
+diff --git a/lib/schede/scheda-ingresso-roundtrip.test.ts b/lib/schede/scheda-ingresso-roundtrip.test.ts
+index 60f23084..926ab5ff 100644
+--- a/lib/schede/scheda-ingresso-roundtrip.test.ts
++++ b/lib/schede/scheda-ingresso-roundtrip.test.ts
+@@ -6,12 +6,7 @@ import { bundleToSchedaPayloads } from "@/lib/schede/schede-db-mapper";
+ import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
+ import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
+ import { TEXT_EXTRA } from "@/lib/validation/text-field-limits";
+-import {
+-  applySchedaIngressoTypedFields,
+-  copySchedaIngressoFieldFromClient,
+-  isSchedaIngressoFieldEmpty,
+-  type SchedaIngressoStringKey,
+-} from "@/lib/schede/scheda-ingresso-typed-fields";
++import { applySchedaIngressoTypedFields, type SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
+ import type { LavorazioneSchedeBundle, SchedaIngressoFields } from "@/types/schede";
+ 
+ const MULTILINE_ANOMALIA = "Riga 1\nRiga 2\n\nRiga 4 àèù & < > \" '";
+@@ -84,7 +79,7 @@ function fullCampi(overrides: Partial<SchedaIngressoFields> = {}): SchedaIngress
+ }
+ 
+ const campi = fullCampi();
+-const { cliente: _omitCliente, ...partialWithoutCliente } = campi;
++const { ...partialWithoutCliente } = campi;
+ const normalized = normalizeSchedaIngressoFields(
+   { ...partialWithoutCliente, dataIngresso: "09/06/2026" },
+   "Default Addetto",

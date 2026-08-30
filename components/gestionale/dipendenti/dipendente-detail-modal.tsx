@@ -21,7 +21,6 @@ export function DipendenteDetailModal({
   employee,
   monthKey,
   entries,
-  tipiAssenza: _tipiAssenza,
 }: {
   open: boolean;
   onClose: () => void;

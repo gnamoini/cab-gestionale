@@ -1,0 +1,12 @@
+diff --git a/src/lib/rbac/resolve-page-access.ts b/src/lib/rbac/resolve-page-access.ts
+index e33c3b0e..8eeec06f 100644
+--- a/src/lib/rbac/resolve-page-access.ts
++++ b/src/lib/rbac/resolve-page-access.ts
+@@ -6,7 +6,6 @@ import {
+   GESTIONALE_PAGES,
+   pageAccessFromLevel,
+   pathnameToPage,
+-  type GestionalePage,
+   type GestionalePageKey,
+   type PageAccessLevel,
+ } from "@/src/lib/permissions/gestionale-pages";

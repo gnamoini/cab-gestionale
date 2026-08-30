@@ -1,0 +1,26 @@
+diff --git a/src/hooks/gestionale/use-gestionale-sync-scope.ts b/src/hooks/gestionale/use-gestionale-sync-scope.ts
+index ced8690f..2cb42cb8 100644
+--- a/src/hooks/gestionale/use-gestionale-sync-scope.ts
++++ b/src/hooks/gestionale/use-gestionale-sync-scope.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useLayoutEffect, useMemo, useRef } from "react";
++import { useLayoutEffect, useMemo, useRef, useEffect } from "react";
+ import {
+   registerGestionaleSyncScope,
+   type GestionaleSyncScopeRegistration,
+@@ -20,9 +20,12 @@ function scopeSignature(reg: GestionaleSyncScopeRegistration): string {
+  */
+ export function useGestionaleSyncScope(reg: GestionaleSyncScopeRegistration): void {
+   const regRef = useRef(reg);
+-  regRef.current = reg;
+   const signature = useMemo(() => scopeSignature(reg), [reg]);
+ 
++  useEffect(() => {
++    regRef.current = reg;
++  }, [reg]);
++
+   useLayoutEffect(() => {
+     return registerGestionaleSyncScope(regRef.current);
+   }, [signature]);

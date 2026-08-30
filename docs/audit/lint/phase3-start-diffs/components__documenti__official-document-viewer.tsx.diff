@@ -1,0 +1,16 @@
+diff --git a/components/documenti/official-document-viewer.tsx b/components/documenti/official-document-viewer.tsx
+index 25265bd5..e54984ee 100644
+--- a/components/documenti/official-document-viewer.tsx
++++ b/components/documenti/official-document-viewer.tsx
+@@ -13,9 +13,11 @@ export function OfficialDocumentViewer({ streamUrl, title }: OfficialDocumentVie
+   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+   const [error, setError] = useState<string | null>(null);
+ 
++   
+   useEffect(() => {
+     if (!isMobile) return;
+     let revoked: string | null = null;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setError(null);
+     void (async () => {
+       try {

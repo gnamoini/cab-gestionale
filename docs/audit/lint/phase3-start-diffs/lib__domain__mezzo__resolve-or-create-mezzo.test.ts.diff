@@ -1,0 +1,12 @@
+diff --git a/lib/domain/mezzo/resolve-or-create-mezzo.test.ts b/lib/domain/mezzo/resolve-or-create-mezzo.test.ts
+index ed1e737d..fd98690e 100644
+--- a/lib/domain/mezzo/resolve-or-create-mezzo.test.ts
++++ b/lib/domain/mezzo/resolve-or-create-mezzo.test.ts
+@@ -5,7 +5,6 @@ import {
+   normalizeTarga,
+   pickCanonicalMezzo,
+ } from "@/lib/domain/mezzo/mezzo-identity";
+-import { mergeMezzoPatch } from "@/lib/domain/mezzo/merge-mezzo-patch";
+ import {
+   isMezzoUniqueViolation,
+   resolveOrCreateMezzo,

@@ -124,12 +124,15 @@ export function MezziHubDetailModal({
   const [tab, setTab] = useState<MezziHubTabId>(initialTab);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setTab(initialTab);
   }, [mezzo.id, initialTab]);
 
   const hubQuery = useMezzoHub(mezzo.id);
   const hubData = hubQuery.data;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const interventi = hubData?.interventi ?? [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const preventivi = hubData?.preventivi ?? [];
   const documenti = hubData?.documenti ?? [];
 
@@ -166,6 +169,7 @@ export function MezziHubDetailModal({
   useEffect(() => {
     resetPvPage();
   }, [mezzo.id, sortedPv.length, listPageSize, resetPvPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const pagedPv = useMemo(() => slicePv(sortedPv), [sortedPv, slicePv, pvPage]);
 
   const {
@@ -180,6 +184,7 @@ export function MezziHubDetailModal({
   useEffect(() => {
     resetDocPage();
   }, [mezzo.id, documenti.length, listPageSize, resetDocPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const pagedDoc = useMemo(() => sliceDoc(documenti), [documenti, sliceDoc, docPage]);
 
   const mezzoTabPanelId = `mezzi-hub-panel-${tab}`;

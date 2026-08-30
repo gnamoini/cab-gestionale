@@ -1,0 +1,13 @@
+diff --git a/components/lavorazioni/lavorazione-attivita-panel.tsx b/components/lavorazioni/lavorazione-attivita-panel.tsx
+index 850282ed..94f138d7 100644
+--- a/components/lavorazioni/lavorazione-attivita-panel.tsx
++++ b/components/lavorazioni/lavorazione-attivita-panel.tsx
+@@ -88,7 +88,7 @@ function AttivitaEventRow({
+               : ""
+         }`}
+       >
+-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
++        <div className="flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
+           <p
+             className={`min-w-0 uppercase tracking-wide ${
+               isStato

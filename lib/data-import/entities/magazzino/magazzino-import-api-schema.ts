@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { ImportMappingConfig } from "@/lib/data-import/core/types";
-import { IMPORT_MAX_FILE_BYTES } from "@/lib/data-import/core/types";
 
 export const magazzinoImportParseRequestSchema = z.object({
   fileName: z.string().min(1).max(255),

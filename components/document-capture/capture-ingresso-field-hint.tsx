@@ -114,7 +114,7 @@ export function CaptureIngressoFieldHintInline<K extends keyof SchedaIngressoFie
         </p>
       ) : null}
       {suggestion && hint.tone === "suggested" ? (
-        <p className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
           <span>
             Forse intendevi:{" "}
             <strong className="text-[color:var(--cab-fg)]">{suggestion}</strong>
@@ -133,7 +133,7 @@ export function CaptureIngressoFieldHintInline<K extends keyof SchedaIngressoFie
       {hint.tone === "ambiguous" && hint.candidates?.length ? (
         <div className="space-y-1">
           <p>Più corrispondenze possibili:</p>
-          <ul className="flex flex-wrap gap-1">
+          <ul className="flex gap-1 min-w-0 flex-nowrap sm:flex-wrap">
             {hint.candidates.map((c) => (
               <li key={`${c.id ?? "null"}-${c.label}`}>
                 <button

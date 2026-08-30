@@ -1,5 +1,5 @@
 import {
-  magazzinoRowMatchesGlobalSearch,
+
   magazzinoRowSearchHaystack,
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
@@ -36,7 +36,7 @@ export function magazzinoRowMatchesPageFiltersIndexed(
     const hay = haystackById.get(row.id) ?? magazzinoRowSearchHaystack(row, listePrefs);
     if (!matchSearchStringWithPrepared(prepared, hay).matches) return false;
   }
-  const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
+  const { ...advanced } = filters;
   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
 }
 

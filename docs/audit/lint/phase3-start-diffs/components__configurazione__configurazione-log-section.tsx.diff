@@ -1,0 +1,13 @@
+diff --git a/components/configurazione/configurazione-log-section.tsx b/components/configurazione/configurazione-log-section.tsx
+index 18a94349..63a6c952 100644
+--- a/components/configurazione/configurazione-log-section.tsx
++++ b/components/configurazione/configurazione-log-section.tsx
+@@ -88,7 +88,7 @@ export function ConfigurazioneLogSection({
+ 
+   return (
+     <section
+-      className={`flex min-h-0 flex-1 flex-col gap-2 ${className ?? ""}`}
++      className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2 ${className ?? ""}`}
+       aria-label="Storico configurazione"
+     >
+       {list}

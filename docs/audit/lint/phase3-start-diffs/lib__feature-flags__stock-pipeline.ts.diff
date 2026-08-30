@@ -1,0 +1,15 @@
+diff --git a/lib/feature-flags/stock-pipeline.ts b/lib/feature-flags/stock-pipeline.ts
+index 8d9ba680..d0b06382 100644
+--- a/lib/feature-flags/stock-pipeline.ts
++++ b/lib/feature-flags/stock-pipeline.ts
+@@ -21,6 +21,9 @@ export function isStockPipelineEmergencyFallback(): boolean {
+ }
+ 
+ /** Percorso ufficiale v4 attivo su client. */
+-export function useDeterministicStockPipeline(): boolean {
++export function isDeterministicStockPipelineActive(): boolean {
+   return isStockPipelineClientEnabled() && !isStockPipelineEmergencyFallback();
+ }
++
++/** @deprecated use isDeterministicStockPipelineActive — non è un React hook */
++export const useDeterministicStockPipeline = isDeterministicStockPipelineActive;

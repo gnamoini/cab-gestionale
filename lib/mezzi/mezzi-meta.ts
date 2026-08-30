@@ -44,6 +44,7 @@ export function parseMezzoMeta(raw: unknown): MezzoAnagraficaMeta {
 
 /** @deprecated ponytail: v1 matrice tagliandi disabilitata — sempre false. */
 export function mezzoTagliandiEnabled(_m: { tagliandi?: boolean }): boolean {
+  void _m;
   return false;
 }
 

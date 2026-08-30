@@ -34,20 +34,13 @@ const qrUrl = "https://example.test/r/CAB-TESTTOKEN1";
 const renderOpts = { embedFonts: false, textAsPaths: true } as const;
 
 async function main() {
-  const withBarcode = await renderLabelSvg(template, payload, qrUrl, { ...renderOpts, includeBarcode: true });
-  const withoutBarcode = await renderLabelSvg(template, payload, qrUrl, { ...renderOpts, includeBarcode: false });
-
-  assert.ok(withBarcode.length > withoutBarcode.length, "barcode adds ink to SVG");
-  assert.equal(
-    withBarcode.match(/viewBox="0 0 (\d+) (\d+)"/)?.[0],
-    withoutBarcode.match(/viewBox="0 0 (\d+) (\d+)"/)?.[0],
-    "layout dimensions unchanged without barcode",
-  );
+  const svg = await renderLabelSvg(template, payload, qrUrl, renderOpts);
+  assert.ok(svg.includes("<svg"), "renders label svg");
+  assert.ok(svg.includes("8FSNS030000001") || svg.includes("<path"), "codice ink present");
 
   const clienteTemplate = getLabelTemplate("60x40-default", "cliente")!;
   const clienteSvg = await renderLabelSvg(clienteTemplate, payload, DEFAULT_COMPANY_WEBSITE_URL, {
     embedFonts: false,
-    includeBarcode: false,
     labelKind: "cliente",
     textAsPaths: false,
   });
@@ -70,14 +63,12 @@ async function main() {
   const a4SvgPaths = await renderLabelSvg(a4Template, payload, qrUrl, {
     embedFonts: false,
     textAsPaths: true,
-    includeBarcode: false,
   });
   assert.ok(!a4SvgPaths.includes("paint-order=\"stroke fill\""), "A4 native bold: no faux-bold stroke on text");
 
   const a4Svg = await renderLabelSvg(a4Template, payload, qrUrl, {
     embedFonts: false,
     textAsPaths: false,
-    includeBarcode: false,
   });
   assert.ok(a4Svg.includes("text-anchor=\"middle\""), "A4: testo centrato");
   assert.ok(a4Svg.includes("font-family=\"LabelSansBold\""), "A4: font bold nativo");
@@ -103,10 +94,9 @@ async function main() {
   assert.ok(dual95Svg.includes("XXXX"), "95x40 dual marca: codice principale nel SVG");
   assert.ok(dual95Svg.includes("YYYY"), "95x40 dual marca: codice secondario nel SVG");
 
-  assert.equal(formatLabelJobPreset("95x40-default", false, true), "95x40-default::no-barcode::cliente");
+  assert.equal(formatLabelJobPreset("95x40-default", true), "95x40-default::cliente");
   assert.deepEqual(parseLabelJobPreset("95x40-default::no-barcode::cliente"), {
     preset: "95x40-default",
-    includeBarcode: false,
     clienteLabel: true,
   });
 

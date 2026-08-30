@@ -172,5 +172,5 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
       canWrite: rbac.canWritePage(key),
       isLoading: rbac.isLoading,
     };
-  }, [page, rbac.canReadPage, rbac.canWritePage, rbac.isLoading]);
+  }, [page, rbac]);
 }

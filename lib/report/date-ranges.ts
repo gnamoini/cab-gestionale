@@ -112,11 +112,6 @@ function startOfLocalQuarter(d: Date): Date {
 }
 
 /** Ultimo istante del trimestre solare che contiene `d`. */
-function endOfLocalQuarter(d: Date): Date {
-  const q = quarterIndex(d.getMonth());
-  return endOfLocalDay(new Date(d.getFullYear(), q * 3 + 3, 0));
-}
-
 /** Trimestre solare completo immediatamente precedente ad `anchor`. */
 function previousLocalQuarterRange(anchor: Date): DateRange {
   const curQStart = startOfLocalQuarter(anchor);

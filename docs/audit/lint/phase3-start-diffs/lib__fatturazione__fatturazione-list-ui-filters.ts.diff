@@ -1,0 +1,13 @@
+diff --git a/lib/fatturazione/fatturazione-list-ui-filters.ts b/lib/fatturazione/fatturazione-list-ui-filters.ts
+index 0080106e..795c251b 100644
+--- a/lib/fatturazione/fatturazione-list-ui-filters.ts
++++ b/lib/fatturazione/fatturazione-list-ui-filters.ts
+@@ -52,7 +52,7 @@ export function invoiceRowMatchesPageFilters(
+   filters: FatturazionePageFilters,
+ ): boolean {
+   if (!invoiceRowMatchesGlobalSearch(row, ctx, filters.search)) return false;
+-  const { search: _s, ...advanced } = filters;
++  const { ...advanced } = filters;
+   return invoiceMatchesAdvancedFilters(row, advanced);
+ }
+ 

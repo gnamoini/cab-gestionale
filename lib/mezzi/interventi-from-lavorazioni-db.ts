@@ -21,7 +21,7 @@ export function labelLavorazioneStatoDb(stato: string): string {
 }
 
 /** @deprecated Usare `isLavorazioneArchived(row)` — l'archivio non dipende dallo stato. */
-export function isLavorazioneStoricoDb(_stato: string): boolean {
+export function isLavorazioneStoricoDb(): boolean {
   return false;
 }
 

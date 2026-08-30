@@ -53,7 +53,6 @@ import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import {
   dsBtnNeutral,
-  dsInput,
   dsLabel,
   dsPageToolbarCtaCompact,
   dsTableActionBtnDanger,
@@ -144,7 +143,6 @@ export function OrdiniFornitoriView({
   listSurface,
   canRead,
   canWrite,
-  initialOrdineId,
 }: {
   listSurface: ListSurface;
   /** Permessi pagina Preventivi (read = visualizza, write = modifica). */
@@ -162,8 +160,6 @@ export function OrdiniFornitoriView({
     searchInput,
     setSearchInput,
     searchApplied,
-    flushSearch: flushPageSearch,
-    clearSearch,
   } = useGestionaleListSearch({ domain: "ordini-fornitori" });
   const [filters, setFilters] = useState<OrdiniFornitoriPageFilters>(ORDINI_FORNITORI_FILTERS_EMPTY);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
@@ -279,7 +275,7 @@ export function OrdiniFornitoriView({
       setEditor(null);
       await reload();
     },
-    [reload, resetPage, upsertOrdineInListCache],
+    [reload, resetPage, setSearchInput, upsertOrdineInListCache],
   );
 
   const openView = useCallback(
@@ -375,7 +371,7 @@ export function OrdiniFornitoriView({
         <section aria-label="Azioni e filtri ordini fornitori">
           <PageToolbar
             primaryAction={
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-nowrap sm:flex-wrap gap-2">
                 <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
                   <button
                     type="button"

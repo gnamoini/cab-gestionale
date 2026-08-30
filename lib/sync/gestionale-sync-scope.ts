@@ -3,6 +3,8 @@
  * Non dedurre dal pathname.
  */
 
+import { CAB_SYNC_TABLE_USER_PERMISSIONS } from "@/lib/sync/cab-sync-bus";
+
 export type GestionaleSyncDomain =
   | "lavorazioni"
   | "magazzino"
@@ -103,7 +105,7 @@ export const TABLE_TO_SYNC_DOMAIN: Partial<Record<string, GestionaleSyncDomain>>
   dipendenti_timesheet_entries: "dipendenti",
   app_settings: "impostazioni",
   profiles: "sicurezza",
-  user_permissions: "sicurezza",
+  [CAB_SYNC_TABLE_USER_PERMISSIONS]: "sicurezza",
 };
 
 export function resolveDomainForTable(table: string): GestionaleSyncDomain | null {

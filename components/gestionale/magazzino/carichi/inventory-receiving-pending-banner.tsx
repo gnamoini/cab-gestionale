@@ -60,7 +60,7 @@ export function InventoryReceivingPendingBanner({
                 <p className="truncate text-sm font-medium text-[color:#fafafa]">{item.label}</p>
                 <span className={dsSystemBannerChip}>{inventoryReceivingUiStatusLabel(item.uiStatus)}</span>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
                 {previewMode ? (
                   <button type="button" className={pendingRowActionBtn} disabled aria-disabled>
                     {INVENTORY_RECEIVING_PENDING_BANNER_RESUME_LABEL}

@@ -1,0 +1,33 @@
+diff --git a/components/report/report-lavorazioni-section.tsx b/components/report/report-lavorazioni-section.tsx
+index 72567f7f..3efa05ad 100644
+--- a/components/report/report-lavorazioni-section.tsx
++++ b/components/report/report-lavorazioni-section.tsx
+@@ -9,7 +9,7 @@ import { GlobalTableHead } from "@/components/gestionale/global-table";
+ import { ReportCompareBanner } from "@/components/report/report-compare-banner";
+ import { ReportYearlyForecastLineChart } from "@/components/report/report-charts";
+ import { reportChartShellClass } from "@/components/report/report-ui-tokens";
+-import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
++import { erpBtnNeutral } from "@/components/report/report-buttons";
+ import type { ReportCompareDetail } from "@/lib/report/build-report-model";
+ import { deltaPct, type DateRange } from "@/lib/report/date-ranges";
+ import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
+@@ -58,8 +58,8 @@ function fmtPct(p: number | null): string {
+ }
+ 
+ function ReportLavorazioniSectionInner({
+-  attive,
+-  completate,
++
++
+   anchor,
+   filterRange,
+   compareDetail,
+@@ -159,7 +159,7 @@ function ReportLavorazioniSectionInner({
+         aria-hidden
+         onChange={onFileInputChange}
+       />
+-      <div className="flex flex-wrap items-center justify-end gap-2">
++      <div className="flex items-center justify-end gap-2 flex-nowrap sm:flex-wrap">
+         <button
+           type="button"
+           className={`${erpBtnNeutral} shrink-0 sm:text-sm`}

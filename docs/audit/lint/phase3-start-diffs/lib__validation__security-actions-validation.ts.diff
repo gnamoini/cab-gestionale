@@ -1,0 +1,9 @@
+diff --git a/lib/validation/security-actions-validation.ts b/lib/validation/security-actions-validation.ts
+index 88e2a880..51e5f931 100644
+--- a/lib/validation/security-actions-validation.ts
++++ b/lib/validation/security-actions-validation.ts
+@@ -1,3 +1,4 @@
++/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
+ /** Validazione input server actions sicurezza / impostazioni portale clienti. */
+ 
+ import type { SupabaseClient } from "@supabase/supabase-js";

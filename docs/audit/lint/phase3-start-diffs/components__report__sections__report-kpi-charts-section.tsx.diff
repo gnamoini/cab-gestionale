@@ -1,0 +1,29 @@
+diff --git a/components/report/sections/report-kpi-charts-section.tsx b/components/report/sections/report-kpi-charts-section.tsx
+index 3f7a9a96..a8f9010f 100644
+--- a/components/report/sections/report-kpi-charts-section.tsx
++++ b/components/report/sections/report-kpi-charts-section.tsx
+@@ -56,6 +56,7 @@ export default function ReportKpiChartsSectionView(props: DomainReportSectionPro
+   const createMutation = useCreateSavedKpiChartMutation(userId);
+   const updateMutation = useUpdateSavedKpiChartMutation(userId);
+   const deleteMutation = useDeleteSavedKpiChartMutation(userId);
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
+   const savedConfigs = savedQuery.data ?? [];
+ 
+   useMigrateLocalKpiCharts(userId, savedQuery.data);
+@@ -72,6 +73,7 @@ export default function ReportKpiChartsSectionView(props: DomainReportSectionPro
+ 
+   useEffect(() => {
+     if (rangeInitialized) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setDraft((prev) => ({
+       ...prev,
+       preset: "custom",
+@@ -221,7 +223,7 @@ export default function ReportKpiChartsSectionView(props: DomainReportSectionPro
+           </p>
+         ) : (
+           <>
+-            <div className="mb-3 flex flex-wrap items-end gap-2">
++            <div className="mb-3 flex items-end gap-2 flex-nowrap sm:flex-wrap">
+               <label className="text-sm text-[color:var(--cab-text-muted)]">
+                 Nome
+                 <input

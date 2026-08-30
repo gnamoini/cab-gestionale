@@ -1,0 +1,12 @@
+diff --git a/src/hooks/use-notification-opt-in.ts b/src/hooks/use-notification-opt-in.ts
+index 5ccbb9ac..07a76aa5 100644
+--- a/src/hooks/use-notification-opt-in.ts
++++ b/src/hooks/use-notification-opt-in.ts
+@@ -61,6 +61,7 @@ export function useNotificationOptIn(enabled = true) {
+ 
+   useEffect(() => {
+     if (!enabled) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync opt-in state from storage on mount
+     syncState();
+     const onStorage = () => syncState();
+     window.addEventListener("storage", onStorage);

@@ -616,6 +616,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     hourKind: "presence",
     sourceTables: ["dipendenti_timesheet_entries"],
     allowEstimate: false,
+    formula: "totalHours / (employeesWithHours × 8h × weekdays) × 100",
   }),
   entry({
     id: "gap_schede_timesheet",
@@ -632,6 +633,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     hourKind: "actual",
     sourceTables: ["lavorazioni.actual_labor_hours", "dipendenti_timesheet_entries"],
     allowEstimate: false,
+    formula: "|schedeHours - timesheetHours| / timesheetHours × 100",
   }),
   // — Economici —
   entry({
@@ -685,6 +687,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "higher_is_better",
     sourceModule: "preventivi-records",
     trust: "exact",
+    formula: "acceptedClosedDecisions / closedCustomerDecisions × 100",
   }),
   entry({
     id: "eco_fatturato",

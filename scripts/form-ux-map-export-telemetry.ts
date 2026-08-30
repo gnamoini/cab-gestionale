@@ -9,7 +9,6 @@
  *   type map\\telemetry-export.json | npx tsx scripts/form-ux-map-export-telemetry.ts
  */
 import fs from "node:fs";
-import path from "node:path";
 import {
   writeTelemetrySnapshot,
   type MapTelemetryDailySnapshot,

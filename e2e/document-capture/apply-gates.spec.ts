@@ -101,7 +101,7 @@ test.describe("document capture apply gates", () => {
     }
   });
 
-  test("apply without lavorazioni write returns forbidden for read-only role", async ({ browser }) => {
+  test("apply without lavorazioni write returns forbidden for read-only role", async ({}) => {
     test.skip(true, "Requires dedicated read-only document_capture fixture");
   });
 });

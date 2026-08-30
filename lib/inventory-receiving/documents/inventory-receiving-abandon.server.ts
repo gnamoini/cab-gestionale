@@ -35,7 +35,8 @@ async function failPendingDocumentsForImportFile(importFileId: string): Promise<
     .in("status", [...ABANDONABLE_DOCUMENT_STATUSES]);
 }
 
-export async function abandonInventoryReceivingDocument(documentId: string, userId: string): Promise<void> {
+export async function abandonInventoryReceivingDocument(documentId: string, _userId: string): Promise<void> {
+  void _userId;
   const canWrite = await verifyServerPageWrite("magazzino_carichi");
   if (!canWrite) throw abandonError("Permesso negato", "FORBIDDEN");
 

@@ -76,7 +76,7 @@ export function statiLavorazioniRapidiOptions(stati: StatoLavorazioneConfig[]): 
 }
 
 /** @deprecated Enum pool rimosso — aggiunta libera in impostazioni. */
-export function statiEnumDisponibiliDaAggiungere(_configured: StatoLavorazioneConfig[]): StatoLavorazioneConfig[] {
+export function statiEnumDisponibiliDaAggiungere(): StatoLavorazioneConfig[] {
   return [];
 }
 

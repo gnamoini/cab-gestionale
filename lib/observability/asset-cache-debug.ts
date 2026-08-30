@@ -2,7 +2,7 @@
 
 import {
   getAssetCacheEvents,
-  getAssetHotspots,
+
   getAverageAssetLatency,
   getCacheHitRatio,
   getCacheHitRatioByEntity,

@@ -67,7 +67,7 @@ export function mergeDocumentSparePartsMeta(
 
 export type DocumentAiIndexBadgeState = {
   fileSearch: "ready" | "processing" | "failed" | "disabled" | "none";
-  aiCatalog: "ready" | "processing" | "failed" | "disabled" | "none";
+  aiCatalog: "ready" | "partial" | "processing" | "failed" | "disabled" | "none";
   exploded: "ready" | "partial" | "none" | "disabled";
 };
 
@@ -83,36 +83,43 @@ export function deriveDocumentAiIndexBadges(input: {
   }
 
   const fsStatus = input.status ?? "none";
+  const us = input.understandingStatus ?? "none";
+  const indexComplete =
+    fsStatus === "indexed" && (us === "ready" || us === "ready_with_warnings");
+
   const fileSearch =
     fsStatus === "indexed"
       ? "ready"
-      : fsStatus === "processing" || fsStatus === "pending"
+      : fsStatus === "processing"
         ? "processing"
-        : fsStatus === "failed"
-          ? "failed"
-          : "none";
-
-  const us = input.understandingStatus ?? "none";
-  const aiCatalog =
-    us === "ready"
-      ? "ready"
-      : us === "processing" || us === "pending"
-        ? "processing"
-        : us === "failed"
-          ? "failed"
-          : fileSearch === "ready"
-            ? "processing"
+        : fsStatus === "pending"
+          ? "none"
+          : fsStatus === "failed"
+            ? "failed"
             : "none";
+
+  const aiCatalog =
+    us === "ready_with_warnings"
+      ? "partial"
+      : us === "ready"
+        ? "ready"
+        : us === "processing"
+        ? "processing"
+        : us === "pending" && (fsStatus === "indexed" || fsStatus === "processing")
+          ? "processing"
+          : us === "pending" && fsStatus === "pending"
+            ? "none"
+            : us === "failed"
+              ? "failed"
+              : "none";
 
   const caps = input.capabilities ?? {};
   const exploded =
-    caps.exploded_views === true
+    indexComplete && caps.exploded_views === true
       ? input.indexQuality === "low"
         ? "partial"
         : "ready"
-      : aiCatalog === "ready"
-        ? "none"
-        : "none";
+      : "none";
 
   return { fileSearch, aiCatalog, exploded };
 }

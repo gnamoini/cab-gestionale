@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx b/components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx
+index bb9b0282..8e7a1fba 100644
+--- a/components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx
++++ b/components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx
+@@ -103,7 +103,7 @@ export function MagazzinoBulkLabelToolbar({
+       const res = await fetch("/api/inventory-labels/bulk", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode: false, clienteLabel }),
++        body: JSON.stringify({ items, preset, format: "pdf", clienteLabel }),
+         signal: controller.signal,
+       });
+       window.clearTimeout(timeoutId);

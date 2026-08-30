@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 const MENUITEM_SELECTOR = '[role="menuitem"], a[role="menuitem"], a[data-testid^="page-action-menu-item"]';
 
@@ -24,7 +24,10 @@ export function usePageActionMenuKeyboard({
   setActiveIndex: (index: number) => void;
 }): void {
   const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
+
+  useLayoutEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const focusItemAt = useCallback(
     (index: number) => {

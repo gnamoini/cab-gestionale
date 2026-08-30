@@ -21,5 +21,7 @@ export function useBootInvestigationMount(
   _name: string,
   _meta?: Record<string, unknown>,
 ): void {
+  void _name;
+  void _meta;
   /* ponytail: gate-only hook avoids static edge to boot-investigation.ts */
 }

@@ -272,24 +272,6 @@ export function buildPreventivoTelaioMezzoPdfFields(p: PreventivoRecord): PdfFie
   return legacy;
 }
 
-function mergePdfFieldsWithLabelCollisionPrefix(
-  primary: readonly PdfField[],
-  secondary: readonly PdfField[],
-  secondaryPrefix: string,
-): PdfField[] {
-  const usedLabels = new Set(primary.map((f) => f.label));
-  const out: PdfField[] = [...primary];
-  for (const field of secondary) {
-    if (usedLabels.has(field.label)) {
-      out.push({ label: `${secondaryPrefix} ${field.label}`, value: field.value });
-    } else {
-      out.push(field);
-      usedLabels.add(field.label);
-    }
-  }
-  return out;
-}
-
 /** @deprecated Usare buildPreventivoSchedaIngressoTelaioPdfFields */
 export function buildPreventivoMezzoPdfFields(p: PreventivoRecord): PdfField[] {
   return buildPreventivoTelaioMezzoPdfFields(p);

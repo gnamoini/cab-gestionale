@@ -151,7 +151,7 @@ export function useFormUxFieldEvaluation({
   );
 
   const onBlur = useCallback(
-    (_e: FocusEvent<HTMLInputElement>) => {
+    () => {
       if (!evaluationEnabled) return;
       clearDebounce();
       executionTokenRef.current = createFormUxExecutionToken(formId, fieldId);

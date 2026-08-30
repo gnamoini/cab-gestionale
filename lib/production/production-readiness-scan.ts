@@ -1,5 +1,3 @@
-import "server-only";
-
 import fs from "node:fs";
 import path from "node:path";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
@@ -60,6 +58,7 @@ const LEGACY_READ_ADAPTER_IMPORT_ALLOWLIST = new Set([
   "lib/domain/intervento-context/build-intervento-context.ts",
   "lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server.ts",
   "lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura.ts",
+  "src/services/maintenance-engine-v2.service.ts",
 ]);
 
 function normalizeRel(p: string): string {

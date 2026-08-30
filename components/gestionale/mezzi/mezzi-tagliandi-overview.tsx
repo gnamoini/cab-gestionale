@@ -386,9 +386,11 @@ export function MezziTagliandiOverview({
   const [assignOpen, setAssignOpen] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLocalPresetFilter(presetFilter);
   }, [presetFilter]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setLocalStatoFilter(statoFilter);
   }, [statoFilter]);
 

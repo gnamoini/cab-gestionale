@@ -11,7 +11,6 @@ import {
   FILTER_ALL,
   type DocumentiAdvancedFilters,
 } from "@/lib/documenti/documenti-advanced-filters";
-import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type { DocumentiSortKey, DocumentiSortPhase } from "@/components/gestionale/documenti/documenti-helpers";
 
 const filterInputClass = `${globalInputFieldFilter} h-10 py-0 text-sm`;
@@ -97,7 +96,7 @@ export function DocumentiAdvancedFilterPanel({
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Categoria
           </p>
-          <div className="flex min-w-0 flex-wrap gap-2">
+          <div className="flex min-w-0 gap-2 flex-nowrap sm:flex-wrap">
             {(
               [
                 [FILTER_ALL, "Tutte"],

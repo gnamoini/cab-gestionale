@@ -8,11 +8,6 @@ function str(v: string | null | undefined, fallback = "—"): string {
   return t && t.length > 0 ? t : fallback;
 }
 
-function matricolaUi(v: string | null | undefined): string {
-  const t = v?.trim();
-  return t && t.length > 0 ? t : "Non assegnata";
-}
-
 /** Compone `MezzoGestito` da mezzo (telaio) + attrezzatura primaria opzionale. */
 export function composeMezzoGestitoFromRows(
   mezzo: MezzoRow,

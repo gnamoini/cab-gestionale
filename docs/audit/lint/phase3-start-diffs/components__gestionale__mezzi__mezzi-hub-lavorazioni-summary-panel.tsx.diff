@@ -1,0 +1,13 @@
+diff --git a/components/gestionale/mezzi/mezzi-hub-lavorazioni-summary-panel.tsx b/components/gestionale/mezzi/mezzi-hub-lavorazioni-summary-panel.tsx
+index 3148b0c9..9f2eeacd 100644
+--- a/components/gestionale/mezzi/mezzi-hub-lavorazioni-summary-panel.tsx
++++ b/components/gestionale/mezzi/mezzi-hub-lavorazioni-summary-panel.tsx
+@@ -43,7 +43,7 @@ export function MezziHubLavorazioniSummaryPanel({
+     sorted.length,
+     listPageSize,
+   );
+-  const paged = useMemo(() => sliceItems(sorted), [sorted, sliceItems, page]);
++  const paged = useMemo(() => sliceItems(sorted), [sorted, sliceItems]);
+ 
+   const lavorazioneIds = useMemo(() => sorted.map((r) => r.id), [sorted]);
+   const { store: schedeStore } = useSchedeBundlesQuery(sorted.length > 0, { lavorazioneIds });

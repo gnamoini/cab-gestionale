@@ -1,7 +1,6 @@
 import {
   defaultDipendentiRecords,
   serializeDipendentiRecordsForPayload,
-  type DipendenteRecord,
 } from "@/lib/dipendenti/dipendente-record";
 import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import { resolveAddettiRecordsFromDipendenti } from "@/lib/dipendenti/dipendente-record";

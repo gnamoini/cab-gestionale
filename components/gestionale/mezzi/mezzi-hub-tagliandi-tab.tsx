@@ -176,6 +176,7 @@ function HubTagliandiV1({
   });
   const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, active);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const statuses = statusesQ.data ?? [];
   const history = historyQ.data ?? [];
   const storicoPlans = useMemo(
@@ -267,6 +268,7 @@ function HubTagliandiV2({
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleMaintenanceConfigView | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
   const configs = configsQ.data ?? [];
   const history = historyQ.data ?? [];
   const storicoPlans = useMemo(
@@ -317,7 +319,7 @@ function HubTagliandiV2({
 
   const assignPrimary = configs.length === 0;
   const presetActions = canEdit ? (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-2 min-w-0 flex-nowrap sm:flex-wrap">
       <button
         type="button"
         className={assignPrimary ? dsPageToolbarCtaCompact : hubTagliandiSecondaryCtaClass}

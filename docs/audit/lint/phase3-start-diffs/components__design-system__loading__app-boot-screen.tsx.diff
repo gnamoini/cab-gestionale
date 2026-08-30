@@ -1,0 +1,16 @@
+diff --git a/components/design-system/loading/app-boot-screen.tsx b/components/design-system/loading/app-boot-screen.tsx
+index 7253bd0b..3c2863d3 100644
+--- a/components/design-system/loading/app-boot-screen.tsx
++++ b/components/design-system/loading/app-boot-screen.tsx
+@@ -62,9 +62,11 @@ export function AppBootScreen() {
+     };
+   }, []);
+ 
++   
+   useEffect(() => {
+     if (!ready) return;
+     lazyMarkColdStart(CAB_COLD_START_MARK.appBootDismiss);
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setVisible(false);
+     const fadeTimerId = window.setTimeout(() => {
+       removeStaticAppBootLayer();

@@ -1,0 +1,13 @@
+diff --git a/components/lavorazioni-clienti/client-lavorazione-detail-view.tsx b/components/lavorazioni-clienti/client-lavorazione-detail-view.tsx
+index 73d095d5..b17e94fc 100644
+--- a/components/lavorazioni-clienti/client-lavorazione-detail-view.tsx
++++ b/components/lavorazioni-clienti/client-lavorazione-detail-view.tsx
+@@ -25,7 +25,7 @@ import {
+ } from "@/lib/lavorazioni/client-portal-stati";
+ import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
+ import { ClientDetailBodySection } from "@/components/lavorazioni-clienti/client-lavorazione-detail-page-structure";
+-import { HubModalPanoramicaPanel, IconActionButton } from "@/components/design-system";
++import { HubModalPanoramicaPanel } from "@/components/design-system";
+ import { dsBtnNeutral, dsGapMd, dsGapXl, dsStackPage } from "@/lib/ui/design-system";
+ import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
+ import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";

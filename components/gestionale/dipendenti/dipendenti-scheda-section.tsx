@@ -70,7 +70,7 @@ export function DipendentiSchedaSection({
 
   return (
     <div className="space-y-6">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center justify-between gap-2 flex-nowrap sm:flex-wrap">
         <div>
           <p className="text-sm font-semibold text-[color:var(--cab-text)]">{employee.display_name}</p>
           <p className="text-xs text-[color:var(--cab-text-muted)]">{formatMonthLabel(monthKey)}</p>

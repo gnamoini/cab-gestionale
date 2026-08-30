@@ -127,7 +127,7 @@ export function ClientLavorazioneTimelinePanel({
 
         <HubModalPanoramicaFieldTiles className="sm:grid-cols-2">
           <HubModalPanoramicaFieldTileShell label="Addetto" className={panoramicaTileClass}>
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
               <span className="min-w-0 text-sm font-semibold text-[color:var(--cab-text)]">
                 {hubPanoramicaDisplayValue(fields.addetto)}
               </span>

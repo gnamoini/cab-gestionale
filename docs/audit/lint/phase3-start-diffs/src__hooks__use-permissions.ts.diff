@@ -1,0 +1,11 @@
+diff --git a/src/hooks/use-permissions.ts b/src/hooks/use-permissions.ts
+index 655ba6f9..64ebf19b 100644
+--- a/src/hooks/use-permissions.ts
++++ b/src/hooks/use-permissions.ts
+@@ -172,5 +172,5 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
+       canWrite: rbac.canWritePage(key),
+       isLoading: rbac.isLoading,
+     };
+-  }, [page, rbac.canReadPage, rbac.canWritePage, rbac.isLoading]);
++  }, [page, rbac]);
+ }

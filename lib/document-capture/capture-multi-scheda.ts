@@ -1,5 +1,5 @@
 import {
-  mapCaptureFieldsToIngresso,
+
   mapCaptureHeaderToIngressoSlice,
   resolveCaptureFieldValue,
   resolveRawFieldValue,

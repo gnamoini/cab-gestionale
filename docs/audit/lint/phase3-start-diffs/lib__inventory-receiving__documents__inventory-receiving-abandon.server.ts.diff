@@ -1,0 +1,13 @@
+diff --git a/lib/inventory-receiving/documents/inventory-receiving-abandon.server.ts b/lib/inventory-receiving/documents/inventory-receiving-abandon.server.ts
+index 7c532df9..7179b806 100644
+--- a/lib/inventory-receiving/documents/inventory-receiving-abandon.server.ts
++++ b/lib/inventory-receiving/documents/inventory-receiving-abandon.server.ts
+@@ -35,7 +35,7 @@ async function failPendingDocumentsForImportFile(importFileId: string): Promise<
+     .in("status", [...ABANDONABLE_DOCUMENT_STATUSES]);
+ }
+ 
+-export async function abandonInventoryReceivingDocument(documentId: string, userId: string): Promise<void> {
++export async function abandonInventoryReceivingDocument(documentId: string): Promise<void> {
+   const canWrite = await verifyServerPageWrite("magazzino_carichi");
+   if (!canWrite) throw abandonError("Permesso negato", "FORBIDDEN");
+ 

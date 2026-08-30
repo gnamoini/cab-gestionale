@@ -1,0 +1,19 @@
+diff --git a/lib/gestionale-log/log-modifiche-view-model.ts b/lib/gestionale-log/log-modifiche-view-model.ts
+index 4e3e6e88..3cb24389 100644
+--- a/lib/gestionale-log/log-modifiche-view-model.ts
++++ b/lib/gestionale-log/log-modifiche-view-model.ts
+@@ -4,12 +4,12 @@ import { profileDisplayName } from "@/lib/auth/profile-display-name";
+ import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
+ import {
+   buildLogModificaSummary,
+-  filterAuditMetadataCampoChanges,
++
+   modificheToModificaRiga,
+   parseModificheLines,
+   type LogModificaSummary,
+ } from "@/lib/gestionale-log/log-summary";
+-import { isImageLogAction, type GestionaleLogEventTone, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
++import { isImageLogAction, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+ import { isLogReverted } from "@/lib/gestionale-log/undo";
+ import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+ import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";

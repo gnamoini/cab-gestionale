@@ -350,7 +350,7 @@ export function DataImportExportToolbar({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-nowrap sm:flex-wrap">
         <ToolbarSplitButton
           label="Importa"
           icon={<HubIconDownload className="h-4 w-4 shrink-0" />}

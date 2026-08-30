@@ -74,6 +74,7 @@ export function useOperationalBrief(input: UseOperationalBriefInput): UseOperati
   }, [enabled, periodKey]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setData(null);
     setError(null);
     setCorrelationId(null);

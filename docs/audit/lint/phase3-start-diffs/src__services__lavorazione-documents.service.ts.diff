@@ -1,0 +1,18 @@
+diff --git a/src/services/lavorazione-documents.service.ts b/src/services/lavorazione-documents.service.ts
+index 73d5dfd3..4d9d369f 100644
+--- a/src/services/lavorazione-documents.service.ts
++++ b/src/services/lavorazione-documents.service.ts
+@@ -33,11 +33,11 @@ export const lavorazioneDocumentsService = {
+     return err("Upload documenti lavorazione non più supportato. Usare preventivi/DDT ufficiali.");
+   },
+ 
+-  async remove(_lavorazioneId: string, _tipo: LavorazioneDocumentTipo): Promise<ServiceResult<null>> {
++  async remove(__lavorazioneId: string, _tipo: LavorazioneDocumentTipo): Promise<ServiceResult<null>> {
+     return err("Rimozione documenti lavorazione non più supportata.");
+   },
+ 
+-  async purgeForLavorazione(_lavorazioneId: string): Promise<ServiceResult<null>> {
++  async purgeForLavorazione(__lavorazioneId: string): Promise<ServiceResult<null>> {
+     return success(null);
+   },
+ };

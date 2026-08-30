@@ -1,0 +1,21 @@
+diff --git a/lib/lavorazioni/client-portal-ui.ts b/lib/lavorazioni/client-portal-ui.ts
+index 55856364..6796cac4 100644
+--- a/lib/lavorazioni/client-portal-ui.ts
++++ b/lib/lavorazioni/client-portal-ui.ts
+@@ -5,7 +5,7 @@ import {
+   buildLatestLogAutoreByEntitaId,
+   sanitizeClientPortalAutore,
+ } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
+-import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
++ "@/lib/mezzi/mezzi-meta";
+ import { statoLavorazioneLabel } from "@/src/shared/selectors";
+ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+ import type { LogModificaRow, LogModificaWithProfileRow, LavorazioneRow } from "@/src/types/supabase-tables";
+@@ -106,7 +106,6 @@ export function latestAddettoFromLogs(logs: readonly LogModificaRow[]): string {
+ 
+ export function buildClientIngressoSummary(row: LavorazioneListRow): ClientIngressoSummary {
+   const m = row.mezzo;
+-  const meta = parseMezzoMeta(m?.meta);
+   const attrezzatura = formatClientPortalAttrezzatura({
+     marca: m?.marca,
+     modello: m?.modello,

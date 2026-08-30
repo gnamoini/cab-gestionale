@@ -1,0 +1,13 @@
+diff --git a/lib/data-import/import-capabilities.ts b/lib/data-import/import-capabilities.ts
+index c6cf0482..8ca79ba1 100644
+--- a/lib/data-import/import-capabilities.ts
++++ b/lib/data-import/import-capabilities.ts
+@@ -21,7 +21,7 @@ export type EntityCapabilities = {
+   note?: string;
+ };
+ 
+-const EXPORT_ALL: ExportMode[] = ["template", "importable", "backup"];
++const _EXPORT_ALL: ExportMode[] = ["template", "importable", "backup"];
+ const EXPORT_STD: ExportMode[] = ["template", "importable", "backup"];
+ const EXPORT_NONE: ExportMode[] = [];
+ const AI_OFF: AiImportCapability = { enabled: false, provider: null };

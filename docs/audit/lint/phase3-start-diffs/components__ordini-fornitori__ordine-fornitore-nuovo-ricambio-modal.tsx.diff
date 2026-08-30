@@ -1,0 +1,12 @@
+diff --git a/components/ordini-fornitori/ordine-fornitore-nuovo-ricambio-modal.tsx b/components/ordini-fornitori/ordine-fornitore-nuovo-ricambio-modal.tsx
+index d5ca5621..47482243 100644
+--- a/components/ordini-fornitori/ordine-fornitore-nuovo-ricambio-modal.tsx
++++ b/components/ordini-fornitori/ordine-fornitore-nuovo-ricambio-modal.tsx
+@@ -78,6 +78,7 @@ export function OrdineFornitoreNuovoRicambioModal({
+ 
+   useEffect(() => {
+     if (!open) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setInput(emptyInput(ordineFornitoreLabel));
+   }, [open, ordineFornitoreLabel]);
+ 

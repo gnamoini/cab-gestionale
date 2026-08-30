@@ -56,4 +56,23 @@ const htmlWide = buildCommunicationEmailHtml({
 });
 assert.match(htmlWide, /width:168px/);
 
+const htmlCta = buildCommunicationEmailHtml({
+  displayName: "Officina CAB",
+  bodyText: "Test CTA",
+  logoSrc: `cid:${COMM_EMAIL_LOGO_CID}`,
+  logoLayout: "square",
+  primaryColor: "#ff6633",
+  websiteUrl: "https://www.autocompattatori.it",
+  websiteHost: "www.autocompattatori.it",
+  gestionaleAppUrl: "https://gestionale.example.vercel.app",
+  gestionaleAppHost: "gestionale.example.vercel.app",
+  headerTagline: "Sicurezza account",
+  ctaButton: { label: "Reimposta password", href: "https://example.com/reset" },
+  footerNote: "Nota di prova",
+});
+assert.match(htmlCta, /Sicurezza account/);
+assert.match(htmlCta, /Reimposta password/);
+assert.match(htmlCta, /https:\/\/example\.com\/reset/);
+assert.match(htmlCta, /Nota di prova/);
+
 console.log("communication-email-envelope.test.ts: ok");

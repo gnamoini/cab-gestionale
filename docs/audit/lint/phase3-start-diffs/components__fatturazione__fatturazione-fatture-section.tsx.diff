@@ -1,0 +1,24 @@
+diff --git a/components/fatturazione/fatturazione-fatture-section.tsx b/components/fatturazione/fatturazione-fatture-section.tsx
+index 3d26765e..6266c420 100644
+--- a/components/fatturazione/fatturazione-fatture-section.tsx
++++ b/components/fatturazione/fatturazione-fatture-section.tsx
+@@ -98,8 +98,10 @@ export function FatturazioneFattureSection({
+   const [sortPhase, setSortPhase] = useState<GlobalTableSortPhase>("desc");
+   const [overflowOpen, setOverflowOpen] = useState(false);
+ 
++   
+   useEffect(() => {
+     if (!externalFilters) return;
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setFilters((f) => ({ ...f, ...externalFilters }));
+   }, [externalFilters]);
+ 
+@@ -158,7 +160,7 @@ export function FatturazioneFattureSection({
+         <PageToolbar
+           primaryAction={
+             canWrite ? (
+-              <div className="flex flex-wrap gap-2">
++              <div className="flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+                 <button type="button" className={dsPageToolbarCtaCompact} onClick={onNewManuale}>
+                   <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova fattura" />
+                 </button>

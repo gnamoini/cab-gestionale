@@ -35,11 +35,6 @@ function renameErrorMessage(message: string, correlationId: string): string {
   return `${message} [correlation=${correlationId}]`;
 }
 
-function resolvePropagationMode(executionMode: RenameExecutionMode, propagate: boolean): PropagationStatus {
-  if (!propagate || executionMode === "configuration_only") return "configuration_only";
-  return "propagated";
-}
-
 function normalizeExecutionMode(
   executionMode: RenameExecutionMode,
   propagate: boolean,
@@ -93,7 +88,6 @@ export const settingsRenameEngineService = {
   > {
     const started = Date.now();
     const executionMode = normalizeExecutionMode(input.executionMode, input.propagate);
-    const propagationStatus = resolvePropagationMode(executionMode, input.propagate);
 
     try {
       const previewRes = await this.previewRename(input.plan, {

@@ -1,0 +1,27 @@
+diff --git a/lib/inventory-labels/domain/fingerprints.ts b/lib/inventory-labels/domain/fingerprints.ts
+index 86e9edc6..9a31a463 100644
+--- a/lib/inventory-labels/domain/fingerprints.ts
++++ b/lib/inventory-labels/domain/fingerprints.ts
+@@ -19,9 +19,10 @@ export type LabelFingerprintInput = {
+   templateVersion: string;
+   generatorVersion: string;
+   preset: string;
+-  includeBarcode?: boolean;
+   labelKind?: "internal" | "cliente";
+   clienteQrUrl?: string;
++  /** Token QR interno — invalida cache su QR_REGENERATED (IL-016). */
++  qrToken?: string;
+   canonicalOrigin: string;
+ };
+ 
+@@ -41,9 +42,9 @@ export function computeLabelFingerprint(input: LabelFingerprintInput): string {
+     templateVersion: input.templateVersion,
+     generatorVersion: input.generatorVersion,
+     preset: input.preset,
+-    includeBarcode: input.includeBarcode === true,
+     labelKind: input.labelKind ?? "internal",
+     clienteQrUrl: (input.clienteQrUrl ?? "").trim(),
++    qrToken: (input.qrToken ?? "").trim(),
+     canonicalOrigin: input.canonicalOrigin.replace(/\/+$/, ""),
+   });
+   return createHash("sha256").update(canonical).digest("hex").slice(0, 16);

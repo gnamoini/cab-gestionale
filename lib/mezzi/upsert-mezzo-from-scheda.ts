@@ -85,7 +85,7 @@ export async function upsertMezzoFromSchedaIngresso(
   const {
     fields,
     mezziCatalog,
-    create,
+    
     update,
     applyAssociationChange,
     preferredMezzoId,

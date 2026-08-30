@@ -1,0 +1,13 @@
+diff --git a/components/document-capture/ricambio-magazzino-inline-hint.tsx b/components/document-capture/ricambio-magazzino-inline-hint.tsx
+index cc7d384e..6294db8a 100644
+--- a/components/document-capture/ricambio-magazzino-inline-hint.tsx
++++ b/components/document-capture/ricambio-magazzino-inline-hint.tsx
+@@ -29,7 +29,7 @@ export function RicambioMagazzinoInlineHint({
+         {codiceUi && item.descrizione ? " · " : null}
+         {item.descrizione ?? ""}
+       </p>
+-      <div className="mt-2 flex flex-wrap gap-2">
++      <div className="mt-2 flex gap-2 min-w-0 flex-nowrap sm:flex-wrap">
+         <button type="button" className={`${dsBtnSoftOrange} ${dsFocus}`} onClick={onUseRicambio}>
+           Usa questo ricambio
+         </button>

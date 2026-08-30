@@ -21,7 +21,6 @@ export async function POST(request: Request) {
     const jobId = await createBulkLabelJob({
       items: normalized.items,
       preset: normalized.preset,
-      includeBarcode: normalized.includeBarcode,
       clienteLabel: normalized.clienteLabel,
       userId: auth.userId,
       origin: requestOrigin(request),

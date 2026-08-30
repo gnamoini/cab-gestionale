@@ -1,0 +1,16 @@
+diff --git a/components/preventivi/preventivo-editor-totals.tsx b/components/preventivi/preventivo-editor-totals.tsx
+index 3b9c5121..64c70b55 100644
+--- a/components/preventivi/preventivo-editor-totals.tsx
++++ b/components/preventivi/preventivo-editor-totals.tsx
+@@ -103,9 +103,9 @@ export function PreventivoEditorStickyTotalsBar({
+ }) {
+   return (
+     <div
+-      className={`${totalBarLayoutClass} flex-wrap rounded-[var(--ds-radius-lg)] ${totalBarNeutralClass} gap-y-2`}
++      className={`${totalBarLayoutClass} rounded-[var(--ds-radius-lg)] ${totalBarNeutralClass} gap-y-2 min-w-0 flex-nowrap sm:flex-wrap`}
+     >
+-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{chips}</div>
++      <div className="flex min-w-0 items-center gap-x-4 gap-y-1 flex-nowrap sm:flex-wrap">{chips}</div>
+       <div className="ml-auto flex shrink-0 items-center gap-2">
+         <span className={preventivoEditorSubsectionTitle}>{grandLabel}</span>
+         <span className={preventivoEditorMoneyValue}>{grandValue}</span>

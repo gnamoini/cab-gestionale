@@ -1,0 +1,13 @@
+diff --git a/lib/ui/design-system.ts b/lib/ui/design-system.ts
+index b42449de..b1e02d9e 100644
+--- a/lib/ui/design-system.ts
++++ b/lib/ui/design-system.ts
+@@ -30,7 +30,7 @@ import {
+   cabModalDialogDesktop,
+   cabModalDialogMobile,
+   cabModalLayerDesktop,
+-  cabModalLayerGestionale,
++
+   cabModalLayerMobile,
+   cabModalLayerShared,
+   dsIosInputTextSize,

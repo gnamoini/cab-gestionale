@@ -24,7 +24,10 @@ export function useSelectorOverlayBack({
   layer,
 }: UseSelectorOverlayBackOptions): void {
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useIsomorphicLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useIsomorphicLayoutEffect(() => {
     if (!open) return;

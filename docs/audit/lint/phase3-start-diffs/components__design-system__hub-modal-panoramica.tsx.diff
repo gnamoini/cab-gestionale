@@ -1,0 +1,43 @@
+diff --git a/components/design-system/hub-modal-panoramica.tsx b/components/design-system/hub-modal-panoramica.tsx
+index 54ea3a95..2004dea7 100644
+--- a/components/design-system/hub-modal-panoramica.tsx
++++ b/components/design-system/hub-modal-panoramica.tsx
+@@ -14,8 +14,8 @@ import {
+   dsHubModalFieldLabel,
+   dsHubModalFieldValue,
+   dsHubModalFieldValueEmpty,
+-  dsHubModalNestedCard,
+-  dsHubModalPanoramicaFieldGrid,
++
++
+   dsHubModalPanoramicaFieldTile,
+   dsHubModalPanoramicaFieldTiles,
+   dsHubModalPanoramicaReadonlyPill,
+@@ -24,8 +24,6 @@ import {
+   dsHubModalPanoramicaSubsectionTitle,
+   dsHubModalSection,
+   dsHubModalSectionTitle,
+-  dsInput,
+-  dsTypoCaption,
+ } from "@/lib/ui/design-system";
+ 
+ export function hubPanoramicaDisplayValue(value: string | undefined | null): string {
+@@ -193,7 +191,7 @@ export function HubModalPanoramicaSummaryItem({
+       <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+         {label}
+       </p>
+-      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
++      <div className="mt-2 flex min-w-0 items-center gap-x-2 gap-y-1 flex-nowrap sm:flex-wrap">
+         {pillStyle && !empty ? (
+           <HubModalPanoramicaStatusPill value={value} pillStyle={pillStyle} />
+         ) : (
+@@ -353,7 +351,9 @@ export function HubModalPanoramicaNoteEditor({
+   const [dirty, setDirty] = useState(false);
+   const submitLock = useSubmitLock();
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setText(value);
+     setDirty(false);
+   }, [value]);

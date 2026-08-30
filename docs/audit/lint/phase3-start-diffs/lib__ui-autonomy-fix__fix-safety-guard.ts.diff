@@ -1,0 +1,21 @@
+diff --git a/lib/ui-autonomy-fix/fix-safety-guard.ts b/lib/ui-autonomy-fix/fix-safety-guard.ts
+index dc610a12..54b63345 100644
+--- a/lib/ui-autonomy-fix/fix-safety-guard.ts
++++ b/lib/ui-autonomy-fix/fix-safety-guard.ts
+@@ -56,7 +56,7 @@ export function isElementAllowlisted(el: Element, pageId: string): boolean {
+   return false;
+ }
+ 
+-export function wouldAlterDomStructure(_fix: UIFix, _el: Element): boolean {
++export function wouldAlterDomStructure(_fix: UIFix): boolean {
+   /* Solo add-class ammesso — mai structural actions in questo engine. */
+   return _fix.action !== "add-class" &&
+     _fix.action !== "fix-flex" &&
+@@ -116,6 +116,6 @@ export function validateFixSafety(
+ }
+ 
+ /** True se il fix altererebbe la gerarchia (solo class-level = false). */
+-export function wouldChangeLayoutHierarchy(_fix: UIFix): boolean {
++export function wouldChangeLayoutHierarchy(): boolean {
+   return false;
+ }

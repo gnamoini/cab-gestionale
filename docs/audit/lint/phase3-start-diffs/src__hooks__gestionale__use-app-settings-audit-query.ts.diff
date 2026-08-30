@@ -1,0 +1,12 @@
+diff --git a/src/hooks/gestionale/use-app-settings-audit-query.ts b/src/hooks/gestionale/use-app-settings-audit-query.ts
+index 8f328dec..2d369eaa 100644
+--- a/src/hooks/gestionale/use-app-settings-audit-query.ts
++++ b/src/hooks/gestionale/use-app-settings-audit-query.ts
+@@ -1,5 +1,7 @@
+ "use client";
+ 
++/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
++
+ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+ import { useAuth } from "@/context/auth-context";
+ import { useRbac } from "@/src/hooks/use-rbac";

@@ -1,0 +1,13 @@
+diff --git a/lib/settings/rename-engine/merge-plan.ts b/lib/settings/rename-engine/merge-plan.ts
+index 7b59765b..85fc81a7 100644
+--- a/lib/settings/rename-engine/merge-plan.ts
++++ b/lib/settings/rename-engine/merge-plan.ts
+@@ -14,7 +14,7 @@ export type MergePlan = {
+ export type MergeJobStatus = "draft" | "previewed" | "approved" | "running" | "completed" | "failed" | "cancelled";
+ 
+ /** ponytail: stub — implementazione completa in Fase 9 */
+-export function buildMergePlan(_input: {
++export function buildMergePlan(__input: {
+   kind: string;
+   canonicalLabel: string;
+   absorbedLabel: string;

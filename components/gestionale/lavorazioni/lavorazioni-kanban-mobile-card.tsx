@@ -16,9 +16,7 @@ import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-dis
 import { kanbanCardPriorityVisual } from "@/lib/lavorazioni/kanban-card-priority-style";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { KanbanCardMobileProps } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 
 function kanbanCardOpenKey(e: KeyboardEvent, onOpen: () => void) {

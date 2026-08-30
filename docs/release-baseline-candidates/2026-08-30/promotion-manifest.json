@@ -1,0 +1,11 @@
+{
+  "candidateCreatedAt": "2026-08-30T17:58:15.324Z",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "certificationStatus": "NOT_CERTIFIED",
+  "releaseReady": false,
+  "localFullRegression": "FAIL",
+  "ciReleaseCertification": "PENDING",
+  "ciRunUrl": null,
+  "promotionEligible": false,
+  "candidatePath": "docs/release-baseline-candidates/2026-08-30"
+}

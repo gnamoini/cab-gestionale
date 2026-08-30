@@ -1,0 +1,13 @@
+diff --git a/lib/dashboard/control-tower-selectors.ts b/lib/dashboard/control-tower-selectors.ts
+index e71b77ce..57b09949 100644
+--- a/lib/dashboard/control-tower-selectors.ts
++++ b/lib/dashboard/control-tower-selectors.ts
+@@ -71,7 +71,7 @@ import {
+ import {
+   deltaPct,
+   isoInRange,
+-  resolvePresetRange,
++
+   ymdFromDate,
+   type DateRange,
+ } from "@/lib/report/date-ranges";

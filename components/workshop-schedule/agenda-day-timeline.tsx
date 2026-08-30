@@ -41,6 +41,7 @@ export function AgendaDayTimeline({
     [sessions, dayYmd],
   );
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual estimateSize contract
   const rowVirtualizer = useVirtualizer({
     count: slotCount,
     getScrollElement: () => parentRef.current,

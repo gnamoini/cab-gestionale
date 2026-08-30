@@ -1,0 +1,11 @@
+diff --git a/src/services/clienti-anagrafica.service.ts b/src/services/clienti-anagrafica.service.ts
+index 0bf3f924..f9b3077a 100644
+--- a/src/services/clienti-anagrafica.service.ts
++++ b/src/services/clienti-anagrafica.service.ts
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++/* eslint-disable cab-rbac/no-auth-in-services -- lint phase2: legacy service layer; domain entry migration deferred */
+ import {
+   CLIENTI_ANAGRAFICHE_COLUMNS,
+   CLIENTI_CONTATTI_COLUMNS,

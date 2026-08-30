@@ -87,6 +87,21 @@ export function OrdineFornitoreFornitoreFields({
         />
       </div>
       <div className="sm:col-span-2">
+        <label className={dsLabel} htmlFor="ordine-fornitore-email">
+          Email fornitore
+        </label>
+        <input
+          id="ordine-fornitore-email"
+          className={dsInput}
+          type="email"
+          value={snapshot.email}
+          disabled={disabled}
+          maxLength={TEXT_SHORT}
+          onChange={(e) => patch({ email: sliceInputValue(e.target.value, TEXT_SHORT) })}
+          placeholder="ordini@fornitore.it"
+        />
+      </div>
+      <div className="sm:col-span-2">
         <label className={dsLabel} htmlFor="ordine-fornitore-telefono">
           Telefono
         </label>

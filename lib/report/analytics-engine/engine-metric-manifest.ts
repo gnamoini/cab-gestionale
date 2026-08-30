@@ -189,6 +189,13 @@ export const ENGINE_METRIC_MANIFEST: Record<string, EngineMetricManifestEntry> =
     supportsCompare: true,
     supportsSeries: false,
   },
+  "cost-tot": {
+    metricId: "cost-tot",
+    calculatorId: "computeCostTot",
+    requiredSlices: { schede: true },
+    supportsCompare: true,
+    supportsSeries: false,
+  },
   mag_orders: {
     metricId: "mag_orders",
     calculatorId: "computeMagOrders",

@@ -1,0 +1,25 @@
+# Phase 4 final gate run log — 2026-08-30
+# Commit: see git rev-parse HEAD at run time
+# Machine: local (DESKTOP)
+
+2026-08-30T16:13Z  npm run release:baseline:candidate          exit=0  candidate NOT_CERTIFIED
+2026-08-30T16:27Z  npm run smoke:regression:core (run1)      exit=1  gestionale-textarea-ssot-audit
+2026-08-30T16:34Z  npm run phase4:final                      exit=0  releaseReady=false
+2026-08-30T16:34Z  npm run release:certification:completeness exit=1  matrix missing flex.freeze + smoke.cleanup
+2026-08-30T16:36Z  npm run ci:build (attempt6)               exit=1  budgets: gestionale ~1914KB, report ~1931KB, public ~1825KB
+2026-08-30T16:40Z  npm run smoke:regression:core (run2)      exit=1  list-layout-ssot-audit
+2026-08-30T17:01Z  npm run control:review                    exit=0
+2026-08-30T17:01Z  npm run control:parity                    exit=0
+2026-08-30T17:03Z  npm run ci:build (attempt7)               exit=1  global max 1930.8KB (/report); shell ~1914KB
+2026-08-30T17:08Z  npm run smoke:regression:core (run3)      exit=1  notification-pipeline-policy (vercel cron)
+2026-08-30T17:21Z  npm run smoke:regression:core (run4)      exit=1  notification-ssot-policy (drop fn false positive)
+2026-08-30T17:28Z  SMOKE_SKIP=1 npm run control:pr           exit=1  report v2 chain + build budget cascade
+2026-08-30T17:30Z+ npm run smoke:regression:core (run5)      pending
+
+Evidence logs:
+- docs/audit/ci-build-2026-08-30-attempt7.log
+- docs/audit/smoke-regression-core-run5-2026-08-30.log
+- docs/audit/control-review-2026-08-30.log
+- docs/audit/control-parity-2026-08-30.log
+- docs/audit/control-pr-smoke-skip-2026-08-30.log
+- test-results/build-budget-diff.json

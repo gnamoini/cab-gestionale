@@ -1,0 +1,90 @@
+diff --git a/src/hooks/gestionale/use-admin-notification-store.ts b/src/hooks/gestionale/use-admin-notification-store.ts
+index 4f962ff7..8d15cb5e 100644
+--- a/src/hooks/gestionale/use-admin-notification-store.ts
++++ b/src/hooks/gestionale/use-admin-notification-store.ts
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useCallback, useEffect, useMemo, useState } from "react";
++import { useCallback, useMemo, useSyncExternalStore } from "react";
+ import { useAuth } from "@/context/auth-context";
+ import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+ import {
+@@ -16,7 +16,6 @@ import {
+   removeAdminNotification,
+   removeReadAdminNotifications,
+   subscribeAdminNotificationStore,
+-  type AdminNotificationStoreState,
+ } from "@/lib/lavorazioni/admin-notification-store";
+ import type { AdminDashboardNotification } from "@/lib/notifications/admin-dashboard-notifications";
+ import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+@@ -33,20 +32,16 @@ export function useAdminNotificationStore() {
+   const enabled = staffEligible && !flagLoading && !readsDb && userId.length > 0;
+ 
+   // SSR/hydration: mai leggere localStorage nel render iniziale (vedi docs/bootstrap-hydration.md).
+-  const [state, setState] = useState<AdminNotificationStoreState>(emptyAdminNotificationStore);
+-
+-  useEffect(() => {
+-    if (!enabled) {
+-      setState(emptyAdminNotificationStore());
+-      return;
+-    }
+-    setState(loadAdminNotificationStore(userId));
+-    return subscribeAdminNotificationStore((changedUserId) => {
+-      if (changedUserId === userId) {
+-        setState(loadAdminNotificationStore(userId));
+-      }
+-    });
+-  }, [enabled, userId]);
++  const state = useSyncExternalStore(
++    (onStoreChange) => {
++      if (!enabled) return () => {};
++      return subscribeAdminNotificationStore((changedUserId) => {
++        if (changedUserId === userId) onStoreChange();
++      });
++    },
++    () => (enabled ? loadAdminNotificationStore(userId) : emptyAdminNotificationStore()),
++    () => emptyAdminNotificationStore(),
++  );
+ 
+   const notifications = useMemo(() => (enabled ? listNotifications(state) : []), [enabled, state]);
+   const unreadCount = useMemo(() => (enabled ? getUnreadCount(state) : 0), [enabled, state]);
+@@ -54,13 +49,13 @@ export function useAdminNotificationStore() {
+ 
+   const markAllRead = useCallback(() => {
+     if (!enabled) return;
+-    setState(markAllAdminNotificationsRead(userId));
++    markAllAdminNotificationsRead(userId);
+   }, [enabled, userId]);
+ 
+   const markNotificationRead = useCallback(
+     (notification: AdminDashboardNotification) => {
+       if (!enabled) return;
+-      setState(markAdminNotificationRead(userId, notification));
++      markAdminNotificationRead(userId, notification);
+     },
+     [enabled, userId],
+   );
+@@ -68,19 +63,19 @@ export function useAdminNotificationStore() {
+   const dismissNotification = useCallback(
+     (notification: AdminDashboardNotification) => {
+       if (!enabled) return;
+-      setState(removeAdminNotification(userId, notification));
++      removeAdminNotification(userId, notification);
+     },
+     [enabled, userId],
+   );
+ 
+   const removeReadNotifications = useCallback(() => {
+     if (!enabled) return;
+-    setState(removeReadAdminNotifications(userId));
++    removeReadAdminNotifications(userId);
+   }, [enabled, userId]);
+ 
+   const clearMagazzinoNotifs = useCallback(() => {
+     if (!enabled) return;
+-    setState(clearMagazzinoNotifications(userId));
++    clearMagazzinoNotifications(userId);
+   }, [enabled, userId]);
+ 
+   const isUnread = useCallback(

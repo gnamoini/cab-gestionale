@@ -64,6 +64,7 @@ export function resolveMaintenanceEngineV2Enabled(_input?: {
   userId?: string | null;
   userRole?: string | null;
 }): boolean {
+  void _input;
   // ponytail: v2 always on post-rollout; only env kill switch can disable.
   return !isMaintenanceEngineV2EnvDisabled();
 }

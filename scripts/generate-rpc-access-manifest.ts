@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-assign-module-variable -- lint phase2: dynamic import interop requires module handle */
 /**
  * Classify SECURITY DEFINER functions for rpc-access-manifest.json (SSOT).
  * Run: npx tsx scripts/generate-rpc-access-manifest.ts

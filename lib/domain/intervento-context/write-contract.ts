@@ -57,7 +57,6 @@ import {
   resolveMezzoUpdatePlanFromContext,
   splitMezzoUpdatePlanForCreate,
 } from "@/lib/domain/intervento-context/intervento-write-context";
-import { MEZZO_UPDATE_SCHEDA_ONLY } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 
 export type CreateInterventoStage = "upsert-mezzo" | "create-lavorazione" | "persist-scheda";
 

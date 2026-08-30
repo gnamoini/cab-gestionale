@@ -40,7 +40,7 @@ const LEGACY_STORAGE_KEYS = [
 type PersistedClientPortalFilters = Omit<ClientPortalListFilters, "section">;
 
 function toPersisted(f: ClientPortalListFilters): PersistedClientPortalFilters {
-  const { section: _s, ...rest } = f;
+  const { ...rest } = f;
   return rest;
 }
 
@@ -189,7 +189,7 @@ export function clientPortalBundleMatchesFilters(
 
   if (!lavRowMatchesGlobalSearch(row, f.search, schedeStore)) return false;
 
-  const { search: _s, ...advanced } = f;
+  const { ...advanced } = f;
   const isoRow = { ...row, data_ingresso: fields.dataIngressoIso || row.data_ingresso };
   if (!lavRowMatchesAdvancedFilters(isoRow, advanced, schedeStore, variant)) return false;
 

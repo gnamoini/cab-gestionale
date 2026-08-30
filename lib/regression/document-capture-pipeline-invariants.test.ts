@@ -19,7 +19,7 @@ import {
 import { INITIAL_PIPELINE_STATE } from "@/lib/document-capture/model/pipeline-state";
 import { markUploadUploaded } from "@/lib/document-capture/orchestrator/pipeline-state-advance";
 import {
-  createPipelineWatchdog,
+
   watchdogTimeoutCodeForPhase,
   PHASE_STALL_MS,
 } from "@/lib/document-capture/orchestrator/pipeline-watchdog";

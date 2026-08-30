@@ -1,0 +1,14 @@
+diff --git a/components/dashboard/settings/cliente-anagrafica-hub-modal.tsx b/components/dashboard/settings/cliente-anagrafica-hub-modal.tsx
+index b4e4944d..f0dd6ed7 100644
+--- a/components/dashboard/settings/cliente-anagrafica-hub-modal.tsx
++++ b/components/dashboard/settings/cliente-anagrafica-hub-modal.tsx
+@@ -47,7 +47,9 @@ export function ClienteAnagraficaHubModal({
+   const [tab, setTab] = useState<TabId>("panoramica");
+   const [draft, setDraft] = useState<ClienteAnagrafica | null>(null);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (data) setDraft(data);
+   }, [data]);
+ 

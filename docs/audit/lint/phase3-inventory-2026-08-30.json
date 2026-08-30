@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-08-30T01:46:36.554Z",
+  "baselineReference": {
+    "phase2Warnings": 260,
+    "phase2Errors": 0,
+    "phase2Files": 155
+  },
+  "phase3StartWarnings": 260,
+  "phase3StartErrors": 0,
+  "findings": [],
+  "summary": {
+    "total": 0,
+    "byRule": [],
+    "byDirtyStatus": {}
+  }
+}

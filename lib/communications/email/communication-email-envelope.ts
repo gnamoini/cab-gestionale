@@ -1,5 +1,5 @@
 import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
-import { buildCommunicationEmailHtml } from "@/lib/communications/email/communication-email-layout";
+import { buildCommunicationEmailHtml, type CommunicationEmailLayoutInput } from "@/lib/communications/email/communication-email-layout";
 import type { CommunicationEmailBranding } from "@/lib/communications/email/communication-email-branding-types";
 import type { SendEmailInput } from "@/lib/communications/providers/email-transport";
 import {
@@ -54,14 +54,22 @@ export function resolveCommunicationEmailEnvelope(
   };
 }
 
+export type CommunicationEmailLayoutOptions = Pick<
+  CommunicationEmailLayoutInput,
+  "headerTagline" | "ctaButton" | "footerNote"
+>;
+
 export function buildCommunicationSendEmailInput(input: {
   to: string;
+  cc?: string[];
+  bcc?: string[];
   subject: string;
   text: string;
   commSettings: CommunicationSettings;
   branding: CommunicationEmailBranding;
   envelope: CommunicationEmailEnvelope;
   attachments?: SendEmailInput["attachments"];
+  layout?: CommunicationEmailLayoutOptions;
 }): SendEmailInput {
   const html = buildCommunicationEmailHtml({
     displayName: input.envelope.displayName,
@@ -73,6 +81,7 @@ export function buildCommunicationSendEmailInput(input: {
     websiteHost: input.branding.websiteHost,
     gestionaleAppUrl: input.branding.gestionaleAppUrl,
     gestionaleAppHost: input.branding.gestionaleAppHost,
+    ...input.layout,
   });
 
   const inlineAttachments = input.branding.inlineLogo
@@ -88,6 +97,8 @@ export function buildCommunicationSendEmailInput(input: {
 
   return {
     to: input.to,
+    cc: input.cc,
+    bcc: input.bcc,
     subject: input.subject,
     text: input.text,
     html,

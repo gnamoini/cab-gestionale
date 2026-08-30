@@ -1,0 +1,13 @@
+diff --git a/lib/observability/asset-cache-debug.ts b/lib/observability/asset-cache-debug.ts
+index 3f6e455c..707cb1c4 100644
+--- a/lib/observability/asset-cache-debug.ts
++++ b/lib/observability/asset-cache-debug.ts
+@@ -2,7 +2,7 @@
+ 
+ import {
+   getAssetCacheEvents,
+-  getAssetHotspots,
++
+   getAverageAssetLatency,
+   getCacheHitRatio,
+   getCacheHitRatioByEntity,

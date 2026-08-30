@@ -1,0 +1,17 @@
+{
+  "date": "2026-08-30",
+  "status": "CANDIDATE",
+  "commit": "a4c00c0cac11e51ae9c46e274a0058898397194c",
+  "generatedAt": "2026-08-30T17:58:15.324Z",
+  "contractVersion": "1.0.0",
+  "certificationStatus": "NOT_CERTIFIED",
+  "releaseReady": false,
+  "localFullRegression": "FAIL",
+  "ciReleaseCertification": "PENDING",
+  "paths": {
+    "gateResults": "gate-results.json",
+    "markdown": "release-baseline.md",
+    "environment": "environment.md",
+    "promotionManifest": "promotion-manifest.json"
+  }
+}

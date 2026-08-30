@@ -1,0 +1,13 @@
+diff --git a/components/report/layout/section-trend-widget.tsx b/components/report/layout/section-trend-widget.tsx
+index 0d51bdfb..bdfebabd 100644
+--- a/components/report/layout/section-trend-widget.tsx
++++ b/components/report/layout/section-trend-widget.tsx
+@@ -6,7 +6,7 @@ import { ReportVisualization } from "@/components/report/design-system/layout/vi
+ export function ReportSectionTrendWidget({
+   title,
+   points,
+-  unitLabel,
++  
+ }: {
+   title: string;
+   points: readonly { label: string; value: number }[];

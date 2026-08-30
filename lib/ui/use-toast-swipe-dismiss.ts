@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type TouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type TouchEvent } from "react";
 
 const ACTIVATION_PX = 8;
 const SWIPE_COMMIT_RATIO = 0.4;
@@ -254,21 +254,22 @@ export function useToastSwipeDismiss({ onDismiss, enabled }: UseToastSwipeDismis
   };
 }
 
+function subscribeToastSwipeEnvironment(onStoreChange: () => void): () => void {
+  const mqMobile = window.matchMedia("(max-width: 767px)");
+  const mqCoarse = window.matchMedia("(pointer: coarse)");
+  const sync = () => onStoreChange();
+  mqMobile.addEventListener("change", sync);
+  mqCoarse.addEventListener("change", sync);
+  return () => {
+    mqMobile.removeEventListener("change", sync);
+    mqCoarse.removeEventListener("change", sync);
+  };
+}
+
 export function useToastSwipeEnabled(): boolean {
-  const [enabled, setEnabled] = useState(false);
-
-  useEffect(() => {
-    setEnabled(isToastSwipeEnvironment());
-    const mqMobile = window.matchMedia("(max-width: 767px)");
-    const mqCoarse = window.matchMedia("(pointer: coarse)");
-    const sync = () => setEnabled(isToastSwipeEnvironment());
-    mqMobile.addEventListener("change", sync);
-    mqCoarse.addEventListener("change", sync);
-    return () => {
-      mqMobile.removeEventListener("change", sync);
-      mqCoarse.removeEventListener("change", sync);
-    };
-  }, []);
-
-  return enabled;
+  return useSyncExternalStore(
+    subscribeToastSwipeEnvironment,
+    isToastSwipeEnvironment,
+    () => false,
+  );
 }

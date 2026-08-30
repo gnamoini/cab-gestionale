@@ -6,7 +6,7 @@ import { ReportVisualization } from "@/components/report/design-system/layout/vi
 export function ReportSectionTrendWidget({
   title,
   points,
-  unitLabel,
+  
 }: {
   title: string;
   points: readonly { label: string; value: number }[];

@@ -16,7 +16,7 @@ import { GlobalLoadingSpinner } from "@/components/design-system";
 import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
+import { MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import {
   dsBtnPrimary,
   dsCheckboxInput,
@@ -155,7 +155,9 @@ export function LoginForm() {
     clearGestionaleToasts();
   }, []);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
     setRemember(readAuthRememberPreference());
   }, []);
 

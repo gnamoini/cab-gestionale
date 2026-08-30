@@ -6,8 +6,6 @@ import {
   GlobalHierarchyModelloSelect,
   GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input";
-import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
-import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
@@ -95,10 +93,6 @@ export function formToMezzoUpdate(f: MezzoFormState): MezzoUpdate {
   return formToMezzoInsert(f);
 }
 
-function sortedUniqueStrings(list: string[]): string[] {
-  return [...new Set(list.map((s) => s.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
-}
-
 function MezzoFormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section
@@ -122,17 +116,6 @@ export function MezzoFormFields({
 }) {
   const globalOpts = useGlobalOptions({ debugTag: "MezzoFormFields" });
   const mezziListQ = useMezziListQuery();
-  const liste = globalOpts.mezziListe;
-
-  const modelliAtt = useMemo(() => {
-    if (!liste || !form.marca.trim()) return [] as string[];
-    return modelliVisibiliPerMarca(liste, form.marca.trim());
-  }, [liste, form.marca]);
-
-  const modelliTelaio = useMemo(() => {
-    if (!liste || !form.marcaTelaio.trim()) return [] as string[];
-    return modelliVisibiliPerMarcaHierarchy(liste, "telai", form.marcaTelaio.trim());
-  }, [liste, form.marcaTelaio]);
 
   useEffect(() => {
     if (!form.marca.trim() && form.modello.trim()) setForm((f) => ({ ...f, modello: "" }));

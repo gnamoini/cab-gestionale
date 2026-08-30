@@ -1,0 +1,14 @@
+diff --git a/components/dashboard/dashboard-view.tsx b/components/dashboard/dashboard-view.tsx
+index 6ab7fd3f..b6b68ecf 100644
+--- a/components/dashboard/dashboard-view.tsx
++++ b/components/dashboard/dashboard-view.tsx
+@@ -22,7 +22,9 @@ export function DashboardView() {
+   const [stagingRouteHint, setStagingRouteHint] = useState(false);
+   const [calendarOpen, setCalendarOpen] = useState(false);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     if (searchParams.get("staging_unavailable") === "1") setStagingRouteHint(true);
+   }, [searchParams]);
+ 

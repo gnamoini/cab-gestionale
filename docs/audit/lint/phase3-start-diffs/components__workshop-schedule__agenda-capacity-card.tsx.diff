@@ -1,0 +1,13 @@
+diff --git a/components/workshop-schedule/agenda-capacity-card.tsx b/components/workshop-schedule/agenda-capacity-card.tsx
+index 4051c34d..36ad8eb4 100644
+--- a/components/workshop-schedule/agenda-capacity-card.tsx
++++ b/components/workshop-schedule/agenda-capacity-card.tsx
+@@ -16,7 +16,7 @@ export function AgendaCapacityCard({ capacity }: { capacity: DayCapacitySnapshot
+ 
+   return (
+     <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3 shadow-[var(--cab-shadow-sm)]">
+-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
++      <div className="flex min-w-0 items-start justify-between gap-2 flex-nowrap sm:flex-wrap">
+         <div>
+           <p className={dsSectionTitle}>Capacità giornaliera</p>
+           <p className={`mt-0.5 ${dsTypoCaption}`}>

@@ -211,7 +211,7 @@ export function ReceivingReviewPanel({
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3 text-sm">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <div className="flex items-baseline gap-x-4 gap-y-1 min-w-0 flex-nowrap sm:flex-wrap">
           <span className="font-semibold">DDT {document.document_number ?? "—"}</span>
           <span className="text-[color:var(--cab-text-muted)]">{document.supplier_label ?? "Fornitore non rilevato"}</span>
           <span className="text-[color:var(--cab-text-muted)]">{document.document_date ?? "Data non rilevata"}</span>

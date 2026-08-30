@@ -1,0 +1,13 @@
+diff --git a/lib/ui/ui-compliance-score.ts b/lib/ui/ui-compliance-score.ts
+index a19ef60a..323042cc 100644
+--- a/lib/ui/ui-compliance-score.ts
++++ b/lib/ui/ui-compliance-score.ts
+@@ -10,7 +10,7 @@ import {
+   UI_PRIMITIVE_VERSIONS,
+ } from "@/lib/ui-design-system-lock/component-contracts";
+ import {
+-  auditUiConsistencyRepo,
++
+   countBySeverity,
+   findingsByCategory,
+   type UiAuditFinding,

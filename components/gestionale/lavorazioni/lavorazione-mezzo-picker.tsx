@@ -22,7 +22,7 @@ function summarizeMezzo(m: MezzoGestito): string {
 
 export function LavorazioneMezzoPicker({
   mezzi,
-  draft,
+  
   setDraft,
 }: {
   mezzi: MezzoGestito[];

@@ -17,31 +17,6 @@ function nextId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function normalizeTree(raw: unknown): AttrezzaturaMarca[] {
-  if (!Array.isArray(raw)) return [];
-  const out: AttrezzaturaMarca[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const r = item as Record<string, unknown>;
-    const id = typeof r.id === "string" && r.id.trim() ? r.id.trim() : "";
-    const nome = typeof r.nome === "string" && r.nome.trim() ? r.nome.trim() : "";
-    if (!id || !nome) continue;
-    const modRaw = r.modelli;
-    const modelli: AttrezzaturaMarca["modelli"] = [];
-    if (Array.isArray(modRaw)) {
-      for (const m of modRaw) {
-        if (!m || typeof m !== "object") continue;
-        const mo = m as Record<string, unknown>;
-        const mid = typeof mo.id === "string" && mo.id.trim() ? mo.id.trim() : "";
-        const mn = typeof mo.nome === "string" && mo.nome.trim() ? mo.nome.trim() : "";
-        if (mid && mn) modelli.push({ id: mid, nome: mn });
-      }
-    }
-    out.push({ id, nome, modelli });
-  }
-  return out;
-}
-
 export function getHierarchyTree(liste: MezziListePrefs, key: HierarchyTreeKey): AttrezzaturaMarca[] {
   const p = migrateMezziListePrefs(liste);
   if (key === "attrezzature") return p.attrezzature ?? [];

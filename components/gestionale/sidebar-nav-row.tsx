@@ -156,6 +156,14 @@ function wrapRailTooltip(
   return <Tooltip content={tooltip} side={side}>{node}</Tooltip>;
 }
 
+function excludeNavRowDomProps<T extends Record<string, unknown>>(rest: T): Omit<T, "className" | "rowClassName" | "as"> {
+  const out = { ...rest };
+  delete out.className;
+  delete out.rowClassName;
+  delete out.as;
+  return out as Omit<T, "className" | "rowClassName" | "as">;
+}
+
 export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorElement | HTMLDivElement, SidebarNavRowProps>(
   function SidebarNavRow(props, ref) {
   const {
@@ -170,15 +178,13 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
     railTooltip,
     railTooltipSide = "right",
     iconShellClass,
-    className: _c,
-    rowClassName: _r,
     ...rest
   } = props;
 
   const contentProps = { icon, label, trailing, active, disabled, collapsed, open, iconShellClass };
 
   if (as === "button") {
-    const { as: _a, ...buttonRest } = rest as SidebarNavRowAsButton;
+    const buttonRest = excludeNavRowDomProps(rest as SidebarNavRowAsButton);
     return wrapRailTooltip(
       <button
         ref={ref as React.Ref<HTMLButtonElement>}
@@ -196,7 +202,7 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
   }
 
   if (as === "div") {
-    const { as: _a, ...divRest } = rest as SidebarNavRowAsDiv;
+    const divRest = excludeNavRowDomProps(rest as SidebarNavRowAsDiv);
     return wrapRailTooltip(
       <div
         ref={ref as React.Ref<HTMLDivElement>}
@@ -213,7 +219,8 @@ export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorEleme
     );
   }
 
-  const { as: _a, href = "#", ...linkRest } = rest as SidebarNavRowAsLink;
+  const { href = "#", ...linkRestRaw } = rest as SidebarNavRowAsLink;
+  const linkRest = excludeNavRowDomProps(linkRestRaw);
   if (disabled) {
     return wrapRailTooltip(
       <div ref={ref as React.Ref<HTMLDivElement>} role="link" aria-disabled="true" className={rowClassNames(props)}>

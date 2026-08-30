@@ -52,7 +52,7 @@ export function invoiceRowMatchesPageFilters(
   filters: FatturazionePageFilters,
 ): boolean {
   if (!invoiceRowMatchesGlobalSearch(row, ctx, filters.search)) return false;
-  const { search: _s, ...advanced } = filters;
+  const { ...advanced } = filters;
   return invoiceMatchesAdvancedFilters(row, advanced);
 }
 

@@ -1,0 +1,12 @@
+diff --git a/lib/form-ux-migration/form-ux-orchestrator.ts b/lib/form-ux-migration/form-ux-orchestrator.ts
+index 8b17030a..016c3404 100644
+--- a/lib/form-ux-migration/form-ux-orchestrator.ts
++++ b/lib/form-ux-migration/form-ux-orchestrator.ts
+@@ -16,7 +16,6 @@ import {
+ } from "@/lib/form-ux-migration/form-ux-execution-token";
+ import {
+   getFormUxRegistryEntry,
+-  isFormUxRolloutEnabled,
+ } from "@/lib/form-ux-migration/form-ux-registry";
+ import {
+   resolveConsumerGovernanceView,

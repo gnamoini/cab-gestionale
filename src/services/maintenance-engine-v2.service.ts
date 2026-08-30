@@ -801,7 +801,10 @@ export const maintenanceEngineV2Service = {
     return success(
       (res.data ?? [])
         .filter((m) => !m.hasActivePreset)
-        .map(({ hasActivePreset: _hasActivePreset, ...row }) => row),
+        .map(({ hasActivePreset, ...row }) => {
+          void hasActivePreset;
+          return row;
+        }),
     );
   },
 

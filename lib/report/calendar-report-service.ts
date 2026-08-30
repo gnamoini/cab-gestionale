@@ -6,10 +6,10 @@ import {
   compareRangeFor,
   dayRangeFromYmd,
   deltaPct,
-  endOfLocalDay,
+
   isoInRange,
   monthRangeFromKey,
-  startOfLocalDay,
+
   weekRangeFromYmd,
   ymdFromDate,
   type DateRange,

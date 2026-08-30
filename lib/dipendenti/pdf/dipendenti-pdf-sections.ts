@@ -32,7 +32,7 @@ import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
   pdfAdvanceAfterDocumentHeader,
-  pdfAdvanceSection,
+
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
 

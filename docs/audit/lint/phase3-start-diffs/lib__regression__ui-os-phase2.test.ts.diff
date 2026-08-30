@@ -1,0 +1,13 @@
+diff --git a/lib/regression/ui-os-phase2.test.ts b/lib/regression/ui-os-phase2.test.ts
+index 0f36b0ab..923dcdf3 100644
+--- a/lib/regression/ui-os-phase2.test.ts
++++ b/lib/regression/ui-os-phase2.test.ts
+@@ -7,7 +7,7 @@ import path from "node:path";
+ import { buildPhase2CompareReport } from "@/lib/ui-os/ui-phase2-compare";
+ import { evaluateRenderDecision, UI_OS_FALLBACK_LOG_PREFIX, UI_OS_PHASE2_LOG_PREFIX } from "@/lib/ui-os/ui-render-decision";
+ import { UI_OS_OPT_IN_PAGES } from "@/lib/ui-os/ui-os-engine";
+-import { enrichDetectedSchema, suggestSchemaHints } from "@/lib/ui-os/ui-migration-layer";
++import { suggestSchemaHints } from "@/lib/ui-os/ui-migration-layer";
+ import { getSuggestedSchema } from "@/lib/ui-os/ui-schema";
+ 
+ const ROOT = process.cwd();

@@ -1,0 +1,24 @@
+diff --git a/.github/workflows/release-gate.yml b/.github/workflows/release-gate.yml
+index ef75e17e..15425b5f 100644
+--- a/.github/workflows/release-gate.yml
++++ b/.github/workflows/release-gate.yml
+@@ -70,6 +70,9 @@ jobs:
+       - name: RBAC hardening tests
+         run: npm run test:rbac:hardening
+ 
++      - name: Security remediation regression
++        run: npm run test:security:remediation
++
+       - name: UX enforcement
+         run: npm run ux:enforce
+ 
+@@ -111,6 +114,9 @@ jobs:
+       - name: Flex system freeze gate
+         run: npm run flex:freeze:gate
+ 
++      - name: Release contract conformance
++        run: npx tsx lib/control/release-ready-contract.test.ts
++
+       - name: CI smoke preflight (fail-fast)
+         run: npx tsx scripts/ci-smoke-preflight.ts --tier=pr
+ 

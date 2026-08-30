@@ -1,6 +1,9 @@
 "use client";
 
 import { normalizeSchedaTipoDb, type SchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
+/** SSOT table name — use in sync policy/scope to avoid legacy RBAC string literals. */
+export const CAB_SYNC_TABLE_USER_PERMISSIONS = "user_permissions" as const;
+
 export type CabSyncEntity =
   | "app_settings"
   | "lavorazioni"

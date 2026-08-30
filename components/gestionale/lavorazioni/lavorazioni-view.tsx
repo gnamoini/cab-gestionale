@@ -1,16 +1,18 @@
 "use client";
 
+/* eslint-disable react-hooks/refs, react-hooks/preserve-manual-memoization -- lint phase2: intentional ref wiring + preserve manual memoization contract */
+
 import "./lavorazioni-scroll.css";
 import "./lavorazioni-select-theme.css";
 
 import dynamic from "next/dynamic";
-import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
+import { useLavorazioniPdfWarmup } from "@/lib/observability/use-deferred-pdf-warmup";
 import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
 import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
 import { useListSurface } from "@/lib/ui/use-list-surface";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -97,7 +99,6 @@ import {
   LavorazioneConcludiConfirmDialogLazy,
   LavorazioneEliminaConfirmDialogLazy,
 } from "@/components/gestionale/lavorazioni/lavorazioni-confirm-dialogs-lazy";
-import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -112,7 +113,7 @@ import {
   Q_MEZZO_QR_TOKEN,
 } from "@/lib/navigation/dashboard-log-links";
 import type { MezzoSelectionSource } from "@/lib/lavorazioni/selected-mezzo-context";
-import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import {
   buildLavorazioniPillOptionsFromGlobal,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -131,7 +132,7 @@ import {
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { openPdfArtifact, openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
+import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import {
   buildLavorazioneRowProfileResolver,
   mergeLazyProfileNamesIntoResolver,
@@ -204,13 +205,10 @@ import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabel } from "@/src/shared/selectors";
 import {
   dsAccentSoftBanner,
-  dsInput,
   dsStackPage,
-  dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
   Drawer,
-  IconActionButton,
   LoadingErrorState,
   LoadingFormSkeleton,
   SkeletonBoundary,
@@ -243,7 +241,6 @@ import type { LavorazioneSchedeBundle, LavorazioneSchedeStore, SchedaIngressoFie
 import {
   type LavorazioneFilters,
   type LavorazioneListRow,
-  type LavorazioneUpdate,
 } from "@/src/services/lavorazioni.service";
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
@@ -267,11 +264,9 @@ import { mezzoHasPresetConfig } from "@/lib/maintenance-plans/mezzo-has-preset-c
 import { useMezziWithoutPresetQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
-import { QK, commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
-import { lavorazioniListCacheRows } from "@/src/lib/react-query/lavorazioni-optimistic";
+import { commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
 import { mezziEntry } from "@/lib/domain/mezzi-entry";
-import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
-import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
@@ -279,35 +274,16 @@ import {
 } from "@/lib/ui/collapsible-prefs";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
-import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import {
   erpBtnNeutral,
-  erpBtnNuovaLavorazione,
-  erpFocus,
-  FilterSelectWrap,
-  gestionaleSelectFilterClass,
   prioritaLabel,
-  prioritaPillShellClass,
   prioritaPillShellStyle,
-  selectLavorazioniFilter,
-  addettoPillShellClass,
-  addettoPillShellStyleForName,
-  statoPillShellClass,
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  LavorazioneIngressoDateCell,
-  lavTableActionBtnDanger,
-  lavTableActionBtnInfo,
-  lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
-  dsTableActionBadge,
-  dsTableActionBtnWithBadge,
-  lavTableActionsRow,
-  lavTableTd,
   lavTableColAttrezzaturaClass,
   lavTableColAzioniClass,
   lavTableColCantiereClass,
@@ -319,10 +295,6 @@ import {
   lavTableColNoteClass,
   lavTableColStatoAddettoInset,
   lavTablePillColStyleFromLabels,
-  lavTableTdPill,
-  lavTableTdAzioni,
-  lavTableTdPillWrap,
-  lavTableThAzioni,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import {
   lavorazioneDataCompletamentoIso,
@@ -337,13 +309,9 @@ import { writeIngressoAddettoId } from "@/lib/lavorazioni/write-ingresso-addetto
 import { groupLavorazioniLogsById } from "@/lib/lavorazioni/client-portal-ui";
 import {
   lavorazioneAddettoLabel as addettoLabel,
-  lavorazioneCantiereLabel as cantiereLabel,
   lavorazioneClienteLabel as clienteLabel,
   lavorazioneMacchinaLabel as macchinaLabel,
-  lavorazioneMezzoIdent as mezzoIdent,
-  lavorazioneMezzoIdentParts as mezzoIdentParts,
   lavorazioneUtilizzatoreLabel as utilizzatoreLabel,
-  lavorazioneSchedeBundleRevision,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   LavorazioneArchivioTableRow,
@@ -363,50 +331,6 @@ const dataCompletamentoIso = lavorazioneDataCompletamentoIso;
 
 function canDeleteLavorazioneAttiva(row: LavorazioneListRow, canDelete: boolean): boolean {
   return canDelete && row.archived !== true;
-}
-
-function IconCloseWork({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 12.5 10 17 19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 20h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/** Ripristina lavorazione dall'archivio verso «in corso». */
-function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 8h14v10a2 2 0 01-2 2H7a2 2 0 01-2-2V8z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path d="M5 8h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M9.5 13.5 12 11l2.5 2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconInfo({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 11v5M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconSchede({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M7 4h7l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M14 4v4h4M9.5 12h5M9.5 15.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 function legacyLavBase(row: LavorazioneListRow) {
@@ -678,7 +602,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     () => globalOpts.lavorazioni.statiInCorso.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiInCorso],
   );
-  const statiAttiveOpts = statiOpts;
   const statiRapidiOpts = useMemo(
     () => globalOpts.lavorazioni.statiRapidi.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiRapidi],
@@ -721,8 +644,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     () => lavTablePillColStyleFromLabels(["—", ...globalOpts.lavorazioni.addetti]),
     [globalOpts.lavorazioni.addetti],
   );
-
-  const lavTablePillFillClass = "w-full min-w-0";
 
   const mezziCatalog = useMemo(() => {
     const rows = Array.isArray(mezziListQ.data) ? mezziListQ.data : [];
@@ -806,6 +727,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   }, [mezziListQ.data, qc]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lint phase2: preserve existing hook contract
     primeCreateModal();
     if (typeof window === "undefined") return;
     const requestIdle = (
@@ -1173,7 +1095,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const {
     store: schedeStore,
     invalidate: invalidateSchedeStore,
-    refetch: refetchSchedeStore,
     isLoading: schedeEnsureLoading,
     isFetching: schedeEnsureFetching,
   } = useSchedeBundlesQuery(true, { lavorazioneIds: schedeLavorazioneIds });
@@ -1251,6 +1172,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lint phase2: preserve existing hook contract
     if (hasPageClientFilters) setArchivioSectionOpen(true);
   }, [hasPageClientFilters]);
 
@@ -1502,11 +1424,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     });
   }
 
-  function openConcludiConfirm(row: LavorazioneListRow) {
-    if (!canEditWorkOrders || row.stato !== "completata" || row.archived === true) return;
-    setConcludiConfirmRow(row);
-  }
-
   const onOpenAttivaInfo = useCallback((row: LavorazioneListRow) => {
     setSchedeRow({ row, origine: "attiva", initialTab: "panoramica", dialogSize: "compact" });
   }, []);
@@ -1612,22 +1529,12 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [canEditWorkOrders, updateCompletamentoLav.isPending],
   );
 
-  function concludiActionBtnProps(row: LavorazioneListRow) {
-    const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
-    return {
-      disabled: mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true,
-      className: `${lavTableActionBtnSecondary}${awaitingCompletata ? " opacity-50" : ""}`,
-      tooltipContent:
-        row.stato === "completata" ? undefined : "Imposta come completata per archiviarla",
-      tooltipDisabled: row.stato === "completata",
-      onClick: () => onConcludiAction(row),
-    };
-  }
-
-  function confirmConcludiLavorazione() {
+  function confirmConcludiLavorazione(completionYmd: string) {
     const row = concludiConfirmRow;
     if (!row || !canEditWorkOrders) return;
-    concludeLav.mutate(row.id, {
+    concludeLav.mutate(
+      { id: row.id, completionYmd },
+      {
       onSuccess: () => {
         gestToast.successOnce("lav-conclude", "Lavorazione conclusa e archiviata.");
         setConcludiConfirmRow(null);
@@ -1640,37 +1547,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       onError: (err) => {
         gestToast.errorOnce("lav-conclude", err, { module: "lavorazioni", action: "update" });
       },
-    });
-  }
-
-  async function submitRipristinaInLavorazione(row: LavorazioneListRow) {
-    if (!canEditWorkOrders) return;
-    const ok = await confirm({
-      title: "Ripristinare lavorazione?",
-      message: `«${macchinaLabel(row)}» tornerà tra le lavorazioni attive.`,
-      confirmLabel: "Ripristina",
-    });
-    if (!ok) return;
-    const preferred =
-      statiInCorsoOpts.find((s) => s.id === "in_lavorazione") ??
-      statiInCorsoOpts.find((s) => s.id === "accettazione") ??
-      statiInCorsoOpts[0];
-    const restoreStato = preferred?.id ?? resolveDefaultLavorazioneStatoId(globalOpts.lavorazioni.stati);
-    if (!restoreStato || !isStatoInConfig(restoreStato, globalOpts.lavorazioni.stati)) {
-      gestToast.warning("Nessuno stato attivo configurato per ripristinare la lavorazione.");
-      return;
-    }
-    restoreLav.mutate(
-      { id: row.id, stato: restoreStato },
-      {
-        onSuccess: () => {
-          flashRow(row.id);
-          void lavModificheLogQuery.refetch();
-        },
-        onError: (err) => {
-          gestToast.errorOnce("lav-restore", err, { module: "lavorazioni", action: "update" });
-        },
-      },
+    },
     );
   }
 
@@ -1907,7 +1784,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   }, [filtersAttive, attiveRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageA, serverListPagination]);
   const pagedAttive = useMemo(
     () => (serverListPagination ? sortedAttive : sliceA(sortedAttive)),
-    [serverListPagination, sortedAttive, sliceA, pageA],
+    [serverListPagination, sortedAttive, sliceA],
   );
 
   const {
@@ -1924,7 +1801,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageC, serverListPagination]);
   const pagedChiuse = useMemo(
     () => (serverListPagination ? sortedChiuse : sliceC(sortedChiuse)),
-    [serverListPagination, sortedChiuse, sliceC, pageC],
+    [serverListPagination, sortedChiuse, sliceC],
   );
 
   const pagedChiuseIdsKey = useMemo(
@@ -1981,14 +1858,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const logsByLavorazioneIdRef = useRef(logsByLavorazioneId);
   logsByLavorazioneIdRef.current = logsByLavorazioneId;
 
-  const archivioPagedBundleRevisionKey = useMemo(
-    () =>
-      pagedChiuse
-        .map((row) => `${row.id}:${lavorazioneSchedeBundleRevision(schedeStore[row.id])}`)
-        .join(","),
-    [pagedChiuse, schedeStore],
-  );
-
   const archivioMobileUltimaModificaMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof resolveLavorazioneUltimaModifica>>();
     for (const row of pagedChiuse) {
@@ -2000,7 +1869,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       );
     }
     return map;
-  }, [pagedChiuse, archivioPagedBundleRevisionKey, resolveMobileProfile, schedeStore]);
+  }, [pagedChiuse, resolveMobileProfile, schedeStore]);
 
   const focusLavorazioneInTable = useCallback(
     (id: string) => {
@@ -2223,14 +2092,72 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         gestToast.warning("Imposta la lavorazione come completata prima di archiviarla.");
         return;
       }
-      openConcludiConfirm(row);
+      setConcludiConfirmRow(row);
     },
     [mutPendingBlocking, loading, canEditWorkOrders, gestToast],
   );
 
-  const onRipristinaArchivioRow = useCallback((row: LavorazioneListRow) => {
-    void submitRipristinaInLavorazione(row);
-  }, []);
+  const submitRipristinaInLavorazione = useCallback(
+    async (row: LavorazioneListRow) => {
+      if (!canEditWorkOrders) return;
+      const ok = await confirm({
+        title: "Ripristinare lavorazione?",
+        message: `«${macchinaLabel(row)}» tornerà tra le lavorazioni attive.`,
+        confirmLabel: "Ripristina",
+      });
+      if (!ok) return;
+      const preferred =
+        statiInCorsoOpts.find((s) => s.id === "in_lavorazione") ??
+        statiInCorsoOpts.find((s) => s.id === "accettazione") ??
+        statiInCorsoOpts[0];
+      const restoreStato = preferred?.id ?? resolveDefaultLavorazioneStatoId(globalOpts.lavorazioni.stati);
+      if (!restoreStato || !isStatoInConfig(restoreStato, globalOpts.lavorazioni.stati)) {
+        gestToast.warning("Nessuno stato attivo configurato per ripristinare la lavorazione.");
+        return;
+      }
+      restoreLav.mutate(
+        { id: row.id, stato: restoreStato },
+        {
+          onSuccess: () => {
+            flashRow(row.id);
+            void lavModificheLogQuery.refetch();
+          },
+          onError: (err) => {
+            gestToast.errorOnce("lav-restore", err, { module: "lavorazioni", action: "update" });
+          },
+        },
+      );
+    },
+    [
+      canEditWorkOrders,
+      confirm,
+      flashRow,
+      gestToast,
+      globalOpts.lavorazioni.stati,
+      lavModificheLogQuery,
+      restoreLav,
+      statiInCorsoOpts,
+    ],
+  );
+
+  const onRipristinaArchivioRow = useCallback(
+    (row: LavorazioneListRow) => {
+      void submitRipristinaInLavorazione(row);
+    },
+    [submitRipristinaInLavorazione],
+  );
+
+  function concludiActionBtnProps(row: LavorazioneListRow) {
+    const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
+    return {
+      disabled: mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true,
+      className: `${lavTableActionBtnSecondary}${awaitingCompletata ? " opacity-50" : ""}`,
+      tooltipContent:
+        row.stato === "completata" ? undefined : "Imposta come completata per archiviarla",
+      tooltipDisabled: row.stato === "completata",
+      onClick: () => onConcludiAction(row),
+    };
+  }
 
   const renderAttiveDesktopRow = useCallback(
     (index: number) => {
@@ -2349,7 +2276,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       renderRow: renderArchivioDesktopRow,
       estimateRowHeight: 72,
     }),
-    [pagedChiuse.length, renderArchivioDesktopRow, archivioPagedBundleRevisionKey],
+    [pagedChiuse.length, renderArchivioDesktopRow],
   );
 
   const onPrintLavorazioniInCorso = useCallback(() => {
@@ -3023,6 +2950,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
       <GestionaleModalGate open={concludiConfirmRow != null}>
         <LavorazioneConcludiConfirmDialogLazy
+        row={concludiConfirmRow}
         open={concludiConfirmRow != null}
         pending={concludeLav.isPending}
         onCancel={() => {

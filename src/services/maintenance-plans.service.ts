@@ -22,7 +22,6 @@ import {
   buildSyntheticTagliandoHistoryViews,
   parseIngressoMeterFromSchedaContenuto,
 } from "@/lib/maintenance-plans/synthesize-tagliando-lavorazioni";
-import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
 import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import type {

@@ -1,0 +1,21 @@
+diff --git a/lib/report/drilldown/resolvers/magazzino-resolver.server.ts b/lib/report/drilldown/resolvers/magazzino-resolver.server.ts
+index ce86f52a..5aefb0b0 100644
+--- a/lib/report/drilldown/resolvers/magazzino-resolver.server.ts
++++ b/lib/report/drilldown/resolvers/magazzino-resolver.server.ts
+@@ -2,7 +2,7 @@ import "server-only";
+ 
+ import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
+ import { sottoScortaCount } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+-import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
++ "@/lib/report/magazzino-period-aggregate";
+ import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
+ import type { ReportAnalyticsSourceBundle } from "@/lib/report/analytics-engine/source-bundle";
+ import type { ReportDrillDownRow } from "@/lib/report/drilldown/types";
+@@ -49,7 +49,6 @@ export function listMovimentiUscitaInRange(
+   range: DateRange,
+   ricambioId?: string,
+ ): ReportDrillDownRow[] {
+-  const agg = aggregateMagazzinoQtyByProductInRange(bundle.integrity.magLog, range);
+   const prodMap = new Map(bundle.integrity.magazzino.map((p) => [p.id, p]));
+   const rows: ReportDrillDownRow[] = [];
+ 

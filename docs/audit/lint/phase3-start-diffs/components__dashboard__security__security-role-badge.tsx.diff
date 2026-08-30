@@ -1,0 +1,23 @@
+diff --git a/components/dashboard/security/security-role-badge.tsx b/components/dashboard/security/security-role-badge.tsx
+index 7fc3f1a8..0dabae67 100644
+--- a/components/dashboard/security/security-role-badge.tsx
++++ b/components/dashboard/security/security-role-badge.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+ 
+-import { useEffect, useState } from "react";
+ import { roleLabel, resolveRole, type AppRole } from "@/lib/auth/rbac";
++import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
+ import {
+   formatSecurityWhen,
+   SECURITY_USER_PRESENCE_LABEL,
+@@ -43,8 +43,7 @@ export function SecurityStatusBadge({
+   accountEnabled?: boolean;
+   align?: "start" | "end";
+ }) {
+-  const [mounted, setMounted] = useState(false);
+-  useEffect(() => setMounted(true), []);
++  const mounted = useClientHydrated();
+ 
+   const alignClass = align === "end" ? "items-end text-right" : "items-start text-left";
+ 

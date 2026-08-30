@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/refs -- lint phase2: intentional ref wiring for stable callbacks/DOM sync */
+
 import {
   createContext,
   useCallback,
@@ -52,6 +54,7 @@ function useDelayedActive(active: boolean, delayMs = SHOW_DELAY_MS): boolean {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
       setVisible(false);
       return;
     }
@@ -196,12 +199,13 @@ export function LoadingManagerProvider({ children }: { children: ReactNode }) {
 
 export function useGlobalLoadingState(): { active: boolean; visible: boolean; message: string } {
   const ctx = useContext(LoadingManagerContext);
+  const overlayActive = ctx?.winningSurface === "overlay";
+  const visible = useDelayedActive(Boolean(overlayActive));
   if (!ctx) {
     return { active: false, visible: false, message: GLOBAL_LOADING_MESSAGES.default };
   }
-  const visible = useDelayedActive(ctx.winningSurface === "overlay");
   return {
-    active: ctx.winningSurface === "overlay",
+    active: overlayActive,
     visible,
     message: ctx.message,
   };

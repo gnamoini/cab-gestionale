@@ -1,0 +1,13 @@
+diff --git a/lib/communications/recipients/recipient-resolver.server.ts b/lib/communications/recipients/recipient-resolver.server.ts
+index 85aff8b9..050809c6 100644
+--- a/lib/communications/recipients/recipient-resolver.server.ts
++++ b/lib/communications/recipients/recipient-resolver.server.ts
+@@ -118,7 +118,7 @@ export async function resolveRecipientForPolicy(
+   if (policy.recipientType !== "customer") return null;
+ 
+   let clienteLabel = "";
+-  let clienteId: string | null = null;
++  const clienteId: string | null = null;
+ 
+   if (entityType === "lavorazioni") {
+     const { data: lav } = await client

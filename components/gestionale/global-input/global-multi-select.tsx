@@ -104,7 +104,7 @@ export const GlobalMultiSelect = memo(function GlobalMultiSelect({
       <div className={globalMultiSelectShellClass}>
         {selected.length > 0 ? (
           <div
-            className="flex min-w-0 flex-wrap gap-1.5 border-b border-[color:var(--cab-border)] px-2.5 pb-1.5 pt-2"
+            className="flex min-w-0 gap-1.5 border-b border-[color:var(--cab-border)] px-2.5 pb-1.5 pt-2 flex-nowrap sm:flex-wrap"
             role="list"
             aria-label={selectedSummary}
           >

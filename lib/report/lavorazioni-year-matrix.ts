@@ -1,5 +1,5 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
-import { countCompletedByMonth, type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
+import { type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
 import {
   buildCompletateDbMaps,
   isReportManualMonthOverride,

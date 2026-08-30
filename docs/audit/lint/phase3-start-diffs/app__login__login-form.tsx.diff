@@ -1,0 +1,23 @@
+diff --git a/app/login/login-form.tsx b/app/login/login-form.tsx
+index 8f014340..21c4d544 100644
+--- a/app/login/login-form.tsx
++++ b/app/login/login-form.tsx
+@@ -16,7 +16,7 @@ import { GlobalLoadingSpinner } from "@/components/design-system";
+ import { useGlobalLoading } from "@/context/global-loading-context";
+ import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
+ import { isStagingPublicSlice } from "@/lib/env/staging-public";
+-import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
++import { MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
+ import {
+   dsBtnPrimary,
+   dsCheckboxInput,
+@@ -155,7 +155,9 @@ export function LoginForm() {
+     clearGestionaleToasts();
+   }, []);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     setRemember(readAuthRememberPreference());
+   }, []);
+ 

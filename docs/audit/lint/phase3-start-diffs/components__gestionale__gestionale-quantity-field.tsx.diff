@@ -1,0 +1,11 @@
+diff --git a/components/gestionale/gestionale-quantity-field.tsx b/components/gestionale/gestionale-quantity-field.tsx
+index 7f3d325c..37bff4a6 100644
+--- a/components/gestionale/gestionale-quantity-field.tsx
++++ b/components/gestionale/gestionale-quantity-field.tsx
+@@ -1,6 +1,5 @@
+ "use client";
+ 
+-import type { InputHTMLAttributes } from "react";
+ import { GestionaleNumericField, type GestionaleNumericFieldProps } from "@/components/gestionale/gestionale-numeric-field";
+ import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
+ import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";

@@ -1,0 +1,14 @@
+diff --git a/components/document-capture/capture-v41-review-panel.tsx b/components/document-capture/capture-v41-review-panel.tsx
+index c8dbea41..b0771e77 100644
+--- a/components/document-capture/capture-v41-review-panel.tsx
++++ b/components/document-capture/capture-v41-review-panel.tsx
+@@ -47,7 +47,9 @@ export function CaptureV41ReviewPanel({ captureId }: Props) {
+     }
+   }, [captureId]);
+ 
++   
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync state in effect lifecycle
+     void load();
+   }, [load]);
+ 

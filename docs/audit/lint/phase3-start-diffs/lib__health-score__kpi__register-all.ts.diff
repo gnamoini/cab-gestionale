@@ -1,0 +1,13 @@
+diff --git a/lib/health-score/kpi/register-all.ts b/lib/health-score/kpi/register-all.ts
+index c9ff7b74..5a5e6980 100644
+--- a/lib/health-score/kpi/register-all.ts
++++ b/lib/health-score/kpi/register-all.ts
+@@ -27,7 +27,7 @@ function defineKpi(partial: Omit<HealthKpiDefinition, "normalizer"> & {
+   invertTrend?: boolean;
+   invertLevel?: boolean;
+ }): HealthKpiDefinition {
+-  const { invertTrend: _it, invertLevel: _il, ...rest } = partial;
++  const { ...rest } = partial;
+   return {
+     ...rest,
+     trendWeight: partial.trendWeight ?? 0,

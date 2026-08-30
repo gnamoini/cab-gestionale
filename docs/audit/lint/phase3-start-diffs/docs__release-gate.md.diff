@@ -1,0 +1,197 @@
+diff --git a/docs/release-gate.md b/docs/release-gate.md
+index 2e4c503f..e1be4e5f 100644
+--- a/docs/release-gate.md
++++ b/docs/release-gate.md
+@@ -2,154 +2,77 @@
+ 
+ **Autorità unica:** il workflow GitHub Actions `release-gate` è l’unico sistema che **blocca merge e deploy** in production. Vercel **non** esegue gate, `production:check`, né script di decisione build: fa solo `npm run build` (`next build`) su commit già ammessi su `main`.
+ 
+-Workflow complementari: [`release-gate-cert`](../.github/workflows/release-gate-cert.yml) (tier 2 su `main`) e [`release-gate-nightly`](../.github/workflows/release-gate-nightly.yml) (tier 3 advisory). Matrice SSOT: [`gate-matrix.md`](./gate-matrix.md). Audit: [`audit-release-gate.md`](./audit-release-gate.md).
++**Contratto SSOT:** [`release-gate-contract.md`](./release-gate-contract.md) + [`release-gate-contract.json`](./release-gate-contract.json).
++
++Workflow complementari: [`release-gate-cert`](../.github/workflows/release-gate-cert.yml) (tier 2 su `main`) e [`release-gate-nightly`](../.github/workflows/release-gate-nightly.yml) (tier 3 advisory). Matrice: [`gate-matrix.md`](./gate-matrix.md). Audit freshness: [`audit/release-gate-freshness-2026-08-29.md`](./audit/release-gate-freshness-2026-08-29.md).
+ 
+ Se un controllo critico fallisce in CI → check rosso → merge bloccato → production Vercel non promossa (Deployment Protection).
+ 
+-## Architettura gate-first
+-
+-```mermaid
+-sequenceDiagram
+-  participant Dev
+-  participant GH as GitHub
+-  participant GHA as Actions_release_gate
+-  participant Vercel
+-
+-  Dev->>GH: Open PR
+-  GH->>GHA: pull_request
+-  GHA-->>GH: check release-gate
+-  Note over GH: Branch protection blocks merge if FAIL
+-  Dev->>GH: Merge to main
+-  GH->>GHA: push main rerun gate
+-  GH->>Vercel: webhook deploy
+-  Note over Vercel: Deployment Protection waits for release-gate success
+-  Vercel->>Vercel: next build only
+-  Vercel-->>Dev: Production live
+-```
++**Control Plane:** `control-pr` è **contract-compatible** (non dual-required). Vedi contratto RELEASE_READY.
+ 
+ ## Controlli attivi in CI (`release-gate`)
+ 
+ | # | Comando | Cosa verifica |
+ |---|---------|----------------|
+ | 1 | `npm run ci:tsc` | `npx tsc --noEmit` |
+-| 2 | `npm run ci:build` | `npm run build` (Next.js) |
+-| 3 | `npm run ux:enforce` | `window.alert/confirm/prompt`, `useToast` fuori allowlist |
+-| 4 | `npm run ux:mobile-gate` | Tooltip mobile, scroll-lock modali, containment scroll |
+-| 5 | `npm run ios:check` | Heuristics iOS/Safari (100vh, font-size, overflow) — 0 blocker richiesti |
+-| 6 | Verify Supabase secrets | Presenza env in Actions |
+-| 7 | `verify-supabase-ci-env.ts` | Connessione Supabase |
+-| 8 | `npm run production:check` | RBAC/RLS, storage, pilot flags env+DB, legacy URL |
+-| 9 | `npm run ci:supabase:publication` | Publication realtime sanity (deprecated zero; live se `SUPABASE_DB_URL`) |
+-| 10 | `npm run smoke:structural` | Shell modali, layout app-shell, KPI report exports |
+-| 11 | `npm run smoke:regression:core` | ~63 test critici (security, form/modal, sync, magazzino, gate matrix) |
+-| 12 | `npm run flex:eslint:gate` | Flex baseline — no nuove violazioni |
+-| 13 | `npm run flex:freeze:gate` | Integrità freeze flex |
+-| 14 | `npm run smoke:playwright` | Spec 01–12 E2E chromium |
+-| 15 | `npm run smoke:playwright:scheda-smoke` | Spec 13 desktop full flow (iOS combobox in cert-only) |
+-| 16 | `npm run smoke:playwright:ricambio:smoke` | Spec 14 Nuovo Ricambio smoke |
+-| 17 | `npm run smoke:cleanup` (apply in CI) | Teardown dati smoke (`AUDIT-*`, `E2E-*`, liste `app_settings`) |
++| 2 | `npm run ci:build` | `npm run build` + bundle budget |
++| 3 | `npm run test:rbac` | RBAC matrix, route matrix, role parity |
++| 4 | `npm run test:rbac:hardening` | RBAC entrypoint, SSR/client parity, cache |
++| 5 | `npm run test:security:remediation` | SECURITY DEFINER, RPC manifest, portal isolation (17 test) |
++| 6 | `npm run ux:enforce` | `window.alert/confirm/prompt`, `useToast` fuori allowlist |
++| 7 | `npm run audit:ui` | UI design consistency audit |
++| 8 | `npm run ux:mobile-gate` | Tooltip mobile, scroll-lock modali |
++| 9 | `npm run ios:check` | Heuristics iOS/Safari static |
++| 10 | Verify Supabase secrets | Presenza env in Actions |
++| 11 | `verify-supabase-ci-env.ts` | Connessione Supabase |
++| 12 | `npm run production:check` | RBAC/RLS, storage, pilot flags, legacy URL |
++| 13 | `npm run ci:supabase:publication` | Publication realtime sanity |
++| 14 | `npm run smoke:structural` | Shell modali, layout app-shell |
++| 15 | `npm run smoke:regression:core` | **278** test CORE — SSOT [`smoke-regression-lists.ts`](../lib/regression/smoke-regression-lists.ts) |
++| 16 | `npm run flex:eslint:gate` | Flex baseline — no nuove violazioni |
++| 17 | `npm run flex:freeze:gate` | Integrità freeze flex |
++| 18 | `release-ready-contract.test.ts` | Conformità contratto RELEASE_READY |
++| 19 | `npm run smoke:playwright` | Spec 01–12 E2E chromium (spec 13/14 **esclusi** via `testIgnore`) |
++| 20 | `npm run smoke:cleanup` (apply) | Teardown dati smoke |
+ 
+ `production:check` aggrega: **rbac-rls**, **storage**, **pilot-flags**, **legacy-urls**, **ops-env**.
+ 
+-**Cleanup smoke (manuale):** `npm run smoke:cleanup` (dry-run) → `npm run smoke:cleanup:apply`. In CI: step post-Playwright con `SMOKE_CLEANUP_APPLY=1`, `if: always()`. Residui advisory in cert: `npm run audit:smoke:residues`.
+-
+-**Marker dati smoke (SSOT):** [`smoke-data-markers.ts`](../lib/smoke/smoke-data-markers.ts) — lavorazioni/schede/liste `AUDIT-YYYYMMDD-HHMMSS`, ricambi `E2E-{timestamp}`, documenti filename `smoke-doc`. Utente CI permanente `github-actions-smoke@cab-gestionale.ci` (intenzionale); dati creati dagli smoke sono ephemeral e rimossi dal cleanup.
+-
+-**Spec 13 iOS combobox:** test E2E `"iOS regression: cliente combobox..."` è **cert-only** (`smoke:playwright:cert`); il PR gate esegue il full-flow desktop (`smoke:playwright:scheda-smoke`) più audit static (`scheda-ingresso-ios-save-audit`, `dropdown-outside-dismiss`). Ripristino iOS in PR dopo fix product combobox.
+-
+-Audit completo giugno 2026: [`audit-release-gate-2026-06.md`](./audit-release-gate-2026-06.md).
++**Spec 13/14 E2E:** **cert-only** (`release-gate-cert`). Il PR gate esegue `smoke:playwright` con `testIgnore` su spec 13 e 14 ([`e2e/playwright.config.ts`](../e2e/playwright.config.ts)).
+ 
+ ### Regression tiers
+ 
+-| Script | Uso |
+-|--------|-----|
+-| `smoke:regression:core` | PR gate (63 file) — SSOT [`smoke-regression-lists.ts`](../lib/regression/smoke-regression-lists.ts) |
+-| `smoke:regression:extended` | Cert workflow (44 file) — flex/ui-os/layout advisory |
+-| `smoke:regression` | Core + extended (locale pre-release) |
++| Script | Uso | Count |
++|--------|-----|-------|
++| `smoke:regression:core` | PR gate blocking | 278 |
++| `smoke:regression:extended` | Cert / nightly | ~210 |
++| `smoke:regression` | Core + extended (locale) | ~488 |
++
++**P0 partition (Control Plane):** 79 test — **non equivalente** a CORE; riconciliato via contratto.
+ 
+ **Non eseguiti su Vercel:** tutti i gate sopra — build Vercel = `next build` only.
+ 
+ ## Workflow `release-gate-cert` (tier 2)
+ 
+-- Trigger: `push` su `main`/`master`, schedule lunedì 03:00 UTC, `workflow_dispatch`
+ - `smoke:regression:extended`
+-- `ci:supabase:publication:full` (blocking)
+-- `ops:long-session-soak:threshold` (~6 min)
+-- `audit:supabase` (advisory, `continue-on-error`)
+-- `audit:smoke:residues` (advisory, `continue-on-error`; soglia operativa default 5 via `SMOKE_RESIDUE_OPERATIVE_THRESHOLD`; strict opzionale con `SMOKE_RESIDUE_STRICT=1`)
+-- `smoke:playwright:cert` — spec 13 iOS combobox × 4 progetti
+-- `smoke:playwright:ricambio:cert` — spec 14 desktop + iOS
+-- `smoke:cleanup:apply` — teardown dati smoke post-Playwright (`if: always()`)
+-
+-Richiedere come check su `main` in branch protection (oltre a `release-gate` su PR).
++- `ci:supabase:publication:full`
++- `ops:long-session-soak:threshold`
++- `smoke:playwright:cert`, `smoke:playwright:scheda-smoke`, `smoke:playwright:ricambio:*`
++- `smoke:cleanup:apply`
+ 
+ ## Workflow `release-gate-nightly` (tier 3)
+ 
+-- Trigger: cron giornaliero 02:00 UTC, `workflow_dispatch`
+-- `npm run lint`, `smoke:regression` full, `ops:long-session-soak` extended — **non blocking**
+-
+-## Output uniforme (script gate)
+-
+-```
+-STATUS: PASS|FAIL
+-BLOCKERS:
+-- ...
+-SUMMARY: <nome gate> — PASS|FAIL (N blockers)
+-```
+-
+-## CI — file workflow
+-
+-- PR/main blocking: [`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml)
+-- Cert: [`.github/workflows/release-gate-cert.yml`](../.github/workflows/release-gate-cert.yml)
+-- Nightly: [`.github/workflows/release-gate-nightly.yml`](../.github/workflows/release-gate-nightly.yml)
+-
+-- Trigger: `pull_request` e `push` su `main` / `master`, `workflow_dispatch`
+-- Job: **`release-gate`**
+-- Fork PR: job saltato (no secrets)
+-
+-### Secrets (GitHub Actions)
+-
+-| Secret | Uso |
+-|--------|-----|
+-| `NEXT_PUBLIC_SUPABASE_URL` | DB snapshot production readiness |
+-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Env Supabase pubblico |
+-| `SUPABASE_SERVICE_ROLE_KEY` | Bucket, `app_settings`, `documenti.url_file` |
+-| `SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD` | Login smoke Playwright |
+-| `SMOKE_OPERATOR_EMAIL` / `SMOKE_OPERATOR_PASSWORD` | RBAC smoke |
+-| `SMOKE_DOCUMENTI_LAVORAZIONE_ID` | Upload/delete documenti smoke |
+-| `SUPABASE_DB_URL` | Publication live check (`pg_publication_tables`) — opzionale in PR (`PUBLICATION_CHECK_STRICT=0`) |
+-
+-Vedi [`.env.smoke.example`](../.env.smoke.example). Checklist: [`ops-production-checklist.md`](./ops-production-checklist.md).
+-
+-Senza secrets Supabase, `production:check` **FAIL** in CI. Senza `SMOKE_*`, Playwright **FAIL** in CI (secrets obbligatori nel workflow).
++- `npm run lint` (advisory), `smoke:regression` full — **non blocking**
+ 
+ ## Locale (advisory only)
+ 
+ ```bash
+-npm run release:gate
++npm run control:local    # preferito — Control Plane PR tier
+ ```
+ 
+-Replica i step critici. Senza secrets Supabase: verify/production **SKIP**. Senza `SMOKE_*`: Playwright **SKIP** (non equivale a CI verde).
+-
+ ```bash
+-PRODUCTION_CHECK_REQUIRE_DB=1 npm run production:check
+-npm run smoke:regression          # core + extended
+-npm run smoke:regression:core     # solo tier PR
+-npm run smoke:playwright:cert     # spec 13 mobile
++npm run release:gate     # DEPRECATED — NOT merge authority
+ ```
+ 
+-## Fuori scope del gate PR
+-
+-- `npm run lint` (nightly advisory)
+-- `npm run test:permissions`
+-- `smoke:regression:extended` (cert / nightly)
+-- `smoke:playwright:cert`, `smoke:playwright:ricambio:cert` (cert workflow)
+-- `ci:supabase:publication:full` (cert)
+-- `ops:long-session-soak` full (nightly), `ops:diagnostics`
+-- Dashboard Security → Release Control (informativa)
+-
+-Audit completo: [`audit-release-gate.md`](./audit-release-gate.md).
+-
+ ## Branch protection (obbligatoria)
+ 
+ Settings → Branches → `main`: require check **`release-gate`**.
