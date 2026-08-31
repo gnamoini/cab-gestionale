@@ -21,16 +21,43 @@ const LEGACY_STORAGE_PREFIX = "cab:admin-lav-notifications:";
 type StoreListener = (userId: string) => void;
 const listeners = new Set<StoreListener>();
 
+/** ponytail: ref stabile per useSyncExternalStore quando lo store è vuoto/disabled. */
+const EMPTY_ADMIN_NOTIFICATION_STORE: AdminNotificationStoreState = { lastSeenAt: null, items: {} };
+/** ponytail: cache in-memory — stesso ref finché lo store non cambia (React getSnapshot contract). */
+const memoryStore = new Map<string, AdminNotificationStoreState>();
+
 let storageBridgeAttached = false;
+
+function adminNotificationStoresEqual(
+  a: AdminNotificationStoreState,
+  b: AdminNotificationStoreState,
+): boolean {
+  if (a === b) return true;
+  if (a.lastSeenAt !== b.lastSeenAt) return false;
+  const aKeys = Object.keys(a.items);
+  const bKeys = Object.keys(b.items);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a.items[key] !== b.items[key]) return false;
+  }
+  return true;
+}
+
+function invalidateAdminNotificationStoreMemory(userId: string): void {
+  const id = userId.trim();
+  if (id) memoryStore.delete(id);
+}
 
 function dispatchStorageKey(key: string): void {
   if (key.startsWith(STORAGE_PREFIX)) {
     const userId = key.slice(STORAGE_PREFIX.length);
+    invalidateAdminNotificationStoreMemory(userId);
     for (const fn of listeners) fn(userId);
     return;
   }
   if (key.startsWith(LEGACY_STORAGE_PREFIX)) {
     const userId = key.slice(LEGACY_STORAGE_PREFIX.length);
+    invalidateAdminNotificationStoreMemory(userId);
     for (const fn of listeners) fn(userId);
   }
 }
@@ -147,37 +174,55 @@ function migrateLegacyStore(userId: string): AdminNotificationStoreState | null 
 }
 
 export function emptyAdminNotificationStore(): AdminNotificationStoreState {
-  return { lastSeenAt: null, items: {} };
+  return EMPTY_ADMIN_NOTIFICATION_STORE;
 }
 
-export function loadAdminNotificationStore(userId: string): AdminNotificationStoreState {
-  if (typeof window === "undefined" || !userId.trim()) return emptyAdminNotificationStore();
+function readAdminNotificationStoreFromStorage(userId: string): AdminNotificationStoreState {
+  if (typeof window === "undefined" || !userId.trim()) return EMPTY_ADMIN_NOTIFICATION_STORE;
   try {
     const raw = window.localStorage.getItem(storageKey(userId));
     if (!raw) {
-      return migrateLegacyStore(userId) ?? emptyAdminNotificationStore();
+      return migrateLegacyStore(userId) ?? EMPTY_ADMIN_NOTIFICATION_STORE;
     }
     const parsed = JSON.parse(raw) as AdminNotificationStoreState;
-    if (!parsed || typeof parsed !== "object" || !parsed.items) return emptyAdminNotificationStore();
+    if (!parsed || typeof parsed !== "object" || !parsed.items) return EMPTY_ADMIN_NOTIFICATION_STORE;
     return {
       lastSeenAt: typeof parsed.lastSeenAt === "string" ? parsed.lastSeenAt : null,
       items: parseStoreItems(parsed.items),
     };
   } catch {
-    return emptyAdminNotificationStore();
+    return EMPTY_ADMIN_NOTIFICATION_STORE;
   }
 }
 
+export function loadAdminNotificationStore(userId: string): AdminNotificationStoreState {
+  const id = userId.trim();
+  if (!id) return EMPTY_ADMIN_NOTIFICATION_STORE;
+
+  const cached = memoryStore.get(id);
+  if (cached) return cached;
+
+  const loaded = readAdminNotificationStoreFromStorage(id);
+  memoryStore.set(id, loaded);
+  return loaded;
+}
+
 export function saveAdminNotificationStore(userId: string, state: AdminNotificationStoreState): void {
-  if (typeof window === "undefined" || !userId.trim()) return;
+  const id = userId.trim();
+  if (typeof window === "undefined" || !id) return;
+
+  const prev = memoryStore.get(id);
+  if (prev && adminNotificationStoresEqual(prev, state)) return;
+
+  memoryStore.set(id, state);
   try {
-    window.localStorage.setItem(storageKey(userId), JSON.stringify(state));
+    window.localStorage.setItem(storageKey(id), JSON.stringify(state));
   } catch {
     /* ignore quota */
   }
   for (const fn of listeners) {
     try {
-      fn(userId);
+      fn(id);
     } catch {
       /* ignore */
     }
@@ -341,4 +386,9 @@ export function subscribeAdminNotificationStore(listener: StoreListener): () => 
   listeners.add(listener);
   ensureStorageBridgeListener();
   return () => listeners.delete(listener);
+}
+
+/** Test-only — azzera cache in-memory tra casi isolati (storage mock non invalida da solo). */
+export function __resetAdminNotificationStoreMemoryForTests(): void {
+  memoryStore.clear();
 }

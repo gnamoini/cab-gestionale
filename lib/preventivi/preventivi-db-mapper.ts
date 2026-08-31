@@ -1,4 +1,5 @@
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
+import { resolvePreventivoLegacyStato } from "@/lib/preventivi/preventivo-row-state";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
@@ -65,7 +66,7 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
   const merged: PreventivoRecord = {
     ...stub,
     numero: typeof det.numero === "string" && det.numero.trim() ? det.numero : stub.numero,
-    stato: (row.stato ?? (typeof det.stato === "string" ? det.stato : stub.stato)) as PreventivoStato,
+    stato: resolvePreventivoLegacyStato(row),
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento ?? stub.tipoDocumento),
     lavorazioneOrigine: det.lavorazioneOrigine === "storico" ? "storico" : stub.lavorazioneOrigine,
     lavorazioneTimestamp:

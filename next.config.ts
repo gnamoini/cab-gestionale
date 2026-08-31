@@ -37,8 +37,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
-  /** ponytail: Turbopack production trace sharp come hash esterno → libvips mancante su Vercel (500 PDF etichette). */
-  serverExternalPackages: ["sharp"],
+  /** ponytail: native addons — Turbopack non può bundlarli in ESM chunks (PDF thumbnail fallback). */
+  serverExternalPackages: ["sharp", "@napi-rs/canvas"],
   images: {
     qualities: [75, 100],
   },
@@ -61,6 +61,12 @@ const nextConfig: NextConfig = {
     "/api/media/image": [
       "./node_modules/@img/sharp-libvips-linux-x64/**",
       "./node_modules/@img/sharp-linux-x64/**",
+    ],
+    "/api/documents/**": [
+      "./node_modules/@img/sharp-libvips-linux-x64/**",
+      "./node_modules/@img/sharp-linux-x64/**",
+      "./node_modules/@napi-rs/canvas/**",
+      "./node_modules/@napi-rs/canvas-linux-x64-gnu/**",
     ],
   },
   experimental: {

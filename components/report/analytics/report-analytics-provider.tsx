@@ -66,6 +66,22 @@ function mergeRegistrations(regs: Map<string, AnalyticsRegistration>): {
   };
 }
 
+export function registrationsEqual(a: AnalyticsRegistration, b: AnalyticsRegistration): boolean {
+  if (a.includeSeries !== b.includeSeries) return false;
+  if (a.granularity !== b.granularity) return false;
+  const aDims = a.dimensions ?? [];
+  const bDims = b.dimensions ?? [];
+  if (aDims.length !== bDims.length) return false;
+  for (let i = 0; i < aDims.length; i++) {
+    if (aDims[i] !== bDims[i]) return false;
+  }
+  if (a.metricIds.length !== b.metricIds.length) return false;
+  for (let i = 0; i < a.metricIds.length; i++) {
+    if (a.metricIds[i] !== b.metricIds[i]) return false;
+  }
+  return true;
+}
+
 export function ReportAnalyticsProvider({ children }: { children: ReactNode }) {
   const periodCtx = useReportPeriodContext();
   const period = useMemo(() => buildAnalyticsPeriodFromContext(periodCtx), [periodCtx]);
@@ -74,9 +90,16 @@ export function ReportAnalyticsProvider({ children }: { children: ReactNode }) {
 
   const registerRequirements = useCallback((key: string, registration: AnalyticsRegistration | null) => {
     setRegistrations((prev) => {
+      const existing = prev.get(key);
+      if (!registration) {
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.delete(key);
+        return next;
+      }
+      if (existing && registrationsEqual(existing, registration)) return prev;
       const next = new Map(prev);
-      if (!registration) next.delete(key);
-      else next.set(key, registration);
+      next.set(key, registration);
       return next;
     });
   }, []);
@@ -126,29 +149,32 @@ export function useRegisterAnalyticsSection(
   extra?: Partial<AnalyticsRegistration>,
 ) {
   const { registerRequirements } = useReportAnalyticsContext();
-  const extraMetricIds = extra?.metricIds;
+  const extraMetricIdsKey = extra?.metricIds?.join("\0") ?? "";
   const metricIds = useMemo(
-    () => (extraMetricIds?.length ? [...extraMetricIds] : [...resolveSectionMetricIds(sectionId)]),
-    [sectionId, extraMetricIds],
+    () =>
+      extraMetricIdsKey
+        ? extraMetricIdsKey.split("\0")
+        : [...resolveSectionMetricIds(sectionId)],
+    [sectionId, extraMetricIdsKey],
   );
   const dimensionsKey = extra?.dimensions?.join(",") ?? "";
+  const includeSeries = extra?.includeSeries;
+  const granularity = extra?.granularity;
+
+  const registration = useMemo((): AnalyticsRegistration | null => {
+    if (metricIds.length === 0) return null;
+    return {
+      metricIds,
+      ...(includeSeries !== undefined ? { includeSeries } : {}),
+      ...(granularity !== undefined ? { granularity } : {}),
+      ...(extra?.dimensions?.length ? { dimensions: extra.dimensions } : {}),
+    };
+  }, [metricIds, includeSeries, granularity, dimensionsKey, extra?.dimensions]);
 
   useEffect(() => {
-    if (metricIds.length === 0) {
-      registerRequirements(sectionKey, null);
-      return;
-    }
-    registerRequirements(sectionKey, { metricIds, ...extra });
+    registerRequirements(sectionKey, registration);
     return () => registerRequirements(sectionKey, null);
-  }, [
-    sectionKey,
-    metricIds,
-    extra,
-    extra?.includeSeries,
-    extra?.granularity,
-    dimensionsKey,
-    registerRequirements,
-  ]);
+  }, [sectionKey, registration, registerRequirements]);
 }
 
 export function useAnalyticsEnvelope(metricId: string): ReportMetricEnvelope | undefined {

@@ -814,8 +814,7 @@ export const maintenanceEngineV2Service = {
       const [mezziRes, configsRes] = await Promise.all([
         client
           .from("mezzi")
-          .select("id, targa, numero_scuderia, marca_telaio, modello_telaio, tipo_attrezzatura, meta")
-          .is("deleted_at", null),
+          .select("id, targa, numero_scuderia, marca_telaio, modello_telaio, tipo_telaio, meta"),
         client
           .from("vehicle_maintenance_configs")
           .select("mezzo_id")
@@ -832,7 +831,7 @@ export const maintenanceEngineV2Service = {
           numeroScuderia: (m.numero_scuderia as string | null) ?? null,
           targa: (m.targa as string | null) ?? null,
           attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "—",
-          tipoAttrezzatura: (m.tipo_attrezzatura as string) ?? "",
+          tipoAttrezzatura: (m.tipo_telaio as string) ?? "",
           hasActivePreset: withConfig.has(m.id as string),
         }))
         .sort((a, b) => (a.numeroScuderia ?? "").localeCompare(b.numeroScuderia ?? "", "it", { numeric: true }));

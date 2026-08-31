@@ -89,16 +89,16 @@ async function oggettoContextForLavorazione(
   if (!row.mezzo_id?.trim()) return undefined;
   const { data } = await sb
     .from("mezzi")
-    .select("cliente, marca, modello, tipo_attrezzatura")
+    .select("cliente, marca_telaio, modello_telaio, tipo_telaio")
     .eq("id", row.mezzo_id)
     .maybeSingle();
   if (!data) return undefined;
   const m = data as MezzoRow;
   const oggetto = formatLavorazioneLogOggettoLabel({
     cliente: m.cliente,
-    marca: m.marca,
-    modello: m.modello,
-    tipoAttrezzatura: m.tipo_attrezzatura,
+    marca: m.marca_telaio ?? "",
+    modello: m.modello_telaio ?? "",
+    tipoAttrezzatura: m.tipo_telaio ?? "",
   });
   if (oggetto === "—") return undefined;
   return auditContext(oggetto);

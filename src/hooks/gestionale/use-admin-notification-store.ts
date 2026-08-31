@@ -31,16 +31,25 @@ export function useAdminNotificationStore() {
     isStaffInboxEligible(snapshot ? { ruolo: snapshot.role } : user, snapshot?.rbacContext);
   const enabled = staffEligible && !flagLoading && !readsDb && userId.length > 0;
 
+  const getSnapshot = useCallback(
+    () => (enabled ? loadAdminNotificationStore(userId) : emptyAdminNotificationStore()),
+    [enabled, userId],
+  );
+  const getServerSnapshot = useCallback(() => emptyAdminNotificationStore(), []);
+
   // SSR/hydration: mai leggere localStorage nel render iniziale (vedi docs/bootstrap-hydration.md).
   const state = useSyncExternalStore(
-    (onStoreChange) => {
-      if (!enabled) return () => {};
-      return subscribeAdminNotificationStore((changedUserId) => {
-        if (changedUserId === userId) onStoreChange();
-      });
-    },
-    () => (enabled ? loadAdminNotificationStore(userId) : emptyAdminNotificationStore()),
-    () => emptyAdminNotificationStore(),
+    useCallback(
+      (onStoreChange) => {
+        if (!enabled) return () => {};
+        return subscribeAdminNotificationStore((changedUserId) => {
+          if (changedUserId === userId) onStoreChange();
+        });
+      },
+      [enabled, userId],
+    ),
+    getSnapshot,
+    getServerSnapshot,
   );
 
   const notifications = useMemo(() => (enabled ? listNotifications(state) : []), [enabled, state]);

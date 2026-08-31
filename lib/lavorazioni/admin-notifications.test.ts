@@ -19,6 +19,7 @@ import {
   markAllAdminNotificationsRead,
   upsertAdminNotification,
   ADMIN_NOTIFICATION_STORE_MAX_ITEMS,
+  __resetAdminNotificationStoreMemoryForTests,
 } from "@/lib/lavorazioni/admin-notification-store";
 import { formatNotificationRelativeTime } from "@/lib/lavorazioni/format-notification-relative-time";
 import {
@@ -127,6 +128,7 @@ const mockStorage = {
 
 g.localStorage = mockStorage as Storage;
 g.window = g as Window & typeof globalThis;
+__resetAdminNotificationStoreMemoryForTests();
 
 upsertAdminNotification(USER, wrapLavorazioneNotification(i1));
 upsertAdminNotification(USER, wrapLavorazioneNotification(i2));
@@ -174,6 +176,7 @@ assert.equal(
 
 upsertAdminNotification(USER, magNotif!);
 assert.equal(getUnreadCount(loadAdminNotificationStore(USER)), 1);
+assert.equal(loadAdminNotificationStore(USER), loadAdminNotificationStore(USER));
 
 const cleared = clearMagazzinoNotifications(USER);
 assert.equal(Object.keys(cleared.items).length, 1);
@@ -200,6 +203,7 @@ assert.ok(Object.keys(loadAdminNotificationStore(USER).items).length <= ADMIN_NO
 
 const older = wrapLavorazioneNotification(minimalNotificationIntent("lav-old", "2026-01-10T10:00:00.000Z"));
 const newer = wrapLavorazioneNotification(minimalNotificationIntent("lav-new", "2026-01-12T10:00:00.000Z"));
+__resetAdminNotificationStoreMemoryForTests();
 storage.clear();
 upsertAdminNotification(USER, older);
 upsertAdminNotification(USER, newer);
