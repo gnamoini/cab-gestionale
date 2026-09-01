@@ -12,6 +12,15 @@
 
 # testing
 /coverage
+# Ephemeral bench/e2e outputs (SSOT snapshots in test-results/*.json stay tracked)
+test-results/.last-run.json
+test-results/build-budget-diff.json
+test-results/dashboard-deferred-prefetch-*.json
+test-results/skeleton-benchmark-dashboard-*.json
+test-results/route-console-audit.json
+test-results/e2e-smoke-report-*/
+test-results/performance-v9.*/
+test-results/perf-playwright/
 
 # next.js
 /.next/
@@ -30,6 +39,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .cursor/debug*.log
+.cursor/plans/
+.cursor/settings.json
 dev-probe.log
 debug-929eab.log
 .pnpm-debug.log*

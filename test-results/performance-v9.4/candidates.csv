@@ -1,8 +1,0 @@
-Candidate,Root,CurrentKB,EstimatedRemovableKB,Routes,Criticality,Risk,Technique,Confidence,Priority
-auth-context RBAC strip (repeat V9.3),auth-context,365.9 shared,0-10 measured,V9.3 proved,ROOT_CRITICAL,LOW,static boundary,MEDIUM,NO_BENEFIT
-resolve-from-rows domain split,fetchCabAppSettingsPayload,365.9 shared,0-1 measured,V9.1 +0.4,GESTIONALE_CRITICAL,HIGH,dynamic in queryFn,LOW,INVESTIGATE
-map-auth-user lib/rbac,map-auth-user,already fixed,unknown,all,ROOT_CRITICAL,LOW,import path fix,HIGH,KEEP_DONE
-split use-permissions from GESTIONALE_PAGES,use-permissions.ts,188.2 0ja,5-20 gzip est,gestionale,GESTIONALE_CRITICAL,LOW,file split,MEDIUM,P1 not P0
-settings mutations split,use-settings-queries,co-chunked,5-15 est,gestionale,GESTIONALE_CRITICAL,LOW,module split,LOW,P2
-defer invalidate-runtime-truth from auth cold,auth-context,co-chunked,unproven,login,ROOT_CRITICAL,MEDIUM,session-only module,LOW,INVESTIGATE
-webpack split 0jzqp aggregate,bundler,365.9,unknown,all,application,HIGH,build config,LOW,INVESTIGATE
