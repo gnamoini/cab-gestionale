@@ -8,6 +8,12 @@ export type ResolvedAuditActor = {
   companyId: string | null;
 };
 
+/** UUID autore dalla sessione del Supabase client (browser o server-user). */
+export async function resolveWriteActorIdFromClient(client: SupabaseClient): Promise<string | null> {
+  const { data } = await client.auth.getUser();
+  return data.user?.id ?? null;
+}
+
 export async function resolveAuditActor(
   client: SupabaseClient,
   input: {
@@ -19,7 +25,7 @@ export async function resolveAuditActor(
   const actorType = input.actorType ?? "USER";
   let autoreId = input.autoreId ?? null;
 
-  if (actorType === "USER" && autoreId === null) {
+  if (actorType === "USER" && input.autoreId === undefined) {
     const { data: userData } = await client.auth.getUser();
     autoreId = userData.user?.id ?? null;
   }

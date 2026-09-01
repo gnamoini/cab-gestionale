@@ -14,8 +14,9 @@ import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type {
   ResolveOrCreateAttrezzaturaResult,
+  AttrezzaturaMergeMode,
 } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
-import type { AttrezzaturaResolveInsert } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
+import type { AttrezzaturaResolveInsert, ResolveOrCreateAttrezzaturaParams } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -23,7 +24,7 @@ import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-
 import type { UpsertFromSchedaV2Result } from "@/lib/attrezzature/types";
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { MEZZO_UPDATE_SCHEDA_ONLY, mezzoUpdatePlanAllowsMezzoWrite } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
-import { buildMezzoUpdatePatchFromSchedaPlan } from "@/lib/domain/mezzo/apply-mezzo-patch-from-scheda-fields";
+import { buildMezzoUpdatePatchFromSchedaPlan, attrezzaturaOverwriteFieldsFromPlan, schedaFieldsToAttrezzaturaPatch } from "@/lib/domain/mezzo/apply-mezzo-patch-from-scheda-fields";
 import { isMezzoUpdatedAtStale } from "@/lib/domain/mezzo/mezzo-occ";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { MezzoSchedaValidationError } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -36,11 +37,7 @@ export type UpsertFromSchedaV2Deps = {
   }) => Promise<ResolveOrCreateMezzoResult>;
   updateMezzo: (id: string, data: MezzoUpdate) => Promise<MezzoRow>;
   applyAssociationChange?: (input: ApplyAssociationChangeInput) => Promise<MezzoRow>;
-  resolveAttrezzatura: (input: {
-    mezzoId: string;
-    incoming: AttrezzaturaResolveInsert;
-    hintId?: string | null;
-  }) => Promise<ResolveOrCreateAttrezzaturaResult>;
+  resolveAttrezzatura: (input: ResolveOrCreateAttrezzaturaParams) => Promise<ResolveOrCreateAttrezzaturaResult>;
 };
 
 function schedaToMezzoPayload(fields: SchedaIngressoFields, anno?: number): MezzoInsert {
@@ -209,10 +206,26 @@ export async function upsertFromSchedaV2(
     };
   }
 
+  const attrezzaturaOverwrite =
+    anagraficaPlan.updateAnagrafica && anagraficaPlan.fieldsToUpdate.length > 0
+      ? attrezzaturaOverwriteFieldsFromPlan(anagraficaPlan.fieldsToUpdate)
+      : undefined;
+  const attrezzaturaMergeMode: AttrezzaturaMergeMode =
+    attrezzaturaOverwrite && attrezzaturaOverwrite.size > 0
+      ? "user_confirmed_overwrite"
+      : "fill_empty";
+
   const resolvedAtt = await deps.resolveAttrezzatura({
     mezzoId,
-    incoming: schedaToAttrezzaturaPayload(fields, mezzoId),
+    incoming: {
+      ...schedaToAttrezzaturaPayload(fields, mezzoId),
+      ...(attrezzaturaMergeMode === "user_confirmed_overwrite"
+        ? schedaFieldsToAttrezzaturaPatch(fields, anagraficaPlan.fieldsToUpdate)
+        : {}),
+    },
     hintId: fields.attrezzaturaId ?? attrezzaturaIdHint,
+    mergeMode: attrezzaturaMergeMode,
+    overwriteFields: attrezzaturaOverwrite,
   });
   const attrezzaturaId = resolvedAtt.row.id;
   const createdAttrezzatura = resolvedAtt.created;

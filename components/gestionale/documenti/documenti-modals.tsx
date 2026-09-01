@@ -224,7 +224,7 @@ export function UploadDocumentoModal({
   ) => void | Promise<DocumentoGestionale | void>;
   onImportListino?: (doc: DocumentoGestionale) => void;
 }) {
-  const { authorName } = useAuth();
+  const { authorName, user } = useAuth();
   const gestToast = useGestionaleToast();
   const pickedFileRef = useRef<File | null>(null);
   const [nome, setNome] = useState("");
@@ -338,6 +338,7 @@ export function UploadDocumentoModal({
           tipoFile: tipo,
           mimeType: file.type || undefined,
           autoreCaricamento: authorName,
+          autoreCaricamentoUserId: user?.id ?? null,
           note: snap.note.trim() || undefined,
           caricatoIl: today,
           ultimaModifica: today,
@@ -861,7 +862,7 @@ export function DocumentoEditModal({
   onRequestClose: () => void;
   onSave: (next: DocumentoGestionale) => boolean | void | Promise<boolean | void>;
 }) {
-  const { authorName } = useAuth();
+  const { authorName, user } = useAuth();
   const gestToast = useGestionaleToast();
   const r0 = resolveDocumentoApplicazione(doc);
   const [nome, setNome] = useState(doc.nome);
@@ -944,6 +945,7 @@ export function DocumentoEditModal({
           tipoFile: inferredTipoFile,
           note: snap.note.trim() || undefined,
           autoreCaricamento: doc.autoreCaricamento?.trim() || authorName,
+          autoreCaricamentoUserId: doc.autoreCaricamentoUserId ?? user?.id ?? null,
           ultimaModifica: today,
           applicabilita: marcaTrim ? snap.effectiveApp : undefined,
           marcaKey: marcaTrim || undefined,

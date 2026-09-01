@@ -97,7 +97,6 @@ export function MagazzinoRicambioInfoModal({
             ricambioId={ricambio.id}
             codice={ricambioCodiceForUi(ricambio.codiceFornitoreOriginale)}
             canRead={magCanReadRicambio}
-            canWrite={magCanCreateRicambio}
             trailingAction={
               <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanCreateRicambio}>
                 <button

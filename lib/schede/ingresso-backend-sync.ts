@@ -62,6 +62,10 @@ export type SyncIngressoBackendInput = {
   };
 };
 
+export type SyncIngressoBackendResult = {
+  attrezzaturaId: string | null;
+};
+
 /**
  * Sync backend scheda ingresso edit — catalogo congelato, zero refetch/invalidate qui.
  * Unico punto autorizzato per updateLavorazione in edit ingresso.
@@ -69,7 +73,7 @@ export type SyncIngressoBackendInput = {
 export async function syncIngressoBackendFromFrozenCatalog(
   input: SyncIngressoBackendInput,
   deps: IngressoBackendSyncDeps,
-): Promise<void> {
+): Promise<SyncIngressoBackendResult> {
   const {
     row,
     campi,
@@ -87,7 +91,9 @@ export async function syncIngressoBackendFromFrozenCatalog(
   logIngressoSavePipeline("backend_sync_start", { runId, correlationId: corr, lavorazioneId: row.id });
 
   if (!assertIngressoSaveGenerationCurrent(runId, "backend_sync_start")) {
-    return;
+    return {
+      attrezzaturaId: campi.attrezzaturaId?.trim() || row.attrezzatura_id?.trim() || null,
+    };
   }
 
   const { result } = await executeInterventoWriteEntry(
@@ -138,7 +144,12 @@ export async function syncIngressoBackendFromFrozenCatalog(
 
   if (patchKeys.length > 0) {
     if (!assertIngressoSaveGenerationCurrent(runId, "update_lavorazione")) {
-      return;
+      return {
+        attrezzaturaId:
+          result.ok && result.attrezzaturaId != null
+            ? result.attrezzaturaId
+            : campi.attrezzaturaId?.trim() || row.attrezzatura_id?.trim() || null,
+      };
     }
     logIngressoSavePipeline("save_db", {
       runId,
@@ -164,6 +175,17 @@ export async function syncIngressoBackendFromFrozenCatalog(
   }
 
   logIngressoSavePipeline("backend_sync_end", { runId, correlationId: corr, lavorazioneId: row.id, patchKeys });
+
+  const patchAttId =
+    typeof mergedPatch.attrezzatura_id === "string" ? mergedPatch.attrezzatura_id.trim() : "";
+  return {
+    attrezzaturaId:
+      patchAttId ||
+      (result.ok ? result.attrezzaturaId?.trim() || null : null) ||
+      campi.attrezzaturaId?.trim() ||
+      row.attrezzatura_id?.trim() ||
+      null,
+  };
 }
 
 /** Invalidazione batch unica — MIC non bloccante; refetch lista in background. */

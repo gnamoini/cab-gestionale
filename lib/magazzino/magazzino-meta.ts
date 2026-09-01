@@ -40,6 +40,8 @@ export type MagazzinoRicambioMeta = {
   scontoFornitoreNonOriginale?: number;
   /** Nome operatore che ha effettuato l'ultima modifica ai dati ricambio. */
   autoreUltimaModifica?: string;
+  /** UUID autore ultima modifica (sessione al save). */
+  autoreUltimaModificaUserId?: string;
   /** Ricambio creato da import listino documenti. */
   listinoImport?: ListinoImportMeta;
   anagraficaStatus?: "completo" | "incompleto";
@@ -110,6 +112,7 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
     ...legacyFlat,
     autoreUltimaModifica: str(m.autoreUltimaModifica) || undefined,
+    autoreUltimaModificaUserId: str(m.autoreUltimaModificaUserId) || undefined,
     listinoImport: parseListinoImportMeta(m.listinoImport),
   };
 }
@@ -147,6 +150,7 @@ export function ricambioUiToMagazzinoMeta(
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
     ...legacySync,
     autoreUltimaModifica: r.autoreUltimaModifica.trim() || undefined,
+    autoreUltimaModificaUserId: r.autoreUltimaModificaUserId?.trim() || undefined,
     listinoImport: r.listinoImport,
   };
 }

@@ -276,6 +276,42 @@ export function useSchedaIngressoMezzoLink({
     [resetUserPermanentEdits],
   );
 
+  const reconcileLinkedSnapshotAfterSave = useCallback(
+    (
+      fields: SchedaIngressoFields,
+      mezzoFromCatalog?: MezzoGestito | null,
+      savedFieldKeys?: readonly MezzoPermanentFieldKey[],
+    ) => {
+      setLinkState((prev) => {
+        if (prev.status !== "linked" || !prev.linkedSnapshot) return prev;
+        const mezzo =
+          mezzoFromCatalog?.id === prev.linkedSnapshot.id
+            ? mezzoFromCatalog
+            : null;
+        return {
+          ...prev,
+          linkedSnapshot: {
+            ...prev.linkedSnapshot,
+            fieldsAtLinkTime: pickMezzoPermanentFields(fields),
+            mezzoUpdatedAtAtLinkTime:
+              mezzo?.ultimaModifica?.trim() ||
+              prev.linkedSnapshot.mezzoUpdatedAtAtLinkTime,
+          },
+        };
+      });
+      if (savedFieldKeys?.length) {
+        setUserEditedPermanent((prev) => {
+          const next = new Set(prev);
+          for (const key of savedFieldKeys) next.delete(key);
+          return next;
+        });
+      } else {
+        resetUserPermanentEdits();
+      }
+    },
+    [resetUserPermanentEdits],
+  );
+
   const conflictFields = listLinkedMezzoFieldConflicts(fields, linkState.linkedSnapshot);
   const userEditedConflictFields = conflictFields.filter((key) => userEditedPermanent.has(key));
   const hasConflict = userEditedConflictFields.length > 0;
@@ -299,6 +335,7 @@ export function useSchedaIngressoMezzoLink({
     confirmAutoMatchedMezzo,
     markCreatedNewMezzo,
     bootstrapLinkedMezzo,
+    reconcileLinkedSnapshotAfterSave,
     clearLink,
     hasConflict,
     conflictFields: userEditedConflictFields,

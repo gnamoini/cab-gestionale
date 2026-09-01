@@ -65,8 +65,8 @@ import {
   getControlTowerCurrentDayRange,
   getControlTowerCurrentMonthRange,
   getControlTowerCurrentWeekRange,
-  getControlTowerPreviousMonthSameWindowRange,
-  getControlTowerPreviousWeekSameWindowRange,
+  getControlTowerPreviousMonthRange,
+  getControlTowerPreviousWeekRange,
 } from "@/lib/dashboard/control-tower-time-ranges";
 import {
   deltaPct,
@@ -551,8 +551,8 @@ export function buildControlTowerHeaderKpiSlice(
   const prevRange = comparePrevious
     ? (input.prevRange ??
       (briefMode === "month"
-        ? getControlTowerPreviousMonthSameWindowRange(anchor)
-        : getControlTowerPreviousWeekSameWindowRange(anchor)))
+        ? getControlTowerPreviousMonthRange(anchor)
+        : getControlTowerPreviousWeekRange(anchor)))
     : null;
   const bundle = buildReportLavorazioniBundle([...input.lavRows]);
   const { attive } = splitLavorazioniListRowsForReport([...input.lavRows]);

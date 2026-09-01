@@ -9,6 +9,7 @@ import {
   shouldUseStockPipelineForMovimenti,
 } from "@/lib/magazzino/movimenti-stock-pipeline";
 import type { StockMovementOrigin } from "@/lib/magazzino/stock-movement-origin";
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -56,7 +57,14 @@ async function applyStockForMovement(
   const q1 = q0 + dq;
   if (q1 < 0) return err("Giacenza insufficiente per il movimento richiesto");
 
-  let updateQuery = c.from("magazzino_ricambi").update({ quantita: q1 }).eq("id", mov.ricambio_id);
+  const userId = await resolveWriteActorIdFromClient(c);
+  let updateQuery = c
+    .from("magazzino_ricambi")
+    .update({
+      quantita: q1,
+      ...(userId ? { updated_by: userId } : {}),
+    })
+    .eq("id", mov.ricambio_id);
   if (q1 < q0) {
     updateQuery = updateQuery.gte("quantita", q0 - q1);
   }

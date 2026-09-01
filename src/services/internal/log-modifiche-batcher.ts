@@ -1,3 +1,4 @@
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
 import type { AuditAzione, AuditPayload } from "@/src/services/internal/audit-log";
 
@@ -83,33 +84,44 @@ function createFlushWaiter(): { promise: Promise<void>; waiter: FlushWaiter } {
   return { promise, waiter: { resolve, reject } };
 }
 
-export function queueModificaLog(
+async function freezeAutoreId(
+  client: SupabaseClient,
+  autore_id: string | null | undefined,
+): Promise<string | null | undefined> {
+  if (autore_id !== undefined) return autore_id;
+  return resolveWriteActorIdFromClient(client);
+}
+
+export async function queueModificaLog(
   flush: FlushModificaLogFn,
   client: SupabaseClient,
   input: FlushInput,
 ): Promise<void> {
-  if (!shouldBatchModificaLogUpdate(input.azione, input.entita)) {
-    return flush(input);
+  const autore_id = await freezeAutoreId(client, input.autore_id);
+  const frozen = { ...input, autore_id };
+
+  if (!shouldBatchModificaLogUpdate(frozen.azione, frozen.entita)) {
+    return flush(frozen);
   }
 
-  const key = batchKey(input.entita, input.entita_id, input.azione, input.autore_id);
+  const key = batchKey(frozen.entita, frozen.entita_id, frozen.azione, frozen.autore_id);
   const { promise, waiter } = createFlushWaiter();
   const existing = pending.get(key);
   if (existing) {
     clearTimeout(existing.timer);
-    existing.payload = mergeAuditDiffPayload(existing.payload, input.payload);
+    existing.payload = mergeAuditDiffPayload(existing.payload, frozen.payload);
     existing.waiters.push(waiter);
     existing.timer = setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS);
     return promise;
   }
 
   const entry: PendingLog = {
-    client: input.client,
-    entita: input.entita,
-    entita_id: input.entita_id,
-    azione: input.azione,
-    payload: input.payload,
-    autore_id: input.autore_id,
+    client: frozen.client,
+    entita: frozen.entita,
+    entita_id: frozen.entita_id,
+    azione: frozen.azione,
+    payload: frozen.payload,
+    autore_id: frozen.autore_id,
     waiters: [waiter],
     timer: setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS),
   };
@@ -136,6 +148,14 @@ async function flushPending(key: string, flush: FlushModificaLogFn): Promise<voi
   } catch (error) {
     for (const w of waiters) w.reject(error);
   }
+}
+
+/** Solo test: svuota coda e timer pendenti tra casi. */
+export function resetModificaLogBatchStateForTest(): void {
+  for (const entry of pending.values()) {
+    clearTimeout(entry.timer);
+  }
+  pending.clear();
 }
 
 /** Per test, logout o pagehide: scrive subito tutti i log in coda. Propaga il primo errore. */

@@ -126,14 +126,10 @@ export const lavorazioniService = {
       const sb = await c();
       const userId = await authUserId(sb);
       const picked = pickLavorazioneCreatePayload(data as Record<string, unknown>);
-      const createdBy =
-        typeof data.created_by === "string" && data.created_by.trim()
-          ? data.created_by.trim()
-          : userId;
       const insertPayload = {
         ...picked,
-        created_by: createdBy,
-        updated_by: createdBy ?? userId,
+        created_by: userId,
+        updated_by: userId,
       } as LavorazioneInsert;
       const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select(LAVORAZIONI_COLUMNS).single();
       if (error) {

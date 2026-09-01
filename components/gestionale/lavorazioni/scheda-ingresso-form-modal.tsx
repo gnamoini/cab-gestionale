@@ -68,6 +68,8 @@ import {
 import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import { useSchedaIngressoMezzoLinkGate } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
 import { useSchedaIngressoSavePipeline } from "@/src/hooks/use-scheda-ingresso-save-pipeline";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { SAVE_OPERATION_LOOP_MESSAGE } from "@/lib/sync/save-operation-loop-guard";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import type { FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
@@ -1122,6 +1124,7 @@ export function SchedaIngressoEditModal({
   initialLavorazionePriorita: PrioritaLavorazione;
 }) {
   const ro = readOnly || !canEdit;
+  const gestToast = useGestionaleToast();
   const [lavorazioneStato, setLavorazioneStato] = useState(initialLavorazioneStato);
   const [lavorazionePriorita, setLavorazionePriorita] = useState(initialLavorazionePriorita);
   const [lavorazioneNote, setLavorazioneNote] = useState(initialLavorazioneNote);
@@ -1308,8 +1311,15 @@ export function SchedaIngressoEditModal({
     gateSave: saveGate.gateSave,
     gateMezzoLink: mezzoLinkGate.gateMezzoLink,
     commit: (input) => commitRef.current(input),
+    loopGuardEntityId: excludeLavorazioneId,
   });
   const savePending = pending || savePipeline.isPending;
+
+  const linkedMezzoForReconcile = useMemo(() => {
+    const id = mezzoPrompt.linkedSnapshot?.id?.trim();
+    if (!id) return null;
+    return mezziCatalog.find((m) => m.id === id) ?? null;
+  }, [mezziCatalog, mezzoPrompt.linkedSnapshot?.id]);
 
   const runIngressoSave = useCallback(async (): Promise<IngressoSaveResult> => {
     const snap = getSnapshot();
@@ -1330,9 +1340,23 @@ export function SchedaIngressoEditModal({
         priorita: lavorazionePrioritaRef.current,
       },
     });
-    if (result.ok) onSaveSuccess?.();
+    if (!result.ok && result.error === SAVE_OPERATION_LOOP_MESSAGE) {
+      gestToast.error(SAVE_OPERATION_LOOP_MESSAGE, { module: "lavorazioni", action: "update" });
+    }
+    if (result.ok) {
+      mezzoPrompt.reconcileLinkedSnapshotAfterSave(fields, linkedMezzoForReconcile);
+      onSaveSuccess?.();
+    }
     return result;
-  }, [getSnapshot, globalOpts.lavorazioni.addettiRecords, onSaveSuccess, savePipeline]);
+  }, [
+    getSnapshot,
+    globalOpts.lavorazioni.addettiRecords,
+    linkedMezzoForReconcile,
+    mezzoPrompt,
+    onSaveSuccess,
+    savePipeline,
+    gestToast,
+  ]);
 
   useEffect(() => {
     if (!ingressoSaveRunRef) return;

@@ -55,6 +55,7 @@ export function gestionaleToDocumentoInsert(
       nome: doc.nome.trim(),
       note: doc.note?.trim() || undefined,
       autoreCaricamento: doc.autoreCaricamento?.trim() || undefined,
+      autoreCaricamentoUserId: doc.autoreCaricamentoUserId?.trim() || undefined,
       dimensioneKb: doc.dimensioneKb,
       applicabilita: doc.applicabilita,
       marcaKey: marcaRaw && marcaRaw !== "—" ? marcaRaw : undefined,

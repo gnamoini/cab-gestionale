@@ -1,13 +1,13 @@
 /** Label UI periodo KPI header dashboard (brief settimanale). */
 export const CONTROL_TOWER_KPI_WINDOW_LABEL =
-  "Da lunedì a oggi, confrontato con lo stesso periodo della settimana precedente." as const;
+  "Da lunedì a oggi, confrontato con l'intera settimana precedente." as const;
 
 /** Label UI periodo KPI header dashboard (brief giornaliero). */
 export const CONTROL_TOWER_KPI_DAY_WINDOW_LABEL = "Statistiche di oggi, senza confronto con periodi precedenti." as const;
 
 /** Label UI periodo KPI header dashboard (brief mensile). */
 export const CONTROL_TOWER_KPI_MONTH_WINDOW_LABEL =
-  "Dal 1° del mese a oggi, confrontato con lo stesso periodo del mese precedente." as const;
+  "Dal 1° del mese a oggi, confrontato con l'intero mese precedente." as const;
 
 /** Label UI stato operativo (health score rolling 30 giorni). */
 export const OPERATIONAL_HEALTH_PERIOD_LABEL = "Ultimi 30 giorni vs periodo precedente" as const;

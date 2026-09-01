@@ -283,7 +283,7 @@ export function SchedeLavorazioneModal({
       correlationId: string;
       lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
     },
-  ) => void | Promise<void>;
+  ) => void | Promise<void | { attrezzaturaId?: string | null }>;
   /** Invalidazione batch unica post-commit. */
   onInvalidateAfterIngressoSave?: (
     lavorazioneId: string,
@@ -578,10 +578,15 @@ export function SchedeLavorazioneModal({
   function startCreate(tipo: SchedaTipo) {
     if (!canEditWorkOrders) return;
     const u = currentUser.trim() || "Operatore";
+    const actorUserId = user?.id ?? null;
     if (tipo === "ingresso") {
       const campi = buildSchedaIngressoFieldsFromContext(lav, mezzo, addetti[0] ?? "");
       baselineIngressoJson.current = JSON.stringify(campi);
-      const doc: SchedaIngressoDoc = { ...newSchedaMeta("ingresso", u), tipo: "ingresso", campi };
+      const doc: SchedaIngressoDoc = {
+        ...newSchedaMeta("ingresso", u, "generata", actorUserId),
+        tipo: "ingresso",
+        campi,
+      };
       flushSync(() => {
         persistBundleInBackground({ ...draftRef.current, ingresso: doc });
       });
@@ -597,7 +602,7 @@ export function SchedeLavorazioneModal({
       const addInit: RigaAddettoOreScheda[] = [];
       if (lav.addetto.trim()) addInit.push({ addetto: lav.addetto, oreImpiegate: 0 });
       const doc: SchedaLavorazioniDoc = {
-        ...newSchedaMeta("lavorazioni", u),
+        ...newSchedaMeta("lavorazioni", u, "generata", actorUserId),
         tipo: "lavorazioni",
         campi: {
           ...campi,
@@ -626,7 +631,7 @@ export function SchedeLavorazioneModal({
     } else {
       const campi = buildSchedaRicambiFieldsFromContext(lav, mezzo);
       const doc: SchedaRicambiDoc = {
-        ...newSchedaMeta("ricambi", u),
+        ...newSchedaMeta("ricambi", u, "generata", actorUserId),
         tipo: "ricambi",
         campi: {
           ...campi,
@@ -887,20 +892,9 @@ export function SchedeLavorazioneModal({
 
       const now = new Date().toISOString();
       const u = currentUser.trim() || "Operatore";
-      const nextDoc: SchedaIngressoDoc = {
-        tipo: "ingresso",
-        createdAt: base.createdAt,
-        createdBy: base.createdBy,
-        sorgente: base.sorgente,
-        fileEsterno: base.fileEsterno,
-        campi: ig,
-        mezzoLink: input.mezzoLinkMeta ?? base.mezzoLink,
-        updatedAt: now,
-        updatedBy: u,
-      };
 
       try {
-        await onIngressoCommitted?.(ig, {
+        const syncRes = await onIngressoCommitted?.(ig, {
           mezzoUpdatePlan: input.mezzoUpdatePlan,
           lavorazioneNote: input.lavorazioneNote,
           tagliandoFields: input.tagliandoFields,
@@ -909,6 +903,25 @@ export function SchedeLavorazioneModal({
           correlationId: input.correlationId,
           lavorazioneGestione: input.lavorazioneGestione,
         });
+
+        const committedCampi: SchedaIngressoFields =
+          syncRes && typeof syncRes === "object" && syncRes.attrezzaturaId?.trim()
+            ? { ...ig, attrezzaturaId: syncRes.attrezzaturaId.trim() }
+            : ig;
+
+        const nextDoc: SchedaIngressoDoc = {
+          tipo: "ingresso",
+          createdAt: base.createdAt,
+          createdBy: base.createdBy,
+          sorgente: base.sorgente,
+          fileEsterno: base.fileEsterno,
+          campi: committedCampi,
+          mezzoLink: input.mezzoLinkMeta ?? base.mezzoLink,
+          updatedAt: now,
+          updatedBy: u,
+          updatedByUserId: user?.id ?? null,
+          createdByUserId: base.createdByUserId ?? null,
+        };
 
         if (!assertIngressoSaveGenerationCurrent(input.runId, "persist_bundle")) {
           return { ok: false, error: "SAVE_STALE" };
@@ -923,7 +936,7 @@ export function SchedeLavorazioneModal({
           return { ok: false, error: persistRes.error };
         }
 
-        baselineIngressoJson.current = JSON.stringify(ig);
+        baselineIngressoJson.current = JSON.stringify(committedCampi);
         logIngressoSavePipeline("save_invalidate", {
           runId: input.runId,
           correlationId: input.correlationId,
@@ -977,6 +990,8 @@ export function SchedeLavorazioneModal({
           campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
           updatedAt: now,
           updatedBy: u,
+          updatedByUserId: user?.id ?? null,
+          createdByUserId: doc.createdByUserId ?? null,
         };
         const changes = diffSchedaLavorazioniDoc(prevDoc, nextDoc);
         if (changes.length) {
@@ -1035,6 +1050,8 @@ export function SchedeLavorazioneModal({
           campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
           updatedAt: now,
           updatedBy: u,
+          updatedByUserId: user?.id ?? null,
+          createdByUserId: doc.createdByUserId ?? null,
         };
         const changes = diffSchedaRicambiDoc(prevDoc, nextDoc);
         if (changes.length) {
@@ -1815,6 +1832,7 @@ function RicambiPanel({
   onImmediatePersist: (d: SchedaRicambiDoc) => void;
 }) {
   const gestToast = useGestionaleToast();
+  const { user } = useAuth();
   const { confirm: askConfirm, confirmDialog: ricambiConfirmDialog } = useGestionaleConfirm();
   const ro = doc.sorgente === "file_esterno";
   const qc = useQueryClient();
@@ -1857,6 +1875,8 @@ function RicambiPanel({
         campi: { ...doc.campi, righe },
         updatedAt: now,
         updatedBy: u,
+        updatedByUserId: user?.id ?? null,
+        createdByUserId: doc.createdByUserId ?? null,
       };
       setDoc(nextDoc);
       onImmediatePersist(nextDoc);

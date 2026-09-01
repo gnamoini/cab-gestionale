@@ -10,6 +10,12 @@ import {
   nextIngressoSaveRunId,
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
 import { beginIngressoSaveGeneration } from "@/lib/schede/ingresso-save-generation";
+import {
+  clearExplicitSaveAttempts,
+  recordExplicitSaveAttempt,
+  SaveOperationLoopError,
+  SAVE_OPERATION_LOOP_MESSAGE,
+} from "@/lib/sync/save-operation-loop-guard";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoSaveGateResult } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import type { SchedaIngressoMezzoLinkGateResult } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
@@ -54,6 +60,8 @@ export type IngressoSavePipelineContext = {
   gateMezzoLink?: (fields: SchedaIngressoFields) => Promise<SchedaIngressoMezzoLinkGateResult>;
   commit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
   onPendingChange?: (pending: boolean) => void;
+  /** Entity id per loop guard — solo save espliciti utente. */
+  loopGuardEntityId?: string;
 };
 
 /**
@@ -74,6 +82,20 @@ export async function runIngressoSavePipeline(
   beginIngressoSaveGeneration(runId);
   ctx.onPendingChange?.(true);
   logIngressoSavePipeline("save_start", { runId, correlationId });
+
+  const loopGuardId = ctx.loopGuardEntityId?.trim() ?? "";
+  if (loopGuardId) {
+    try {
+      recordExplicitSaveAttempt("scheda_ingresso", loopGuardId);
+    } catch (err) {
+      if (err instanceof SaveOperationLoopError) {
+        ctx.lock.release();
+        ctx.onPendingChange?.(false);
+        return { ok: false, runId, correlationId, error: SAVE_OPERATION_LOOP_MESSAGE };
+      }
+      throw err;
+    }
+  }
 
   try {
     const mezziCatalogFrozen = [...ctx.mezziCatalog];
@@ -141,6 +163,7 @@ export async function runIngressoSavePipeline(
     logIngressoSavePipeline("save_error", { runId, correlationId, error: String(err) });
     return { ok: false, runId, correlationId, error: err };
   } finally {
+    if (loopGuardId) clearExplicitSaveAttempts("scheda_ingresso", loopGuardId);
     ctx.lock.release();
     ctx.onPendingChange?.(false);
     logIngressoSavePipeline("save_finally", { runId, correlationId });

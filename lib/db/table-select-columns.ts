@@ -134,7 +134,7 @@ export const SCHEDA_LAVORAZIONE_COLUMNS =
   "id, lavorazione_id, tipo, contenuto, created_at, updated_at" as const;
 
 export const MAGAZZINO_RICAMBI_COLUMNS =
-  "id, codice, nome, marca, quantita, stock_version, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
+  "id, codice, nome, marca, quantita, stock_version, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_by, updated_by, created_at, updated_at" as const;
 
 export const MOVIMENTI_RICAMBI_COLUMNS =
   "id, ricambio_id, lavorazione_id, tipo, quantita, conta_statistiche, inventory_document_id, inventory_document_line_id, operation_id, meta, created_at" as const;
@@ -215,7 +215,7 @@ export const PREVENTIVI_BILLING_STATUS_COLUMNS =
   "preventivo_id, preventivo_totale, fatturato, residuo, stato_fatturazione" as const;
 
 export const DOCUMENTI_COLUMNS =
-  "id, mezzo_id, marca, modello, categoria, url_file, meta, created_at" as const;
+  "id, mezzo_id, marca, modello, categoria, url_file, meta, created_by, created_at" as const;
 
 export const LOG_MODIFICHE_COLUMNS =
   "id, entita, entita_id, azione, autore_id, autore_nome_snapshot, payload, created_at, company_id, event_type, actor_type, correlation_id, request_id, module, title, description, severity, category" as const;

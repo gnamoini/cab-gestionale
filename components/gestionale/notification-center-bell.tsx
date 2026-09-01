@@ -490,6 +490,7 @@ export function NotificationCenterBell({
       title={drawerTitle}
       layerClassName={layerAboveNav ? "z-[110]" : undefined}
       restoreFocusRef={layerAboveNav ? triggerRef : undefined}
+      side="left"
       titleAddon={
         staffInbox ? (
           <NotificationsDesktopStatusBadge

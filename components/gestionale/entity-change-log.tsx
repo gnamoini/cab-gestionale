@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useAuth } from "@/context/auth-context";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -30,6 +31,7 @@ export type EntityChangeLogProps = {
 
 function useEntityChangeLogEntries(props: EntityChangeLogProps) {
   const gestOpts = useGestionaleQueryOpts();
+  const { user, authorName } = useAuth();
   const limit = props.limit ?? 50;
   const q = useLogListQuery(
     {
@@ -49,8 +51,10 @@ function useEntityChangeLogEntries(props: EntityChangeLogProps) {
             return props.eventTypes!.includes(et as AuditEventType);
           })
         : rows;
-    return buildLogModificheDisplayEntries(filtered, (row) => logAutoreLabel(row, null, "Tu"));
-  }, [q.data, props.eventTypes]);
+    return buildLogModificheDisplayEntries(filtered, (row) =>
+      logAutoreLabel(row, user?.id ?? null, authorName),
+    );
+  }, [q.data, props.eventTypes, user?.id, authorName]);
 
   return { entries, isLoading: q.isLoading };
 }

@@ -19,6 +19,10 @@ export type SchedaMeta = {
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
+  /** UUID autore creazione (sessione al save). */
+  createdByUserId?: string | null;
+  /** UUID autore ultima modifica (sessione al save). */
+  updatedByUserId?: string | null;
   tipo: SchedaTipo;
   sorgente: SchedaSorgente;
   /** Se caricato PDF/immagine da esterno. */

@@ -273,6 +273,37 @@ test("edit scheda ingresso: modifica targa mezzo collegato richiede conferma", a
   await expect(editModal).toBeHidden({ timeout: 60_000 });
 });
 
+test("edit ingresso: modifica marca/modello su mezzo linkato aggiorna anagrafica", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+  const newMarca = `MARCA-EDIT-${fixture.token}`;
+  const newModello = `MOD-EDIT-${fixture.token}`;
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  await fillListCombobox(page, "Marca attrezzatura", newMarca, editModal);
+  await fillListCombobox(page, "Modello attrezzatura", newModello, editModal);
+  await clickSalvaSchedaIngressoEdit(editModal);
+
+  await openIngressoEditorFromHub(page);
+  const editModal2 = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  await expect(editModal2.getByRole("combobox", { name: "Marca attrezzatura", exact: true })).toHaveValue(
+    newMarca,
+  );
+  await expect(editModal2.getByRole("combobox", { name: "Modello attrezzatura", exact: true })).toHaveValue(
+    newModello,
+  );
+});
+
 test("catalog mezzo: salvataggio diretto senza modal collegamento", async ({ page }) => {
   test.setTimeout(900_000);
   const fixture = buildSchedaIngressoAuditFixture();

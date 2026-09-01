@@ -12,6 +12,14 @@ import { useOperationalHealthScore } from "@/src/hooks/view/use-operational-heal
 import { useOperationalHealthScoreHistory } from "@/src/hooks/view/use-operational-health-score-history";
 import { dsTypoBody } from "@/lib/ui/design-system";
 
+function HealthScoreErrorBody({ message }: { message: string }) {
+  return (
+    <p className={`${dsTypoBody} text-[color:var(--cab-danger)]`}>
+      {message}
+    </p>
+  );
+}
+
 function InsufficientHealthScoreBody() {
   return (
     <p className={`${dsTypoBody} text-[color:var(--cab-text-muted)]`}>
@@ -28,7 +36,7 @@ function DashboardHealthScoreWidgetLoaded({ def }: { def: DashboardWidgetDefinit
     if (!collapsed) setHistoryEnabled(true);
   }, []);
 
-  const { score, isLoading, insufficientData } = useOperationalHealthScore();
+  const { score, isLoading, isError, error, insufficientData } = useOperationalHealthScore();
   const { points: historyPoints, isLoading: historyLoading } = useOperationalHealthScoreHistory(historyEnabled);
 
   let body: ReactNode;
@@ -38,6 +46,19 @@ function DashboardHealthScoreWidgetLoaded({ def }: { def: DashboardWidgetDefinit
   if (isLoading) {
     body = <HealthScoreBreakdownPanel historyLoading={historyEnabled && historyLoading} />;
     headerLeadingActions = <HealthScoreSummarySkeleton />;
+  } else if (isError) {
+    const message = error ?? "Calcolo Health Score non riuscito.";
+    body = (
+      <HealthScoreBreakdownPanel
+        historyPoints={historyPoints}
+        historyLoading={historyLoading}
+        insufficientMessage={<HealthScoreErrorBody message={message} />}
+      />
+    );
+    subtitle = "Errore calcolo";
+    headerLeadingActions = (
+      <HealthScoreSummary score={null} label="Non disponibile" tone="neutral" insufficientData hideTitle />
+    );
   } else if (insufficientData || !score) {
     body = (
       <HealthScoreBreakdownPanel

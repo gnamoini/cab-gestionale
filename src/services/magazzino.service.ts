@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditContext, auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
 import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
@@ -32,6 +33,10 @@ export type MagazzinoUpdate = Partial<MagazzinoInsert>;
 
 async function sb() {
   return getBrowserSupabase();
+}
+
+async function authUserId(c: Awaited<ReturnType<typeof sb>>): Promise<string | null> {
+  return resolveWriteActorIdFromClient(c);
 }
 
 function num(v: unknown): number {
@@ -75,7 +80,11 @@ export const magazzinoService = {
     try {
       const c = await sb();
       return await commitCriticalMutation(c, async () => {
-        const payload = attachMagazzinoEntityKey(data);
+        const userId = await authUserId(c);
+        const payload = attachMagazzinoEntityKey({
+          ...data,
+          ...(userId ? { created_by: userId, updated_by: userId } : {}),
+        });
         const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select(MAGAZZINO_RICAMBI_COLUMNS).single();
         if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
         const r = row as MagazzinoRicambioRow;
@@ -97,7 +106,13 @@ export const magazzinoService = {
       }
       const c = await sb();
       return await commitCriticalMutation(c, async () => {
-        const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
+        const userId = await authUserId(c);
+        const payload = Object.keys(data).length > 0
+          ? attachMagazzinoEntityKey({
+              ...data,
+              ...(userId ? { updated_by: userId } : {}),
+            })
+          : data;
         const { data: before, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
         if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
         const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select(MAGAZZINO_RICAMBI_COLUMNS).single();

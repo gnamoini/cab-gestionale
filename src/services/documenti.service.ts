@@ -1,6 +1,7 @@
 "use client";
 
 import { DOCUMENTI_COLUMNS } from "@/lib/db/table-select-columns";
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { deleteDocumentoFully } from "@/lib/documenti/delete-documento-fully";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
@@ -69,7 +70,9 @@ export const documentiService = {
     try {
       const c = await sb();
       const merged = mergeDocumentoMeta(data, { setUploadTimestamp: true }) as DocumentoInsert;
-      const { data: row, error } = await c.from("documenti").insert(merged).select(DOCUMENTI_COLUMNS).single();
+      const userId = await resolveWriteActorIdFromClient(c);
+      const insertPayload = userId ? { ...merged, created_by: userId } : merged;
+      const { data: row, error } = await c.from("documenti").insert(insertPayload).select(DOCUMENTI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as DocumentoRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });

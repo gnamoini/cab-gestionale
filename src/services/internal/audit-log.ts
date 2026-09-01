@@ -1,3 +1,4 @@
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
 import {
   flushAllModificaLogs,
@@ -27,12 +28,14 @@ async function writeModificaLogImmediate(
     request_id?: string | null;
   },
 ): Promise<void> {
+  const autoreId =
+    input.autore_id !== undefined ? input.autore_id : await resolveWriteActorIdFromClient(client);
   await recordAuditEvent(client, {
     entityType: input.entita,
     entityId: input.entita_id,
     action: input.azione,
     payload: input.payload,
-    autoreId: input.autore_id,
+    autoreId: autoreId,
     eventType: (input.event_type as import("@/lib/audit/types").AuditEventType) ?? "DATA_CHANGE",
     actorType: input.actor_type as import("@/lib/audit/types").AuditActorType | undefined,
     correlationId: input.correlation_id,

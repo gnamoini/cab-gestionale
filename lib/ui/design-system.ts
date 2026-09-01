@@ -72,10 +72,10 @@ export const dsAccentSoftBanner =
 export const dsSystemBannerShell =
   "bg-[#09090b] text-[color:#fafafa] shadow-[var(--cab-shadow-md)]";
 export const dsSystemBannerShellTop =
-  "sticky top-0 z-[90] border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)] pt-[max(0.625rem,env(safe-area-inset-top))]";
+  "cab-system-banner-full-bleed w-full min-w-0 sticky top-0 z-[90] border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)] pt-[max(0.625rem,env(safe-area-inset-top))]";
 /** Banner in-shell (main.gestionale-scroll-y) — sticky senza padding safe-area esterno. */
 export const dsSystemBannerShellInShell =
-  "sticky top-0 z-[90] shrink-0 border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";
+  "cab-system-banner-full-bleed w-full min-w-0 sticky top-0 z-[90] shrink-0 border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";
 /** Banner in pagina/modale — stesso shell scuro, senza sticky. */
 export const dsSystemBannerShellEmbedded =
   "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";

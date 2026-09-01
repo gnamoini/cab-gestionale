@@ -80,6 +80,8 @@ export type DrawerProps = {
   layerClassName?: string;
   /** Body a tutta altezza: scroll solo nel contenuto, footer ancorato in basso (anche su mobile). */
   contentFill?: boolean;
+  /** Lato da cui entra il pannello (default destra). Profilo/notifiche: sinistra. */
+  side?: "left" | "right";
 };
 
 export function Drawer({
@@ -98,6 +100,7 @@ export function Drawer({
   onBack,
   layerClassName = dsZDrawer,
   contentFill = false,
+  side = "right",
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
   const autoTitleId = useId();
@@ -187,6 +190,11 @@ export function Drawer({
 
   if (!mounted) return null;
 
+  const asideSideClass =
+    side === "left"
+      ? "cab-log-drawer-panel--left border-l-0 border-r border-[color:var(--cab-border)]"
+      : "";
+
   const headerNode = (
     <header className={dsModalHeader}>
       <div className={dsModalHeaderInner}>
@@ -211,7 +219,9 @@ export function Drawer({
 
   return (
     <div
-      className={`cab-log-drawer-backdrop fixed inset-0 ${layerClassName} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
+      className={`cab-log-drawer-backdrop fixed inset-0 ${layerClassName} flex items-stretch ${
+        side === "left" ? "justify-start" : "justify-end"
+      } ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
       data-state={panelState}
       role="presentation"
       onMouseDown={(e) => {
@@ -224,7 +234,7 @@ export function Drawer({
       <aside
         ref={asideRef}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-        className={asideClassName}
+        className={`${asideClassName}${asideSideClass ? ` ${asideSideClass}` : ""}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"

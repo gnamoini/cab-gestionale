@@ -391,6 +391,8 @@ export type MagazzinoRicambioRow = {
   meta: Record<string, unknown>;
   /** Chiave normalizzata per dedupe/ricerca (Global Validation Layer). */
   entity_key?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -878,6 +880,7 @@ export type DocumentoRow = {
   categoria: CategoriaDocumento;
   url_file: string;
   meta: Record<string, unknown>;
+  created_by?: string | null;
   created_at: string;
 };
 

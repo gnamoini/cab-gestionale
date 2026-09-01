@@ -1,6 +1,8 @@
 import { formToMezzoInsert, type MezzoFormState } from "@/components/gestionale/mezzi/mezzi-form-fields";
 import { buildBrowserAttrezzaturaResolveDeps } from "@/lib/domain/mezzo-attrezzatura/build-browser-attrezzatura-resolve-deps";
+import { pickPrimaryAttrezzatura } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
 import { resolveOrCreateAttrezzatura } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
+import type { AttrezzaturaMergeField } from "@/lib/domain/mezzo-attrezzatura/merge-attrezzatura-patch";
 import { buildBrowserMezzoResolveDeps } from "@/lib/domain/mezzo/build-browser-mezzo-resolve-deps";
 import { resolveOrCreateMezzo } from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
@@ -46,6 +48,13 @@ function attrezzaturaPatchFromForm(f: MezzoFormState, mezzoId: string) {
   };
 }
 
+const CATALOG_ATTREZZATURA_OVERWRITE = new Set<AttrezzaturaMergeField>([
+  "marca",
+  "modello",
+  "tipo_attrezzatura",
+  "matricola",
+]);
+
 /** Hub mezzi V2: mezzo = telaio; attrezzatura su tabella dedicata. */
 export async function persistMezzoFormCreate(input: {
   form: MezzoFormState;
@@ -76,8 +85,19 @@ export async function persistMezzoFormUpdate(input: {
   const row = await input.updateMezzo(input.mezzoId, payload);
   const deps = await buildBrowserAttrezzaturaResolveDeps();
   const att = attrezzaturaPatchFromForm(input.form, input.mezzoId);
+  let hintId = input.attrezzaturaId?.trim() || null;
+  if (!hintId) {
+    const rows = await deps.listByMezzo(input.mezzoId);
+    hintId = pickPrimaryAttrezzatura(rows, input.mezzoId)?.id ?? null;
+  }
   await resolveOrCreateAttrezzatura(
-    { mezzoId: input.mezzoId, incoming: att, hintId: input.attrezzaturaId },
+    {
+      mezzoId: input.mezzoId,
+      incoming: att,
+      hintId,
+      mergeMode: "user_confirmed_overwrite",
+      overwriteFields: CATALOG_ATTREZZATURA_OVERWRITE,
+    },
     deps,
   );
   return row;

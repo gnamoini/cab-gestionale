@@ -64,6 +64,9 @@ assert.match(bff, /activityFeed:/);
 assert.match(dashboardDeferredBlock, /activity-feed/);
 assert.match(dashboardDeferredBlock, /headerKpi\.preventivi/);
 assert.match(dashboardDeferredBlock, /fatturazioneListQueryKey/);
+assert.doesNotMatch(dashboardDeferredBlock, /buildDashboardHealthScoreApiPayloadServer/);
+assert.doesNotMatch(dashboardDeferredBlock, /\["dashboard",\s*"health-score",\s*"v2"\]/);
+assert.match(read("src/hooks/view/use-operational-health-score.ts"), /\/api\/dashboard\/health-score/);
 
 const pageSrc = read("app/(gestionale)/dashboard/page.tsx");
 assert.match(pageSrc, /Suspense/);

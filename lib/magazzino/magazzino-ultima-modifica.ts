@@ -76,21 +76,26 @@ function rowUltimaModificaCandidate(ricambio: RicambioMagazzino): MagazzinoUltim
   };
 }
 
-/** Preferisce la fonte più recente: log locale → log server → meta riga. */
+/** Preferisce la fonte più recente; a parità di timestamp: log server > meta riga > log locale. */
 export function resolveMagazzinoUltimaModifica(
   ricambio: RicambioMagazzino,
   fromLogs: ReadonlyMap<string, MagazzinoUltimaModificaInfo>,
   fromLocal?: ReadonlyMap<string, MagazzinoUltimaModificaInfo>,
 ): MagazzinoUltimaModificaInfo {
-  const candidates: MagazzinoUltimaModificaInfo[] = [];
+  type Candidate = MagazzinoUltimaModificaInfo & { priority: number };
+  const candidates: Candidate[] = [];
   const local = fromLocal?.get(ricambio.id);
-  if (local?.iso) candidates.push(local);
+  if (local?.iso) candidates.push({ ...local, priority: 1 });
   const fromLog = fromLogs.get(ricambio.id);
-  if (fromLog?.iso) candidates.push(fromLog);
+  if (fromLog?.iso) candidates.push({ ...fromLog, priority: 3 });
   const fromRow = rowUltimaModificaCandidate(ricambio);
-  if (fromRow?.iso) candidates.push(fromRow);
+  if (fromRow?.iso) candidates.push({ ...fromRow, priority: 2 });
 
-  candidates.sort((a, b) => b.iso.localeCompare(a.iso));
+  candidates.sort((a, b) => {
+    const byIso = b.iso.localeCompare(a.iso);
+    if (byIso !== 0) return byIso;
+    return b.priority - a.priority;
+  });
   const best = candidates[0];
   if (!best?.iso) return { iso: "", autore: "—" };
   return { iso: best.iso, autore: best.autore.trim() || "—" };

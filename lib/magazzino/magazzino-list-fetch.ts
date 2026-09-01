@@ -28,8 +28,11 @@ export async function fetchMagazzinoListRows(
   options?: { filters?: MagazzinoFilters; variant?: MagazzinoListVariant },
 ): Promise<ServiceResult<MagazzinoRicambioRow[]>> {
   const variant = options?.variant ?? "list";
-  const columns = variant === "report" ? MAGAZZINO_REPORT_LIGHT_COLUMNS : MAGAZZINO_RICAMBI_COLUMNS;
-  let q = sb.from("magazzino_ricambi").select(columns).order("codice", { ascending: true });
+  const base =
+    variant === "report"
+      ? sb.from("magazzino_ricambi").select(MAGAZZINO_REPORT_LIGHT_COLUMNS)
+      : sb.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS);
+  let q = base.order("codice", { ascending: true });
   q = applyMagazzinoFilters(q, options?.filters);
   const { data, error } = await q;
   if (error) return err(error.message);

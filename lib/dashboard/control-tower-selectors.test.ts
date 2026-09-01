@@ -150,9 +150,9 @@ const monthlyDip = monthlyHeader.clusters.find((c) => c.id === "dipendenti");
 assert.ok(monthlyDip);
 const monthlyOre = monthlyDip!.metrics.find((m) => m.id === "dip-ore");
 assert.equal(monthlyOre?.value, 8);
-assert.equal(monthlyOre?.prevValue, 4);
-assert.equal(monthlyOre?.deltaAbs, "+4");
-assert.equal(monthlyOre?.deltaPct, 100);
+assert.equal(monthlyOre?.prevValue, 103, "mese prec chiuso somma tutte le ore di maggio");
+assert.equal(monthlyOre?.deltaAbs, "-95");
+assert.equal(monthlyOre?.deltaPct, -92.2);
 
 const staleLav = lavRow({
   id: "stale-1",

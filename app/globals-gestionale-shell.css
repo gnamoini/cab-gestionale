@@ -1,5 +1,13 @@
 /* Gestionale app shell + sidebar — scoped to (gestionale) layout */
 
+/* Banner di sistema (PWA install/aggiorna, notifiche): full-bleed viewport anche dentro main con padding sidebar. */
+.cab-system-banner-full-bleed {
+  box-sizing: border-box;
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
 body:has(.cab-app-shell) {
   min-height: 0;
 }

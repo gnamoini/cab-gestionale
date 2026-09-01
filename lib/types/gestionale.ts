@@ -22,6 +22,8 @@ export interface DocumentoGestionale {
   macchina: string;
   tipoFile: DocumentoTipoFile;
   autoreCaricamento: string;
+  /** UUID autore caricamento (meta, fallback display). */
+  autoreCaricamentoUserId?: string | null;
   note?: string;
   ultimaModifica: string;
   caricatoIl: string;

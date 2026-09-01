@@ -9,7 +9,9 @@ import {
   mergeAttrezzaturaPatch,
   type AttrezzaturaIncomingPatch,
   type AttrezzaturaMergeConflict,
+  type AttrezzaturaMergeField,
 } from "@/lib/domain/mezzo-attrezzatura/merge-attrezzatura-patch";
+import { logMezzoMutationSaveTrace } from "@/lib/observability/mezzo-mutation-save-trace";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 
 export type AttrezzaturaResolveInsert = {
@@ -49,6 +51,17 @@ export type ResolveOrCreateAttrezzaturaDeps = {
   logUpgradeAmbiguous?: (input: { mezzoId: string; reason: string }) => void | Promise<void>;
 };
 
+export type AttrezzaturaMergeMode = "fill_empty" | "user_confirmed_overwrite";
+
+export type ResolveOrCreateAttrezzaturaParams = {
+  mezzoId: string;
+  incoming: AttrezzaturaResolveInsert;
+  hintId?: string | null;
+  /** Default fill_empty — anti-duplicati. Overwrite solo su campi in overwriteFields. */
+  mergeMode?: AttrezzaturaMergeMode;
+  overwriteFields?: ReadonlySet<AttrezzaturaMergeField>;
+};
+
 export type ResolveOrCreateAttrezzaturaResult = {
   row: AttrezzaturaRow;
   created: boolean;
@@ -72,13 +85,33 @@ async function applyMergeUpdate(
   existing: AttrezzaturaRow,
   incoming: AttrezzaturaResolveInsert,
   matchedBy: AttrezzaturaMatchedBy,
+  mergeOptions?: {
+    mergeMode?: AttrezzaturaMergeMode;
+    overwriteFields?: ReadonlySet<AttrezzaturaMergeField>;
+  },
 ): Promise<ResolveOrCreateAttrezzaturaResult> {
-  const { patch, conflicts } = mergeAttrezzaturaPatch(existing, incoming);
+  const overwriteFields =
+    mergeOptions?.mergeMode === "user_confirmed_overwrite"
+      ? mergeOptions.overwriteFields
+      : undefined;
+  const { patch, conflicts } = mergeAttrezzaturaPatch(existing, incoming, { overwriteFields });
   let row = existing;
   if (Object.keys(patch).length > 0) {
     row = await deps.updateRaw(existing.id, patch);
+    logMezzoMutationSaveTrace("ATTREZZATURA_OVERWRITE_APPLIED", {
+      mezzoId: existing.mezzo_id,
+      attrezzaturaId: existing.id,
+      fields: Object.keys(patch),
+      mergeMode: mergeOptions?.mergeMode ?? "fill_empty",
+    });
   }
   for (const conflict of conflicts) {
+    logMezzoMutationSaveTrace("ATTREZZATURA_CONFLICT_SKIPPED", {
+      mezzoId: existing.mezzo_id,
+      attrezzaturaId: existing.id,
+      field: conflict.field,
+      mergeMode: mergeOptions?.mergeMode ?? "fill_empty",
+    });
     await deps.logConflictKept?.({
       mezzoId: existing.mezzo_id,
       attrezzaturaId: existing.id,
@@ -109,28 +142,31 @@ async function findByMatricolaNorm(
 }
 
 export async function resolveOrCreateAttrezzatura(
-  params: {
-    mezzoId: string;
-    incoming: AttrezzaturaResolveInsert;
-    hintId?: string | null;
-  },
+  params: ResolveOrCreateAttrezzaturaParams,
   deps: ResolveOrCreateAttrezzaturaDeps,
 ): Promise<ResolveOrCreateAttrezzaturaResult> {
-  const { mezzoId, incoming, hintId } = params;
+  const { mezzoId, incoming, hintId, mergeMode = "fill_empty", overwriteFields } = params;
   const incomingMatricola = incoming.matricola?.trim() ?? null;
+  const mergeOpts = { mergeMode, overwriteFields };
 
   const hint = hintId?.trim();
   if (hint && UUID_RE.test(hint)) {
     const byHint = await deps.getById(hint);
     if (byHint?.mezzo_id === mezzoId) {
-      return applyMergeUpdate(deps, byHint, { ...incoming, mezzo_id: mezzoId }, "hint_id");
+      return applyMergeUpdate(deps, byHint, { ...incoming, mezzo_id: mezzoId }, "hint_id", mergeOpts);
     }
   }
 
   if (incomingMatricola) {
     const byMatricola = await findByMatricolaNorm(deps, mezzoId, incomingMatricola);
     if (byMatricola) {
-      return applyMergeUpdate(deps, byMatricola, { ...incoming, mezzo_id: mezzoId }, "matricola_norm");
+      return applyMergeUpdate(
+        deps,
+        byMatricola,
+        { ...incoming, mezzo_id: mezzoId },
+        "matricola_norm",
+        mergeOpts,
+      );
     }
   }
 
@@ -141,7 +177,13 @@ export async function resolveOrCreateAttrezzatura(
       true,
     );
     if (upgrade.kind === "candidate") {
-      return applyMergeUpdate(deps, upgrade.row, { ...incoming, mezzo_id: mezzoId }, "null_upgrade");
+      return applyMergeUpdate(
+        deps,
+        upgrade.row,
+        { ...incoming, mezzo_id: mezzoId },
+        "null_upgrade",
+        mergeOpts,
+      );
     }
     if (upgrade.kind === "ambiguous") {
       await deps.logUpgradeAmbiguous?.({ mezzoId, reason: upgrade.reason });
@@ -155,6 +197,12 @@ export async function resolveOrCreateAttrezzatura(
     if (!incomingMatricola || !isAttrezzaturaUniqueViolation(error)) throw error;
     const recovered = await findByMatricolaNorm(deps, mezzoId, incomingMatricola);
     if (!recovered) throw error;
-    return applyMergeUpdate(deps, recovered, { ...incoming, mezzo_id: mezzoId }, "race_recovery");
+    return applyMergeUpdate(
+      deps,
+      recovered,
+      { ...incoming, mezzo_id: mezzoId },
+      "race_recovery",
+      mergeOpts,
+    );
   }
 }

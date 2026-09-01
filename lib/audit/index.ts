@@ -14,7 +14,7 @@ export type { AuditLogContext } from "@/lib/audit/record";
 export { recordDataChange } from "@/lib/audit/record-data-change";
 export { recordWorkflowAction } from "@/lib/audit/record-workflow-action";
 export { recordImportEvent } from "@/lib/audit/record-import-event";
-export { resolveAuditActor } from "@/lib/audit/resolve-actor";
+export { resolveAuditActor, resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
 export { rbacLogEntitaModule } from "@/lib/audit/resolve-module";
 export {
   resolveRequestId,

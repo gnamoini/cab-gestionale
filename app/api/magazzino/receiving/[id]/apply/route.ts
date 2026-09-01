@@ -91,7 +91,6 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await applyInventoryReceivingDocument({
       documentId: id,
       lines,
-      userId,
       documentNumber: existing.document.document_number,
       supplierLabel: existing.document.supplier_label,
     });

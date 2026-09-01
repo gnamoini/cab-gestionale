@@ -122,6 +122,15 @@ async function run() {
   assert.equal(merge2.patch.tipo_attrezzatura, undefined);
   assert.equal(merge2.conflicts.length, 1);
 
+  const mergeOverwrite = mergeAttrezzaturaPatch(
+    row({ id: "1", mezzo_id: "m1", marca: "OLD", modello: "OLD-M" }),
+    { marca: "NEW", modello: "NEW-M" },
+    { overwriteFields: new Set(["marca", "modello"]) },
+  );
+  assert.equal(mergeOverwrite.patch.marca, "NEW");
+  assert.equal(mergeOverwrite.patch.modello, "NEW-M");
+  assert.equal(mergeOverwrite.conflicts.length, 0);
+
   const canonical = pickCanonicalAttrezzatura([
     row({ id: "old", mezzo_id: "m1", matricola: "abc", created_at: "2026-01-01T00:00:00.000Z" }),
     row({
@@ -155,6 +164,57 @@ async function run() {
   assert.equal(r1.created, false);
   assert.equal(state1.rows.length, 1);
   assert.equal(state1.rows[0]!.tipo_attrezzatura, "Spazzatrice");
+
+  // fill_empty: marca già valorizzata → conflitto, nessun overwrite
+  const stateFill: { rows: AttrezzaturaRow[] } = {
+    rows: [
+      row({
+        id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001",
+        mezzo_id: "m1",
+        marca: "OLD",
+        modello: "OLD-M",
+      }),
+    ],
+  };
+  const depsFill = makeDeps(stateFill);
+  await resolveOrCreateAttrezzatura(
+    {
+      mezzoId: "m1",
+      hintId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001",
+      incoming: { mezzo_id: "m1", marca: "NEW", modello: "NEW-M" },
+      mergeMode: "fill_empty",
+    },
+    depsFill,
+  );
+  assert.equal(stateFill.rows[0]!.marca, "OLD");
+  assert.equal(stateFill.rows[0]!.modello, "OLD-M");
+  assert.ok(depsFill.logs.conflicts >= 1);
+
+  // user_confirmed_overwrite: marca/modello aggiornati
+  const stateOw: { rows: AttrezzaturaRow[] } = {
+    rows: [
+      row({
+        id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002",
+        mezzo_id: "m1",
+        marca: "OLD",
+        modello: "OLD-M",
+      }),
+    ],
+  };
+  const depsOw = makeDeps(stateOw);
+  await resolveOrCreateAttrezzatura(
+    {
+      mezzoId: "m1",
+      hintId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002",
+      incoming: { mezzo_id: "m1", marca: "NEW", modello: "NEW-M" },
+      mergeMode: "user_confirmed_overwrite",
+      overwriteFields: new Set(["marca", "modello"]),
+    },
+    depsOw,
+  );
+  assert.equal(stateOw.rows[0]!.marca, "NEW");
+  assert.equal(stateOw.rows[0]!.modello, "NEW-M");
+  assert.equal(depsOw.logs.conflicts, 0);
 
   // Caso 5: casing
   const state5: { rows: AttrezzaturaRow[] } = {

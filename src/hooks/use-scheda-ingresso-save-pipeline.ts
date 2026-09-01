@@ -25,6 +25,7 @@ export type UseSchedaIngressoSavePipelineOptions = {
   gateSave: (fields: SchedaIngressoFields) => Promise<SchedaIngressoSaveGateResult>;
   gateMezzoLink?: (fields: SchedaIngressoFields) => Promise<import("@/src/hooks/use-scheda-ingresso-mezzo-link-gate").SchedaIngressoMezzoLinkGateResult>;
   commit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
+  loopGuardEntityId?: string;
 };
 
 export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelineOptions) {
@@ -37,13 +38,16 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
   const gateMezzoLinkRef = useRef(opts.gateMezzoLink);
   const mezziCatalogRef = useRef(opts.mezziCatalog);
 
+  const loopGuardEntityIdRef = useRef(opts.loopGuardEntityId);
+
   useLayoutEffect(() => {
     commitRef.current = opts.commit;
     gateSubmitRef.current = opts.gateSubmit;
     gateSaveRef.current = opts.gateSave;
     gateMezzoLinkRef.current = opts.gateMezzoLink;
     mezziCatalogRef.current = opts.mezziCatalog;
-  }, [opts.commit, opts.gateSubmit, opts.gateSave, opts.gateMezzoLink, opts.mezziCatalog]);
+    loopGuardEntityIdRef.current = opts.loopGuardEntityId;
+  }, [opts.commit, opts.gateSubmit, opts.gateSave, opts.gateMezzoLink, opts.mezziCatalog, opts.loopGuardEntityId]);
 
   const run = useCallback(
     async (input: {
@@ -66,6 +70,7 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
           : undefined,
         commit: (commitInput) => commitRef.current(commitInput),
         onPendingChange: setIsPending,
+        loopGuardEntityId: loopGuardEntityIdRef.current,
       });
     },
     [lock],

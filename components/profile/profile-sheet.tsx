@@ -53,6 +53,7 @@ export function ProfileSheet({
         asideClassName={gestionaleLogPanelAsideClass}
         layerClassName="z-[110]"
         contentFill
+        side="left"
         restoreFocusRef={restoreFocusRef}
       >
         <div

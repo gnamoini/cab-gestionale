@@ -346,9 +346,13 @@ type SyncIngressoAfterSavePlan = {
 };
 
 /** Interno a write-contract — non esportato; usare executeInterventoWrite. */
-async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<LavorazioneUpdate> {
+async function syncIngressoAfterSave(
+  plan: SyncIngressoAfterSavePlan,
+): Promise<{ lavPatch: LavorazioneUpdate; attrezzaturaId: string | null }> {
   const { row, campi, mezziCatalog, deps } = plan;
-  if (!canUpsertMezzoFromSchedaIngresso(campi, mezziCatalog, row.mezzo_id)) return {};
+  if (!canUpsertMezzoFromSchedaIngresso(campi, mezziCatalog, row.mezzo_id)) {
+    return { lavPatch: {}, attrezzaturaId: row.attrezzatura_id ?? campi.attrezzaturaId ?? null };
+  }
 
   const resolved = resolveMezzoFromScheda({
     scheda: campi,
@@ -385,7 +389,7 @@ async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<L
   const lavPatch = buildEditLavorazionePatchFromUpsert(row, campi, upsert);
 
   auditInterventoContext(ctx, "write-scheda", { contextId: row.id, extra: { lavPatchKeys: Object.keys(lavPatch) } });
-  return lavPatch;
+  return { lavPatch, attrezzaturaId: upsert.attrezzaturaId ?? null };
 }
 
 export { isInterventoWriteV2Enabled, isInterventoWriteV2ShadowEnabled };
@@ -446,9 +450,10 @@ export async function executeInterventoWrite(
     });
     let resolvedMezzoId = plan.meta.row.mezzo_id ?? "";
     let lavorazionePatch: LavorazioneUpdate = {};
+    let resolvedAttrezzaturaId: string | null = plan.meta.row.attrezzatura_id ?? null;
     recordTraceStep(trace, "v1_persist", "started");
     try {
-      lavorazionePatch = await syncIngressoAfterSave({
+      const syncRes = await syncIngressoAfterSave({
         row: plan.meta.row,
         campi: plan.fields,
         mezziCatalog: plan.mezziCatalog,
@@ -462,11 +467,14 @@ export async function executeInterventoWrite(
           },
         },
       });
+      lavorazionePatch = syncRes.lavPatch;
+      resolvedAttrezzaturaId = syncRes.attrezzaturaId ?? resolvedAttrezzaturaId;
       recordTraceStep(trace, "v1_persist", "completed");
       v1Result = {
         ok: true,
         lavorazioneId: plan.meta.row.id,
         mezzoId: resolvedMezzoId,
+        attrezzaturaId: resolvedAttrezzaturaId,
         ...(Object.keys(lavorazionePatch).length > 0 ? { lavorazionePatch } : {}),
       };
     } catch (err) {

@@ -37,7 +37,37 @@ export function getControlTowerPreviousDayRange(date = new Date()): DateRange {
   };
 }
 
-/** Finestra brief del periodo precedente (giorno/settimana/mese). */
+/** Settimana operativa chiusa immediatamente precedente (lun–dom). */
+export function getControlTowerPreviousWeekRange(date = new Date()): DateRange {
+  return resolvePresetRange(date, "last_week");
+}
+
+/** Mese di calendario chiuso immediatamente precedente (1°–ultimo giorno). */
+export function getControlTowerPreviousMonthRange(date = new Date()): DateRange {
+  return resolvePresetRange(date, "last_month");
+}
+
+/** Settimana chiusa immediatamente prima di `weekRange`. */
+export function getControlTowerWeekBeforeRange(weekRange: DateRange): DateRange {
+  const weekStart = startOfLocalWeekMonday(weekRange.start);
+  const prevWeekStart = addLocalDays(weekStart, -7);
+  return {
+    start: startOfLocalDay(prevWeekStart),
+    end: endOfLocalDay(addLocalDays(prevWeekStart, 6)),
+  };
+}
+
+/** Mese chiuso immediatamente prima di `monthRange`. */
+export function getControlTowerMonthBeforeRange(monthRange: DateRange): DateRange {
+  const anchorMonth = monthRange.start.getMonth();
+  const anchorYear = monthRange.start.getFullYear();
+  return {
+    start: startOfLocalDay(new Date(anchorYear, anchorMonth - 1, 1)),
+    end: endOfLocalDay(new Date(anchorYear, anchorMonth, 0)),
+  };
+}
+
+/** Finestra brief del periodo precedente (giorno/settimana/mese chiusi). */
 export function getControlTowerBriefPreviousRange(
   mode: "day" | "week" | "month",
   date = new Date(),
@@ -46,21 +76,21 @@ export function getControlTowerBriefPreviousRange(
     case "day":
       return getControlTowerPreviousDayRange(date);
     case "week":
-      return getControlTowerPreviousWeekSameWindowRange(date);
+      return getControlTowerPreviousWeekRange(date);
     case "month":
-      return getControlTowerPreviousMonthSameWindowRange(date);
+      return getControlTowerPreviousMonthRange(date);
   }
 }
 
-/** Confronto quando si visualizza già il periodo precedente (shift ulteriore). */
+/** Confronto quando si visualizza già il periodo precedente (periodo chiuso ancora più indietro). */
 export function getControlTowerBriefPreviousCompareRange(
   mode: "week" | "month",
   date = new Date(),
 ): DateRange {
   const previous = getControlTowerBriefPreviousRange(mode, date);
   return mode === "week"
-    ? getControlTowerPreviousWeekSameWindowRange(previous.end)
-    : getControlTowerPreviousMonthSameWindowRange(previous.end);
+    ? getControlTowerWeekBeforeRange(previous)
+    : getControlTowerMonthBeforeRange(previous);
 }
 
 /** Settimana operativa corrente: lunedì 00:00 → oggi 23:59. */
@@ -70,30 +100,11 @@ export function getControlTowerCurrentWeekRange(date = new Date()): DateRange {
   return { start, end };
 }
 
-/** Stessa finestra sulla settimana precedente (shift -7 giorni su start e end). */
-export function getControlTowerPreviousWeekSameWindowRange(date = new Date()): DateRange {
-  const cur = getControlTowerCurrentWeekRange(date);
-  return {
-    start: startOfLocalDay(addLocalDays(cur.start, -7)),
-    end: endOfLocalDay(addLocalDays(cur.end, -7)),
-  };
-}
-
 /** Mese corrente: 1° del mese 00:00 → oggi 23:59. */
 export function getControlTowerCurrentMonthRange(date = new Date()): DateRange {
   const start = startOfLocalDay(new Date(date.getFullYear(), date.getMonth(), 1));
   const end = endOfLocalDay(date);
   return { start, end };
-}
-
-/** Stessa finestra nel mese precedente (stesso numero di giorni dal 1°). */
-export function getControlTowerPreviousMonthSameWindowRange(date = new Date()): DateRange {
-  const dayOffset = Math.max(0, date.getDate() - 1);
-  const prevMonthStart = startOfLocalDay(new Date(date.getFullYear(), date.getMonth() - 1, 1));
-  return {
-    start: prevMonthStart,
-    end: endOfLocalDay(addLocalDays(prevMonthStart, dayOffset)),
-  };
 }
 
 /** Ultimi 30 giorni inclusivi (stesso preset report `last_30_days`). */
@@ -168,13 +179,13 @@ export function getControlTowerHealthScoreHistoryFetchRange(
   return { start: oldestPrev.start, end: newestEnd };
 }
 
-/** Finestra dati da precaricare per brief (giorno/settimana/mese + confronti a cascata). */
+/** Finestra dati da precaricare per brief (periodi chiusi + confronti a cascata). */
 export function getControlTowerBriefDataFetchRange(date = new Date()): DateRange {
   const curMonth = getControlTowerCurrentMonthRange(date);
-  const prevMonth = getControlTowerPreviousMonthSameWindowRange(date);
-  const prevWeek = getControlTowerPreviousWeekSameWindowRange(date);
-  const prevMonthCompare = getControlTowerPreviousMonthSameWindowRange(prevMonth.end);
-  const prevWeekCompare = getControlTowerPreviousWeekSameWindowRange(prevWeek.end);
+  const prevMonth = getControlTowerPreviousMonthRange(date);
+  const prevWeek = getControlTowerPreviousWeekRange(date);
+  const prevMonthCompare = getControlTowerMonthBeforeRange(prevMonth);
+  const prevWeekCompare = getControlTowerWeekBeforeRange(prevWeek);
   const candidates = [prevMonth.start, prevWeek.start, prevMonthCompare.start, prevWeekCompare.start];
   const start = candidates.reduce((earliest, candidate) =>
     candidate.getTime() < earliest.getTime() ? candidate : earliest,
@@ -186,9 +197,11 @@ export const CONTROL_TOWER_TIME = {
   getCurrentDay: getControlTowerCurrentDayRange,
   getPreviousDay: getControlTowerPreviousDayRange,
   getCurrentWeek: getControlTowerCurrentWeekRange,
-  getPreviousWeekSameWindow: getControlTowerPreviousWeekSameWindowRange,
+  getPreviousWeek: getControlTowerPreviousWeekRange,
   getCurrentMonth: getControlTowerCurrentMonthRange,
-  getPreviousMonthSameWindow: getControlTowerPreviousMonthSameWindowRange,
+  getPreviousMonth: getControlTowerPreviousMonthRange,
+  getWeekBefore: getControlTowerWeekBeforeRange,
+  getMonthBefore: getControlTowerMonthBeforeRange,
   getBriefPreviousRange: getControlTowerBriefPreviousRange,
   getBriefPreviousCompareRange: getControlTowerBriefPreviousCompareRange,
   getLast30Days: getControlTowerLast30DaysRange,

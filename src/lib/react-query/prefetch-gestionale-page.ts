@@ -14,7 +14,6 @@ import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination
 import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
 import { getMezziListLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
-import { buildDashboardHealthScoreApiPayloadServer } from "@/lib/health-score/dashboard-health-score-api-payload.server";
 import { fetchDashboardDataDTOServer } from "@/lib/bff/dashboard-data-fetch-server";
 import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
@@ -180,8 +179,17 @@ export async function prefetchDeferredPage(
         limit: GESTIONALE_LOG_FEED_LIMIT,
         days: DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days,
       };
+      const deferredTiming = process.env.DASHBOARD_DEFERRED_TIMING === "1";
+      const t0 = deferredTiming ? Date.now() : 0;
       const dto = await fetchDashboardDataDTOServer();
-      const healthPayload = await buildDashboardHealthScoreApiPayloadServer();
+      const tBff = deferredTiming ? Date.now() : 0;
+      if (deferredTiming) {
+        console.info("[dashboard-deferred]", {
+          bffMs: tBff - t0,
+          healthScoreMs: 0,
+          totalMs: tBff - t0,
+        });
+      }
       await Promise.all([
         seedPrefetchedData(
           qc,
@@ -236,13 +244,6 @@ export async function prefetchDeferredPage(
           dto.activityFeed,
           LA_LIST_STALE_MS,
           GESTIONALE_VIEW_GC_MS,
-        ),
-        seedPrefetchedData(
-          qc,
-          ["dashboard", "health-score", "v2"] as const,
-          healthPayload,
-          GESTIONALE_REPORT_STALE_MS,
-          GESTIONALE_REPORT_GC_MS,
         ),
       ]);
       return;

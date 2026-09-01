@@ -58,6 +58,7 @@ export function magazzinoRowToRicambioUI(
     scortaMinima: fromMeta.scortaMinima,
     dataUltimaModifica: row.updated_at ?? row.created_at,
     autoreUltimaModifica: autoreSalvato || autore,
+    autoreUltimaModificaUserId: meta.autoreUltimaModificaUserId,
     prezzoFornitoreOriginale: listino,
     scontoFornitoreOriginale: fromMeta.scontoFornitoreOriginale,
     markupPercentuale: markup,

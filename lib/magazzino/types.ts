@@ -32,6 +32,8 @@ export interface RicambioMagazzino {
   scortaMinima: number;
   dataUltimaModifica: string;
   autoreUltimaModifica: string;
+  /** UUID autore ultima modifica (meta, fallback display). */
+  autoreUltimaModificaUserId?: string;
   prezzoFornitoreOriginale: number;
   scontoFornitoreOriginale: number;
   /** Markup % sul listino OE: vendita = listino + listino × markup/100 */

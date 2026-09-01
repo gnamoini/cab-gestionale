@@ -528,6 +528,14 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   animation: cab-drawer-out var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) forwards;
 }
 
+.cab-log-drawer-panel--left[data-state="open"] {
+  animation: cab-nav-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
+}
+
+.cab-log-drawer-panel--left[data-state="closing"] {
+  animation: cab-nav-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+}
+
 .cab-log-drawer-backdrop[data-state="open"] {
   animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
 }

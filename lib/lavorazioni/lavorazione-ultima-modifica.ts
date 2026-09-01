@@ -1,4 +1,5 @@
 import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
+import { resolveAuthorLabel } from "@/lib/auth/resolve-author-label";
 import type { LogModificaAutoreSource } from "@/lib/gestionale-log/log-modifiche-view-model";
 import type {
   LavorazioneSchedeBundle,
@@ -66,19 +67,25 @@ export type ResolveLavorazioneUltimaModificaOptions = {
   omitUnresolvedAutore?: boolean;
 };
 
-/** Resolver nomi profilo da join lista + sessione corrente. */
+/** Resolver nomi profilo da join lista; viewer solo per etichetta «Tu». */
 export function buildLavorazioneRowProfileResolver(
   row: LavorazioneRowAutoreFields,
-  currentUserId?: string | null,
-  currentUserDisplayName?: string | null,
+  viewerId?: string | null,
+  viewerDisplayName?: string | null,
 ): (userId: string) => string | undefined {
   return (userId: string) => {
     const id = userId.trim();
     if (!id) return undefined;
     if (row.updated_by === id && row.updated_by_nome?.trim()) return row.updated_by_nome.trim();
     if (row.created_by === id && row.created_by_nome?.trim()) return row.created_by_nome.trim();
-    if (currentUserId && id === currentUserId && currentUserDisplayName?.trim()) {
-      return currentUserDisplayName.trim();
+    if (viewerId && id === viewerId) {
+      const tu = resolveAuthorLabel({
+        userId: id,
+        viewerId,
+        viewerDisplayName,
+        unknownUserLabel: "",
+      });
+      return tu && tu !== "Utente" ? tu : viewerDisplayName?.trim() || "Tu";
     }
     return undefined;
   };
@@ -101,6 +108,8 @@ type SchedaDoc = SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
 
 /** Storico: in creazione `updatedBy` sulla scheda ingresso era l'addetto, non l'operatore. */
 function schedaDocAutore(doc: SchedaDoc): string {
+  const userId = doc.updatedByUserId?.trim();
+  if (userId) return userId;
   const autore = doc.updatedBy?.trim() ?? "";
   if (!autore) return "";
   if (doc.tipo === "ingresso") {

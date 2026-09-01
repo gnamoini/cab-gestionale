@@ -42,17 +42,33 @@ function valuesEqual(
   return String(a).trim() === String(b).trim();
 }
 
-/** Null-safe merge: existing wins on conflict. */
+export type MergeAttrezzaturaPatchOptions = {
+  /** Campi da sovrascrivere anche se già valorizzati (edit anagrafica confermato). */
+  overwriteFields?: ReadonlySet<AttrezzaturaMergeField>;
+};
+
+/** Null-safe merge: existing wins on conflict, salvo `overwriteFields`. */
 export function mergeAttrezzaturaPatch(
   existing: AttrezzaturaRow,
   incoming: AttrezzaturaIncomingPatch,
+  options?: MergeAttrezzaturaPatchOptions,
 ): { patch: AttrezzaturaIncomingPatch; conflicts: AttrezzaturaMergeConflict[] } {
   const patch: AttrezzaturaIncomingPatch = {};
   const conflicts: AttrezzaturaMergeConflict[] = [];
+  const overwrite = options?.overwriteFields;
 
   for (const field of ATTREZZATURA_MERGE_FIELDS) {
     const ex = fieldValue(existing, field);
     const inc = fieldValue(incoming, field);
+
+    if (overwrite?.has(field)) {
+      if (inc === undefined) continue;
+      if (isEmptyValue(inc) && field !== "matricola" && field !== "tipo_attrezzatura") continue;
+      if (!valuesEqual(ex, inc)) {
+        patch[field] = inc as never;
+      }
+      continue;
+    }
 
     if (isEmptyValue(inc)) continue;
     if (isEmptyValue(ex)) {

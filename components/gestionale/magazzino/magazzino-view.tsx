@@ -1055,6 +1055,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       ...p,
       dataUltimaModifica: new Date().toISOString(),
       autoreUltimaModifica: authorName,
+      autoreUltimaModificaUserId: user?.id ?? undefined,
     };
   }
 

@@ -18,6 +18,10 @@ import {
   type AssociationChange,
 } from "@/lib/domain/mezzo/mezzo-association";
 import { persistMezzoFormUpdate } from "@/lib/mezzi/persist-mezzo-form";
+import {
+  clearExplicitSaveAttempts,
+  recordExplicitSaveAttempt,
+} from "@/lib/sync/save-operation-loop-guard";
 import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
@@ -90,11 +94,16 @@ export function MezziEditModal({
         });
       }
 
-      await persistMezzoFormUpdate({
-        mezzoId: id,
-        form: currentForm,
-        updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
-      });
+      try {
+        recordExplicitSaveAttempt("mezzo_catalog", id);
+        await persistMezzoFormUpdate({
+          mezzoId: id,
+          form: currentForm,
+          updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
+        });
+      } finally {
+        clearExplicitSaveAttempts("mezzo_catalog", id);
+      }
 
       if (change.hasChanges && associationConfirmed) {
         void queryClient.invalidateQueries({ queryKey: mezzoDomainQueryKeys.anagraficaHistory(id) });

@@ -20,6 +20,11 @@ const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.match(lavView, /updateLavOrchestrated = useLavorazioneUpdateMutation\(\{ deferInvalidation: true \}\)/);
 assert.match(lavView, /updateLavOrchestrated\.mutateAsync/);
 assert.match(lavView, /acquireLavorazioneEditFlight/);
+assert.match(
+  lavView.match(/syncIngressoBackendForEdit[\s\S]*?try \{/)?.[0] ?? "",
+  /throw new Error\("SAVE_IN_PROGRESS"\)/,
+  "syncIngressoBackendForEdit must throw SAVE_IN_PROGRESS when flight blocked",
+);
 assert.doesNotMatch(
   lavView.match(/syncIngressoBackendForEdit[\s\S]*?\[attiveRows/)?.[0] ?? "",
   /updateLav\.mutateAsync/,

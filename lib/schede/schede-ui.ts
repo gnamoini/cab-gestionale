@@ -39,9 +39,15 @@ export function newRigaId(): string {
   return `riga-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function newSchedaMeta(tipo: SchedaTipo, user: string, sorgente: SchedaMeta["sorgente"] = "generata"): SchedaMeta {
+export function newSchedaMeta(
+  tipo: SchedaTipo,
+  user: string,
+  sorgente: SchedaMeta["sorgente"] = "generata",
+  userId?: string | null,
+): SchedaMeta {
   const now = new Date().toISOString();
   const u = user.trim() || "Operatore";
+  const uid = userId?.trim() || null;
   return {
     tipo,
     sorgente,
@@ -50,5 +56,7 @@ export function newSchedaMeta(tipo: SchedaTipo, user: string, sorgente: SchedaMe
     updatedAt: now,
     createdBy: u,
     updatedBy: u,
+    createdByUserId: uid,
+    updatedByUserId: uid,
   };
 }

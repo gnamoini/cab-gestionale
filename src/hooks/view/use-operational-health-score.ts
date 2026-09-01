@@ -35,6 +35,8 @@ export function useOperationalHealthScore() {
   return {
     score: q.data?.score ?? null,
     isLoading: q.isPending,
+    isError: q.isError,
+    error: q.error instanceof Error ? q.error.message : null,
     insufficientData: !q.isPending && q.isSuccess && q.data?.score == null,
     status: q.data?.status,
   };

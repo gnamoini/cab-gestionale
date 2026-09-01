@@ -28,6 +28,13 @@ assert.match(pipelineSsot, /finally/);
 assert.match(pipelineSsot, /lock\.release\(\)/);
 assert.match(pipelineSsot, /onPendingChange\?\.\(false\)/);
 
+assert.match(pipelineSsot, /recordExplicitSaveAttempt/);
+assert.match(pipelineSsot, /clearExplicitSaveAttempts/);
+
+const loopGuard = read("lib/sync/save-operation-loop-guard.ts");
+assert.match(loopGuard, /MAX_EXPLICIT_ATTEMPTS = 5/);
+assert.doesNotMatch(loopGuard, /invalidateQueries/);
+
 const hook = read("src/hooks/use-scheda-ingresso-save-pipeline.ts");
 assert.match(hook, /runIngressoSavePipeline/);
 

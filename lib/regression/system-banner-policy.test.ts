@@ -27,6 +27,7 @@ for (const rel of bannerFiles) {
 
 const designSystem = fs.readFileSync(path.join(ROOT, "lib/ui/design-system.ts"), "utf8");
 assert.match(designSystem, /dsSystemBannerShellTop/);
+assert.match(designSystem, /cab-system-banner-full-bleed/);
 assert.doesNotMatch(designSystem, /dsSystemBannerShellBottom/, "all system banners must be top sticky");
 assert.match(designSystem, /bg-\[#09090b\]/, "system banner must use fixed dark shell");
 

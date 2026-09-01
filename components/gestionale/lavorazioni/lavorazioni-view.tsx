@@ -1952,18 +1952,18 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         correlationId: string;
         lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
       },
-    ) => {
+    ): Promise<import("@/lib/schede/ingresso-backend-sync").SyncIngressoBackendResult> => {
       const row =
         attiveRows.find((r) => r.id === staleRow.id) ??
         chiuseRows.find((r) => r.id === staleRow.id) ??
         staleRow;
 
       if (!acquireLavorazioneEditFlight(row.id, options.runId, options.correlationId)) {
-        return;
+        throw new Error("SAVE_IN_PROGRESS");
       }
 
       try {
-        await syncIngressoBackendFromFrozenCatalog(
+        return await syncIngressoBackendFromFrozenCatalog(
           {
             row,
             campi,
@@ -2893,8 +2893,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           }
           onPersist={onPersistSchedeBundle}
           onIngressoCommitted={async (campi, options) => {
-            if (!schedeRow) return;
-            await syncIngressoBackendForEdit(schedeRow.row, campi, options);
+            if (!schedeRow) return { attrezzaturaId: null };
+            return syncIngressoBackendForEdit(schedeRow.row, campi, options);
           }}
           onInvalidateAfterIngressoSave={async (lavorazioneId, mezzoId) => {
             await invalidateAfterIngressoEditSave(qc, lavorazioneId, mezzoId);

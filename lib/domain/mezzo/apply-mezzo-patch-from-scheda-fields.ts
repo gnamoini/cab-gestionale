@@ -3,6 +3,7 @@ import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { buildMeteringPatchFromScheda } from "@/lib/domain/mezzo/evaluate-mezzo-metering-update";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
+import type { AttrezzaturaMergeField } from "@/lib/domain/mezzo-attrezzatura/merge-attrezzatura-patch";
 import type { MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MezzoUpdate } from "@/src/services/mezzi.service";
@@ -76,6 +77,24 @@ export function buildMezzoUpdatePatchFromSchedaPlan(
   return patch;
 }
 
+const SCHEDA_KEY_TO_ATTREZZATURA_FIELD = {
+  marcaAttrezzatura: "marca",
+  modelloAttrezzatura: "modello",
+  tipoAttrezzatura: "tipo_attrezzatura",
+  matricola: "matricola",
+} as const satisfies Partial<Record<MezzoPermanentFieldKey, AttrezzaturaMergeField>>;
+
+export function attrezzaturaOverwriteFieldsFromPlan(
+  fieldsToUpdate: readonly MezzoPermanentFieldKey[],
+): Set<AttrezzaturaMergeField> {
+  const out = new Set<AttrezzaturaMergeField>();
+  for (const key of fieldsToUpdate) {
+    const mapped = SCHEDA_KEY_TO_ATTREZZATURA_FIELD[key as keyof typeof SCHEDA_KEY_TO_ATTREZZATURA_FIELD];
+    if (mapped) out.add(mapped);
+  }
+  return out;
+}
+
 export function schedaFieldsToAttrezzaturaPatch(
   fields: SchedaIngressoFields,
   keys: MezzoPermanentFieldKey[],
@@ -86,11 +105,11 @@ export function schedaFieldsToAttrezzaturaPatch(
   matricola?: string | null;
 } {
   const patch: ReturnType<typeof schedaFieldsToAttrezzaturaPatch> = {};
-  if (keys.includes("marcaAttrezzatura") && fields.marcaAttrezzatura.trim()) {
-    patch.marca = fields.marcaAttrezzatura.trim();
+  if (keys.includes("marcaAttrezzatura")) {
+    patch.marca = fields.marcaAttrezzatura.trim() || "—";
   }
-  if (keys.includes("modelloAttrezzatura") && fields.modelloAttrezzatura.trim()) {
-    patch.modello = fields.modelloAttrezzatura.trim();
+  if (keys.includes("modelloAttrezzatura")) {
+    patch.modello = fields.modelloAttrezzatura.trim() || "—";
   }
   if (keys.includes("tipoAttrezzatura")) {
     patch.tipo_attrezzatura = trimOrNull(fields.tipoAttrezzatura);
