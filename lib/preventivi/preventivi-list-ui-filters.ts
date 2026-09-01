@@ -27,6 +27,15 @@ export function preventivoRowSearchScore(row: PreventivoRecord, query: string): 
   return scoreSearchDocument(query, preventivoRowSearchHaystack(row)).score;
 }
 
+/** Query effettiva da voce suggerimento `numero · tipo · cliente` — filtra per numero. */
+export function preventivoSearchQueryFromSuggestion(label: string): string {
+  const t = label.trim();
+  const sep = " · ";
+  const idx = t.indexOf(sep);
+  if (idx > 0) return t.slice(0, idx).trim();
+  return t;
+}
+
 export function preventivoRowMatchesPageFilters(
   row: PreventivoRecord,
   filters: PreventiviPageFilters,

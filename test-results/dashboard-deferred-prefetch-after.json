@@ -1,0 +1,20 @@
+{
+  "measuredAt": "2026-09-01T16:43:38.443Z",
+  "environment": {
+    "timestamp": "2026-09-01T16:43:39.418Z",
+    "gitCommit": "659d0f38",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "chromium",
+    "nextMode": "dev",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "1440x900"
+  },
+  "baseUrl": "http://localhost:3000",
+  "healthScoreApiMs": 10200,
+  "healthScoreApiStatus": 200,
+  "healthScorePayloadStatus": "READY",
+  "dashboardInteractiveMs": 3777,
+  "note": "SSR bffMs/healthScoreMs: avviare dev con DASHBOARD_DEFERRED_TIMING=1 e caricare /dashboard — log server [dashboard-deferred]."
+}

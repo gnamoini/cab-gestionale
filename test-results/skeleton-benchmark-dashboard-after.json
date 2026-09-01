@@ -1,0 +1,40 @@
+{
+  "environment": {
+    "timestamp": "2026-09-01T16:44:56.835Z",
+    "gitCommit": "659d0f38",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "chromium",
+    "nextMode": "dev",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "1440x900"
+  },
+  "baseUrl": "http://localhost:3000",
+  "measuredAt": "2026-09-01T16:44:56.835Z",
+  "throttled": false,
+  "hard": [
+    {
+      "route": "/dashboard",
+      "navMode": "hard",
+      "loadingDomNodes": 3,
+      "pulseCount": 0,
+      "skeletonMountCount": 1,
+      "ttuiMs": 2973,
+      "blankDurationMs": 2950,
+      "hydrationMs": 0,
+      "loadingVisibleMs": 2973,
+      "loadingGoneMs": null,
+      "clientChunkWaitMs": null,
+      "transitionLoaderMs": null,
+      "blankAfterLoadingMs": 0,
+      "interactiveMs": 2973,
+      "skeletonToInteractiveMs": 0,
+      "transitionLayoutShiftPx": null,
+      "cls": 0
+    }
+  ],
+  "soft": [],
+  "failures": [],
+  "authMethod": "service-role-magiclink"
+}

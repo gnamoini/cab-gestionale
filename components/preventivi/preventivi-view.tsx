@@ -131,6 +131,7 @@ import {
   buildPreventiviSearchSuggestions,
   preventivoRowMatchesPageFilters,
   preventivoRowSearchScore,
+  preventivoSearchQueryFromSuggestion,
   type PreventiviPageFilters,
 } from "@/lib/preventivi/preventivi-list-ui-filters";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -900,7 +901,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           <td
             className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-semibold tabular-nums ${prevTablePrimaryTextClass}`}
           >
-            {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} Ôé¼
+            {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
           </td>
           <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <PreventiviProfittoCell
@@ -1247,6 +1248,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                 onDebouncedInputChange={onDebouncedInputChange}
                 clearSignal={searchClearSignal}
                 suggestionPool={searchSuggestionPool}
+                mapSuggestionToQuery={preventivoSearchQueryFromSuggestion}
+                mapInputToQueryOnEnter={preventivoSearchQueryFromSuggestion}
               />
             }
             filtersExpanded={filtriEspansi}
@@ -1408,7 +1411,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                        {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} Ôé¼
+                        {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                       </p>
                       <div className="mt-0.5 flex justify-end">
                         <PreventiviProfittoCell
