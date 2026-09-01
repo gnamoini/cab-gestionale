@@ -1,12 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { resolveRole } from "@/lib/auth/rbac";
 import { useAuth } from "@/context/auth-context";
-import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+import { useInboxEligible } from "@/src/hooks/gestionale/use-inbox-eligible";
 
 const NotificationCenterBell = dynamic(
   () =>
@@ -16,16 +14,13 @@ const NotificationCenterBell = dynamic(
 
 type NotificationCenterMountProps = {
   sidebarCollapsed?: boolean;
-  /** Dentro `SidebarSessionPanel` (stile riga unificata). */
   embedded?: boolean;
-  /** Sopra il drawer nav mobile (z-[110], come profilo). */
   layerAboveNav?: boolean;
   onExpandIntent?: () => void;
-  /** Chiude overlay parent (sidebar); non usare sul drawer nav mobile. */
   onOpenInbox?: () => void;
 };
 
-/** Monta campanella inbox v2 per staff elegibile o portale clienti. */
+/** Monta campanella inbox v2 quando RPC notification_inbox_eligible() è true. */
 export function NotificationCenterMount({
   sidebarCollapsed,
   embedded = false,
@@ -34,21 +29,16 @@ export function NotificationCenterMount({
   onOpenInbox,
 }: NotificationCenterMountProps) {
   const { user } = useAuth();
-  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const { readsDb, isLoading: flagLoading } = useNotificationsV2Mode();
+  const { eligible, isLoading: eligibilityLoading } = useInboxEligible();
 
   if (!user?.id) return null;
 
-  const eligibleUser = snapshot?.role ? { ruolo: snapshot.role } : user;
-  const rbacCtx = snapshot?.rbacContext;
-  const resolving = permsLoading || flagLoading;
+  const resolving = flagLoading || eligibilityLoading;
 
   if (!resolving) {
-    if (!readsDb) return null;
-    const staffEligible = isStaffInboxEligible(eligibleUser, rbacCtx);
-    const clientEligible = isClientInboxEligible(eligibleUser, rbacCtx);
-    if (!staffEligible && !clientEligible) return null;
-  } else if (resolveRole(eligibleUser) === "guest") {
+    if (!readsDb || !eligible) return null;
+  } else if (resolveRole(user) === "guest") {
     return null;
   }
 

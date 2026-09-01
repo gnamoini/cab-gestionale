@@ -1642,6 +1642,15 @@
       "requiresAuthUid": true,
       "requiresRbac": true
     },
+    "notification_inbox_eligible()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true
+    },
     "notification_staff_inbox_eligible()": {
       "classification": "AUTHENTICATED_CLIENT_CALLABLE",
       "grants": [
@@ -2486,17 +2495,16 @@
       ]
     },
     "resolve_auth_email_for_login(p_identifier text)": {
-      "classification": "PUBLIC_SAFE",
+      "classification": "SERVER_ONLY",
       "grants": [
-        "anon",
         "service_role"
       ],
-      "anonAllow": true,
+      "anonAllow": false,
       "requiresAuthUid": false,
       "requiresRbac": false,
-      "notes": "Login email resolve only; body validates input",
+      "notes": "Solo Server Action login; revoca anon anti-enumerazione (20260707140000, 20261230130000)",
       "findingRefs": [
-        "SEC-PUBLIC-SAFE"
+        "SEC-LOGIN-RESOLVE"
       ]
     },
     "security_set_user_role(p_user_id uuid, p_role_key text)": {

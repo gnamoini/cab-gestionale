@@ -2,8 +2,12 @@ import "server-only";
 
 export type NotificationTraceStage =
   | "outbox_enqueued"
+  | "outbox_claimed"
+  | "outbox_drained"
   | "outbox_processed"
+  | "worker_invoke_skipped"
   | "worker_invoked"
+  | "reconciliation_fetch"
   | "dispatch"
   | "persist"
   | "delivery_queued"

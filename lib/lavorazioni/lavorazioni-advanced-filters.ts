@@ -1,5 +1,6 @@
 import { clientPortalIngressoIso } from "@/lib/lavorazioni/client-portal-row-fields";
 import { lavorazioneAddettoId } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import { composeInterventoContextFromListRow, resolveInterventoDisplay } from "@/lib/domain/intervento-context";
 import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -88,38 +89,19 @@ function rowEntityFields(
   logs?: readonly LogModificaRow[],
   addettiRecords?: readonly AddettoRecord[],
 ): RowEntityFields {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  const m = row.mezzo;
+  const ctx = composeInterventoContextFromListRow(row, schedeStore);
+  const display = resolveInterventoDisplay(ctx);
   const addetto = lavorazioneAddettoId(row, schedeStore ?? {}, logs, addettiRecords);
 
-  let marca = "";
-  let modello = "";
-  let marcaTelaio = "";
-  let modelloTelaio = "";
-  if (ing?.marcaAttrezzatura?.trim()) {
-    marca = ing.marcaAttrezzatura.trim();
-    modello = ing.modelloAttrezzatura?.trim() || "";
-  } else if (m) {
-    marca = m.marca?.trim() || "";
-    modello = m.modello?.trim() || "";
-  }
-  if (ing?.marcaTelaio?.trim()) {
-    marcaTelaio = ing.marcaTelaio.trim();
-    modelloTelaio = ing.modelloTelaio?.trim() || "";
-  } else if (m) {
-    marcaTelaio = m.marca_telaio?.trim() || "";
-    modelloTelaio = m.modello_telaio?.trim() || "";
-  }
-
   return {
-    cliente: dash(ing?.cliente?.trim() || m?.cliente),
-    cantiere: dash(ing?.cantiere?.trim()),
-    utilizzatore: dash(ing?.utilizzatore?.trim() || m?.utilizzatore),
+    cliente: dash(display.cliente.value),
+    cantiere: dash(display.cantiere.value),
+    utilizzatore: dash(display.utilizzatore.value),
     addetto: dash(addetto),
-    marca,
-    modello,
-    marcaTelaio,
-    modelloTelaio,
+    marca: dash(display.marcaAttrezzatura.value),
+    modello: dash(display.modelloAttrezzatura.value),
+    marcaTelaio: dash(display.marcaTelaio.value),
+    modelloTelaio: dash(display.modelloTelaio.value),
   };
 }
 

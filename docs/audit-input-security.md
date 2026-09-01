@@ -72,7 +72,7 @@ Strumenti: grep statico, lettura servizi/modali/migration, agent explore read-on
 |-------|------|--------------------|--------------------|-----|
 | Identificatore (email/username) | `app/login/login-form.tsx`, `src/lib/auth/username.ts` | Format + sanitize username; email regex base | `resolve-login-email.ts`: max 254 char; rate limit IP 30/5min | Server non ri-valida formato username/email |
 | Password | `login-form.tsx` | Solo non-vuota | Supabase Auth | Nessun max length; nessun rate limit app-level su tentativi |
-| Remember me | `login-form.tsx` | UI checkbox | Non implementato | Campo fuorviante |
+| Remember me | `login-form.tsx` | UI checkbox | Implementato (cookie SSOT) | `cab-auth-remember` controlla maxAge auth cookie; default session-only |
 
 ### 1.2 Recupero password
 
@@ -480,16 +480,15 @@ Strumenti: grep statico, lettura servizi/modali/migration, agent explore read-on
 | **Esempio teorico** | Password 1MB string |
 | **Mitigazione** | maxLength 128 client + server |
 
-### INP-021 — Remember me non funzionale
+### INP-021 — Remember me (Resta collegato)
 
 | Attributo | Valore |
 |-----------|--------|
-| **File** | `login-form.tsx`, `auth-context.tsx` |
-| **Campo** | remember checkbox |
-| **Livello** | **Basso** |
-| **Impatto** | UX/security expectation mismatch |
-| **Probabilità** | N/A |
-| **Mitigazione** | Implementare persist session o rimuovere checkbox |
+| **File** | `login-form.tsx`, `auth-context.tsx`, `lib/auth/auth-remember-preference.ts` |
+| **Campo** | remember checkbox ("Resta collegato") |
+| **Livello** | **Risolto** |
+| **Comportamento** | Cookie `cab-auth-remember` = SSOT (`1` persistente, `0` session-only); default opt-in `false` |
+| **Mitigazione** | `applyRememberToCookiesToSet` su browser/middleware/server-user client; test `auth-remember-preference.test.ts` |
 
 ### INP-022 — Email regex debole
 

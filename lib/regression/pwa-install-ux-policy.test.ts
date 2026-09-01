@@ -207,7 +207,8 @@ assert.match(bridge, /handlePwaAppInstalled/);
 assert.match(bridge, /clearStalePwaInstallDetectionState/);
 
 const providers = read("components/app-providers-core.tsx");
-assert.match(providers, /DeferredPwaBridges/);
+const gestionaleLayout = read("app/(gestionale)/layout.tsx");
+assert.match(gestionaleLayout, /DeferredPwaBridges/);
 assert.doesNotMatch(providers, /useAuth/);
 const pwaPack = read("src/components/pwa-core-bridge-pack.tsx");
 assert.match(pwaPack, /PwaInstallBanner/);

@@ -6,8 +6,6 @@ import {
   resolveInterventoDisplay,
   resolveInterventoIdent,
 } from "@/lib/domain/intervento-context";
-import { schedaIngressoFieldsFromDisplay } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
-import { mezzoGestitoFromRow } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   resolveAddettoDisplayLabel,
@@ -156,28 +154,13 @@ function lavorazioneTelaioFromParts(_tipo?: string | null, marca?: string | null
 
 /** Sottotitolo colonna Attrezzatura in lista: marca e modello telaio (senza tipo). */
 export function lavorazioneTelaioLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): string {
-  const ingresso = schedeStore[row.id]?.ingresso?.campi;
-  if (ingresso) {
-    const fromIngresso = lavorazioneTelaioFromParts(
-      ingresso.tipoTelaio,
-      ingresso.marcaTelaio,
-      ingresso.modelloTelaio,
-    );
-    if (fromIngresso !== "—") return fromIngresso;
-  }
-
-  const ctx = composeInterventoContextFromListRow(row, schedeStore);
-  const display = resolveInterventoDisplay(ctx);
-  const fields = schedaIngressoFieldsFromDisplay(display, ctx.schedaIngresso.campi ?? undefined);
-  const fromFields = lavorazioneTelaioFromParts(fields.tipoTelaio, fields.marcaTelaio, fields.modelloTelaio);
-  if (fromFields !== "—") return fromFields;
-
-  if (row.mezzo) {
-    const mezzo = mezzoGestitoFromRow(row.mezzo, { attrezzaturaId: row.attrezzatura_id });
-    const fromMezzo = lavorazioneTelaioFromParts(mezzo.tipoTelaio, mezzo.marcaTelaio, mezzo.modelloTelaio);
-    if (fromMezzo !== "—") return fromMezzo;
-  }
-
+  const display = listRowDisplay(row, schedeStore);
+  const fromDisplay = lavorazioneTelaioFromParts(
+    display.tipoTelaio.value,
+    display.marcaTelaio.value,
+    display.modelloTelaio.value,
+  );
+  if (fromDisplay !== "—") return fromDisplay;
   return "—";
 }
 

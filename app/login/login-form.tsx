@@ -24,7 +24,10 @@ import {
   dsSearchFieldInput,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
-import { readAuthRememberPreference } from "@/lib/auth/auth-remember-preference";
+import {
+  readAuthRememberPreference,
+  setAuthRememberPreference,
+} from "@/lib/auth/auth-remember-preference";
 import {
   formatLoginIdentifierInput,
   isValidLoginIdentifier,
@@ -125,7 +128,7 @@ export function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -336,7 +339,11 @@ export function LoginForm() {
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setRemember(next);
+                  setAuthRememberPreference(next);
+                }}
                 disabled={busy || configBlocked}
                 className={dsCheckboxInput}
               />

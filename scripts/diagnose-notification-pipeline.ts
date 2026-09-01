@@ -1,9 +1,9 @@
 /**
- * Fase 0 — Diagnostica pipeline notifiche per una lavorazione (o evento generico).
+ * Fase 0 — Diagnostica pipeline notifiche (GO/NO-GO bloccante).
  *
  * Uso:
- *   npx tsx scripts/diagnose-notification-pipeline.ts <entity_id>
  *   npx tsx scripts/diagnose-notification-pipeline.ts --health
+ *   npx tsx scripts/diagnose-notification-pipeline.ts <entity_id>
  *
  * Richiede SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in env.
  */
@@ -28,29 +28,121 @@ type Checkpoint = {
   detail: string;
 };
 
+type HealthReport = {
+  outboxPending: number | null;
+  outboxFailed: number | null;
+  outboxOldestPendingAgeMs: number;
+  workerDiagnostics: unknown;
+  lastDispatch: unknown;
+  divergentOutboxCompleted: number | null;
+  classification: "scheduling" | "processor" | "dispatch" | "client_sync" | "healthy" | "unknown";
+  goNoGo: "GO" | "NO-GO" | "INVESTIGATE";
+};
+
+function classifyHealth(report: Omit<HealthReport, "classification" | "goNoGo">): Pick<HealthReport, "classification" | "goNoGo"> {
+  if ((report.outboxFailed ?? 0) > 0) {
+    return { classification: "processor", goNoGo: "NO-GO" };
+  }
+  if ((report.outboxPending ?? 0) > 0 && report.outboxOldestPendingAgeMs > 5 * 60_000) {
+    const skipped = Array.isArray(report.workerDiagnostics)
+      && report.workerDiagnostics.some(
+        (d) =>
+          typeof d === "object"
+          && d
+          && (d as { worker_name?: string; status?: string }).worker_name === "notification_outbox"
+          && (d as { status?: string }).status === "skipped",
+      );
+    if (skipped) return { classification: "scheduling", goNoGo: "NO-GO" };
+    return { classification: "processor", goNoGo: "INVESTIGATE" };
+  }
+  if ((report.divergentOutboxCompleted ?? 0) > 0) {
+    return { classification: "dispatch", goNoGo: "NO-GO" };
+  }
+  if ((report.outboxPending ?? 0) === 0 && (report.outboxFailed ?? 0) === 0) {
+    return { classification: "healthy", goNoGo: "GO" };
+  }
+  return { classification: "unknown", goNoGo: "INVESTIGATE" };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function runHealthCheck(client: ReturnType<typeof createClient<any>>): Promise<HealthReport> {
+  const now = Date.now();
+
+  const [
+    { count: outboxPending },
+    { count: outboxFailed },
+    { data: workerDiag },
+    { data: oldestPending },
+    { data: lastDispatch },
+    { count: divergent },
+  ] = await Promise.all([
+    client
+      .from("notification_outbox")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["pending", "processing"]),
+    client
+      .from("notification_outbox")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "failed"),
+    client
+      .from("notification_worker_diagnostics")
+      .select("worker_name, status, detail, created_at")
+      .eq("worker_name", "notification_outbox")
+      .order("created_at", { ascending: false })
+      .limit(10),
+    client
+      .from("notification_outbox")
+      .select("created_at")
+      .in("status", ["pending", "processing"])
+      .order("created_at", { ascending: true })
+      .limit(1),
+    client
+      .from("notification_dispatch_log")
+      .select("status, created_at, dispatch_notification_event_id, created_count")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    client
+      .from("notification_outbox")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "completed")
+      .is("processed_at", null),
+  ]);
+
+  const outboxOldestPendingAgeMs = oldestPending?.[0]
+    ? now - new Date(String((oldestPending[0] as { created_at: string }).created_at)).getTime()
+    : 0;
+
+  const base = {
+    outboxPending,
+    outboxFailed,
+    outboxOldestPendingAgeMs,
+    workerDiagnostics: workerDiag,
+    lastDispatch: lastDispatch?.[0] ?? null,
+    divergentOutboxCompleted: divergent,
+    cronSecretConfigured: Boolean(process.env.CRON_SECRET?.trim()?.length),
+  };
+
+  const verdict = classifyHealth({
+    outboxPending,
+    outboxFailed,
+    outboxOldestPendingAgeMs,
+    workerDiagnostics: workerDiag,
+    lastDispatch: lastDispatch?.[0] ?? null,
+    divergentOutboxCompleted: divergent,
+  });
+
+  return { ...base, ...verdict };
+}
+
 async function main(): Promise<void> {
   const client = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   if (healthOnly || !entityId) {
-    const [{ count: outboxPending }, { count: outboxFailed }, { data: workerDiag }] = await Promise.all([
-      client
-        .from("notification_outbox")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "processing"]),
-      client
-        .from("notification_outbox")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "failed"),
-      client
-        .from("notification_worker_diagnostics")
-        .select("worker_name, status, detail, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
-
-    console.log(JSON.stringify({ outboxPending, outboxFailed, workerDiag }, null, 2));
+    const report = await runHealthCheck(client);
+    console.log(JSON.stringify(report, null, 2));
     if (!entityId || healthOnly) return;
   }
 

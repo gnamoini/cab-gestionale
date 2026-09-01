@@ -10,8 +10,10 @@ import { RealtimeTabCoordinator } from "@/lib/notifications/realtime-tab-coordin
 
 const SEEN_TTL_MS = 5 * 60_000;
 const DEBOUNCE_MS = 300;
-const FALLBACK_POLL_MS = 120_000;
-const FALLBACK_POLL_DRAWER_MS = 30_000;
+export const INBOX_FALLBACK_POLL_MS = 30_000;
+export const INBOX_FALLBACK_POLL_DRAWER_MS = 15_000;
+/** Reconciliation safety-net when live — off until pipeline trace shows client_ack gaps. */
+export const INBOX_LIVE_RECONCILE_MS = 0;
 const RESUBSCRIBE_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 30_000];
 const GAP_STALE_MS = 45_000;
 
@@ -200,7 +202,7 @@ export class RealtimeInboxCoordinator {
   private syncPolling(): void {
     this.clearPoll();
     if (this.status !== "degraded") return;
-    const ms = this.drawerOpen ? FALLBACK_POLL_DRAWER_MS : FALLBACK_POLL_MS;
+    const ms = this.drawerOpen ? INBOX_FALLBACK_POLL_DRAWER_MS : INBOX_FALLBACK_POLL_MS;
     this.pollTimer = setInterval(() => void this.invalidateInbox(), ms);
   }
 

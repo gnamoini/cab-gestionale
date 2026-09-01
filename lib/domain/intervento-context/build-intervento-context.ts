@@ -79,6 +79,10 @@ function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoG
       nScuderia: "",
       tipoAttrezzatura: "",
       cantiere: "",
+      marcaTelaio: "",
+      modelloTelaio: "",
+      tipoTelaio: "",
+      vin: "",
       present: false,
     };
   }
@@ -93,7 +97,29 @@ function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoG
     nScuderia: safeMezzoText(g.numeroScuderia),
     tipoAttrezzatura: safeMezzoText(g.tipoAttrezzatura),
     cantiere: safeMezzoText(g.cantiere),
+    marcaTelaio: safeMezzoText(g.marcaTelaio),
+    modelloTelaio: safeMezzoText(g.modelloTelaio),
+    tipoTelaio: safeMezzoText(g.tipoTelaio),
+    vin: safeMezzoText(g.vin),
     present: true,
+  };
+}
+
+function catalogSnapshotFromInputs(
+  mezzo: MezzoSnapshot,
+  attrezzaturaRow?: import("@/src/types/supabase-tables").AttrezzaturaRow | null,
+  lavorazioneRow?: LavorazioneRow | null,
+): import("@/lib/domain/intervento-context/intervento-context.types").InterventoCatalogSnapshot {
+  const att = attrezzaturaRow;
+  return {
+    attrezzatura: {
+      id: lavorazioneRow?.attrezzatura_id ?? att?.id ?? null,
+      marca: safeMezzoText(att?.marca),
+      modello: safeMezzoText(att?.modello),
+      matricola: safeMezzoText(att?.matricola),
+      tipoAttrezzatura: safeMezzoText(att?.tipo_attrezzatura),
+    },
+    mezzo: { ...mezzo },
   };
 }
 
@@ -164,7 +190,10 @@ function detectIdentMismatch(
   return !interventoIdentEquals(fromScheda, fromMezzo);
 }
 
-function targetSnapshotFromInputs(inputs: InterventoContextInputs): InterventoTargetSnapshot {
+function targetSnapshotFromInputs(
+  inputs: InterventoContextInputs,
+  _schedaIngresso: SchedaIngressoSnapshot,
+): InterventoTargetSnapshot {
   const row = inputs.lavorazioneRow;
   const att = inputs.attrezzaturaRow;
   const scheda = inputs.ingressoCampi;
@@ -184,29 +213,16 @@ function targetSnapshotFromInputs(inputs: InterventoContextInputs): InterventoTa
     };
   }
 
-  const marca =
-    att?.marca?.trim() ||
-    scheda?.marcaAttrezzatura?.trim() ||
-    inputs.mezzoGestito?.marca?.trim() ||
-    "";
-  const modello =
-    att?.modello?.trim() ||
-    scheda?.modelloAttrezzatura?.trim() ||
-    inputs.mezzoGestito?.modello?.trim() ||
-    "";
+  const attId = row?.attrezzatura_id ?? att?.id ?? scheda?.attrezzaturaId ?? null;
 
   return {
     targetType: "attrezzatura",
     attrezzatura: {
-      id: row?.attrezzatura_id ?? att?.id ?? scheda?.attrezzaturaId ?? null,
-      marca,
-      modello,
-      matricola:
-        att?.matricola?.trim() ||
-        scheda?.matricola?.trim() ||
-        inputs.mezzoGestito?.matricola?.trim() ||
-        "",
-      present: Boolean(marca || modello || att?.id),
+      id: attId,
+      marca: "",
+      modello: "",
+      matricola: "",
+      present: Boolean(attId),
     },
   };
 }
@@ -249,10 +265,11 @@ export function composeInterventoContext(inputs: InterventoContextInputs): Inter
     mezzo,
     lavorazione,
     schedaIngresso,
+    catalog: catalogSnapshotFromInputs(mezzo, inputs.attrezzaturaRow, inputs.lavorazioneRow ?? null),
     ident,
-    target: targetSnapshotFromInputs(inputs),
+    target: targetSnapshotFromInputs(inputs, schedaIngresso),
     meta: {
-      schedaMissing: !schedaIngresso.present,
+      schedaMissing: schedaIngresso.campi === null,
       mezzoUnlinked: !lavorazione.mezzoId,
       hasIdentMismatch: detectIdentMismatch(schedaIngresso, mezzo, ident),
     },

@@ -25,9 +25,21 @@ export {
   interventoClienteLabel,
   interventoMacchinaLabel,
   interventoMezzoIdentLabel,
+  resolveIngressoFieldDisplayForContext,
   resolveInterventoDisplay,
   resolveInterventoIdent,
 } from "@/lib/domain/intervento-context/resolve-intervento-display";
+
+export {
+  ingressoDisplayFieldsFromContext,
+  resolveIngressoFieldDisplay,
+  resolveIngressoMarcaModelloDisplay,
+} from "@/lib/domain/intervento-context/resolve-ingresso-field-display";
+
+export {
+  schedaIngressoFieldReadState,
+  schedaIngressoRecordExists,
+} from "@/lib/domain/intervento-context/scheda-ingresso-read-policy";
 
 export {
   hasInterventoIdentValue,

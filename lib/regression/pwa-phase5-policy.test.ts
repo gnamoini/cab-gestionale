@@ -39,8 +39,9 @@ assert.match(useServiceMutation, /assertOnlineForWrite/);
 const connectivityGate = read("src/components/pwa-connectivity-gate.tsx");
 assert.doesNotMatch(connectivityGate, /createContext/);
 
+const pwaCorePack = read("src/components/pwa-core-bridge-pack.tsx");
+assert.match(pwaCorePack, /PwaConnectivityGate/);
 const appProviders = read("components/app-providers-core.tsx");
-assert.match(appProviders, /PwaConnectivityGate/);
 assert.doesNotMatch(appProviders, /PwaPushOpenBridge/);
 assert.doesNotMatch(appProviders, /PwaNotificationBadgeBridge/);
 
@@ -140,9 +141,11 @@ assert.match(syncBridge, /pageshow/);
 assert.doesNotMatch(syncBridge, /addEventListener\("online"/);
 
 const deferred = read("src/components/deferred-gestionale-bridges.tsx");
-assert.match(deferred, /PwaPushOpenBridge/);
-assert.match(deferred, /PwaNotificationBadgeBridge/);
-assert.match(deferred, /PwaSyncFinalizationBridge/);
+const pwaBridgePack = read("src/components/pwa-bridge-pack.tsx");
+assert.match(deferred, /PwaBridgePack|pwa-bridge-pack/);
+assert.match(pwaBridgePack, /PwaPushOpenBridge/);
+assert.match(pwaBridgePack, /PwaNotificationBadgeBridge/);
+assert.match(pwaBridgePack, /PwaSyncFinalizationBridge/);
 
 // --- mobile ---
 const mobile = read("lib/pwa/pwa-mobile.ts");

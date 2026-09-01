@@ -52,6 +52,7 @@ import {
   formatIdentificazioneMezzoLine,
   formatLavorazioneDetailHeaderSubtitle,
 
+  identificazionePartsFromInterventoDisplay,
   identificazionePartsFromSchedaIngresso,
   type MezzoIdentificazioneParts,
 } from "@/lib/mezzi/identificazione-mezzo";
@@ -64,6 +65,7 @@ import {
   SCHEDA_LAVORAZIONI_LABEL,
   SCHEDA_RICAMBI_LABEL,
 } from "@/lib/schede/schede-log-helpers";
+import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
 import {
   buildSchedaIngressoFieldsFromContext,
   buildSchedaLavorazioniFieldsFromContext,
@@ -524,7 +526,11 @@ export function SchedeLavorazioneModal({
   }, [submitLock, flushDeferredBackgroundPersist]);
 
   function openIngressoEditor(campi: SchedaIngressoFields) {
-    const normalized = normalizeSchedaIngressoFields(campi, addetti[0] ?? "");
+    const hydrated = mergeSchedaIngressoWithMezzoPriority(campi, {
+      linkedMezzo: mezzo,
+      prefillPolicy: "edit_hydrate",
+    });
+    const normalized = normalizeSchedaIngressoFields(hydrated, addetti[0] ?? "");
     baselineIngressoJson.current = JSON.stringify(normalized);
     ingressoDraftRef.current = normalized;
     setIngressoEditorInitial(normalized);
@@ -788,22 +794,32 @@ export function SchedeLavorazioneModal({
     }
     return {
       ...panoramicaCampi,
-      cliente: d.cliente.value || panoramicaCampi.cliente.trim(),
-      cantiere: d.cantiere.value || panoramicaCampi.cantiere.trim(),
-      utilizzatore: d.utilizzatore.value || panoramicaCampi.utilizzatore.trim(),
-      targa: d.targa.value || panoramicaCampi.targa.trim(),
-      matricola: d.matricola.value || panoramicaCampi.matricola.trim(),
-      nScuderia: d.nScuderia.value || panoramicaCampi.nScuderia.trim(),
+      cliente: d.cliente.value,
+      cantiere: d.cantiere.value,
+      utilizzatore: d.utilizzatore.value,
+      marcaAttrezzatura: d.marcaAttrezzatura.value,
+      modelloAttrezzatura: d.modelloAttrezzatura.value,
+      tipoAttrezzatura: d.tipoAttrezzatura.value,
+      targa: d.targa.value,
+      matricola: d.matricola.value,
+      nScuderia: d.nScuderia.value,
+      marcaTelaio: d.marcaTelaio.value,
+      modelloTelaio: d.modelloTelaio.value,
+      tipoTelaio: d.tipoTelaio.value,
+      vin: d.vin.value,
     };
   }, [interventoCtx.display, panoramicaCampi, lav]);
 
+  const hubIdentParts = useMemo(() => {
+    if (interventoCtx.display) {
+      return identificazionePartsFromInterventoDisplay(interventoCtx.display);
+    }
+    return identificazionePartsFromSchedaIngresso(panoramicaCampi);
+  }, [interventoCtx.display, panoramicaCampi]);
+
   const identSubtitle = useMemo(
-    () =>
-      formatLavorazioneDetailHeaderSubtitle(
-        identificazionePartsFromSchedaIngresso(panoramicaCampi),
-        lav,
-      ),
-    [panoramicaCampi, lav],
+    () => formatLavorazioneDetailHeaderSubtitle(hubIdentParts, lav),
+    [hubIdentParts, lav],
   );
 
   const panoramicaNoteValue = useMemo(() => {
@@ -1479,7 +1495,7 @@ export function SchedeLavorazioneModal({
               doc={lavDoc}
               setDoc={setLavDoc as Dispatch<SetStateAction<SchedaLavorazioniDoc>>}
               addettiLista={addetti}
-              identParts={identificazionePartsFromSchedaIngresso(panoramicaDisplayFields)}
+              identParts={hubIdentParts}
             />
           ) : null}
 
@@ -1489,7 +1505,7 @@ export function SchedeLavorazioneModal({
               setDoc={setRicDoc as Dispatch<SetStateAction<SchedaRicambiDoc>>}
               lav={lav}
               identLine={identSubtitle}
-              identParts={identificazionePartsFromSchedaIngresso(panoramicaDisplayFields)}
+              identParts={hubIdentParts}
               currentUser={currentUser}
               addettiLista={addetti}
               onImmediatePersist={(d) => persistBundleInBackground({ ...draftRef.current, ricambi: d })}

@@ -2,17 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import { useToastContext } from "@/context/toast-context";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { useStaffInboxEligibleRpc } from "@/src/hooks/gestionale/use-inbox-eligible";
 import { subscribeNotificheGestionale } from "@/lib/sync/gestionale-notification-dispatch";
 
 /**
  * Bridge unico notifiche operative -> toast UI.
- * Filtra su ruoli admin/autorizzati e deduplica ulteriormente per viewport.
+ * Staff inbox eligibility via DB RPC (allineato ai bridge dominio).
  */
 export function GestionaleNotificationsBridge() {
   const { push } = useToastContext();
-  const { isAdmin, canManageSecurity, isLoading } = usePermissions();
-  const canViewOperationalNotifications = isAdmin || canManageSecurity;
+  const { eligible: canViewOperationalNotifications, isLoading } = useStaffInboxEligibleRpc();
   const recentRef = useRef<Map<string, number>>(new Map());
   const VIEW_DEDUP_MS = 2500;
 

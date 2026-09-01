@@ -49,6 +49,8 @@ export const QK = {
   /** Inbox notifiche v2. */
   notificationsInbox: ["notifications", "inbox"] as const,
   notificationsUnread: ["notifications", "unread-count"] as const,
+  notificationsInboxEligible: ["notifications", "inbox-eligible"] as const,
+  notificationsStaffInboxEligible: ["notifications", "staff-inbox-eligible"] as const,
 };
 
 export function clientLavorazionePreventivoKey(lavorazioneId: string) {

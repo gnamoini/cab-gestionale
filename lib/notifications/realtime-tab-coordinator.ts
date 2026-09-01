@@ -92,7 +92,7 @@ export class RealtimeTabCoordinator {
         this.onBecomeLeader();
         this.startHeartbeat();
       }
-    }, 150);
+    }, 50);
   }
 
   private startHeartbeat(): void {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
+import { canPrefillSchedaFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-prefill-policy";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -71,5 +72,19 @@ assert.equal(merged.descrizioneAnomalia, "", "anomalia non copiata");
 
 const noMezzo = mergeSchedaIngressoWithMezzoPriority(empty(), { fromScheda: oldScheda });
 assert.equal(noMezzo.marcaAttrezzatura, "Bucher", "senza mezzo, scheda come fallback");
+
+assert.equal(canPrefillSchedaFromMezzo("edit_hydrate"), true, "edit_hydrate abilita prefill editor");
+
+const hydrateOnly = mergeSchedaIngressoWithMezzoPriority(
+  { ...empty(), marcaAttrezzatura: "" },
+  { linkedMezzo: mezzo, prefillPolicy: "edit_hydrate" },
+);
+assert.equal(hydrateOnly.marcaAttrezzatura, "Ravo", "edit_hydrate riempie campo vuoto da mezzo");
+
+const hydrateKeepsScheda = mergeSchedaIngressoWithMezzoPriority(
+  { ...empty(), marcaAttrezzatura: "SchedaVal" },
+  { linkedMezzo: mezzo, prefillPolicy: "edit_hydrate" },
+);
+assert.equal(hydrateKeepsScheda.marcaAttrezzatura, "SchedaVal", "edit_hydrate non sovrascrive scheda valorizzata");
 
 console.log("merge-scheda-ingresso-with-mezzo-priority.test.ts: ok");

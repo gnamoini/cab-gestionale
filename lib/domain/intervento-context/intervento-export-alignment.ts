@@ -23,9 +23,9 @@ function uiFieldFromCanonical(
     case "matricola":
       return norm(d.matricola.value);
     case "marcaAttrezzatura":
-      return norm(d.marcaModello.value.split(" ")[0]);
+      return norm(d.marcaAttrezzatura.value);
     case "modelloAttrezzatura":
-      return norm(d.marcaModello.value.split(" ").slice(1).join(" "));
+      return norm(d.modelloAttrezzatura.value);
     default:
       return "";
   }

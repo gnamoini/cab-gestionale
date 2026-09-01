@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+import { resolveNotificationStaffInboxEligible } from "@/lib/notifications/inbox-eligible.server";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
 import { dispatchNotificationEvent } from "@/lib/notifications/dispatch/notification-dispatch-service.server";
 import { buildDispatchCommandFromLegacy } from "@/lib/notifications/dispatch/build-dispatch-command.server";
@@ -10,10 +10,9 @@ import { getNotificationRegistryEntry } from "@/lib/notifications/notification-e
 
 export async function POST(req: Request) {
   const snap = await resolveServerEffectivePermissions();
-  if (
-    !snap?.userId ||
-    !isStaffInboxEligible({ id: snap.userId, ruolo: snap.role }, { resolved: snap.resolved })
-  ) {
+  const client = await createSupabaseServerUserClient();
+  const staffEligible = await resolveNotificationStaffInboxEligible(client);
+  if (!snap?.userId || !staffEligible) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }
 
@@ -30,7 +29,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Evento sconosciuto" }, { status: 400 });
   }
 
-  const client = await createSupabaseServerUserClient();
   const { data: profile } = await client
     .from("profiles")
     .select("company_id")

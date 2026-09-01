@@ -1,5 +1,5 @@
-import { composeInterventoContextFromListRow } from "@/lib/domain/intervento-context/build-intervento-context";
 import {
+  composeInterventoContextFromListRow,
   interventoClienteLabel,
   resolveInterventoDisplay,
   resolveInterventoIdent,
@@ -7,7 +7,6 @@ import {
 import type { InterventoTargetType } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
 import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
-import { mezzoGestitoFromRow } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -33,39 +32,6 @@ function dash(v: string | null | undefined): string {
 
 function joinMarcaModello(marca?: string | null, modello?: string | null): string {
   return formatClientPortalAttrezzatura({ marca, modello });
-}
-
-function resolveTelaioLine(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const ingresso = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ingresso) {
-    const fromIngresso = joinMarcaModello(ingresso.marcaTelaio, ingresso.modelloTelaio);
-    if (fromIngresso !== "—") return fromIngresso;
-  }
-  const m = row.mezzo;
-  if (m) {
-    const fromEmbed = joinMarcaModello(m.marca_telaio, m.modello_telaio);
-    if (fromEmbed !== "—") return fromEmbed;
-    const gestito = mezzoGestitoFromRow(m, { attrezzaturaId: row.attrezzatura_id });
-    const fromGestito = joinMarcaModello(gestito.marcaTelaio, gestito.modelloTelaio);
-    if (fromGestito !== "—") return fromGestito;
-  }
-  return "—";
-}
-
-function resolveAttrezzaturaLine(
-  row: LavorazioneListRow,
-  schedeStore: LavorazioneSchedeStore | undefined,
-  targetType: InterventoTargetType,
-): string {
-  if (targetType !== "attrezzatura") return "—";
-  const ingresso = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ingresso) {
-    const fromIngresso = joinMarcaModello(ingresso.marcaAttrezzatura, ingresso.modelloAttrezzatura);
-    if (fromIngresso !== "—") return fromIngresso;
-  }
-  const ctx = composeInterventoContextFromListRow(row, schedeStore);
-  const att = ctx.target.attrezzatura;
-  return joinMarcaModello(att.marca, att.modello);
 }
 
 function resolveClassification(
@@ -94,8 +60,11 @@ export function resolveLavorazioneContextWithAttrezzatura(
   const identRaw = resolveInterventoIdent(ctx);
   const targetType = ctx.target.targetType;
 
-  const telaioLine = resolveTelaioLine(row, schedeStore);
-  const attrezzaturaLine = resolveAttrezzaturaLine(row, schedeStore, targetType);
+  const telaioLine = joinMarcaModello(display.marcaTelaio.value, display.modelloTelaio.value);
+  const attrezzaturaLine =
+    targetType === "attrezzatura"
+      ? joinMarcaModello(display.marcaAttrezzatura.value, display.modelloAttrezzatura.value)
+      : "—";
   const classification = resolveClassification(targetType, options?.attrezzatureCountOnMezzo);
 
   let oggettoLabel = oggetto.label.trim() || "—";

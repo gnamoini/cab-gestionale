@@ -12,6 +12,11 @@ import {
   buildLegacyNotificationFromOutbox,
   type OutboxRow,
 } from "@/lib/notifications/outbox/build-legacy-from-outbox.server";
+import {
+  OUTBOX_BATCH_LIMIT,
+  OUTBOX_MAX_EVENTS_PER_INVOCATION,
+  OUTBOX_PROCESSOR_TIME_BUDGET_MS,
+} from "@/lib/notifications/outbox/outbox-processor-config";
 import { writePipelineTrace } from "@/lib/notifications/observability/pipeline-trace.server";
 import { logNotificationTrace } from "@/lib/notifications/observability/notification-trace";
 
@@ -21,11 +26,19 @@ export type NotificationOutboxProcessorResult = {
   completed: number;
   failed: number;
   skipped: number;
+  batches: number;
+  drained: boolean;
   error?: string;
 };
 
 type ClaimedOutboxRow = OutboxRow & {
   attempt_count: number;
+};
+
+type BatchStats = {
+  completed: number;
+  failed: number;
+  skipped: number;
 };
 
 const MAX_ATTEMPTS = 5;
@@ -51,32 +64,10 @@ async function completeOutbox(
   });
 }
 
-export async function runNotificationOutboxProcessor(input?: {
-  limit?: number;
-}): Promise<NotificationOutboxProcessorResult> {
-  const client = createAdminClient();
-  const limit = input?.limit ?? 20;
-
-  const { data: claimed, error: claimError } = await client.rpc("cab_claim_notification_outbox_batch", {
-    p_limit: limit,
-  });
-
-  if (claimError) {
-    return {
-      ok: false,
-      processed: 0,
-      completed: 0,
-      failed: 0,
-      skipped: 0,
-      error: claimError.message,
-    };
-  }
-
-  const rows = (claimed ?? []) as ClaimedOutboxRow[];
-  if (!rows.length) {
-    return { ok: true, processed: 0, completed: 0, failed: 0, skipped: 0 };
-  }
-
+async function processOutboxBatch(
+  client: SupabaseClient,
+  rows: ClaimedOutboxRow[],
+): Promise<BatchStats> {
   let completed = 0;
   let failed = 0;
   let skipped = 0;
@@ -179,11 +170,90 @@ export async function runNotificationOutboxProcessor(input?: {
     }
   }
 
+  return { completed, failed, skipped };
+}
+
+export async function runNotificationOutboxProcessor(input?: {
+  limit?: number;
+  timeBudgetMs?: number;
+  maxEvents?: number;
+}): Promise<NotificationOutboxProcessorResult> {
+  const client = createAdminClient();
+  const batchLimit = input?.limit ?? OUTBOX_BATCH_LIMIT;
+  const timeBudgetMs = input?.timeBudgetMs ?? OUTBOX_PROCESSOR_TIME_BUDGET_MS;
+  const maxEvents = input?.maxEvents ?? OUTBOX_MAX_EVENTS_PER_INVOCATION;
+  const startedAt = Date.now();
+
+  let totalProcessed = 0;
+  let totalCompleted = 0;
+  let totalFailed = 0;
+  let totalSkipped = 0;
+  let batches = 0;
+  let drained = false;
+
+  while (true) {
+    if (Date.now() - startedAt >= timeBudgetMs) break;
+    if (totalProcessed >= maxEvents) break;
+
+    const remaining = maxEvents - totalProcessed;
+    const claimLimit = Math.min(batchLimit, remaining);
+
+    const { data: claimed, error: claimError } = await client.rpc(
+      "cab_claim_notification_outbox_batch",
+      { p_limit: claimLimit },
+    );
+
+    if (claimError) {
+      return {
+        ok: false,
+        processed: totalProcessed,
+        completed: totalCompleted,
+        failed: totalFailed,
+        skipped: totalSkipped,
+        batches,
+        drained: false,
+        error: claimError.message,
+      };
+    }
+
+    const rows = (claimed ?? []) as ClaimedOutboxRow[];
+    if (!rows.length) {
+      drained = true;
+      break;
+    }
+
+    batches += 1;
+    logNotificationTrace({
+      traceId: rows[0]?.trace_id ?? "outbox-batch",
+      stage: "outbox_claimed",
+      notificationEventId: rows[0]?.notification_event_id,
+      ts: new Date().toISOString(),
+      meta: { batchSize: rows.length, batchIndex: batches },
+    });
+
+    const batchStats = await processOutboxBatch(client, rows);
+    totalProcessed += rows.length;
+    totalCompleted += batchStats.completed;
+    totalFailed += batchStats.failed;
+    totalSkipped += batchStats.skipped;
+  }
+
+  if (drained) {
+    logNotificationTrace({
+      traceId: "outbox-drain",
+      stage: "outbox_drained",
+      ts: new Date().toISOString(),
+      meta: { processed: totalProcessed, batches },
+    });
+  }
+
   return {
     ok: true,
-    processed: rows.length,
-    completed,
-    failed,
-    skipped,
+    processed: totalProcessed,
+    completed: totalCompleted,
+    failed: totalFailed,
+    skipped: totalSkipped,
+    batches,
+    drained,
   };
 }

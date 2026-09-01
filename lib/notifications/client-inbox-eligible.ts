@@ -2,7 +2,7 @@ import { resolveRole, type RbacUser } from "@/lib/auth/rbac";
 import type { RbacEvaluationContext } from "@/lib/auth/rbac";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
-/** Portale clienti: inbox solo ingresso/completata proprie macchine. */
+/** @deprecated Use useInboxEligible() — DB RPC notification_inbox_eligible() is SSOT. */
 export function isClientInboxEligible(
   user: RbacUser,
   ctx?: RbacEvaluationContext,

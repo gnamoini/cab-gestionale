@@ -81,7 +81,7 @@ assert.match(prefsMigration, /notification_event_preferences/);
 assert.match(prefsMigration, /cab_dispatch_notifications_bulk/);
 
 const mountSrc = read("components/gestionale/notification-center-mount.tsx");
-assert.match(mountSrc, /isStaffInboxEligible/);
+assert.match(mountSrc, /useInboxEligible/);
 
 const shellSrc = read("components/gestionale/app-shell.tsx");
 assert.match(shellSrc, /AppShellSidebar/);

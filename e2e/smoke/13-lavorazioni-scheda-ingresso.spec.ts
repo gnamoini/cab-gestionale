@@ -68,6 +68,9 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   await submitCreateLavorazione(page);
 
   await searchLavorazioneByToken(page, token);
+  const marcaList = ingresso.marcaAttrezzatura;
+  await expect(page.getByRole("row").filter({ hasText: token }).first()).toContainText(marcaList);
+
   await openSchedeHubForToken(page, token);
 
   const hub = hubDialog(page);
@@ -82,6 +85,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   await openIngressoEditorFromHub(page);
   const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
   await expect(editModal.getByRole("combobox", { name: "Cliente" })).toHaveValue(ingresso.cliente);
+  await expect(editModal.getByLabel("Marca attrezzatura", { exact: false })).toHaveValue(marcaList);
 
   for (const [key, val] of Object.entries(ingressoEdit) as [keyof typeof ingressoEdit, string][]) {
     if (key === "cliente" || key === "cantiere" || key === "utilizzatore") {

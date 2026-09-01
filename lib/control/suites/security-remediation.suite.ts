@@ -11,6 +11,7 @@ export const SECURITY_REMEDIATION_SUITE: readonly string[] = [
   "lib/regression/security-webhook-resend.test.ts",
   "lib/regression/security-import-retry-owner.test.ts",
   "lib/regression/auth-logout-global-policy.test.ts",
+  "lib/regression/login-username-resolve-policy.test.ts",
   "lib/regression/security-ai-prompt-boundary.test.ts",
   "lib/regression/security-live-catalog-gate.test.ts",
   "lib/regression/security-cliente-api-deny.test.ts",

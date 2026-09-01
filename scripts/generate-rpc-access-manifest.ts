@@ -109,8 +109,8 @@ const CRON_ONLY = new Set([
 
 const INTERNAL_ONLY_PREFIX = "trg_";
 
-/** Explicit PUBLIC_SAFE: anon EXECUTE allowed (rare). */
-const PUBLIC_SAFE = new Set(["resolve_auth_email_for_login"]);
+/** Explicit PUBLIC_SAFE: anon EXECUTE allowed (rare). Currently empty. */
+const PUBLIC_SAFE = new Set<string>([]);
 
 const PORTALE = new Set([
   "is_ddt_visible_to_client",

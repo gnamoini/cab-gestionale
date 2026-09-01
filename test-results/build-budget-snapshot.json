@@ -1,7 +1,7 @@
 {
   "environment": {
-    "timestamp": "2026-08-30T19:08:47.245Z",
-    "gitCommit": "a4c00c0c",
+    "timestamp": "2026-09-01T01:23:41.593Z",
+    "gitCommit": "f5178a4c",
     "branch": "main",
     "nodeVersion": "v24.15.0",
     "browser": "n/a",
@@ -10,228 +10,228 @@
     "machine": "DESKTOP-Jay",
     "viewport": "build"
   },
-  "generatedAt": "2026-08-30T19:08:47.252Z",
-  "firstLoadJsKb": 1930.9,
+  "generatedAt": "2026-09-01T01:23:41.604Z",
+  "firstLoadJsKb": 1932,
   "vendorChunkKb": 457.8,
-  "sharedChunksKb": 1930.9,
+  "sharedChunksKb": 1932,
   "routeChunks": {
     "/report": {
-      "jsKb": 1930.9,
+      "jsKb": 1932,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/ai": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/clienti": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/contesto": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/dipendenti": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/economia": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/lavorazioni": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/magazzino": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/mezzi": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/panoramica": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/preventivi": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/trasversali": {
-      "jsKb": 1928.1,
+      "jsKb": 1929.2,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/report/design-system-preview": {
-      "jsKb": 1922.7,
+      "jsKb": 1923.8,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/impostazioni": {
-      "jsKb": 1915,
+      "jsKb": 1916.1,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/lavorazioni": {
-      "jsKb": 1914.8,
+      "jsKb": 1915.8,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/magazzino": {
-      "jsKb": 1914.8,
+      "jsKb": 1915.8,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/identifica-ricambio": {
-      "jsKb": 1914.4,
+      "jsKb": 1915.5,
       "cssKb": 0,
       "chunkCount": 36
     },
     "/agenda": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/dashboard": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/dipendenti": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/documenti": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/fatturazione": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/lavorazioni-clienti": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/magazzino/carichi": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/mezzi": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/ordini-fornitori": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/preventivi": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/sicurezza": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/sicurezza/production-readiness": {
-      "jsKb": 1914.3,
+      "jsKb": 1915.4,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/impostazioni/ai-providers": {
-      "jsKb": 1912.9,
+      "jsKb": 1914,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/lavorazioni-clienti/[id]": {
-      "jsKb": 1912.9,
+      "jsKb": 1914,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/magazzino/carichi/nuovo": {
-      "jsKb": 1912.9,
+      "jsKb": 1914,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/documenti/[token]": {
-      "jsKb": 1909.7,
+      "jsKb": 1910.8,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/documenti/ddt/[id]/preview": {
-      "jsKb": 1909.7,
+      "jsKb": 1910.8,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/documenti/preventivo/[id]/preview": {
-      "jsKb": 1909.7,
+      "jsKb": 1910.8,
       "cssKb": 0,
       "chunkCount": 35
     },
     "/acesso-negato": {
-      "jsKb": 1905.9,
+      "jsKb": 1907,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/privacy-policy": {
-      "jsKb": 1828,
+      "jsKb": 1828.7,
       "cssKb": 0,
       "chunkCount": 31
     },
     "/termini-e-condizioni": {
-      "jsKb": 1828,
+      "jsKb": 1828.7,
       "cssKb": 0,
       "chunkCount": 31
     },
     "/m/q/errore": {
-      "jsKb": 1827,
+      "jsKb": 1827.8,
       "cssKb": 0,
       "chunkCount": 31
     },
     "/": {
-      "jsKb": 1825.6,
+      "jsKb": 1826.3,
       "cssKb": 0,
       "chunkCount": 30
     },
     "/_not-found": {
-      "jsKb": 1825.6,
+      "jsKb": 1826.3,
       "cssKb": 0,
       "chunkCount": 30
     },
     "/login": {
-      "jsKb": 1825.6,
+      "jsKb": 1826.3,
       "cssKb": 0,
       "chunkCount": 30
     },
     "/login/reset-password": {
-      "jsKb": 1825.6,
+      "jsKb": 1826.3,
       "cssKb": 0,
       "chunkCount": 30
     },
     "/offline": {
-      "jsKb": 1825.6,
+      "jsKb": 1826.3,
       "cssKb": 0,
       "chunkCount": 30
     }

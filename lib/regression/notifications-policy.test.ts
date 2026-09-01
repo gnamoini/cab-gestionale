@@ -110,8 +110,9 @@ const mountSrc = fs.readFileSync(
   path.join(ROOT, "components/gestionale/notification-center-mount.tsx"),
   "utf8",
 );
-assert.match(mountSrc, /isClientInboxEligible/);
-assert.match(mountSrc, /isStaffInboxEligible/);
+assert.match(mountSrc, /useInboxEligible/);
+assert.doesNotMatch(mountSrc, /isStaffInboxEligible/);
+assert.doesNotMatch(mountSrc, /isClientInboxEligible/);
 
 const triggersMigrationSrc = fs.readFileSync(
   path.join(ROOT, "supabase/migrations/20260906130000_client_portal_notifications_db_triggers.sql"),

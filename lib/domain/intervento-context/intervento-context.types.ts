@@ -37,7 +37,23 @@ export type MezzoSnapshot = {
   nScuderia: string;
   tipoAttrezzatura: string;
   cantiere: string;
+  marcaTelaio: string;
+  modelloTelaio: string;
+  tipoTelaio: string;
+  vin: string;
   present: boolean;
+};
+
+/** Catalogo flotta puro (bootstrap caso C) — mai mescolato con snapshot scheda. */
+export type InterventoCatalogSnapshot = {
+  attrezzatura: {
+    id: string | null;
+    marca: string;
+    modello: string;
+    matricola: string;
+    tipoAttrezzatura: string;
+  };
+  mezzo: MezzoSnapshot;
 };
 
 export type LavorazioneSnapshot = {
@@ -73,6 +89,7 @@ export type InterventoContext = {
   mezzo: MezzoSnapshot;
   lavorazione: LavorazioneSnapshot;
   schedaIngresso: SchedaIngressoSnapshot;
+  catalog: InterventoCatalogSnapshot;
   ident: InterventoIdent;
   target: InterventoTargetSnapshot;
   meta: InterventoContextMeta;
@@ -88,6 +105,13 @@ export type InterventoDisplay = {
   utilizzatore: InterventoDisplayField;
   cantiere: InterventoDisplayField;
   marcaModello: InterventoDisplayField;
+  marcaAttrezzatura: InterventoDisplayField;
+  modelloAttrezzatura: InterventoDisplayField;
+  tipoAttrezzatura: InterventoDisplayField;
+  marcaTelaio: InterventoDisplayField;
+  modelloTelaio: InterventoDisplayField;
+  tipoTelaio: InterventoDisplayField;
+  vin: InterventoDisplayField;
   targa: InterventoDisplayField;
   matricola: InterventoDisplayField;
   nScuderia: InterventoDisplayField;

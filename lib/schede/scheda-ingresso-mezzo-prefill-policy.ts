@@ -1,10 +1,10 @@
 import type { MezzoLinkStatus } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import type { MezzoLinkOrigin } from "@/lib/schede/scheda-ingresso-mezzo-match";
 
-export type MezzoPrefillPolicy = "manual_selected" | "confirmed_match" | "no_prefill";
+export type MezzoPrefillPolicy = "manual_selected" | "confirmed_match" | "no_prefill" | "edit_hydrate";
 
 export function canPrefillSchedaFromMezzo(policy: MezzoPrefillPolicy): boolean {
-  return policy === "manual_selected" || policy === "confirmed_match";
+  return policy === "manual_selected" || policy === "confirmed_match" || policy === "edit_hydrate";
 }
 
 export function resolveMezzoPrefillPolicy(input: {

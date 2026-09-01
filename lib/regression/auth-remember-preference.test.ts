@@ -20,6 +20,7 @@ function read(rel: string): string {
 
 const authCtx = read("context/auth-context.tsx");
 const loginForm = read("app/login/login-form.tsx");
+const rememberPref = read("lib/auth/auth-remember-preference.ts");
 const browserClient = read("src/lib/supabase/browser-client.ts");
 const middlewareClient = read("src/lib/supabase/middleware-client.ts");
 const serverUserClient = read("src/lib/supabase/server-user-client.ts");
@@ -27,6 +28,13 @@ const serverUserClient = read("src/lib/supabase/server-user-client.ts");
 assert.doesNotMatch(authCtx, /_remember/);
 assert.match(authCtx, /setAuthRememberPreference\(remember\)/);
 assert.match(loginForm, /readAuthRememberPreference/);
+assert.match(loginForm, /setAuthRememberPreference\(next\)/);
+assert.match(loginForm, /useState\(false\)/);
+
+assert.match(rememberPref, /readAuthRememberPreferenceFromCookies/);
+assert.doesNotMatch(rememberPref, /localStorage\.getItem[\s\S]*return stored === "1"/);
+assert.match(rememberPref, /return parsed \?\? false/);
+assert.match(rememberPref, /return false;\s*\n\}/);
 
 assert.match(browserClient, /applyRememberToCookiesToSet/);
 assert.match(browserClient, /readAuthRememberPreference/);
@@ -64,7 +72,7 @@ const mapped = applyRememberToCookiesToSet(
 assert.equal(mapped[0]?.options?.maxAge, undefined);
 assert.equal(mapped[1]?.options?.maxAge, 123);
 
-assert.equal(readAuthRememberPreferenceFromCookies([]), true);
+assert.equal(readAuthRememberPreferenceFromCookies([]), false);
 assert.equal(
   readAuthRememberPreferenceFromCookies([{ name: CAB_AUTH_REMEMBER_COOKIE_KEY, value: "0" }]),
   false,

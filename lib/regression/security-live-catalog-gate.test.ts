@@ -12,7 +12,7 @@ const BASELINE_PATH =
   process.env.LIVE_SECURITY_BASELINE ??
   path.join(ROOT, "docs/security/baseline-post-remediation-2026-08-26.json");
 
-const PUBLIC_SAFE_ALLOWLIST = new Set(["resolve_auth_email_for_login"]);
+const PUBLIC_SAFE_ALLOWLIST = new Set<string>([]);
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, "utf8")) as {
   entries: Record<string, { classification: string; grants: string[] }>;

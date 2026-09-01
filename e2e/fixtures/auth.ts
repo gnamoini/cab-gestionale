@@ -5,6 +5,11 @@ export type SmokeCredentials = {
   password: string;
 };
 
+export type LoginViaUiOptions = {
+  /** Imposta checkbox "Resta collegato" prima del submit. */
+  remember?: boolean;
+};
+
 export function adminCredentials(): SmokeCredentials {
   const email = process.env.SMOKE_ADMIN_EMAIL?.trim();
   const password = process.env.SMOKE_ADMIN_PASSWORD?.trim();
@@ -12,6 +17,13 @@ export function adminCredentials(): SmokeCredentials {
     throw new Error("SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required for Playwright smoke");
   }
   return { email, password };
+}
+
+export function adminUsernameCredentials(): SmokeCredentials | null {
+  const username = process.env.SMOKE_ADMIN_USERNAME?.trim();
+  const password = process.env.SMOKE_ADMIN_PASSWORD?.trim();
+  if (!username || !password) return null;
+  return { email: username, password };
 }
 
 export function operatorCredentials(): SmokeCredentials | null {
@@ -54,9 +66,19 @@ async function ensureAccountMenuVisible(page: Page): Promise<void> {
   await expect(accountMenu).toBeVisible({ timeout: 15_000 });
 }
 
-export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<void> {
+export async function loginViaUi(
+  page: Page,
+  creds: SmokeCredentials,
+  opts?: LoginViaUiOptions,
+): Promise<void> {
   await expect(async () => {
     await page.goto("/login");
+    const rememberCheckbox = page.getByRole("checkbox", { name: /resta collegato/i });
+    if (opts?.remember === true) {
+      await rememberCheckbox.check();
+    } else if (opts?.remember === false) {
+      await rememberCheckbox.uncheck();
+    }
     await page.getByTestId("smoke-login-identifier").fill(creds.email);
     await page.getByTestId("smoke-login-password").fill(creds.password);
     await page.getByTestId("smoke-login-submit").click();

@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/notification-types";
-import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { RealtimeInboxCoordinator, type InboxCoordinatorHealth } from "@/lib/notifications/realtime-inbox-coordinator";
 import { notificationsEntry } from "@/lib/domain/notifications-entry";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+import { useInboxEligible } from "@/src/hooks/gestionale/use-inbox-eligible";
 
 const PAGE_SIZE = 50;
+const DEGRADED_REFETCH_INTERVAL_MS = 30_000;
 
 function cursorFromRow(row: InboxNotificationRow): InboxCursor {
   return {
@@ -25,8 +24,8 @@ function cursorFromRow(row: InboxNotificationRow): InboxCursor {
 export function useNotificationCenter(drawerOpen = false) {
   const { user, status } = useAuth();
   const userId = user?.id ?? "";
-  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const { readsDb, mode } = useNotificationsV2Mode();
+  const { readsDb } = useNotificationsV2Mode();
+  const { eligible: inboxEligible, isLoading: eligibilityLoading } = useInboxEligible();
   const queryClient = useQueryClient();
   const coordinatorRef = useRef<RealtimeInboxCoordinator | null>(null);
   const [channelStatus, setChannelStatus] = useState<"live" | "degraded" | "off">("off");
@@ -36,14 +35,14 @@ export function useNotificationCenter(drawerOpen = false) {
     inboxVersion: number;
   }>({ heartbeatTimestamp: null, lastEventId: null, inboxVersion: 0 });
 
-  const rbacCtx = snapshot?.rbacContext;
-  const eligibleUser = snapshot?.role ? { ruolo: snapshot.role } : user;
   const enabled =
     isAuthSessionEstablished(status) &&
     userId.length > 0 &&
-    !permsLoading &&
     readsDb &&
-    (isStaffInboxEligible(eligibleUser, rbacCtx) || isClientInboxEligible(eligibleUser, rbacCtx));
+    inboxEligible &&
+    !eligibilityLoading;
+
+  const degradedPolling = channelStatus === "degraded";
 
   const inboxQuery = useInfiniteQuery({
     queryKey: [...QK.notificationsInbox, userId] as const,
@@ -63,6 +62,7 @@ export function useNotificationCenter(drawerOpen = false) {
     },
     enabled,
     staleTime: 30_000,
+    refetchInterval: degradedPolling ? DEGRADED_REFETCH_INTERVAL_MS : false,
   });
 
   const unreadQuery = useQuery({
@@ -74,6 +74,7 @@ export function useNotificationCenter(drawerOpen = false) {
     },
     enabled,
     staleTime: 15_000,
+    refetchInterval: degradedPolling ? DEGRADED_REFETCH_INTERVAL_MS : false,
   });
 
   const notifications = useMemo(
@@ -107,18 +108,6 @@ export function useNotificationCenter(drawerOpen = false) {
     }
     if (total > 0) await refresh();
   }, [enabled, refresh]);
-
-  const markedAllOnOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (!drawerOpen) {
-      markedAllOnOpenRef.current = false;
-      return;
-    }
-    if (!enabled || markedAllOnOpenRef.current) return;
-    markedAllOnOpenRef.current = true;
-    void markAllRead();
-  }, [drawerOpen, enabled, markAllRead]);
 
   const dismissNotification = useCallback(
     async (row: InboxNotificationRow) => {
@@ -194,11 +183,11 @@ export function useNotificationCenter(drawerOpen = false) {
     notifications,
     unreadCount,
     enabled,
-    mode,
-    isLoading: inboxQuery.isLoading || unreadQuery.isLoading || permsLoading,
+    isLoading: inboxQuery.isLoading || unreadQuery.isLoading || eligibilityLoading,
     dismissNotification,
     dismissAllNotifications,
     markReadById,
+    markAllRead,
     isDismissingAll,
     loadMore,
     hasMore: Boolean(inboxQuery.hasNextPage),

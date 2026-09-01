@@ -8,7 +8,9 @@
 | `cab-theme` | `writeThemeBootCookie`, theme boot IIFE | `resolveServerThemeMode` (SSR), `ThemeProvider` | No | HTTPS only |
 | `sb-*-auth-token` | Supabase SSR (`@supabase/ssr`) | middleware, server-user-client, browser-client | Yes (SSR path) | Via Supabase options |
 
-**Remember-me:** UI preference only (`1`/`0`). Not auth — tells Supabase cookie adapter whether to apply persistent `maxAge` on auth cookies after login.
+**Remember-me:** UI preference only (`1`/`0`). **SSOT:** cookie `cab-auth-remember` (client e server leggono solo il cookie; `localStorage` è mirror legacy one-shot). Default `false` = session-only finché l'utente non seleziona "Resta collegato". Not auth — tells Supabase cookie adapter whether to apply persistent `maxAge` on auth cookies after login.
+
+**Login username:** risoluzione `username → email` solo server-side (`resolveLoginEmailAction` + RPC `resolve_auth_email_for_login` con `service_role`). Password reset richiede ancora l'email (forgot-password non accetta username).
 
 **Theme:** Boot cache for first paint. SSR reads `cab-theme` cookie in `app/layout.tsx`; client syncs `localStorage` + cookie via boot script before React hydration.
 

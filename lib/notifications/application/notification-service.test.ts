@@ -64,7 +64,13 @@ const ctxOnline = PresenceResolver.buildUserDeliveryContext(
   ],
   PresenceResolver.defaultPreferences(),
 );
-const resolvedOnline = ChannelPolicyResolver.resolveChannels("lavorazione_created", ctxOnline, "HIGH");
+const resolvedOnline = ChannelPolicyResolver.resolveChannels(
+  "lavorazione_created",
+  ctxOnline,
+  "HIGH",
+  null,
+  new Date("2026-06-15T12:00:00"),
+);
 assert.ok(resolvedOnline.channels.includes("realtime"));
 assert.ok(resolvedOnline.channels.includes("push"));
 
@@ -73,7 +79,13 @@ const ctxStale = PresenceResolver.buildUserDeliveryContext(
   [{ id: "d1", endpoint: "https://example.com", user_agent: null, presence_status: "ONLINE" }],
   PresenceResolver.defaultPreferences(),
 );
-const resolvedStale = ChannelPolicyResolver.resolveChannels("lavorazione_created", ctxStale, "HIGH");
+const resolvedStale = ChannelPolicyResolver.resolveChannels(
+  "lavorazione_created",
+  ctxStale,
+  "HIGH",
+  null,
+  new Date("2026-06-15T12:00:00"),
+);
 assert.ok(!resolvedStale.channels.includes("realtime"));
 assert.ok(resolvedStale.channels.includes("push"));
 

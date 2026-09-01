@@ -1,7 +1,7 @@
 import { resolveRole, type RbacEvaluationContext } from "@/lib/auth/rbac";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
-/** Policy A: guest e cliente esclusi dall'inbox. */
+/** @deprecated Use useStaffInboxEligibleRpc() or resolveNotificationStaffInboxEligible() — DB RPC is SSOT. */
 export function isStaffInboxEligible(
   user: import("@/lib/auth/rbac").RbacUser,
   ctx?: RbacEvaluationContext,

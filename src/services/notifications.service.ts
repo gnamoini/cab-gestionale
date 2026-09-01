@@ -161,4 +161,15 @@ export const notificationsService = {
       return serviceFailFromError(e);
     }
   },
+
+  async isInboxEligible(): Promise<ServiceResult<boolean>> {
+    try {
+      const client = await sb();
+      const { data, error } = await client.rpc("notification_inbox_eligible");
+      if (error) return err(error.message);
+      return success(Boolean(data));
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
 };

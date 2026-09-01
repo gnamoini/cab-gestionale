@@ -81,11 +81,34 @@ export async function GET() {
     .select("*", { count: "exact", head: true })
     .eq("status", "failed");
 
+  const { data: oldestOutboxPending } = await client
+    .from("notification_outbox")
+    .select("created_at")
+    .in("status", ["pending", "processing"])
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const outboxOldestAgeMs = oldestOutboxPending?.[0]?.created_at
+    ? now - new Date(String(oldestOutboxPending[0].created_at)).getTime()
+    : 0;
+
   const { data: recentWorkerDiag } = await client
     .from("notification_worker_diagnostics")
     .select("worker_name, status, detail, created_at")
+    .eq("worker_name", "notification_outbox")
     .order("created_at", { ascending: false })
     .limit(5);
+
+  const { data: lastDispatch } = await client
+    .from("notification_dispatch_log")
+    .select("status, created_at, dispatch_notification_event_id, created_count")
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const workerSecretConfigured = Boolean(
+    process.env.CRON_SECRET?.trim() && process.env.CRON_SECRET.trim().length >= 8,
+  );
 
   const { data: recentPipelineTrace } = await client
     .from("notification_pipeline_trace")
@@ -121,6 +144,9 @@ export async function GET() {
     outbox: {
       pending: outboxPending ?? 0,
       failed: outboxFailed ?? 0,
+      oldestPendingAgeMs: outboxOldestAgeMs,
+      workerSecretConfigured,
+      lastDispatch: lastDispatch?.[0] ?? null,
     },
     workerDiagnostics: recentWorkerDiag ?? [],
     pipelineTrace: {

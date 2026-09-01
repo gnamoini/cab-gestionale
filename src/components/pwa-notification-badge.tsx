@@ -6,12 +6,14 @@ import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { syncPwaAppBadge } from "@/lib/pwa/pwa-notification-badge";
 import { notificationsEntry } from "@/lib/domain/notifications-entry";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { useInboxEligible } from "@/src/hooks/gestionale/use-inbox-eligible";
 
-/** Badge OS solo da unread count DB — mai da eventi push. */
+/** Badge OS solo da unread count DB — gated su RPC inbox eligibility. */
 export const PwaNotificationBadgeBridge = memo(function PwaNotificationBadgeBridge() {
   const { user, status } = useAuth();
   const userId = user?.id ?? "";
   const authReady = isAuthSessionEstablished(status) && userId.length > 0;
+  const { eligible: inboxEligible, isLoading: eligibilityLoading } = useInboxEligible();
   const lastCountRef = useRef<number | null>(null);
 
   const unreadQuery = useQuery({
@@ -21,14 +23,14 @@ export const PwaNotificationBadgeBridge = memo(function PwaNotificationBadgeBrid
       if (!res.success) throw new Error(res.error ?? "Errore conteggio");
       return res.data ?? 0;
     },
-    enabled: authReady,
+    enabled: authReady && inboxEligible && !eligibilityLoading,
     staleTime: 15_000,
   });
 
   const unreadCount = unreadQuery.data ?? 0;
 
   useEffect(() => {
-    if (!authReady) {
+    if (!authReady || !inboxEligible) {
       void syncPwaAppBadge(0);
       lastCountRef.current = null;
       return;
@@ -36,7 +38,7 @@ export const PwaNotificationBadgeBridge = memo(function PwaNotificationBadgeBrid
     if (lastCountRef.current === unreadCount) return;
     lastCountRef.current = unreadCount;
     void syncPwaAppBadge(unreadCount);
-  }, [authReady, unreadCount]);
+  }, [authReady, inboxEligible, unreadCount]);
 
   return null;
 });

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { resolveNotificationStaffInboxEligible } from "@/lib/notifications/inbox-eligible.server";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
 
 export const runtime = "nodejs";
@@ -20,10 +21,9 @@ type PipelineTraceBody = {
 
 export async function POST(req: Request) {
   const snap = await resolveServerEffectivePermissions();
-  if (
-    !snap?.userId ||
-    !isStaffInboxEligible({ id: snap.userId, ruolo: snap.role }, { resolved: snap.resolved })
-  ) {
+  const userClient = await createSupabaseServerUserClient();
+  const staffEligible = await resolveNotificationStaffInboxEligible(userClient);
+  if (!snap?.userId || !staffEligible) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }
 

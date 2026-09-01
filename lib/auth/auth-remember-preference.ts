@@ -1,41 +1,62 @@
 import { AUTH_PERSISTENT_COOKIE_MAX_AGE } from "@/lib/auth/auth-cookie-options";
 
 export const CAB_AUTH_REMEMBER_COOKIE_KEY = "cab-auth-remember";
+/** Mirror opzionale per compat; non usato come SSOT di lettura. */
 export const CAB_AUTH_REMEMBER_STORAGE_KEY = "cab-auth-remember";
 
 type CookieLike = { name: string; value: string };
 
-export function readAuthRememberPreferenceFromCookies(cookies: CookieLike[]): boolean {
-  const entry = cookies.find((c) => c.name === CAB_AUTH_REMEMBER_COOKIE_KEY);
-  if (!entry) return true;
-  return entry.value === "1";
+function parseRememberCookieValue(raw: string | undefined): boolean | null {
+  if (raw === undefined) return null;
+  if (raw === "1") return true;
+  if (raw === "0") return false;
+  return null;
 }
 
-export function readAuthRememberPreference(): boolean {
-  if (typeof window === "undefined") return true;
-
-  try {
-    const stored = localStorage.getItem(CAB_AUTH_REMEMBER_STORAGE_KEY);
-    if (stored === "0") return false;
-    if (stored === "1") return true;
-  } catch {
-    /* storage disabilitato */
-  }
-
-  const chunks = document.cookie.split("; ");
+function readRememberFromCookieChunks(chunks: Iterable<string>): boolean | null {
   for (const chunk of chunks) {
     if (!chunk) continue;
     const eq = chunk.indexOf("=");
     if (eq < 0) continue;
     const name = decodeURIComponent(chunk.slice(0, eq));
     if (name !== CAB_AUTH_REMEMBER_COOKIE_KEY) continue;
-    return decodeURIComponent(chunk.slice(eq + 1)) === "1";
+    return parseRememberCookieValue(decodeURIComponent(chunk.slice(eq + 1)));
   }
-
-  return true;
+  return null;
 }
 
-/** Salva preferenza prima del login — cookie + localStorage per ripopolare il form. */
+/** SSOT server-side: solo cookie `cab-auth-remember`; default session-only (false). */
+export function readAuthRememberPreferenceFromCookies(cookies: CookieLike[]): boolean {
+  const entry = cookies.find((c) => c.name === CAB_AUTH_REMEMBER_COOKIE_KEY);
+  const parsed = parseRememberCookieValue(entry?.value);
+  return parsed ?? false;
+}
+
+/**
+ * SSOT client-side: solo cookie. Se manca, migrazione one-shot da localStorage legacy → cookie.
+ * Default session-only (false) = opt-in esplicito per persistenza.
+ */
+export function readAuthRememberPreference(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const fromCookie = readRememberFromCookieChunks(document.cookie.split("; "));
+  if (fromCookie !== null) return fromCookie;
+
+  try {
+    const stored = localStorage.getItem(CAB_AUTH_REMEMBER_STORAGE_KEY);
+    if (stored === "0" || stored === "1") {
+      const remember = stored === "1";
+      setAuthRememberPreference(remember);
+      return remember;
+    }
+  } catch {
+    /* storage disabilitato */
+  }
+
+  return false;
+}
+
+/** Salva preferenza: cookie SSOT + mirror localStorage best-effort. */
 export function setAuthRememberPreference(remember: boolean): void {
   if (typeof window === "undefined") return;
 

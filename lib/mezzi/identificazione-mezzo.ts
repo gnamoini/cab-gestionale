@@ -1,3 +1,4 @@
+import type { InterventoDisplay } from "@/lib/domain/intervento-context/intervento-context.types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
@@ -142,6 +143,24 @@ export function identificazionePartsFromLavorazione(
     cliente: clean(lav.cliente),
     cantiere: undefined,
     utilizzatore: clean(lav.utilizzatore),
+  };
+}
+
+export function identificazionePartsFromInterventoDisplay(
+  display: InterventoDisplay,
+): MezzoIdentificazioneParts {
+  return {
+    targa: clean(display.targa.value),
+    matricola: clean(display.matricola.value),
+    nScuderia: clean(display.nScuderia.value),
+    marcaAttrezzatura: clean(display.marcaAttrezzatura.value),
+    modelloAttrezzatura: clean(display.modelloAttrezzatura.value),
+    cliente: clean(display.cliente.value),
+    cantiere: clean(display.cantiere.value),
+    utilizzatore: clean(display.utilizzatore.value),
+    marcaTelaio: clean(display.marcaTelaio.value),
+    modelloTelaio: clean(display.modelloTelaio.value),
+    vin: clean(display.vin.value),
   };
 }
 

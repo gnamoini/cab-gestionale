@@ -50,9 +50,8 @@ import {
 import { SidebarNavRow, SidebarSessionExpandChevron } from "@/components/gestionale/sidebar-nav-row";
 import { useNotificationCenter } from "@/src/hooks/gestionale/use-notification-center";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
-import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
-import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
+import { useStaffInboxEligibleRpc } from "@/src/hooks/gestionale/use-inbox-eligible";
+import { useInboxEligible } from "@/src/hooks/gestionale/use-inbox-eligible";
 import {
   getNotificationCenterOpenSnapshot,
   subscribeNotificationCenterOpen,
@@ -304,16 +303,9 @@ export function NotificationCenterBell({
   headerTrigger = false,
 }: NotificationCenterBellProps) {
   const gestToast = useGestionaleToast();
-  const { user } = useAuth();
-  const { snapshot } = useEffectivePermissions();
-  const staffInbox = isStaffInboxEligible(
-    snapshot?.role ? { ruolo: snapshot.role } : user,
-    snapshot?.rbacContext,
-  );
-  const clientInbox = isClientInboxEligible(
-    snapshot?.role ? { ruolo: snapshot.role } : user,
-    snapshot?.rbacContext,
-  );
+  const { eligible: staffInbox } = useStaffInboxEligibleRpc();
+  const { eligible: inboxEligible } = useInboxEligible();
+  const clientInbox = inboxEligible && !staffInbox;
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -378,7 +370,6 @@ export function NotificationCenterBell({
   const [bellArrive, setBellArrive] = useState(false);
   const clientToastSeenRef = useRef<Map<string, number>>(new Map());
   const inboxSystemSeenRef = useRef<Map<string, number>>(new Map());
-  const inboxEligible = staffInbox || clientInbox;
 
   useEffect(() => {
     if (!clientInbox || isLoading || open) return;

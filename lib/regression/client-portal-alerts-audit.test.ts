@@ -23,7 +23,7 @@ assert.doesNotMatch(lavorazioniBridge, /fanoutClientPortalLavorazioneNotificatio
 
 const notificationBellSrc = read("components/gestionale/notification-center-bell.tsx");
 assert.match(notificationBellSrc, /client_portal_ingresso/);
-assert.match(notificationBellSrc, /isClientInboxEligible/);
+assert.match(notificationBellSrc, /useInboxEligible/);
 
 const triggersMigration = read("supabase/migrations/20260906130000_client_portal_notifications_db_triggers.sql");
 assert.match(triggersMigration, /trg_lavorazioni_client_portal_ingresso/);
@@ -31,10 +31,9 @@ assert.match(triggersMigration, /trg_lavorazioni_client_portal_completata/);
 assert.match(triggersMigration, /on conflict \(dedup_key\) do nothing/);
 
 const notificationMount = read("components/gestionale/notification-center-mount.tsx");
-assert.match(notificationMount, /isStaffInboxEligible/);
-assert.match(notificationMount, /isClientInboxEligible/);
+assert.match(notificationMount, /useInboxEligible/);
 
 const notificationCenterHook = read("src/hooks/gestionale/use-notification-center.ts");
-assert.match(notificationCenterHook, /isClientInboxEligible/);
+assert.match(notificationCenterHook, /useInboxEligible/);
 
 console.log("client-portal-alerts-audit.test.ts OK");
