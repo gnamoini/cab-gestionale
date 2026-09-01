@@ -47,6 +47,7 @@ export type AppPageRoutePath =
   | "/impostazioni/ai-providers"
   | "/sicurezza"
   | "/sicurezza/production-readiness"
+  | "/sicurezza/pwa-render-probe"
   | "/acesso-negato"
   | "/login"
   | "/login/reset-password"
@@ -142,6 +143,10 @@ export const GESTIONALE_ROUTE_TITLES: Record<AppPageRoutePath, AppPageRouteConfi
     formatPageTitle("Prontezza operativa", "Sicurezza"),
     "Checklist pre-produzione",
   ),
+  "/sicurezza/pwa-render-probe": routeConfig(
+    formatPageTitle("Audit rendering PWA", "Sicurezza"),
+    "Diagnostica compositor PWA Windows",
+  ),
   "/acesso-negato": routeConfig("Accesso negato", "Permessi insufficienti"),
   "/login": routeConfig("Accedi", "Accesso all'area riservata del gestionale officina"),
   "/login/reset-password": routeConfig("Reimposta password", "Imposta una nuova password di accesso"),
@@ -194,6 +199,7 @@ export const impostazioniPageMetadata = metadataForRoute("/impostazioni");
 export const impostazioniAiProvidersPageMetadata = metadataForRoute("/impostazioni/ai-providers");
 export const sicurezzaPageMetadata = metadataForRoute("/sicurezza");
 export const sicurezzaProductionReadinessPageMetadata = metadataForRoute("/sicurezza/production-readiness");
+export const sicurezzaPwaRenderProbePageMetadata = metadataForRoute("/sicurezza/pwa-render-probe");
 export const accessoNegatoPageMetadata = metadataForRoute("/acesso-negato");
 export const loginPageMetadata = metadataForRoute("/login");
 export const loginResetPasswordPageMetadata = metadataForRoute("/login/reset-password");
