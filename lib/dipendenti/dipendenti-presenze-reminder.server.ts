@@ -9,6 +9,7 @@ import {
   shouldRunDipendentiPresenzeReminderCheck,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import { fanoutEntityNotification } from "@/lib/notifications/dispatch/entity-fanout.server";
+import { entityDispatchIdempotencyKey } from "@/lib/notifications/dispatch/entity-idempotency";
 import { resolveSingleCompanyId } from "@/lib/notifications/dispatch/resolve-company-id.server";
 import { createNotificationTraceId } from "@/lib/notifications/observability/notification-trace";
 
@@ -51,6 +52,22 @@ export async function runDipendentiPresenzeReminderNotify(): Promise<DipendentiP
   }
 
   const today = romeDateYmd(now);
+
+  const dispatchKey = entityDispatchIdempotencyKey(
+    "dipendenti.presence_reminder",
+    "dipendenti_presenze",
+    today,
+  );
+  const { data: existingDispatch } = await client
+    .from("notification_dispatch_log")
+    .select("status")
+    .eq("company_id", companyId)
+    .eq("dispatch_idempotency_key", dispatchKey)
+    .maybeSingle();
+
+  if (existingDispatch?.status === "completed") {
+    return { ok: true, skipped: "already_dispatched", dateYmd: today };
+  }
 
   const [employeesRes, entriesRes] = await Promise.all([
     client.from("dipendenti_timesheet_employees").select("id, display_name, in_settings"),

@@ -4,7 +4,7 @@ import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
-  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationOpenMagazzinoHref,
   formatAdminNotificationDesktopBody,
   formatLavorazioneCompletataToastMessage,
   formatMagazzinoSottoScortaToastMessage,
@@ -78,9 +78,9 @@ export function adminDashboardNotificationDesktopPayload(
   }
   if (isMagazzinoDashboardNotification(notification)) {
     return {
-      title: "Sotto scorta minima",
+      title: "Ricambio sotto scorta",
       body: formatMagazzinoSottoScortaToastMessage(notification),
-      href: buildAdminNotificationMagazzinoHref(notification.ricambioId),
+      href: buildAdminNotificationOpenMagazzinoHref(notification.ricambioId),
       tag: notificationStoreKey(notification),
     };
   }

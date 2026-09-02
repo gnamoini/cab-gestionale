@@ -8,6 +8,7 @@ import {
   lavorazioneCompletataDedupKey,
   lavorazioneCreatedDedupKey,
   magazzinoSottoScortaDedupKey,
+  magazzinoSottoScortaLegacyDedupKey,
   tagliandoDaEseguireDedupKey,
 } from "@/lib/notifications/notification-dedup-keys";
 import {
@@ -24,10 +25,11 @@ import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
-  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationOpenMagazzinoHref,
   formatAdminNotificationDesktopBody,
   formatLavorazioneCompletataToastMessage,
   formatMagazzinoSottoScortaToastMessage,
+  MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE,
 } from "@/lib/lavorazioni/admin-notifications";
 import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
 import {
@@ -89,18 +91,30 @@ export function legacyNotificationToCommand(
   }
 
   if (isMagazzinoDashboardNotification(notification)) {
-    const dedupKey = magazzinoSottoScortaDedupKey(notification.ricambioId);
+    const episodeId = notification.episodeId?.trim();
+    const dedupKey = episodeId
+      ? magazzinoSottoScortaDedupKey(notification.ricambioId, episodeId)
+      : magazzinoSottoScortaLegacyDedupKey(notification.ricambioId);
     return {
       notificationType: "magazzino_sotto_scorta",
       sourceDomainEvent: "inventory.below_minimum",
       translationKey: "notification.magazzino_sotto_scorta",
-      translationParams: { ricambioId: notification.ricambioId },
-      snapshot: { partName: notification.descrizione },
-      title: notification.esaurito
-        ? notification.descrizione?.trim() || "Ricambio esaurito"
-        : notification.descrizione?.trim() || "Sotto scorta minima",
+      translationParams: {
+        ricambioId: notification.ricambioId,
+        episodeId: episodeId ?? null,
+      },
+      snapshot: {
+        ricambio_id: notification.ricambioId,
+        codice: notification.codice ?? "",
+        quantita: String(notification.scorta),
+        scorta_minima: String(notification.scortaMinima),
+        nome: notification.descrizione,
+        marca: notification.marca,
+        episode_id: episodeId ?? "",
+      },
+      title: MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE,
       body: formatMagazzinoSottoScortaToastMessage(notification),
-      deepLink: buildAdminNotificationMagazzinoHref(notification.ricambioId),
+      deepLink: buildAdminNotificationOpenMagazzinoHref(notification.ricambioId),
       entityType: "magazzino_ricambi",
       entityId: notification.ricambioId,
       dedupKey,

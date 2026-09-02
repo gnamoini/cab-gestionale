@@ -3,25 +3,23 @@
 import { useCallback, useRef, useState } from "react";
 import { SchedaIngressoUnknownSettingsDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-unknown-settings-dialog";
 import {
-  applyCanonicalValuesToSchedaIngresso,
   listSchedaIngressoUnknownSettings,
   type SchedaIngressoUnknownSettingItem,
 } from "@/lib/schede/scheda-ingresso-unknown-settings";
+import {
+  runUnknownSettingsGateSubmit,
+  runUnknownSettingsSaveAndContinue,
+  type UnknownSettingsGatePending,
+} from "@/lib/schede/scheda-ingresso-unknown-settings-gate-core";
 import { useAppendSchedaIngressoUnknownSettings } from "@/src/hooks/use-append-scheda-ingresso-unknown-settings";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { SchedaIngressoFields } from "@/types/schede";
-
-type PendingAction = {
-  fields: SchedaIngressoFields;
-  proceed: (fields: SchedaIngressoFields) => void | Promise<void>;
-  finish: () => void;
-};
 
 export function useSchedaIngressoUnknownSettingsGate(globalOpts?: GlobalOptionsSlice) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<SchedaIngressoUnknownSettingItem[]>([]);
   const [gatePending, setGatePending] = useState(false);
-  const pendingRef = useRef<PendingAction | null>(null);
+  const pendingRef = useRef<UnknownSettingsGatePending | null>(null);
   const { appendItems, canManageSettings, isPending: appendPending } = useAppendSchedaIngressoUnknownSettings();
 
   const closeGate = useCallback(() => {
@@ -48,31 +46,24 @@ export function useSchedaIngressoUnknownSettingsGate(globalOpts?: GlobalOptionsS
 
   const gateSubmit = useCallback(
     async (fields: SchedaIngressoFields, proceed: (fields: SchedaIngressoFields) => void | Promise<void>) => {
-      await new Promise<void>((resolve) => {
-        const finish = () => resolve();
-        const wrappedProceed = async (nextFields: SchedaIngressoFields) => {
-          try {
-            await proceed(nextFields);
-          } finally {
-            finish();
-          }
-        };
+      const unknown =
+        !globalOpts || globalOpts.isLoading
+          ? []
+          : listSchedaIngressoUnknownSettings(fields, globalOpts);
 
-        if (!globalOpts || globalOpts.isLoading) {
-          void wrappedProceed(fields);
-          return;
-        }
-
-        const unknown = listSchedaIngressoUnknownSettings(fields, globalOpts);
-        if (unknown.length === 0) {
-          void wrappedProceed(fields);
-          return;
-        }
-
-        pendingRef.current = { fields, proceed: wrappedProceed, finish };
-        setItems(unknown);
-        setOpen(true);
-      });
+      await runUnknownSettingsGateSubmit(
+        fields,
+        proceed,
+        {
+          globalOptsLoading: !globalOpts || globalOpts.isLoading,
+          unknown,
+        },
+        (pending) => {
+          pendingRef.current = pending;
+          setItems(unknown);
+          setOpen(true);
+        },
+      );
     },
     [globalOpts],
   );
@@ -89,15 +80,14 @@ export function useSchedaIngressoUnknownSettingsGate(globalOpts?: GlobalOptionsS
     void (async () => {
       setGatePending(true);
       try {
-        const canonical = await appendItems(items);
-        if (canonical === null) return;
-        const nextFields = applyCanonicalValuesToSchedaIngresso(pending.fields, canonical);
-        await runProceed(nextFields);
+        await runUnknownSettingsSaveAndContinue(pending, () => appendItems(items));
+      } catch {
+        /* finish() già invocato in core su appendItems null */
       } finally {
         setGatePending(false);
       }
     })();
-  }, [appendItems, items, runProceed]);
+  }, [appendItems, items]);
 
   const dialog = (
     <SchedaIngressoUnknownSettingsDialog

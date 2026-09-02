@@ -9,6 +9,7 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
 import path from "node:path";
+import { assertSmokeMutationAllowed } from "@/lib/smoke/smoke-target-policy";
 import {
   cleanupSmokeData,
   printSmokeCleanupReport,
@@ -50,6 +51,16 @@ async function main(): Promise<void> {
   loadEnvLocal();
   const { verbose, apply: applyFlag } = parseArgs();
   const apply = applyFlag || process.env.SMOKE_CLEANUP_APPLY === "1";
+
+  if (apply) {
+    try {
+      assertSmokeMutationAllowed();
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Cleanup apply su production DB bloccato senza opt-in smoke sicuro.");
+      process.exit(1);
+    }
+  }
 
   const serviceKey = readSupabaseServiceRoleKey();
   if (!serviceKey) {

@@ -42,8 +42,6 @@ function NotificationOptInBannerBody({
         title="Attiva le notifiche"
         titleExtra={<span className={dsSystemBannerContextChip}>{notificationOptInContextLabel(mode)}</span>}
         description={notificationOptInDescription(mode)}
-        onDismiss={onDecline}
-        dismissLabel="Rifiuta notifiche"
         actions={
           <>
             <button type="button" className={dsSystemBannerGhostBtn} onClick={onDecline}>

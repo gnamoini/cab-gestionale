@@ -7,6 +7,7 @@ import {
   preventivoRecordToUpdate,
   preventivoRowToRecord,
 } from "@/lib/preventivi/preventivi-db-mapper";
+import { isPreventivoVendita } from "@/lib/preventivi/preventivo-categoria";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
@@ -18,7 +19,7 @@ import {
 import { preventiviService } from "@/src/services/preventivi.service";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
 import { lavorazioniService } from "@/src/services/lavorazioni.service";
-import type { PreventivoRow } from "@/src/types/supabase-tables";
+import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 
 export const PREVENTIVI_CONCURRENCY_CONFLICT =
   "Un altro utente ha aggiornato questo preventivo. Ricarica e riprova.";
@@ -74,12 +75,20 @@ async function resolveMezzoIdForRecord(
   return null;
 }
 
-function rowMatchesExistingRecord(row: PreventivoRow, record: PreventivoRecord, mezzoId: string): boolean {
+function rowMatchesExistingRecord(
+  row: PreventivoRow,
+  record: PreventivoRecord,
+  mezzoId: string | null,
+): boolean {
   const det = row.dettagli as Record<string, unknown> | undefined;
   if (typeof det?.localLegacyId === "string" && det.localLegacyId === record.id) return true;
   const detNum = typeof det?.numero === "string" ? det.numero.trim() : "";
   if (!detNum || detNum !== record.numero.trim()) return false;
-  if (row.mezzo_id !== mezzoId) return false;
+  if (mezzoId) {
+    if (row.mezzo_id !== mezzoId) return false;
+  } else if (row.mezzo_id) {
+    return false;
+  }
   if (isPreventivoUuid(record.lavorazioneId)) {
     return row.lavorazione_id === record.lavorazioneId;
   }
@@ -88,7 +97,7 @@ function rowMatchesExistingRecord(row: PreventivoRow, record: PreventivoRecord, 
 
 async function resolveExistingPreventivoRow(
   record: PreventivoRecord,
-  mezzoId: string,
+  mezzoId: string | null,
 ): Promise<{ row: PreventivoRow | null; lookupError?: string }> {
   if (isPreventivoUuid(record.id)) {
     const byId = await preventiviService.getById(record.id);
@@ -111,7 +120,11 @@ async function resolveExistingPreventivoRow(
   return { row: hit };
 }
 
-function mezzoEmbedForId(mezziGestiti: readonly MezzoGestito[], mezzoId: string) {
+function mezzoEmbedForId(
+  mezziGestiti: readonly MezzoGestito[],
+  mezzoId: string | null,
+): MezzoRow | null {
+  if (!mezzoId) return null;
   const g = mezziGestiti.find((m) => m.id === mezzoId);
   return g ? mezzoGestitoToEmbedRow(g) : null;
 }
@@ -125,8 +138,9 @@ async function syncRecordToDb(
   | { ok: false; error: string }
 > {
   const legacyId = !isPreventivoUuid(record.id) ? record.id : undefined;
-  const mezzoId = await resolveMezzoIdForRecord(record, mezziGestiti);
-  if (!mezzoId) {
+  const vendita = isPreventivoVendita(record);
+  const mezzoId = vendita ? null : await resolveMezzoIdForRecord(record, mezziGestiti);
+  if (!vendita && !mezzoId) {
     return { ok: false, error: "Mezzo non trovato per il cliente/lavorazione indicati." };
   }
 

@@ -1,4 +1,5 @@
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
+import { resolvePreventivoCategoria } from "@/lib/preventivi/preventivo-categoria";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import {
   resolvePreventivoLegacyStato,
@@ -179,6 +180,11 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
     statoCliente: resolvePreventivoStatoCliente(row),
     versione: row.versione ?? 1,
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento),
+    categoriaPreventivo: resolvePreventivoCategoria({
+      categoriaPreventivo: det.categoriaPreventivo,
+      lavorazioneId: row.lavorazione_id,
+      mezzoId: row.mezzo_id,
+    }),
     lavorazioneId: row.lavorazione_id ?? "",
     lavorazioneOrigine: (det.lavorazioneOrigine === "storico" ? "storico" : "attiva") as PreventivoRecord["lavorazioneOrigine"],
     cliente: row.cliente,

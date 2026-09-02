@@ -1,6 +1,9 @@
 import "server-only";
 
 import { z } from "zod";
+import {
+  validateOrdineFornitoreDeliveryRequest,
+} from "@/lib/ordini-fornitori/ordine-fornitore-delivery-validation";
 import { fetchOrdineFornitoreRecordServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
 import { verifyServerModuleCan } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -41,21 +44,14 @@ export async function receiveOrdineFornitoreDeliveryServer(
 
   const record = await fetchOrdineFornitoreRecordServer(ordineId);
   if (!record) return err("Ordine non trovato.");
-  if (record.status !== "in_consegna") {
-    return err("Ricezione consentita solo su ordini in consegna.");
-  }
 
-  for (const line of input.lines) {
-    const riga = record.righe.find((r) => r.id === line.riga_id);
-    if (!riga) return err(`Riga non trovata: ${line.riga_id}`);
-    const qtyReceived = riga.quantitaRicevuta ?? 0;
-    if (line.quantita_ricevuta_target < qtyReceived) {
-      return err("La quantità ricevuta non può diminuire.");
-    }
-    if (line.quantita_ricevuta_target > riga.quantita) {
-      return err("La quantità ricevuta supera la quantità ordinata.");
-    }
-  }
+  const validationError = validateOrdineFornitoreDeliveryRequest({
+    status: record.status,
+    righe: record.righe,
+    lines: input.lines,
+    applyStock: input.apply_stock,
+  });
+  if (validationError) return err(validationError);
 
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb.rpc("ordine_fornitore_receive_delivery", {

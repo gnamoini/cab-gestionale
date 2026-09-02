@@ -97,6 +97,18 @@ export function filterTablesForRemoteCacheInvalidation(
   });
 }
 
+/** Rimuove marker locale dopo mutation fallita — evita soppressione di eventi remoti legittimi. */
+export function abortRecentLocalGestionaleMutation(tables: string[], entityId: string): void {
+  const id = entityId.trim();
+  if (!id) return;
+  const now = Date.now();
+  prune(now);
+  for (const table of tables) {
+    if (!table) continue;
+    recentEntityKeys.delete(entityKey(table, id));
+  }
+}
+
 /** Per test / debug. */
 export function clearRecentLocalGestionaleMutations(): void {
   recentEntityKeys.clear();

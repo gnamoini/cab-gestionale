@@ -1,18 +1,11 @@
-import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
+import { registerMutatingSmokeGuards } from "../helpers/smoke-production-guard";
 import { expect, test } from "@playwright/test";
-
-const hasSmokeCreds = Boolean(
-  process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
-);
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeEach(({ page }) => {
-  test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
-  attachConsoleGuards(page);
-});
+registerMutatingSmokeGuards(test);
 
 test.afterAll(async () => {
   await applySmokeTeardown();

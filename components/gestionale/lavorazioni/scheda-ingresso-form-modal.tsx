@@ -72,7 +72,10 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { SAVE_OPERATION_LOOP_MESSAGE } from "@/lib/sync/save-operation-loop-guard";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
+import { prepareFormSubmitAsync } from "@/lib/forms/form-engine/prepare-form-submit";
 import type { FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
+import { createIngressoSaveAttemptId } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import type {
   IngressoSaveCommitInput,
   IngressoSaveCommitResult,
@@ -1132,7 +1135,7 @@ export function SchedaIngressoEditModal({
     initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
   );
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
-  const { value: draft, reset, setValue, patch: onPatch, getSnapshot, formProps, runSubmit } =
+  const { value: draft, reset, setValue, patch: onPatch, getSnapshot, formProps } =
     formEngine;
   const commitRef = useRef(commitIngressoEdit);
   commitRef.current = commitIngressoEdit;
@@ -1144,6 +1147,9 @@ export function SchedaIngressoEditModal({
   const lastBootstrappedMezzoIdRef = useRef<string | null>(null);
   const baselineRef = useRef<string | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const [saveInFlightExitOpen, setSaveInFlightExitOpen] = useState(false);
+  const saveAttemptIdRef = useRef<string | null>(null);
+  const saveSafetyTimerRef = useRef<number | null>(null);
 
   const syncCloseBaseline = useCallback(() => {
     baselineRef.current = JSON.stringify({
@@ -1169,15 +1175,6 @@ export function SchedaIngressoEditModal({
       })
     );
   }, [getSnapshot]);
-
-  const requestClose = useCallback(() => {
-    if (!isCloseDirty()) {
-      setUnsavedExitOpen(false);
-      onClose();
-      return;
-    }
-    setUnsavedExitOpen(true);
-  }, [isCloseDirty, onClose]);
 
   useLayoutEffect(() => {
     tagliandoFieldsRef.current = tagliandoFields;
@@ -1315,6 +1312,26 @@ export function SchedaIngressoEditModal({
   });
   const savePending = pending || savePipeline.isPending;
 
+  const requestClose = useCallback(() => {
+    if (savePending) {
+      setSaveInFlightExitOpen(true);
+      return;
+    }
+    if (!isCloseDirty()) {
+      setUnsavedExitOpen(false);
+      onClose();
+      return;
+    }
+    setUnsavedExitOpen(true);
+  }, [isCloseDirty, onClose, savePending]);
+
+  const clearSaveSafetyTimer = useCallback(() => {
+    if (saveSafetyTimerRef.current != null) {
+      window.clearTimeout(saveSafetyTimerRef.current);
+      saveSafetyTimerRef.current = null;
+    }
+  }, []);
+
   const linkedMezzoForReconcile = useMemo(() => {
     const id = mezzoPrompt.linkedSnapshot?.id?.trim();
     if (!id) return null;
@@ -1322,6 +1339,21 @@ export function SchedaIngressoEditModal({
   }, [mezziCatalog, mezzoPrompt.linkedSnapshot?.id]);
 
   const runIngressoSave = useCallback(async (): Promise<IngressoSaveResult> => {
+    if (!isCloseDirty()) {
+      onSaveSuccess?.();
+      return { ok: true, runId: 0, correlationId: "" };
+    }
+
+    const saveAttemptId = createIngressoSaveAttemptId();
+    saveAttemptIdRef.current = saveAttemptId;
+    clearSaveSafetyTimer();
+    // ponytail: rete di sicurezza — non sostituisce stati terminali del gate
+    saveSafetyTimerRef.current = window.setTimeout(() => {
+      gestToast.warning(
+        "Il salvataggio sta impiegando più del previsto. Verifica la connessione o riprova.",
+      );
+    }, 30_000);
+
     const snap = getSnapshot();
     const addettoId =
       snap.addettoAccettazioneId?.trim() ||
@@ -1339,9 +1371,38 @@ export function SchedaIngressoEditModal({
         stato: lavorazioneStatoRef.current,
         priorita: lavorazionePrioritaRef.current,
       },
+      saveAttemptId,
     });
-    if (!result.ok && result.error === SAVE_OPERATION_LOOP_MESSAGE) {
-      gestToast.error(SAVE_OPERATION_LOOP_MESSAGE, { module: "lavorazioni", action: "update" });
+    clearSaveSafetyTimer();
+    saveAttemptIdRef.current = null;
+
+    if (!result.ok) {
+      if (result.error === SAVE_OPERATION_LOOP_MESSAGE) {
+        gestToast.error(SAVE_OPERATION_LOOP_MESSAGE, { module: "lavorazioni", action: "update" });
+      } else if (result.reason === "SAVE_IN_PROGRESS" || result.error === "SAVE_IN_PROGRESS") {
+        gestToast.error("Salvataggio già in corso. Attendi il completamento.", {
+          module: "lavorazioni",
+          action: "update",
+        });
+      } else if (result.error === "SAVE_STALE") {
+        gestToast.error(
+          "Il salvataggio è stato annullato perché è partita una nuova operazione.",
+          { module: "lavorazioni", action: "update" },
+        );
+      } else if (result.reason !== "SAVE_CANCELLED" && result.error !== "validation") {
+        const detail =
+          typeof result.error === "string"
+            ? result.error
+            : result.error instanceof Error
+              ? result.error.message
+              : "";
+        gestToast.error(
+          detail
+            ? `Impossibile salvare la data di ingresso. La modifica non è stata salvata. (${detail})`
+            : "Impossibile salvare la data di ingresso. La modifica non è stata salvata.",
+          { module: "lavorazioni", action: "update" },
+        );
+      }
     }
     if (result.ok) {
       mezzoPrompt.reconcileLinkedSnapshotAfterSave(fields, linkedMezzoForReconcile);
@@ -1349,8 +1410,10 @@ export function SchedaIngressoEditModal({
     }
     return result;
   }, [
+    clearSaveSafetyTimer,
     getSnapshot,
     globalOpts.lavorazioni.addettiRecords,
+    isCloseDirty,
     linkedMezzoForReconcile,
     mezzoPrompt,
     onSaveSuccess,
@@ -1369,9 +1432,10 @@ export function SchedaIngressoEditModal({
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (ro || !open || savePending) return;
-    void runSubmit(e.currentTarget, async () => {
+    void (async () => {
+      await prepareFormSubmitAsync(e.currentTarget);
       await runIngressoSave();
-    });
+    })();
   }
 
   if (!open) return null;
@@ -1391,7 +1455,7 @@ export function SchedaIngressoEditModal({
               Elimina scheda
             </GestionaleModalFooterDeleteButton>
           ) : null}
-          <GestionaleModalFooterCancelButton onClick={requestClose} disabled={savePending} />
+          <GestionaleModalFooterCancelButton onClick={requestClose} />
           {!ro ? (
             <GestionaleModalFooterSaveButton
               type="submit"
@@ -1455,6 +1519,19 @@ export function SchedaIngressoEditModal({
           const result = await runIngressoSave();
           if (result.ok) setUnsavedExitOpen(false);
         })();
+      }}
+    />
+
+    <GestionaleConfirmDialog
+      open={saveInFlightExitOpen}
+      title="Salvataggio in corso"
+      subtitle="Un salvataggio è ancora in corso. Vuoi uscire comunque? Le modifiche potrebbero non essere state salvate."
+      onCancel={() => setSaveInFlightExitOpen(false)}
+      confirmLabel="Esci comunque"
+      cancelLabel="Resta"
+      onConfirm={() => {
+        setSaveInFlightExitOpen(false);
+        onClose();
       }}
     />
     </>

@@ -4,7 +4,12 @@ export function lavorazioneCreatedDedupKey(lavorazioneId: string): string {
   return `lav:${lavorazioneId}`;
 }
 
-export function magazzinoSottoScortaDedupKey(ricambioId: string): string {
+export function magazzinoSottoScortaDedupKey(ricambioId: string, episodeId: string): string {
+  return `mag:${ricambioId}:below:${episodeId}`;
+}
+
+/** @deprecated Solo notifiche legacy pre-episodio. */
+export function magazzinoSottoScortaLegacyDedupKey(ricambioId: string): string {
   return `mag:${ricambioId}:crossing`;
 }
 

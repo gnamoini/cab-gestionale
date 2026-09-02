@@ -2840,7 +2840,7 @@
         "SEC-01"
       ]
     },
-    "trg_magazzino_outbox_stock_crossing()": {
+    "trg_magazzino_stock_alert_episode()": {
       "classification": "INTERNAL_ONLY",
       "grants": [
         "service_role"
@@ -2848,7 +2848,7 @@
       "anonAllow": false,
       "requiresAuthUid": false,
       "requiresRbac": false,
-      "notes": "Trigger/pg internal; no PostgREST client",
+      "notes": "BEFORE UPDATE trigger magazzino_ricambi; episode gate sotto scorta; no PostgREST client",
       "findingRefs": [
         "SEC-01"
       ]

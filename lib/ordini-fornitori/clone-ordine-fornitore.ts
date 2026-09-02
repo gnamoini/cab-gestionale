@@ -10,6 +10,7 @@ function cloneRiga(riga: OrdineFornitoreRiga, ordine: number): OrdineFornitoreRi
     ...riga,
     id: crypto.randomUUID(),
     ordine,
+    quantitaRicevuta: 0,
     meta: { ...riga.meta },
   };
 }
@@ -27,6 +28,7 @@ export function cloneOrdineFornitoreRecord(
     numero: nextOrdineNumeroFromRecords(existing),
     status: "bozza",
     dataOrdine: todayIsoDate(),
+    dataConsegna: null,
     lavorazioneId: null,
     preventivoId: null,
     schedaLavorazioneId: null,

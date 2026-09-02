@@ -67,6 +67,15 @@ export function clearExplicitSaveAttempts(scope: string, entityId: string): void
   buckets.delete(bucketKey(scope, id));
 }
 
+const DEFER_CLEAR_MS = 500;
+
+/** ponytail: ritarda reset bucket — side-effect che ri-triggera save entro 500ms conta ancora. */
+export function scheduleClearExplicitSaveAttempts(scope: string, entityId: string): void {
+  const id = entityId.trim();
+  if (!id) return;
+  setTimeout(() => clearExplicitSaveAttempts(scope, id), DEFER_CLEAR_MS);
+}
+
 /** Test-only reset. */
 export function resetSaveOperationLoopGuardForTests(): void {
   buckets.clear();

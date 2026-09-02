@@ -1,5 +1,6 @@
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { resolvePreventivoLegacyStato } from "@/lib/preventivi/preventivo-row-state";
+import { normalizePreventivoCategoria } from "@/lib/preventivi/preventivo-categoria";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
@@ -21,7 +22,7 @@ function recordToDettagli(record: PreventivoRecord): Record<string, unknown> {
 
 export function preventivoRecordToInsert(
   record: PreventivoRecord,
-  mezzoId: string,
+  mezzoId: string | null,
 ): PreventivoInsert {
   const dettagli = recordToDettagli(record);
   if (!isPreventivoUuid(record.id)) {
@@ -32,6 +33,10 @@ export function preventivoRecordToInsert(
     lavorazione_id: isPreventivoUuid(record.lavorazioneId) ? record.lavorazioneId : null,
     cliente: record.cliente.trim() || "—",
     totale: record.totaleFinale,
+    stato_workflow:
+      record.statoWorkflow === "inviato" || record.statoWorkflow === "annullato"
+        ? record.statoWorkflow
+        : "bozza",
     dettagli,
   };
   if (isPreventivoUuid(record.id)) {
@@ -42,7 +47,7 @@ export function preventivoRecordToInsert(
 
 export function preventivoRecordToUpdate(
   record: PreventivoRecord,
-  mezzoId: string,
+  mezzoId: string | null,
   expectedUpdatedAt?: string,
 ): PreventivoUpdate {
   const dettagli = recordToDettagli(record);
@@ -68,6 +73,7 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
     numero: typeof det.numero === "string" && det.numero.trim() ? det.numero : stub.numero,
     stato: resolvePreventivoLegacyStato(row),
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento ?? stub.tipoDocumento),
+    categoriaPreventivo: normalizePreventivoCategoria(det.categoriaPreventivo) ?? stub.categoriaPreventivo,
     lavorazioneOrigine: det.lavorazioneOrigine === "storico" ? "storico" : stub.lavorazioneOrigine,
     lavorazioneTimestamp:
       typeof det.lavorazioneTimestamp === "string" ? det.lavorazioneTimestamp : stub.lavorazioneTimestamp,
@@ -161,7 +167,7 @@ export function mergePreventivoRecords(
   const legacyToUuid = new Map<string, string>();
 
   for (const row of remote) {
-    const mezzo = mezziById.get(row.mezzo_id) ?? null;
+    const mezzo = row.mezzo_id ? (mezziById.get(row.mezzo_id) ?? null) : null;
     const rec = preventivoRowToRecord(row, mezzo);
     byId.set(rec.id, rec);
     const det = row.dettagli as Record<string, unknown> | undefined;

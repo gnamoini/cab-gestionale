@@ -547,7 +547,7 @@ export type OperationalDiaryEntryRow = {
 
 export type PreventivoStatoRow = "bozza" | "inviato" | "confermato" | "annullato";
 
-export type PreventivoStatoWorkflowRow = "bozza" | "inviato" | "acquisito" | "annullato";
+export type PreventivoStatoWorkflowRow = "bozza" | "inviato" | "annullato";
 
 export type PreventivoStatoClienteRow = "pending" | "accettato" | "rifiutato";
 
@@ -593,15 +593,12 @@ export type PreventivoEventRow = {
 
 export type PreventivoRow = {
   id: string;
-  mezzo_id: string;
+  mezzo_id: string | null;
   lavorazione_id: string | null;
   cliente: string;
   totale: number;
   dettagli: Record<string, unknown>;
-  /** @deprecated Legacy — preferire stato_workflow. */
-  stato: PreventivoStatoRow;
   stato_workflow: PreventivoStatoWorkflowRow;
-  stato_cliente: PreventivoStatoClienteRow | null;
   versione: number;
   parent_preventivo_id: string | null;
   current_pdf_artifact_id: string | null;
@@ -610,16 +607,20 @@ export type PreventivoRow = {
   pdf_sent_generated_at: string | null;
   inviato_at: string | null;
   visualizzato_at: string | null;
-  accettato_at: string | null;
-  rifiutato_at: string | null;
-  scadenza_accettazione_at: string | null;
-  metodo_accettazione: PreventivoMetodoAccettazioneRow | null;
-  reminder_sent_at: string | null;
-  confermato_at: string | null;
-  confermato_by: string | null;
   annullato_at: string | null;
   created_at: string;
   updated_at: string;
+  /** @deprecated Rimosso da DB (202612) — può restare in dettagli legacy. */
+  stato?: PreventivoStatoRow;
+  /** @deprecated Rimosso da DB (202612). */
+  stato_cliente?: PreventivoStatoClienteRow | null;
+  accettato_at?: string | null;
+  rifiutato_at?: string | null;
+  scadenza_accettazione_at?: string | null;
+  metodo_accettazione?: PreventivoMetodoAccettazioneRow | null;
+  reminder_sent_at?: string | null;
+  confermato_at?: string | null;
+  confermato_by?: string | null;
 };
 
 export type InvoiceStatus =
@@ -1087,6 +1088,7 @@ export type OrdineFornitoreRow = {
     | "spedito"
     | "ricevuto";
   data_ordine: string;
+  data_consegna: string | null;
   fornitore_label: string;
   fornitore_snapshot: Record<string, unknown>;
   destinazione: string | null;

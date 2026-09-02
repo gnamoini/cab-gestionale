@@ -51,6 +51,13 @@ test("inboxNotificationHref resolves lavorazione entity focus", () => {
   );
 });
 
+test("inboxNotificationHref resolves magazzino open ricambio modal", () => {
+  assert.equal(
+    inboxNotificationHref(row({ type: "magazzino_sotto_scorta", entity_id: "ric-42" })),
+    "/magazzino?openRicambio=ric-42&source=dashboard",
+  );
+});
+
 test("inboxNotificationHref normalizes stored href without leading slash", () => {
   assert.equal(inboxNotificationHref(row({ type: "dipendenti_presenze_reminder", href: "dipendenti" })), "/dipendenti");
 });

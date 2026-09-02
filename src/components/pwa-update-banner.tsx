@@ -65,8 +65,6 @@ export function PwaUpdateBanner() {
           blockedReason ??
           "È disponibile un aggiornamento del gestionale. Ricarica per applicarlo."
         }
-        onDismiss={handleDismiss}
-        dismissLabel="Chiudi suggerimento aggiornamento"
         actions={
           <>
             <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>

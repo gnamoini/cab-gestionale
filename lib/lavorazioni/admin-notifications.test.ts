@@ -184,13 +184,14 @@ assert.ok(cleared.items["lav:lav-a"]);
 assert.equal(getUnreadCount(cleared), 0);
 
 const magToast = formatMagazzinoSottoScortaToastMessage({
-  marca: "Bosch",
   descrizione: "Filtro",
+  codice: "FH-1",
   scorta: 3,
   scortaMinima: 5,
 });
-assert.ok(magToast.includes("Bosch"));
-assert.ok(magToast.includes("3/5"));
+assert.ok(magToast.includes("Filtro"));
+assert.ok(magToast.includes("Disponibili: 3"));
+assert.ok(magToast.includes("Soglia minima: 5"));
 
 // Store cap (fase 10)
 for (let i = 0; i < ADMIN_NOTIFICATION_STORE_MAX_ITEMS + 5; i++) {

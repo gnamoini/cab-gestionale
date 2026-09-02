@@ -55,6 +55,7 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
       lavorazioneNote: string;
       tagliandoFields: TagliandoLavorazioneFields;
       lavorazioneGestione?: IngressoLavorazioneGestionePatch;
+      saveAttemptId?: string;
     }): Promise<IngressoSaveResult> => {
       return runIngressoSavePipeline({
         lock,
@@ -71,6 +72,7 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
         commit: (commitInput) => commitRef.current(commitInput),
         onPendingChange: setIsPending,
         loopGuardEntityId: loopGuardEntityIdRef.current,
+        saveAttemptId: input.saveAttemptId,
       });
     },
     [lock],

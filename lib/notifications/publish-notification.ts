@@ -9,9 +9,10 @@ import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
-  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationOpenMagazzinoHref,
   formatLavorazioneCompletataToastMessage,
   formatMagazzinoSottoScortaToastMessage,
+  MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE,
 } from "@/lib/lavorazioni/admin-notifications";
 import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
 import {
@@ -122,9 +123,9 @@ function desktopPayloadFromLegacy(notification: AdminDashboardNotification) {
   }
   if (isMagazzinoDashboardNotification(notification)) {
     return {
-      title: notification.esaurito ? "Ricambio esaurito" : "Sotto scorta minima",
+      title: MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE,
       body: formatMagazzinoSottoScortaToastMessage(notification),
-      href: buildAdminNotificationMagazzinoHref(notification.ricambioId),
+      href: buildAdminNotificationOpenMagazzinoHref(notification.ricambioId),
       tag: key,
     };
   }

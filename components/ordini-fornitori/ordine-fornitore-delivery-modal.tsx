@@ -9,6 +9,11 @@ import {
   GestionaleModalFooterSaveButton,
 } from "@/components/design-system";
 import { isOrdineSpesaVariaRiga } from "@/lib/ordini-fornitori/ordine-fornitore-spesa-varia";
+import {
+  findOrdineFornitoreStockBlockedLines,
+  ordineFornitoreDeliveryHasStockDelta,
+  validateOrdineFornitoreDeliveryRequest,
+} from "@/lib/ordini-fornitori/ordine-fornitore-delivery-validation";
 import { ordineFornitoreResidualQty } from "@/lib/ordini-fornitori/ordine-fornitore-status-transitions";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
@@ -62,26 +67,48 @@ export function OrdineFornitoreDeliveryModal({
     setLines(buildLineStates(record));
   }, [open, record]);
 
-  const hasUnlinkedRighe = lines.some((l) => !l.ricambioId);
-  const hasStockDelta = lines.some((l) => l.target > l.quantitaRicevuta && l.ricambioId);
+  const stockBlockedLines = useMemo(() => findOrdineFornitoreStockBlockedLines(lines), [lines]);
+  const hasStockDelta = ordineFornitoreDeliveryHasStockDelta(lines);
+  const hasReceiptDelta = lines.some((l) => l.target > l.quantitaRicevuta);
 
   const submit = useCallback(
     async (applyStock: boolean) => {
+      const payloadLines = lines.map((l) => ({
+        riga_id: l.rigaId,
+        quantita_ricevuta_target: l.target,
+      }));
+      const validationError = validateOrdineFornitoreDeliveryRequest({
+        status: record.status,
+        righe: record.righe,
+        lines: payloadLines,
+        applyStock,
+      });
+      if (validationError) {
+        gestToast.errorOnce("ordine-delivery-validate", validationError, { module: "ordini_fornitori" });
+        return;
+      }
+      if (!hasReceiptDelta) {
+        gestToast.errorOnce("ordine-delivery-validate", "Indica almeno una quantità ricevuta.", {
+          module: "ordini_fornitori",
+        });
+        return;
+      }
+
       setPending(true);
       try {
         const res = await ordiniFornitoriEntry.receiveDelivery(record.id, {
           batch_id: batchIdRef,
           apply_stock: applyStock,
-          lines: lines.map((l) => ({
-            riga_id: l.rigaId,
-            quantita_ricevuta_target: l.target,
-          })),
+          lines: payloadLines,
         });
         if (!res.success) throw new Error(res.error ?? "Ricezione fallita.");
         if (res.data?.complete) {
-          gestToast.successOnce("ordine-delivery", "Ordine consegnato e archiviato.");
+          gestToast.successOnce("ordine-delivery", "Ordine consegnato.");
         } else {
-          gestToast.successOnce("ordine-delivery", "Consegna parziale registrata. L'ordine resta in consegna.");
+          gestToast.successOnce(
+            "ordine-delivery",
+            "Ricezione parziale registrata. L'ordine resta in consegna.",
+          );
         }
         onCompleted();
         onClose();
@@ -91,21 +118,21 @@ export function OrdineFornitoreDeliveryModal({
         setPending(false);
       }
     },
-    [batchIdRef, gestToast, lines, onClose, onCompleted, record.id],
+    [batchIdRef, gestToast, hasReceiptDelta, lines, onClose, onCompleted, record.id, record.righe, record.status],
   );
 
   const table = (
     <div className="space-y-3 text-sm">
       <p className="text-[color:var(--cab-text-muted)]">
-        Ordine consegnato. Vuoi aggiungere al magazzino i pezzi ricevuti?
+        Registra le quantità ricevute. Vuoi aggiungere i ricambi di questo ordine al magazzino?
       </p>
-      {hasUnlinkedRighe ? (
+      {stockBlockedLines.length > 0 ? (
         <div
           role="alert"
           className="rounded-[var(--ds-radius-lg)] border border-amber-300/80 bg-amber-50 px-3 py-2 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
         >
-          Alcune righe non sono collegate a un ricambio di magazzino: il carico automatico non è disponibile per quelle
-          righe.
+          Per caricare il magazzino collega un ricambio a:{" "}
+          {stockBlockedLines.map((l) => l.codice || l.descrizione).join(", ")}.
         </div>
       ) : null}
       <div className="overflow-x-auto">
@@ -172,7 +199,7 @@ export function OrdineFornitoreDeliveryModal({
   return (
     <GestionaleConfirmDialog
       open={open}
-      title="Registra consegna"
+      title="Segna come consegnato"
       message={table}
       pending={pending}
       onCancel={onClose}
@@ -184,19 +211,19 @@ export function OrdineFornitoreDeliveryModal({
           <button
             type="button"
             className={`${preventivoEditorFooterBtnNeutral} w-full sm:w-auto`}
-            disabled={pending}
+            disabled={pending || !hasReceiptDelta}
             onClick={() => void submit(false)}
           >
-            Consegna registrata, non aggiornare magazzino
+            Conferma consegna senza aggiungere al magazzino
           </button>
           <GestionaleModalFooterSaveButton
             type="button"
             className="w-full sm:w-auto"
             loading={pending}
-            disabled={pending || !hasStockDelta}
+            disabled={pending || !hasStockDelta || stockBlockedLines.length > 0}
             onClick={() => void submit(true)}
           >
-            Conferma e aggiungi al magazzino
+            Conferma consegna + aggiungi al magazzino
           </GestionaleModalFooterSaveButton>
         </div>
       }

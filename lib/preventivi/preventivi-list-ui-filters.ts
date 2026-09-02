@@ -1,3 +1,4 @@
+import type { PreventivoSearchDocumentContext } from "@/lib/preventivi/preventivo-search-document-contract";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import {
   preventiviAdvancedFiltersActive,
@@ -14,17 +15,30 @@ export type PreventiviPageFilters = PreventiviAdvancedFilters & {
   search: string;
 };
 
+export type PreventiviSearchUiContext = PreventivoSearchDocumentContext;
+
 /** Testo indicizzato per ricerca globale preventivi. */
-export function preventivoRowSearchHaystack(row: PreventivoRecord): string {
-  return buildSearchDocumentPreventivo(row);
+export function preventivoRowSearchHaystack(
+  row: PreventivoRecord,
+  ctx?: PreventiviSearchUiContext,
+): string {
+  return buildSearchDocumentPreventivo(row, ctx);
 }
 
-export function preventivoRowMatchesGlobalSearch(row: PreventivoRecord, query: string): boolean {
-  return matchSearchString(query, preventivoRowSearchHaystack(row)).matches;
+export function preventivoRowMatchesGlobalSearch(
+  row: PreventivoRecord,
+  query: string,
+  ctx?: PreventiviSearchUiContext,
+): boolean {
+  return matchSearchString(query, preventivoRowSearchHaystack(row, ctx)).matches;
 }
 
-export function preventivoRowSearchScore(row: PreventivoRecord, query: string): number {
-  return scoreSearchDocument(query, preventivoRowSearchHaystack(row)).score;
+export function preventivoRowSearchScore(
+  row: PreventivoRecord,
+  query: string,
+  ctx?: PreventiviSearchUiContext,
+): number {
+  return scoreSearchDocument(query, preventivoRowSearchHaystack(row, ctx)).score;
 }
 
 /** Query effettiva da voce suggerimento `numero · tipo · cliente` — filtra per numero. */
@@ -39,9 +53,14 @@ export function preventivoSearchQueryFromSuggestion(label: string): string {
 export function preventivoRowMatchesPageFilters(
   row: PreventivoRecord,
   filters: PreventiviPageFilters,
-  options?: { skipSearchFilter?: boolean },
+  options?: { skipSearchFilter?: boolean; searchCtx?: PreventiviSearchUiContext },
 ): boolean {
-  if (!options?.skipSearchFilter && !preventivoRowMatchesGlobalSearch(row, filters.search)) return false;
+  if (
+    !options?.skipSearchFilter &&
+    !preventivoRowMatchesGlobalSearch(row, filters.search, options?.searchCtx)
+  ) {
+    return false;
+  }
   const { ...advanced } = filters;
   return preventiviRowMatchesAdvancedFilters(row, advanced);
 }
@@ -51,6 +70,7 @@ export function buildPreventiviSearchSuggestions(
   rows: readonly PreventivoRecord[],
   query: string,
   limit = 8,
+  ctx?: PreventiviSearchUiContext,
 ): string[] {
   const labels: string[] = [];
   const seen = new Set<string>();
@@ -63,7 +83,7 @@ export function buildPreventiviSearchSuggestions(
   };
 
   for (const r of rows) {
-    if (query.trim() && !preventivoRowMatchesGlobalSearch(r, query)) continue;
+    if (query.trim() && !preventivoRowMatchesGlobalSearch(r, query, ctx)) continue;
     push(`${r.numero} · ${preventivoTipoDocumentoLabel(r.tipoDocumento, "short")} · ${r.cliente || "—"}`);
     if (r.macchinaRiassunto.trim()) push(`${r.numero} · ${r.macchinaRiassunto.trim()}`);
     if (labels.length >= limit * 2) break;
@@ -81,6 +101,7 @@ export function buildPreventiviSearchSuggestions(
       r.modelloAttrezzatura,
       r.targa,
       r.matricola,
+      ...r.righeRicambi.flatMap((rr) => [rr.codiceOE, rr.descrizione]),
     ]) {
       const t = part.trim();
       if (t.length >= 2) tokens.add(t);

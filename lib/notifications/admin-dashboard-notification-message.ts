@@ -75,13 +75,14 @@ export function toAdminNotificationLogViewModel(row: AdminDashboardNotification)
   }
 
   if (isMagazzinoDashboardNotification(row)) {
-    const oggetto = row.descrizione?.trim() || (row.esaurito ? "Ricambio esaurito" : "Ricambio sotto scorta");
+    const oggetto = row.descrizione?.trim() || "Ricambio sotto scorta";
     const lines: string[] = [];
+    if (row.codice?.trim()) lines.push(`Codice: ${row.codice.trim()}`);
     if (row.marca?.trim()) lines.push(`Marca: ${row.marca.trim()}`);
-    lines.push(row.esaurito ? "Scorta: 0" : `Scorta: ${row.scorta} (min. ${row.scortaMinima})`);
+    lines.push(`Disponibili: ${row.scorta} — Soglia minima: ${row.scortaMinima}`);
     return {
       tone: "update",
-      tipoRiga: row.esaurito ? "ESAURITO" : "SOTTO SCORTA",
+      tipoRiga: "SOTTO SCORTA",
       oggettoRiga: oggetto,
       modificaRiga: toBulletModificaRiga(lines),
       autore: "Sistema",

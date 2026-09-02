@@ -1,27 +1,22 @@
 import { isMagazzinoNotificationsPath } from "@/lib/lavorazioni/admin-notifications";
-import {
-  didCrossToZero,
-  shouldNotifyStockCrossing,
-  type StockSnapshot,
-} from "@/lib/magazzino/ricambio-stock-crossing";
+import { shouldNotifyStockCrossing, type StockSnapshot } from "@/lib/magazzino/ricambio-stock-crossing";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MagazzinoSottoScortaNotification } from "@/lib/notifications/admin-dashboard-notifications";
 
 export function ricambioToMagazzinoSottoScortaNotification(
   ricambio: RicambioMagazzino,
   createdAt?: string,
-  esaurito = false,
 ): MagazzinoSottoScortaNotification {
   const now = createdAt?.trim() || new Date().toISOString();
   return {
     kind: "magazzino_sotto_scorta",
     id: ricambio.id,
     ricambioId: ricambio.id,
+    codice: ricambio.codiceFornitoreOriginale?.trim() || undefined,
     marca: ricambio.marca?.trim() || "—",
     descrizione: ricambio.descrizione?.trim() || "—",
     scorta: Math.max(0, Math.round(ricambio.scorta)),
     scortaMinima: Math.max(0, Math.round(ricambio.scortaMinima)),
-    esaurito,
     createdAt: now,
   };
 }
@@ -37,10 +32,8 @@ export function magazzinoCrossingToNotification(input: {
   if (isMagazzinoNotificationsPath(pathname)) return null;
   if (!shouldNotifyStockCrossing(prev, curr)) return null;
 
-  const esaurito = prev ? didCrossToZero(prev, curr) : curr.scorta === 0;
-
   if (ricambio?.id === ricambioId) {
-    return ricambioToMagazzinoSottoScortaNotification(ricambio, undefined, esaurito);
+    return ricambioToMagazzinoSottoScortaNotification(ricambio);
   }
 
   return {
@@ -51,7 +44,6 @@ export function magazzinoCrossingToNotification(input: {
     descrizione: ricambio?.descrizione?.trim() || "—",
     scorta: curr.scorta,
     scortaMinima: curr.scortaMinima,
-    esaurito,
     createdAt: new Date().toISOString(),
   };
 }

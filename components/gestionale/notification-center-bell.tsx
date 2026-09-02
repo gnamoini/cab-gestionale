@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   Drawer,
@@ -259,22 +260,30 @@ function InboxNotificationMessageRow({
   row,
   onClose,
   onDismiss,
+  onMarkRead,
 }: {
   row: InboxNotificationRow;
   onClose: () => void;
   onDismiss: () => void;
+  onMarkRead: (id: string) => void;
 }) {
+  const router = useRouter();
   const vm = toInboxNotificationLogViewModel(row);
   const href = inboxNotificationHref(row);
   const openLabel = href ? getInboxNotificationOpenLinkLabel(row) : null;
+
+  const onNavigate = useCallback(() => {
+    void onMarkRead(row.id);
+    onClose();
+    if (href) router.push(href);
+  }, [href, onClose, onMarkRead, row.id, router]);
 
   return (
     <div className="min-w-0">
       <LogEntry
         vm={vm}
         variant="inbox"
-        href={href ?? undefined}
-        onAfterNavigate={onClose}
+        onClick={href ? onNavigate : undefined}
         title={openLabel ?? undefined}
         trailing={<NotificationRowDismiss embedded onDismiss={onDismiss} />}
       />
@@ -328,6 +337,7 @@ export function NotificationCenterBell({
     loadMore,
     hasMore,
     isLoadingMore,
+    markReadById,
   } = useNotificationCenter(open);
 
   const close = useCallback(() => setOpen(false), []);
@@ -522,6 +532,7 @@ export function NotificationCenterBell({
                     row={row}
                     onClose={close}
                     onDismiss={() => void dismissNotification(row)}
+                    onMarkRead={(id) => void markReadById(id)}
                   />
                 </li>
               ))}

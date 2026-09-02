@@ -3,7 +3,13 @@ import {
   buildConsolidatedIngressoLavorazionePatch,
 } from "@/lib/schede/ingresso-lavorazione-patch";
 import { DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import { buildDataIngressoPatchFromFields } from "@/lib/domain/intervento-context/build-edit-lavorazione-patch";
+import {
+  dedupeIngressoDataIngressoWrite,
+  resetIngressoDataIngressoWriteDedupForTests,
+} from "@/lib/schede/ingresso-data-ingresso-write-dedup";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { SchedaIngressoFields } from "@/types/schede";
 
 function baseRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneListRow {
   return {
@@ -68,4 +74,37 @@ const unchangedNote = buildConsolidatedIngressoLavorazionePatch({
 });
 assert.equal(Object.keys(unchangedNote).length, 0);
 
+// Fast path patch: data_ingresso idempotente
+{
+  const row = baseRow({ data_ingresso: "2026-06-01" });
+  assert.deepEqual(
+    buildDataIngressoPatchFromFields(row, { dataIngresso: "02/06/2026" } as SchedaIngressoFields),
+    { data_ingresso: "2026-06-02" },
+  );
+  assert.deepEqual(
+    buildDataIngressoPatchFromFields(row, { dataIngresso: "01/06/2026" } as SchedaIngressoFields),
+    {},
+  );
+}
+
+// Dedup in-flight stesso (lavId, ymd)
+async function main(): Promise<void> {
+{
+  resetIngressoDataIngressoWriteDedupForTests();
+  let writes = 0;
+  const patch = { data_ingresso: "2026-06-03" };
+  const slow = dedupeIngressoDataIngressoWrite("lav-1", patch, async () => {
+    writes += 1;
+    await new Promise((r) => setTimeout(r, 30));
+  });
+  const fast = dedupeIngressoDataIngressoWrite("lav-1", patch, async () => {
+    writes += 1;
+  });
+  await Promise.all([slow, fast]);
+  assert.equal(writes, 1);
+}
+
 console.log("ingresso-backend-sync.test.ts: ok");
+}
+
+void main();

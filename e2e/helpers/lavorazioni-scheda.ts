@@ -56,6 +56,34 @@ async function dismissMezzoPromptIfOpen(page: Page): Promise<void> {
   }
 }
 
+async function confirmUnknownSettingsIfOpen(page: Page): Promise<void> {
+  const dlg = page.getByRole("dialog").filter({ hasText: "Nuovi valori negli elenchi globali" });
+  if (!(await dlg.isVisible().catch(() => false))) return;
+  // ponytail: E2E non inquina app_settings — salva scheda senza append liste globali
+  await dlg.getByRole("button", { name: "Continua senza salvare" }).click();
+  await expect(dlg).toBeHidden({ timeout: 60_000 });
+}
+
+/** Attende scrittura ingresso: scheda_lavorazione o solo PATCH lavorazioni (es. data ingresso). */
+async function waitForIngressoSaveWrite(page: Page, timeoutMs = 90_000): Promise<Response> {
+  const response = await page.waitForResponse(
+    (res) => {
+      const method = res.request().method();
+      const url = res.url();
+      if (url.includes("/rest/v1/scheda_lavorazione") && (method === "POST" || method === "PATCH")) {
+        return true;
+      }
+      if (url.includes("/rest/v1/lavorazioni") && (method === "PATCH" || method === "PUT")) {
+        return true;
+      }
+      return false;
+    },
+    { timeout: timeoutMs },
+  );
+  expect(response.ok(), `ingresso save write failed: ${response.status()}`).toBeTruthy();
+  return response;
+}
+
 /** Attende persistenza scheda_lavorazione (POST/PATCH) e opzionalmente verifica cliente. */
 export async function waitForSchedaPersist(
   page: Page,
@@ -134,7 +162,13 @@ export async function selectMezzoFromSearchByTarga(page: Page, targa: string): P
 }
 
 /** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. Apre step selezione mezzo. */
+export async function waitForLavorazioniPageReady(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/lavorazioni(?:\?|$)/, { timeout: 30_000 });
+  await expect(page.getByTestId("page-ready-toolbar")).toBeVisible({ timeout: 90_000 });
+}
+
 export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
+  await waitForLavorazioniPageReady(page);
   const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
   await expect(btn).toBeVisible({ timeout: 45_000 });
   await btn.click();
@@ -178,9 +212,11 @@ async function dismissComboboxDropdown(
 
 async function optionInComboboxListbox(page: Page, comboboxInput: Locator, value: string): Promise<Locator> {
   const listbox = await listboxForCombobox(page, comboboxInput);
+  const nameRe = new RegExp(escapeRegExp(value), "i");
   return listbox
-    .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
-    .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
+    .locator('[role="option"]:not([id$="-add"])')
+    .filter({ hasText: nameRe })
+    .or(page.getByRole("option", { name: nameRe }).and(page.locator(':not([id$="-add"])')))
     .first();
 }
 
@@ -204,27 +240,31 @@ export async function fillListCombobox(
     if (scope) await expect(scope).toBeVisible();
     return;
   }
-  await input.fill(value);
-  const addBtn = page.getByRole("button", { name: new RegExp(`Aggiungi.*${escapeRegExp(value)}`, "i") });
-  if (await addBtn.isVisible().catch(() => false)) {
-    await addBtn.click();
-    await expect(input).toHaveValue(value, { timeout: 15_000 });
-    await dismissComboboxDropdown(page, input, scope);
-    if (scope) await expect(scope).toBeVisible();
-    return;
-  }
-  const option = await optionInComboboxListbox(page, input, value);
-  if (await option.isVisible().catch(() => false)) {
-    await option.click();
-    await expect(input).toHaveValue(value, { timeout: 15_000 });
-    await dismissComboboxDropdown(page, input, scope);
-    if (scope) await expect(scope).toBeVisible();
-    return;
-  }
-  await input.press("Enter");
+  const valueRe = new RegExp(escapeRegExp(value), "i");
+  const addNameRe = new RegExp(`Aggiungi.*${escapeRegExp(value)}`, "i");
+  await expect(async () => {
+    await input.scrollIntoViewIfNeeded();
+    await input.click();
+    await input.fill(value);
+    const listbox = await listboxForCombobox(page, input);
+    await expect(listbox).toBeVisible({ timeout: 8_000 });
+    const addOption = listbox.getByRole("option", { name: addNameRe });
+    if (await addOption.isVisible().catch(() => false)) {
+      await addOption.click();
+    } else {
+      const option = listbox
+        .locator('[role="option"]:not([id$="-add"])')
+        .filter({ hasText: valueRe })
+        .first();
+      if (await option.isVisible().catch(() => false)) {
+        await option.click();
+      } else {
+        await input.press("Enter");
+      }
+    }
+    await expect(input).toHaveValue(value, { timeout: 5_000 });
+  }).toPass({ timeout: 45_000 });
   await dismissComboboxDropdown(page, input, scope);
-  await input.blur();
-  await expect(input).toHaveValue(value, { timeout: 15_000 });
   if (scope) await expect(scope).toBeVisible();
   return;
 }
@@ -245,7 +285,7 @@ export async function fillSchedaIngressoCreateForm(
   }
   await fillListCombobox(page, "Cantiere", data.cantiere, modal);
   await fillListCombobox(page, "Utilizzatore", data.utilizzatore, modal);
-  await modal.getByLabel("Richiedente").fill(data.richiedente);
+  await modal.getByLabel("Richiedente", { exact: true }).fill(data.richiedente);
 
   await fillListCombobox(page, "Tipo attrezzatura", data.tipoAttrezzatura, modal);
   await fillListCombobox(page, "Marca attrezzatura", data.marcaAttrezzatura, modal);
@@ -253,13 +293,12 @@ export async function fillSchedaIngressoCreateForm(
     await fillListCombobox(page, "Modello attrezzatura", data.modelloAttrezzatura, modal);
   }
 
-  const matricolaInput = modal.getByRole("combobox", { name: /matricola/i });
+  const matricolaInput = modal.getByLabel("Matricola", { exact: true });
   await matricolaInput.scrollIntoViewIfNeeded();
-  // Regression: marca dropdown portal non deve bloccare focus/digitazione su matricola (no blur esplicito su marca).
   await matricolaInput.click();
   await matricolaInput.fill(data.matricola);
   await expect(matricolaInput).toHaveValue(data.matricola, { timeout: 10_000 });
-  await modal.getByLabel("N. scuderia").fill(data.nScuderia);
+  await modal.getByLabel("N. scuderia", { exact: true }).fill(data.nScuderia);
   await modal.getByLabel("Ore lavoro motore").fill(data.oreLavoro);
 
   await fillListCombobox(page, "Tipo telaio", data.tipoTelaio, modal);
@@ -268,7 +307,7 @@ export async function fillSchedaIngressoCreateForm(
     await fillListCombobox(page, "Modello telaio", data.modelloTelaio, modal);
   }
 
-  const targaInput = modal.getByRole("combobox", { name: /targa/i });
+  const targaInput = modal.getByLabel("Targa", { exact: true });
   await targaInput.scrollIntoViewIfNeeded();
   await targaInput.fill(data.targa);
   await modal.getByLabel("KM").fill(data.km);
@@ -365,11 +404,18 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
   const lavorazionePost = page.waitForResponse(
-    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST" && res.ok(),
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST",
     { timeout: 120_000 },
   );
   await save.click();
-  await lavorazionePost;
+  await expect(
+    page.getByRole("dialog").filter({ hasText: "Nuovi valori negli elenchi globali" }),
+  ).toBeVisible({ timeout: 20_000 }).catch(() => undefined);
+  await confirmUnknownSettingsIfOpen(page);
+  await dismissMezzoPromptIfOpen(page);
+  const response = await lavorazionePost;
+  const bodyText = await response.text().catch(() => "");
+  expect(response.ok(), `lavorazioni POST failed: ${response.status()} ${bodyText}`).toBeTruthy();
   if (await modal.isVisible().catch(() => false)) {
     await modal.getByRole("button", { name: "Chiudi" }).click();
   }
@@ -470,13 +516,15 @@ export async function clickSalvaSchedaHub(hub: Locator): Promise<void> {
 /** Salva scheda ingresso edit modal con attesa persistenza. */
 export async function clickSalvaSchedaIngressoEdit(
   editModal: Locator,
-  options?: { confirmMezzoAnagrafica?: boolean },
+  options?: { confirmMezzoAnagrafica?: boolean; expectNetworkWrite?: boolean },
 ): Promise<void> {
   const page = editModal.page();
-  const persist = waitForSchedaPersist(page);
+  const expectWrite = options?.expectNetworkWrite ?? true;
+  const persist = expectWrite ? waitForIngressoSaveWrite(page) : null;
   const btn = editModal.getByRole("button", { name: "Salva scheda" });
   await btn.scrollIntoViewIfNeeded();
   await btn.click();
+  await confirmUnknownSettingsIfOpen(page);
   const confirm = mezzoAnagraficaConfirmDialog(page);
   if (options?.confirmMezzoAnagrafica ?? true) {
     if (await confirm.isVisible().catch(() => false)) {
@@ -485,10 +533,11 @@ export async function clickSalvaSchedaIngressoEdit(
     }
   }
   await expect(btn).not.toHaveAttribute("aria-busy", "true", { timeout: 30_000 });
-  await Promise.all([
-    persist,
-    expect(btn).toBeEnabled({ timeout: 30_000 }),
-  ]);
+  if (persist) {
+    await Promise.all([persist, expect(btn).toBeEnabled({ timeout: 30_000 })]);
+  } else {
+    await expect(btn).toBeEnabled({ timeout: 30_000 });
+  }
   await expect(editModal).not.toBeVisible({ timeout: 30_000 });
 }
 

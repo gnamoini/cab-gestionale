@@ -35,7 +35,7 @@ const magVm = toAdminNotificationLogViewModel({
 });
 assert.equal(magVm.tipoRiga, "SOTTO SCORTA");
 assert.equal(magVm.oggettoRiga, "Filtro olio");
-assert.match(magVm.modificaRiga, /Scorta: 1 \(min\. 5\)/);
+assert.match(magVm.modificaRiga, /Disponibili: 1 — Soglia minima: 5/);
 
 const testRow = buildAdminDashboardTestNotification();
 assert.equal(getAdminNotificationOpenLinkLabel(testRow), null);

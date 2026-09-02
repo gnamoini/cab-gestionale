@@ -46,6 +46,10 @@ import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { runStockAdjustPipeline } from "@/lib/magazzino/stock-pipeline-execute";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
+import {
+  abortMagazzinoLocalMutationOrigin,
+  registerMagazzinoLocalMutationOrigin,
+} from "@/lib/magazzino/magazzino-local-mutation-origin";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
@@ -241,8 +245,10 @@ export function RicambioEditModal({
           next.scorta = moved.data.quantita;
         }
         const patch = ricambioUiToMagazzinoUpdate(next, mezziListePrefs);
+        registerMagazzinoLocalMutationOrigin(ricambioId);
         const updated = await magazzinoEntry.update(ricambioId, patch);
         if (!updated.success || !updated.data) {
+          abortMagazzinoLocalMutationOrigin(ricambioId);
           onSaveError(updated.error ?? "Salvataggio non riuscito.");
           return;
         }
@@ -256,6 +262,7 @@ export function RicambioEditModal({
             : "";
         onSaved(ui, `Modifiche salvate.${lenientHint}`);
       } catch (e) {
+        abortMagazzinoLocalMutationOrigin(ricambioId);
         if (process.env.NODE_ENV === "development") {
           console.error("[ricambio-edit] save threw", e);
         }

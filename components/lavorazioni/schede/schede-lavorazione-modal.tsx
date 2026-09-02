@@ -79,8 +79,11 @@ import type {
 } from "@/lib/schede/scheda-ingresso-save-pipeline";
 import {
   logIngressoSavePipeline,
+  logIngressoSaveStageEnd,
+  logIngressoSaveStageStart,
   reportInvalidateFailure,
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { resolveDataIngressoWriteValue } from "@/lib/lavorazioni/data-ingresso-patch";
 import { assertIngressoSaveGenerationCurrent } from "@/lib/schede/ingresso-save-generation";
 import { openBlobInNewTab } from "@/lib/schede/schede-print-html";
 import { openSchedaPdfInNewTab } from "@/lib/schede/schede-pdf";
@@ -340,6 +343,7 @@ export function SchedeLavorazioneModal({
   const submitLock = useSubmitLock();
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
   const ingressoSaveRunRef = useRef<(() => Promise<IngressoSaveResult>) | null>(null);
+  const ingressoJustCommittedRef = useRef(false);
   const [preventivoEsistenteOpen, setPreventivoEsistenteOpen] = useState(false);
   const [generaPreventivoBusy, setGeneraPreventivoBusy] = useState(false);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
@@ -504,6 +508,11 @@ export function SchedeLavorazioneModal({
   const backgroundPersistDeferRef = useRef<LavorazioneSchedeBundle | null>(null);
 
   const flushDeferredBackgroundPersist = useCallback(() => {
+    if (ingressoJustCommittedRef.current) {
+      ingressoJustCommittedRef.current = false;
+      backgroundPersistDeferRef.current = null;
+      return;
+    }
     const pending = backgroundPersistDeferRef.current;
     if (!pending || submitLock.isLocked()) return;
     backgroundPersistDeferRef.current = null;
@@ -904,10 +913,16 @@ export function SchedeLavorazioneModal({
           lavorazioneGestione: input.lavorazioneGestione,
         });
 
-        const committedCampi: SchedaIngressoFields =
-          syncRes && typeof syncRes === "object" && syncRes.attrezzaturaId?.trim()
+        const rowDataIngresso =
+          hubData?.lavorazione?.data_ingresso?.trim() || lav.dataIngresso?.trim() || null;
+        const ingressoNorm = resolveDataIngressoWriteValue(rowDataIngresso, ig.dataIngresso);
+
+        const committedCampi: SchedaIngressoFields = {
+          ...(syncRes && typeof syncRes === "object" && syncRes.attrezzaturaId?.trim()
             ? { ...ig, attrezzaturaId: syncRes.attrezzaturaId.trim() }
-            : ig;
+            : ig),
+          dataIngresso: ingressoNorm.displayCanonical ?? ig.dataIngresso,
+        };
 
         const nextDoc: SchedaIngressoDoc = {
           tipo: "ingresso",
@@ -927,7 +942,15 @@ export function SchedeLavorazioneModal({
           return { ok: false, error: "SAVE_STALE" };
         }
 
+        const persistCtx = {
+          runId: input.runId,
+          correlationId: input.correlationId,
+          saveAttemptId: input.saveAttemptId,
+          lavorazioneId: lav.id,
+        };
+        logIngressoSaveStageStart("persist_bundle", persistCtx);
         const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
+        logIngressoSaveStageEnd("persist_bundle", { ...persistCtx, ok: persistRes.ok });
         if (!persistRes.ok) {
           gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", {
             module: "lavorazioni",
@@ -937,6 +960,7 @@ export function SchedeLavorazioneModal({
         }
 
         baselineIngressoJson.current = JSON.stringify(committedCampi);
+        ingressoJustCommittedRef.current = true;
         logIngressoSavePipeline("save_invalidate", {
           runId: input.runId,
           correlationId: input.correlationId,
@@ -955,6 +979,8 @@ export function SchedeLavorazioneModal({
       currentUser,
       emitLog,
       gestToast,
+      hubData?.lavorazione?.data_ingresso,
+      lav.dataIngresso,
       lav.id,
       mezzo?.id,
       onIngressoCommitted,

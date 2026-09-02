@@ -21,9 +21,17 @@ import {
 import {
   markCompletedStockOperation,
   markPendingStockOperation,
+  abortPendingStockOperation,
 } from "@/lib/magazzino/stock-operation-registry";
 import { logStockPipelineEvent } from "@/lib/magazzino/stock-pipeline-telemetry";
-import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
+import {
+  abortRecentLocalGestionaleMutation,
+  markRecentLocalGestionaleMutation,
+} from "@/lib/sync/recent-local-mutation";
+import {
+  cabSyncEventForEntity,
+  dispatchGestionaleLocalMutation,
+} from "@/lib/sync/gestionale-sync-dispatch";
 import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
 import { movimentiListQueryKey } from "@/lib/render/query-key-factory";
 import type { PendingStockMutation } from "@/lib/magazzino/stock-types";
@@ -37,6 +45,13 @@ export type StockAdjustPipelineOutcome =
   | { ok: false; error: string };
 
 const MAX_CONFLICT_RETRIES = 2;
+
+const STOCK_LOCAL_TABLES = ["magazzino_ricambi", "movimenti_ricambi"] as const;
+
+function abortStockLocalOrigin(ricambioId: string, operationId: string): void {
+  abortPendingStockOperation(operationId);
+  abortRecentLocalGestionaleMutation([...STOCK_LOCAL_TABLES], ricambioId);
+}
 
 async function invalidateStockSideEffects(qc: QueryClient, ricambioId: string): Promise<void> {
   void qc.invalidateQueries({ queryKey: movimentiListQueryKey({ ricambio_id: ricambioId }) });
@@ -95,7 +110,24 @@ async function executeStockAdjustJob(
       );
       tryConfirmJournalMutation(qc, ricambioId, operationId, data);
       markCompletedStockOperation(operationId, ricambioId);
-      markRecentLocalGestionaleMutation(["magazzino_ricambi", "movimenti_ricambi"], ricambioId);
+      markRecentLocalGestionaleMutation([...STOCK_LOCAL_TABLES], ricambioId);
+      const entityIdByTable = new Map<string, string>([
+        ["magazzino_ricambi", ricambioId],
+        ["movimenti_ricambi", ricambioId],
+      ]);
+      dispatchGestionaleLocalMutation(
+        qc,
+        [...STOCK_LOCAL_TABLES],
+        [
+          cabSyncEventForEntity(
+            "magazzino_ricambi",
+            ricambioId,
+            "entity_updated",
+            "magazzino_ricambi",
+          ),
+        ],
+        entityIdByTable,
+      );
       void invalidateStockSideEffects(qc, ricambioId);
       logStockPipelineEvent({
         source: "api_adjust",
@@ -128,6 +160,7 @@ async function executeStockAdjustJob(
       status: "failed",
       completedAt: Date.now(),
     });
+    abortStockLocalOrigin(ricambioId, operationId);
     return { ok: false, error: result.error };
   }
 
@@ -135,6 +168,7 @@ async function executeStockAdjustJob(
     status: "failed",
     completedAt: Date.now(),
   });
+  abortStockLocalOrigin(ricambioId, operationId);
   return { ok: false, error: lastError };
 }
 
@@ -155,6 +189,7 @@ export function runStockAdjustPipeline(
   };
   enqueueJournalEntry(entry);
   markPendingStockOperation(operationId, ricambioId);
+  markRecentLocalGestionaleMutation([...STOCK_LOCAL_TABLES], ricambioId);
 
   return enqueueStockMutation(ricambioId, operationId, () =>
     executeStockAdjustJob(qc, input, operationId),

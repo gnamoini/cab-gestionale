@@ -7,7 +7,7 @@ import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { normalizePreventivoRigaAddettoWrite } from "@/lib/lavorazioni/addetto-write-freeze";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
-import type { PreventivoRecord, PreventivoRigaAddetto } from "@/lib/preventivi/types";
+import type { PreventivoCategoria, PreventivoRecord, PreventivoRigaAddetto } from "@/lib/preventivi/types";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -17,13 +17,21 @@ import {
   readOfficinaProfiloFromRows,
 } from "@/lib/officina/officina-profilo-operativo";
 
+export type BuildEmptyManualPreventivoOptions = {
+  cliente?: string;
+  tipoDocumento?: PreventivoRecord["tipoDocumento"];
+  categoria?: PreventivoCategoria;
+};
+
 /** Bozza vuota senza lavorazione collegata (salvataggio alla prima conferma in modale). */
 export function buildEmptyManualPreventivo(
   autore: string,
   existingRecords: readonly PreventivoRecord[],
-  cliente = "",
-  tipoDocumento: PreventivoRecord["tipoDocumento"] = PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
+  options: BuildEmptyManualPreventivoOptions = {},
 ): PreventivoRecord {
+  const categoria = options.categoria ?? "lavorazione";
+  const cliente = options.cliente ?? "";
+  const tipoDocumento = options.tipoDocumento ?? PREVENTIVO_TIPO_DOCUMENTO_DEFAULT;
   const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
   const profilo = readOfficinaProfiloFromRows(getRuntimeCabAppSettingsPayload()?.rows);
   const targetType = defaultTargetTypeForProfilo(profilo);
@@ -32,6 +40,7 @@ export function buildEmptyManualPreventivo(
   const prezzoOrario = infer.prezzoOrario;
   const now = new Date().toISOString();
   const dataCreazione = localCalendarDayIsoFromDate();
+  const isVendita = categoria === "vendita";
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),
     numero: nextPreventivoNumeroManualeFromRecords(existingRecords),
@@ -39,6 +48,7 @@ export function buildEmptyManualPreventivo(
     aggiornatoAt: now,
     ...PREVENTIVO_LIFECYCLE_DEFAULTS,
     tipoDocumento,
+    categoriaPreventivo: categoria,
     targetType,
     attrezzaturaId: "",
     lavorazioneId: "",
@@ -64,24 +74,32 @@ export function buildEmptyManualPreventivo(
     descrizioneLavorazioniTecnicaSorgente: "",
     descrizioneGenerataAuto: "",
     righeRicambi: [],
-    sanificazionePrezzo: prezzoOrario,
-    sanificazioneOre: 1,
-    collaudoPrezzo: prezzoOrario,
-    collaudoOre: 1,
-    manodopera: {
-      oreTotali: 1,
-      righeAddetti: [
-        normalizePreventivoRigaAddettoWrite({
-          addettoId: null,
-          ore: 1,
-          addettoLegacy: "Officina",
-          legacyWarning: "Addetto storico non convertibile: Officina",
-        }) as PreventivoRigaAddetto,
-      ],
-      costoOrario: infer.costoOrario,
-      prezzoOrario: infer.prezzoOrario,
-      scontoPercent: infer.manodoperaScontoPercent,
-    },
+    sanificazionePrezzo: isVendita ? 0 : prezzoOrario,
+    sanificazioneOre: isVendita ? 0 : 1,
+    collaudoPrezzo: isVendita ? 0 : prezzoOrario,
+    collaudoOre: isVendita ? 0 : 1,
+    manodopera: isVendita
+      ? {
+          oreTotali: 0,
+          righeAddetti: [],
+          costoOrario: infer.costoOrario,
+          prezzoOrario: infer.prezzoOrario,
+          scontoPercent: infer.manodoperaScontoPercent,
+        }
+      : {
+          oreTotali: 1,
+          righeAddetti: [
+            normalizePreventivoRigaAddettoWrite({
+              addettoId: null,
+              ore: 1,
+              addettoLegacy: "Officina",
+              legacyWarning: "Addetto storico non convertibile: Officina",
+            }) as PreventivoRigaAddetto,
+          ],
+          costoOrario: infer.costoOrario,
+          prezzoOrario: infer.prezzoOrario,
+          scontoPercent: infer.manodoperaScontoPercent,
+        },
     noteFinali: infer.noteFinaliTipiche,
     totaleRicambi: 0,
     totaleManodopera: 0,

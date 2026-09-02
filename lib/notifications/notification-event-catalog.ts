@@ -136,7 +136,7 @@ const NOTIFICATION_EVENT_CATALOG_BASE: readonly NotificationEventDefinition[] = 
     priority: "high",
     recipients: { admin: true, ufficio: false, officina: true, cliente: false },
     trigger: "cab-sync",
-    dedupKeyPattern: "mag:{ricambioId}:crossing",
+    dedupKeyPattern: "mag:{ricambioId}:below:{episodeId}",
     titleTemplate: "Scorta bassa o esaurita",
     description: "Quando un ricambio scende sotto la scorta minima o finisce",
     defaultEnabled: true,

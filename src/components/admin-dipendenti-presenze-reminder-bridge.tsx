@@ -15,6 +15,10 @@ import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
+import {
+  hasDipendentiPresenzeToastBeenShown,
+  markDipendentiPresenzeToastShown,
+} from "@/lib/dipendenti/dipendenti-presenze-toast-dedup";
 
 const CHECK_INTERVAL_MS = 60_000;
 
@@ -40,6 +44,8 @@ export function AdminDipendentiPresenzeReminderBridge() {
     checkInFlightRef.current = true;
     try {
       const today = todayDateYmd();
+      if (hasDipendentiPresenzeToastBeenShown(user.id, today)) return;
+
       const [employeesRes, entriesRes] = await Promise.all([
         dipendentiTimesheetService.listEmployees(),
         dipendentiTimesheetService.listEntriesForRange(today, today),
@@ -54,6 +60,7 @@ export function AdminDipendentiPresenzeReminderBridge() {
       if (!payload) return;
 
       if (!isDipendentiNotificationsPath(pathname)) {
+        markDipendentiPresenzeToastShown(user.id, today);
         push(formatDipendentiPresenzeReminderBody(payload), "info", 6000);
       }
     } finally {

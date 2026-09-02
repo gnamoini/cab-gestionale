@@ -12,8 +12,14 @@ assert.equal(
 
 assert.equal(
   shouldNotifyStockCrossing({ scorta: 2, scortaMinima: 5 }, { scorta: 0, scortaMinima: 5 }),
+  false,
+  "già sotto minimo: nessuna nuova notifica verso zero",
+);
+
+assert.equal(
+  shouldNotifyStockCrossing({ scorta: 10, scortaMinima: 5 }, { scorta: 0, scortaMinima: 5 }),
   true,
-  "1→0 sotto minimo deve notificare esaurimento",
+  "crossing sufficiente→zero in un step notifica",
 );
 
 assert.equal(didCrossToZero({ scorta: 1, scortaMinima: 5 }, { scorta: 0, scortaMinima: 5 }), true);

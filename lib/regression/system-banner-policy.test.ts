@@ -13,6 +13,13 @@ const bannerFiles = [
   "src/components/pwa-offline-block-banner.tsx",
 ];
 
+const decisionBannerFiles = [
+  "src/components/notification-opt-in-banner.tsx",
+  "src/components/pwa-install-banner.tsx",
+  "src/components/pwa-ios-install-hint.tsx",
+  "src/components/pwa-update-banner.tsx",
+];
+
 for (const rel of bannerFiles) {
   const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
   assert.match(src, /SystemBannerShell/, `${rel} must use SystemBannerShell`);
@@ -23,6 +30,11 @@ for (const rel of bannerFiles) {
     `${rel} must use dsSystemBanner tokens or SystemBannerLayout`,
   );
   assert.doesNotMatch(src, /BANNER_SHELL|HINT_SHELL/, `${rel} must not keep local banner shell tokens`);
+}
+
+for (const rel of decisionBannerFiles) {
+  const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
+  assert.doesNotMatch(src, /onDismiss=/, `${rel} must not expose dismiss X — use explicit action buttons`);
 }
 
 const designSystem = fs.readFileSync(path.join(ROOT, "lib/ui/design-system.ts"), "utf8");

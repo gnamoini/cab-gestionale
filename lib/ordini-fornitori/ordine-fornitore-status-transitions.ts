@@ -22,7 +22,7 @@ export const ORDINE_FORNITORE_STATUS_IN_CORSO: readonly OrdineFornitoreStatus[] 
   "in_consegna",
 ];
 
-export const ORDINE_FORNITORE_STATUS_ARCHIVIO: readonly OrdineFornitoreStatus[] = ["consegnato"];
+export const ORDINE_FORNITORE_STATUS_ARCHIVIO: readonly OrdineFornitoreStatus[] = ["consegnato", "annullato"];
 
 /** Transizioni consentite via updateStatus (consegnato solo via ricezione). */
 export const ORDINE_FORNITORE_STATUS_TRANSITIONS: Record<

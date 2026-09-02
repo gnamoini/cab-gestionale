@@ -29,7 +29,7 @@ assert.match(pipelineSsot, /lock\.release\(\)/);
 assert.match(pipelineSsot, /onPendingChange\?\.\(false\)/);
 
 assert.match(pipelineSsot, /recordExplicitSaveAttempt/);
-assert.match(pipelineSsot, /clearExplicitSaveAttempts/);
+assert.match(pipelineSsot, /scheduleClearExplicitSaveAttempts/);
 
 const loopGuard = read("lib/sync/save-operation-loop-guard.ts");
 assert.match(loopGuard, /MAX_EXPLICIT_ATTEMPTS = 5/);

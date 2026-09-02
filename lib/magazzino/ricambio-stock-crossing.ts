@@ -22,10 +22,10 @@ export function didCrossToZero(prev: StockSnapshot, curr: StockSnapshot): boolea
   return prev.scorta > 0 && curr.scorta === 0;
 }
 
-/** Crossing notificabile: sotto minimo o esaurimento. */
+/** Crossing notificabile (toast client): solo transizione sufficiente → sotto soglia. */
 export function shouldNotifyStockCrossing(prev: StockSnapshot | undefined, curr: StockSnapshot): boolean {
   if (!prev) return false;
-  return didCrossBelowMin(prev, curr) || didCrossToZero(prev, curr);
+  return didCrossBelowMin(prev, curr);
 }
 
 export function stockSnapshotFromRicambio(row: {

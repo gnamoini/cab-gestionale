@@ -3,7 +3,7 @@ import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
-  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationOpenMagazzinoHref,
 } from "@/lib/lavorazioni/admin-notifications";
 import type { InboxNotificationRow, NotificationType } from "@/lib/notifications/notification-types";
 
@@ -87,7 +87,7 @@ function inboxNotificationHrefFromType(row: InboxNotificationRow): string | null
     return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : null;
   }
   if (type === "magazzino_sotto_scorta") {
-    return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
+    return entityId ? buildAdminNotificationOpenMagazzinoHref(entityId) : "/magazzino";
   }
   if (type === "fatture_scadute_digest") return buildAdminNotificationFatturazioneHref();
   if (type === "dipendenti_presenze_reminder") return buildAdminNotificationDipendentiHref();

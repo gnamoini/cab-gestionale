@@ -10,6 +10,7 @@ import { resolveSingleCompanyId } from "@/lib/notifications/dispatch/resolve-com
 import { buildCatalogOutboxCommand } from "@/lib/notifications/outbox/build-catalog-outbox-command.server";
 import {
   buildLegacyNotificationFromOutbox,
+  magazzinoEpisodeIdFromOutboxRow,
   type OutboxRow,
 } from "@/lib/notifications/outbox/build-legacy-from-outbox.server";
 import {
@@ -94,6 +95,10 @@ async function processOutboxBatch(
       let result: { created: number; duplicate: boolean };
 
       if (legacy) {
+        const dispatchVersion =
+          row.notification_event_id === "magazzino.below_minimum"
+            ? magazzinoEpisodeIdFromOutboxRow(row) ?? undefined
+            : undefined;
         result = await fanoutEntityNotification(
           {
             notificationEventId: row.notification_event_id,
@@ -103,6 +108,7 @@ async function processOutboxBatch(
             companyId: row.company_id,
             legacyNotification: legacy,
             traceId,
+            dispatchVersion,
           },
           client,
         );

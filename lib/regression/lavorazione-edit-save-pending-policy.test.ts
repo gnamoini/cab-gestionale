@@ -54,8 +54,8 @@ assert.doesNotMatch(
 
 assert.match(
   backendSync,
-  /await deps\.updateLavorazione\(row\.id, mergedPatch\)/,
-  "single updateLavorazione in backend-sync",
+  /dedupeIngressoDataIngressoWrite\(row\.id, mergedPatch/,
+  "single updateLavorazione path via dedupe wrapper",
 );
 assert.doesNotMatch(
   backendSync,
@@ -69,7 +69,9 @@ assert.doesNotMatch(
   "must not await active refetch in invalidateAfterIngressoEditSave",
 );
 
-assert.match(schedeModal, /Promise\.resolve\(onInvalidateAfterIngressoSave/);
+assert.match(schedeModal, /ingressoJustCommittedRef/);
+assert.match(backendSync, /isMezzoUpdateSchedaOnly/);
+assert.match(backendSync, /dedupeIngressoDataIngressoWrite/);
 assert.match(schedeModal, /reportInvalidateFailure/);
 assert.doesNotMatch(
   schedeModal.match(/commitIngressoEdit[\s\S]*?onInvalidateAfterIngressoSave/)?.[0] ?? "",
@@ -79,6 +81,7 @@ assert.doesNotMatch(
 
 const pipeline = read("lib/schede/scheda-ingresso-save-pipeline.ts");
 assert.match(pipeline, /beginIngressoSaveGeneration/);
+assert.match(pipeline, /scheduleClearExplicitSaveAttempts/);
 
 const generation = read("lib/schede/ingresso-save-generation.ts");
 assert.match(generation, /assertIngressoSaveGenerationCurrent/);

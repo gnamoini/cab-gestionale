@@ -1,3 +1,4 @@
+import "./load-env-local";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.SMOKE_PORT ?? (process.env.SMOKE_NO_WEB_SERVER ? "3000" : "3210"));

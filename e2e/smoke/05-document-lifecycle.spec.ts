@@ -1,12 +1,15 @@
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
+import { registerMutatingSmokeGuards } from "../helpers/smoke-production-guard";
 import { test, expect } from "@playwright/test";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 
 const lavorazioneId = process.env.SMOKE_DOCUMENTI_LAVORAZIONE_ID?.trim();
+
+registerMutatingSmokeGuards(test);
 
 test.afterAll(async () => {
   await applySmokeTeardown();

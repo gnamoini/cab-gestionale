@@ -5,6 +5,7 @@ import { buildClientOfficialDocumentPreviewPath, buildOfficialDocumentTokenStrea
 import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
 import { isPreventivoVisibleToClient } from "@/lib/preventivi/preventivo-client-visibility";
 import {
+  resolvePreventivoLegacyStato,
   resolvePreventivoStatoCliente,
   resolvePreventivoStatoWorkflow,
 } from "@/lib/preventivi/preventivo-row-state";
@@ -55,7 +56,7 @@ export async function resolveClientDocumentsForLavorazioneServer(
         label: numero ? `Preventivo ${numero}` : "Preventivo",
         previewPath: token ? buildClientOfficialDocumentPreviewPath(token.token) : "",
         streamPath: token ? buildOfficialDocumentTokenStreamPath(token.token) : "",
-        stato: r.stato,
+        stato: r.stato ?? resolvePreventivoLegacyStato(r),
       };
     })
     .filter((p) => p.streamPath);

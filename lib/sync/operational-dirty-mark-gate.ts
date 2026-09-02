@@ -1,10 +1,6 @@
-import { isOperationalBaselineAckPending } from "@/lib/sync/operational-data-version";
-import { isOperationalSessionWarmingUp } from "@/lib/sync/operational-session-warmup";
-import { shouldSuppressRemoteCacheInvalidation } from "@/lib/sync/recent-local-mutation";
+import { shouldSkipGestionaleDirtyMark } from "@/lib/sync/gestionale-dirty-decision";
 
-/** Gate unico per marcare dirty da polling/reconnect — stesso criterio del path realtime. */
+/** Gate unico per marcare dirty da polling/reconnect — delega a decideGestionaleDirty SSOT. */
 export function shouldSkipOperationalDirtyMark(table: string, entityId?: string): boolean {
-  if (isOperationalSessionWarmingUp()) return true;
-  if (isOperationalBaselineAckPending(table)) return true;
-  return shouldSuppressRemoteCacheInvalidation(table, entityId);
+  return shouldSkipGestionaleDirtyMark({ table, entityId: entityId ?? null });
 }

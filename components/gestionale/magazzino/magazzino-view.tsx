@@ -64,6 +64,10 @@ const MagazzinoLogDrawer = dynamic(
   { ssr: false },
 );
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
+import {
+  abortMagazzinoLocalMutationOrigin,
+  registerMagazzinoLocalMutationOrigin,
+} from "@/lib/magazzino/magazzino-local-mutation-origin";
 import { useMagazzinoListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestionale-dirty-search-hint";
@@ -1110,12 +1114,15 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     ],
   );
 
-  async function undoStockMovement(movimentoId: string) {
+  async function undoStockMovement(movimentoId: string, ricambioId?: string) {
     if (!magCanCreateRicambio) return;
+    const stockRicambioId = ricambioId?.trim() || detailRicambio?.id?.trim() || "";
+    if (stockRicambioId) registerMagazzinoLocalMutationOrigin(stockRicambioId);
     setUndoStockPending(true);
     try {
       const result = await stockVoidMovementFetch(movimentoId);
       if (!result.ok) {
+        if (stockRicambioId) abortMagazzinoLocalMutationOrigin(stockRicambioId);
         toastError(result.error, { module: "magazzino", action: "update" });
         return;
       }
@@ -1204,8 +1211,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   async function executeEliminaRicambio() {
     if (!eliminaRicambioTarget) return;
     const id = eliminaRicambioTarget.id;
+    registerMagazzinoLocalMutationOrigin(id);
     const removed = await magazzinoEntry.remove(id);
     if (!removed.success) {
+      abortMagazzinoLocalMutationOrigin(id);
       toastError(removed.error ?? "Eliminazione non riuscita.", { module: "magazzino", action: "delete" });
       return;
     }

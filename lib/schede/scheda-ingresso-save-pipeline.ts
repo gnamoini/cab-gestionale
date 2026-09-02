@@ -4,17 +4,23 @@ import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/taglian
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import {
+  bindIngressoSaveAttempt,
   bindIngressoSaveCorrelation,
+  createIngressoSaveAttemptId,
   createIngressoSaveCorrelationId,
   logIngressoSavePipeline,
+  logIngressoSaveStageEnd,
+  logIngressoSaveStageStart,
   nextIngressoSaveRunId,
+  registerIngressoSaveAttempt,
+  unregisterIngressoSaveAttempt,
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
 import { beginIngressoSaveGeneration } from "@/lib/schede/ingresso-save-generation";
 import {
-  clearExplicitSaveAttempts,
   recordExplicitSaveAttempt,
   SaveOperationLoopError,
   SAVE_OPERATION_LOOP_MESSAGE,
+  scheduleClearExplicitSaveAttempts,
 } from "@/lib/sync/save-operation-loop-guard";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoSaveGateResult } from "@/src/hooks/use-scheda-ingresso-save-gate";
@@ -35,6 +41,7 @@ export type IngressoSaveCommitInput = {
   correlationId: string;
   lavorazioneGestione?: IngressoLavorazioneGestionePatch;
   mezzoLinkMeta?: import("@/lib/schede/scheda-ingresso-mezzo-match").SchedaIngressoMezzoLinkMeta;
+  saveAttemptId?: string;
 };
 
 export type IngressoSaveCommitResult =
@@ -62,6 +69,8 @@ export type IngressoSavePipelineContext = {
   onPendingChange?: (pending: boolean) => void;
   /** Entity id per loop guard — solo save espliciti utente. */
   loopGuardEntityId?: string;
+  /** Identificativo click utente — diagnostica e anti doppio submit. */
+  saveAttemptId?: string;
 };
 
 /**
@@ -78,10 +87,18 @@ export async function runIngressoSavePipeline(
 
   const runId = nextIngressoSaveRunId();
   const correlationId = createIngressoSaveCorrelationId();
+  const saveAttemptId = ctx.saveAttemptId?.trim() || createIngressoSaveAttemptId();
   bindIngressoSaveCorrelation(runId, correlationId);
+  bindIngressoSaveAttempt(runId, saveAttemptId);
   beginIngressoSaveGeneration(runId);
   ctx.onPendingChange?.(true);
-  logIngressoSavePipeline("save_start", { runId, correlationId });
+  const stageBase = { runId, correlationId, saveAttemptId };
+  logIngressoSavePipeline("save_start", stageBase);
+  if (!registerIngressoSaveAttempt(saveAttemptId)) {
+    ctx.lock.release();
+    ctx.onPendingChange?.(false);
+    return { ok: false, runId, correlationId, reason: "SAVE_IN_PROGRESS" };
+  }
 
   const loopGuardId = ctx.loopGuardEntityId?.trim() ?? "";
   if (loopGuardId) {
@@ -101,14 +118,16 @@ export async function runIngressoSavePipeline(
     const mezziCatalogFrozen = [...ctx.mezziCatalog];
     let outcome: IngressoSaveCommitResult = { ok: false };
 
+    logIngressoSaveStageStart("gate_submit", stageBase);
     await ctx.gateSubmit(ctx.fields, async (gatedFields) => {
       let mezzoUpdatePlan: MezzoUpdateFromSchedaPlan;
       let mezzoLinkMeta: IngressoSaveCommitInput["mezzoLinkMeta"];
       try {
-        logIngressoSavePipeline("mezzo_gate_start", { runId });
+        logIngressoSaveStageStart("mezzo_gate", stageBase);
         mezzoUpdatePlan = await ctx.gateSave(gatedFields);
-        logIngressoSavePipeline("mezzo_gate_end", { runId });
+        logIngressoSaveStageEnd("mezzo_gate", stageBase);
       } catch (err) {
+        logIngressoSaveStageEnd("mezzo_gate", { ...stageBase, error: String(err) });
         if (err instanceof Error && err.message === "SAVE_CANCELLED") {
           outcome = { ok: false, cancelled: true };
           return;
@@ -122,9 +141,12 @@ export async function runIngressoSavePipeline(
 
       if (ctx.gateMezzoLink) {
         try {
+          logIngressoSaveStageStart("mezzo_link_gate", stageBase);
           const linkGate = await ctx.gateMezzoLink(gatedFields);
           mezzoLinkMeta = linkGate.mezzoLinkMeta;
+          logIngressoSaveStageEnd("mezzo_link_gate", stageBase);
         } catch (err) {
+          logIngressoSaveStageEnd("mezzo_link_gate", { ...stageBase, error: String(err) });
           if (err instanceof Error && err.message === "MEZZO_LINK_CANCELLED") {
             outcome = { ok: false, cancelled: true };
             return;
@@ -133,7 +155,7 @@ export async function runIngressoSavePipeline(
         }
       }
 
-      logIngressoSavePipeline("commit_start", { runId });
+      logIngressoSaveStageStart("commit", stageBase);
       outcome = await ctx.commit({
         fields: gatedFields,
         mezzoUpdatePlan,
@@ -144,9 +166,11 @@ export async function runIngressoSavePipeline(
         runId,
         correlationId,
         mezzoLinkMeta,
+        saveAttemptId,
       });
-      logIngressoSavePipeline("commit_end", { runId, ok: outcome.ok });
+      logIngressoSaveStageEnd("commit", { ...stageBase, ok: outcome.ok });
     });
+    logIngressoSaveStageEnd("gate_submit", stageBase);
 
     if (outcome.cancelled) {
       logIngressoSavePipeline("save_cancelled", { runId, correlationId });
@@ -163,9 +187,10 @@ export async function runIngressoSavePipeline(
     logIngressoSavePipeline("save_error", { runId, correlationId, error: String(err) });
     return { ok: false, runId, correlationId, error: err };
   } finally {
-    if (loopGuardId) clearExplicitSaveAttempts("scheda_ingresso", loopGuardId);
+    if (loopGuardId) scheduleClearExplicitSaveAttempts("scheda_ingresso", loopGuardId);
+    unregisterIngressoSaveAttempt(saveAttemptId);
     ctx.lock.release();
     ctx.onPendingChange?.(false);
-    logIngressoSavePipeline("save_finally", { runId, correlationId });
+    logIngressoSavePipeline("save_finally", { runId, correlationId, saveAttemptId });
   }
 }

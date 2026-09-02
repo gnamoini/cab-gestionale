@@ -39,8 +39,6 @@ export function PwaInstallBanner() {
         media={<PwaBannerAppIcon />}
         title={`Installa l'app ${CAB_APP_PRODUCT_NAME}`}
         description="Apri il gestionale come app dedicata, senza barra del browser."
-        onDismiss={handleDismiss}
-        dismissLabel="Chiudi suggerimento installazione"
         actions={
           <>
             <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>

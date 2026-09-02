@@ -1,12 +1,15 @@
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi, operatorCredentials } from "../fixtures/auth";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
+import { registerMutatingSmokeGuards } from "../helpers/smoke-production-guard";
 import { test, expect } from "@playwright/test";
 import type { StorageBucketId } from "@/src/lib/storage/storage-config";
 
 const MINIMAL_PDF = Buffer.from(
   "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n",
 );
+
+registerMutatingSmokeGuards(test);
 
 test.afterAll(async () => {
   await applySmokeTeardown();

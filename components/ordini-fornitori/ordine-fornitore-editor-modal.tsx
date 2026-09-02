@@ -15,8 +15,10 @@ import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GlobalDatePickerYmd, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
-import { OrdineFornitoreDestinazioneFields } from "@/components/ordini-fornitori/ordine-fornitore-destinazione-fields";
+import { ordineFornitoreRigaAttesaQty } from "@/lib/ordini-fornitori/ordine-fornitore-list-scope";
+import { formatOrdineFornitoreDate } from "@/components/ordini-fornitori/ordine-fornitore-status-badge";
 import { OrdineFornitoreFornitoreFields } from "@/components/ordini-fornitori/ordine-fornitore-fornitore-fields";
+import { OrdineFornitoreDestinazioneFields } from "@/components/ordini-fornitori/ordine-fornitore-destinazione-fields";
 import { OrdineFornitoreLogisticaFields } from "@/components/ordini-fornitori/ordine-fornitore-logistica-fields";
 import { OrdineFornitoreStoricoSection } from "@/components/ordini-fornitori/ordine-fornitore-storico-section";
 import { OrdineFornitoreEmailComposerModal } from "@/components/ordini-fornitori/ordine-fornitore-email-composer-modal";
@@ -198,6 +200,7 @@ export function OrdineFornitoreEditorModal({
   onSaved,
   onSwitchToEdit,
   onDelete,
+  onRegisterDelivery,
 }: {
   record: OrdineFornitoreRecord;
   isNew: boolean;
@@ -209,6 +212,7 @@ export function OrdineFornitoreEditorModal({
   onSaved: (info?: { record?: OrdineFornitoreRecord }) => void | Promise<void>;
   onSwitchToEdit?: () => void;
   onDelete?: () => void;
+  onRegisterDelivery?: () => void;
 }) {
   const gestToast = useGestionaleToast();
   const [fornitoreVerifiedByUser, setFornitoreVerifiedByUser] = useState(
@@ -259,6 +263,8 @@ export function OrdineFornitoreEditorModal({
   const [record, setRecord] = useState(initialRecord);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const viewMode = mode === "view";
+  const showReceiptColumns =
+    viewMode && (initialRecord.status === "in_consegna" || initialRecord.status === "consegnato");
   const fieldsReadOnly = viewMode || !canWrite || (!isNew && initialRecord.status !== "bozza");
   const canEditStatus = !viewMode && canWrite && initialRecord.status !== "annullato";
   const statusDirty = !isNew && record.status !== initialRecord.status;
@@ -598,6 +604,18 @@ export function OrdineFornitoreEditorModal({
               <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onClose}>
                 Chiudi
               </GestionaleModalFooterCancelButton>
+              {initialRecord.status === "in_consegna" && onRegisterDelivery ? (
+                <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
+                  <button
+                    type="button"
+                    className={preventivoEditorFooterBtnPrimary}
+                    disabled={!canWrite}
+                    onClick={onRegisterDelivery}
+                  >
+                    Segna come consegnato
+                  </button>
+                </OptionalTooltip>
+              ) : null}
               {initialRecord.status === "bozza" ? (
                 <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
                   <button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite} onClick={onSwitchToEdit}>
@@ -628,6 +646,17 @@ export function OrdineFornitoreEditorModal({
           <div className="space-y-3 pb-4">
             {importMeta ? (
               <OrdineFornitoreImportQualityBanner level={importMeta.quality.level} />
+            ) : null}
+            {record.note.trim() ? (
+              <div
+                role="note"
+                className="rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_25%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,transparent)] px-3 py-2 text-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                  Note per il ricevimento
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-[color:var(--cab-text)]">{record.note}</p>
+              </div>
             ) : null}
             {identificaMeta?.fornitoreNeedsVerification ? (
               <p className="rounded-lg border border-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,transparent)] px-3 py-2 text-sm text-[color:var(--cab-text)]">
@@ -676,6 +705,16 @@ export function OrdineFornitoreEditorModal({
                     />
                   </FormField>
                 </div>
+                {record.status === "consegnato" && record.dataConsegna ? (
+                  <FormField label="Data consegna">
+                    <input
+                      className={dsInput}
+                      value={formatOrdineFornitoreDate(record.dataConsegna)}
+                      readOnly
+                      aria-readonly
+                    />
+                  </FormField>
+                ) : null}
                 <div className="sm:col-span-2 lg:col-span-3">
                   <FormField label="Oggetto ordine" htmlFor="ordine-oggetto">
                     <input
@@ -739,6 +778,12 @@ export function OrdineFornitoreEditorModal({
                     <GlobalTableHeadLabel label="Codice" />
                     <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[10rem]" />
                     <GlobalTableHeadLabel label="Qtà" />
+                    {showReceiptColumns ? (
+                      <>
+                        <GlobalTableHeadLabel label="Ricevuta" />
+                        <GlobalTableHeadLabel label="Attesa" />
+                      </>
+                    ) : null}
                     <GlobalTableHeadLabel label="U.M." />
                     <GlobalTableHeadLabel label="Prezzo" />
                     <GlobalTableHeadLabel label="Sc. %" />
@@ -749,7 +794,10 @@ export function OrdineFornitoreEditorModal({
                   <tbody>
                     {righeOggetti.length === 0 && fieldsReadOnly ? (
                       <tr>
-                        <td colSpan={fieldsReadOnly ? 8 : 9} className="px-2 py-4 text-center text-[color:var(--cab-text-muted)]">
+                        <td
+                          colSpan={fieldsReadOnly ? (showReceiptColumns ? 10 : 8) : 9}
+                          className="px-2 py-4 text-center text-[color:var(--cab-text-muted)]"
+                        >
                           Nessuna riga.
                         </td>
                       </tr>
@@ -819,6 +867,16 @@ export function OrdineFornitoreEditorModal({
                               aria-label={`Quantità riga ${idx + 1}`}
                             />
                           </td>
+                          {showReceiptColumns ? (
+                            <>
+                              <td className={`${preventivoEditorTableTdClass} font-mono tabular-nums`}>
+                                {r.quantitaRicevuta ?? 0}
+                              </td>
+                              <td className={`${preventivoEditorTableTdClass} font-mono tabular-nums`}>
+                                {ordineFornitoreRigaAttesaQty(r)}
+                              </td>
+                            </>
+                          ) : null}
                           <td className={preventivoEditorTableTdClass}>
                             <RicambioUnitaMisuraPicker
                               value={parseRicambioUnitaMisura(r.unitaMisura)}

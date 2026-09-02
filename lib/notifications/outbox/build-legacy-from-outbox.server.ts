@@ -4,19 +4,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LAVORAZIONI_COLUMNS, MEZZI_LIST_EMBED_COLUMNS } from "@/lib/db/table-select-columns";
 import { lavorazioneRowToNotificationIntent } from "@/lib/lavorazioni/lavorazione-created-notification-mapper";
 import { lavorazioneRowToCompletedIntent } from "@/lib/lavorazioni/lavorazione-completed-notification-mapper";
-import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
-import {
-  didCrossToZero,
-  shouldNotifyStockCrossing,
-  type StockSnapshot,
-} from "@/lib/magazzino/ricambio-stock-crossing";
+import { parseMagazzinoStockAlertOutboxPayload } from "@/lib/magazzino/magazzino-stock-alert-outbox-payload";
 import type { AdminDashboardNotification } from "@/lib/notifications/admin-dashboard-notifications";
 import {
   wrapLavorazioneCompletataNotification,
   wrapLavorazioneNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { MagazzinoRicambioRow, MezzoRow } from "@/src/types/supabase-tables";
+import type { MezzoRow } from "@/src/types/supabase-tables";
 
 export type OutboxRow = {
   id: string;
@@ -70,44 +65,28 @@ export async function buildLegacyNotificationFromOutbox(
   }
 
   if (eventId === "magazzino.below_minimum") {
-    const payload = row.payload ?? {};
-    const prevQuantita = Number(payload.prev_quantita);
-    const currQuantita = Number(payload.curr_quantita);
-    if (!Number.isFinite(prevQuantita) || !Number.isFinite(currQuantita)) return null;
+    const snapshot = parseMagazzinoStockAlertOutboxPayload(row.payload);
+    if (!snapshot) return null;
 
-    const { data: ricambioRow, error } = await client
-      .from("magazzino_ricambi")
-      .select("id, codice, nome, marca, quantita, meta")
-      .eq("id", row.entity_id)
-      .maybeSingle();
-    if (error || !ricambioRow) return null;
-
-    const meta = parseMagazzinoRicambioMeta((ricambioRow as MagazzinoRicambioRow).meta);
-    const scortaMinima = meta.scortaMinima ?? 0;
-    const prev: StockSnapshot = {
-      scorta: Math.max(0, Math.round(prevQuantita)),
-      scortaMinima: Math.max(0, Math.round(scortaMinima)),
-    };
-    const curr: StockSnapshot = {
-      scorta: Math.max(0, Math.round(currQuantita)),
-      scortaMinima: Math.max(0, Math.round(scortaMinima)),
-    };
-    if (!shouldNotifyStockCrossing(prev, curr)) return null;
-
-    const esaurito = didCrossToZero(prev, curr);
-    const ricambioId = String(ricambioRow.id);
     return {
       kind: "magazzino_sotto_scorta",
-      id: ricambioId,
-      ricambioId,
-      marca: ricambioRow.marca?.trim() || "—",
-      descrizione: ricambioRow.nome?.trim() || "—",
-      scorta: curr.scorta,
-      scortaMinima: curr.scortaMinima,
-      esaurito,
+      id: snapshot.ricambio_id,
+      ricambioId: snapshot.ricambio_id,
+      episodeId: snapshot.episode_id,
+      codice: snapshot.codice?.trim() || undefined,
+      marca: snapshot.marca?.trim() || "—",
+      descrizione: snapshot.nome?.trim() || "—",
+      scorta: snapshot.quantita,
+      scortaMinima: snapshot.scorta_minima,
       createdAt: new Date().toISOString(),
     };
   }
 
   return null;
+}
+
+/** ponytail: consume-only — episodio e snapshot dal payload outbox immutabile. */
+export function magazzinoEpisodeIdFromOutboxRow(row: OutboxRow): string | null {
+  if (row.notification_event_id !== "magazzino.below_minimum") return null;
+  return parseMagazzinoStockAlertOutboxPayload(row.payload)?.episode_id ?? null;
 }

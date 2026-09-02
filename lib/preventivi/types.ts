@@ -24,6 +24,9 @@ export type PreventivoLavorazioneOrigine = "attiva" | "storico";
 
 export type PreventivoTipoDocumento = "preventivo" | "consuntivo";
 
+/** Origine/contesto del preventivo — non descrive il contenuto delle righe. */
+export type PreventivoCategoria = "lavorazione" | "vendita";
+
 export type PreventivoRigaRicambioTipo = "standard" | "materiali_consumo";
 
 export type PreventivoRigaRicambio = {
@@ -83,6 +86,8 @@ export type PreventivoRecord = {
   stato: PreventivoStato;
   /** Default storico: `preventivo`. */
   tipoDocumento: PreventivoTipoDocumento;
+  /** Contesto preventivo: lavorazione collegata o vendita standalone. */
+  categoriaPreventivo?: PreventivoCategoria;
   lavorazioneId: string;
   lavorazioneOrigine: PreventivoLavorazioneOrigine;
   lavorazioneTimestamp?: string;

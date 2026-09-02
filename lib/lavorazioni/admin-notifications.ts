@@ -1,4 +1,8 @@
-import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO, buildMagazzinoOpenRicambioHref } from "@/lib/navigation/dashboard-log-links";
+import {
+  formatMagazzinoSottoScortaNotificationBody,
+  MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE,
+} from "@/lib/magazzino/magazzino-sotto-scorta-notification-copy";
 import type { NotificationIntent } from "@/lib/lavorazioni/lavorazione-created-notification-mapper";
 import {
   getUnreadCount,
@@ -115,17 +119,26 @@ export function buildAdminNotificationMagazzinoHref(ricambioId: string): string 
   return `/magazzino?${sp.toString()}`;
 }
 
+/** Deep link inbox/push: apre modale dettaglio ricambio. */
+export function buildAdminNotificationOpenMagazzinoHref(ricambioId: string): string {
+  return buildMagazzinoOpenRicambioHref(ricambioId, "dashboard");
+}
+
 export function formatMagazzinoSottoScortaToastMessage(
   notification: Pick<
     MagazzinoSottoScortaNotification,
-    "marca" | "descrizione" | "scorta" | "scortaMinima" | "esaurito"
+    "descrizione" | "codice" | "scorta" | "scortaMinima"
   >,
 ): string {
-  const label = [notification.marca?.trim(), notification.descrizione?.trim()].filter(Boolean).join(" · ");
-  const prefix = notification.esaurito ? "Esaurito" : "Sotto scorta";
-  const qty = notification.esaurito ? "0" : `${notification.scorta}/${notification.scortaMinima}`;
-  return label ? `${prefix}: ${label} (${qty})` : `${prefix} (${qty})`;
+  return formatMagazzinoSottoScortaNotificationBody({
+    nome: notification.descrizione,
+    codice: notification.codice,
+    quantita: notification.scorta,
+    scortaMinima: notification.scortaMinima,
+  });
 }
+
+export { MAGAZZINO_SOTTO_SCORTA_NOTIFICATION_TITLE };
 
 export function formatLavorazioneCompletataToastMessage(
   intent: Pick<NotificationIntent, "cliente" | "mezzo" | "titolo">,

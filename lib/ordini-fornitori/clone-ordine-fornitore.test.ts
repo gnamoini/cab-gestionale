@@ -8,6 +8,7 @@ const SOURCE: OrdineFornitoreRecord = {
   status: "inviato",
   oggettoOrdine: "Ricambi",
   dataOrdine: "2026-07-01",
+  dataConsegna: "2026-07-15",
   fornitoreLabel: "ACMEI SUD SpA",
   fornitoreSnapshot: { piva: "123" },
   destinazione: "Officina",

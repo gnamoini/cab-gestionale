@@ -1,9 +1,11 @@
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import {
   applyMezzoIdImmutabilityGuard,
+  buildDataIngressoPatchFromFields,
   mergeLavorazionePatches,
 } from "@/lib/domain/intervento-context/build-edit-lavorazione-patch";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
+import { isMezzoUpdateSchedaOnly } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
@@ -18,8 +20,12 @@ import {
 } from "@/lib/schede/ingresso-lavorazione-patch";
 import {
   logIngressoSavePipeline,
+  logIngressoSaveStageEnd,
+  logIngressoSaveStageStart,
+  nextIngressoSaveRequestId,
   resolveIngressoSaveCorrelationId,
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { dedupeIngressoDataIngressoWrite } from "@/lib/schede/ingresso-data-ingresso-write-dedup";
 import { assertIngressoSaveGenerationCurrent } from "@/lib/schede/ingresso-save-generation";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -88,44 +94,14 @@ export async function syncIngressoBackendFromFrozenCatalog(
   } = input;
 
   const corr = resolveIngressoSaveCorrelationId(runId, correlationId);
-  logIngressoSavePipeline("backend_sync_start", { runId, correlationId: corr, lavorazioneId: row.id });
+  const stageCtx = { runId, correlationId: corr, lavorazioneId: row.id };
+  logIngressoSaveStageStart("backend_sync", stageCtx);
 
   if (!assertIngressoSaveGenerationCurrent(runId, "backend_sync_start")) {
+    logIngressoSaveStageEnd("backend_sync", { ...stageCtx, stale: true });
     return {
       attrezzaturaId: campi.attrezzaturaId?.trim() || row.attrezzatura_id?.trim() || null,
     };
-  }
-
-  const { result } = await executeInterventoWriteEntry(
-    {
-      mode: "edit",
-      idempotencyKey: `edit-${row.id}`,
-      fields: campi,
-      mezziCatalog: mezziCatalogFrozen,
-      meta: {
-        row,
-        writeContext: { source: "manual", mezzoUpdatePlan },
-      },
-    },
-    {
-      upsertMezzo: deps.upsertMezzo,
-    },
-  );
-
-  if (!result.ok) {
-    if (result.error === "MEZZO_STALE_CONFLICT") {
-      logMezzoSchedaConflictTelemetry({
-        event: "MEZZO_STALE_CONFLICT",
-        mezzoId: row.mezzo_id,
-        lavorazioneId: row.id,
-      });
-    }
-    logInterventoTelemetry("intervento_sync_drift_detected", {
-      lavorazioneId: row.id,
-      stage: result.stage,
-      mismatch: true,
-    });
-    throw new Error(result.error);
   }
 
   const consolidatedPatch = buildConsolidatedIngressoLavorazionePatch({
@@ -135,31 +111,80 @@ export async function syncIngressoBackendFromFrozenCatalog(
     lavorazioneGestione,
   });
 
+  const skipMezzoUpsert = isMezzoUpdateSchedaOnly(mezzoUpdatePlan);
+  let sagaPatch: Record<string, unknown> = {};
+  let upsertAttrezzaturaId: string | null =
+    campi.attrezzaturaId?.trim() || row.attrezzatura_id?.trim() || null;
+
+  if (skipMezzoUpsert) {
+    sagaPatch = buildDataIngressoPatchFromFields(row, campi);
+    logIngressoSavePipeline("backend_sync_fast_path", {
+      ...stageCtx,
+      skipMezzoUpsert: true,
+      requestId: nextIngressoSaveRequestId(),
+    });
+  } else {
+    const { result } = await executeInterventoWriteEntry(
+      {
+        mode: "edit",
+        idempotencyKey: `edit-${row.id}`,
+        fields: campi,
+        mezziCatalog: mezziCatalogFrozen,
+        meta: {
+          row,
+          writeContext: { source: "manual", mezzoUpdatePlan },
+        },
+      },
+      {
+        upsertMezzo: deps.upsertMezzo,
+      },
+    );
+
+    if (!result.ok) {
+      if (result.error === "MEZZO_STALE_CONFLICT") {
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_STALE_CONFLICT",
+          mezzoId: row.mezzo_id,
+          lavorazioneId: row.id,
+        });
+      }
+      logInterventoTelemetry("intervento_sync_drift_detected", {
+        lavorazioneId: row.id,
+        stage: result.stage,
+        mismatch: true,
+      });
+      throw new Error(result.error);
+    }
+
+    sagaPatch = result.lavorazionePatch ?? {};
+    upsertAttrezzaturaId = result.attrezzaturaId?.trim() || upsertAttrezzaturaId;
+  }
+
   const mergedPatch = applyMezzoIdImmutabilityGuard(
     row,
-    mergeLavorazionePatches(result.lavorazionePatch ?? {}, consolidatedPatch),
+    mergeLavorazionePatches(sagaPatch, consolidatedPatch),
     explicitMezzoChange,
   );
   const patchKeys = Object.keys(mergedPatch);
 
   if (patchKeys.length > 0) {
     if (!assertIngressoSaveGenerationCurrent(runId, "update_lavorazione")) {
+      logIngressoSaveStageEnd("backend_sync", { ...stageCtx, stale: true });
       return {
-        attrezzaturaId:
-          result.ok && result.attrezzaturaId != null
-            ? result.attrezzaturaId
-            : campi.attrezzaturaId?.trim() || row.attrezzatura_id?.trim() || null,
+        attrezzaturaId: upsertAttrezzaturaId,
       };
     }
+    const requestId = nextIngressoSaveRequestId();
     logIngressoSavePipeline("save_db", {
-      runId,
-      correlationId: corr,
-      lavorazioneId: row.id,
+      ...stageCtx,
+      requestId,
       patchKeys,
       updateCount: 1,
     });
-    await deps.updateLavorazione(row.id, mergedPatch);
-    logIngressoSavePipeline("save_response", { runId, correlationId: corr, lavorazioneId: row.id, patchKeys });
+    await dedupeIngressoDataIngressoWrite(row.id, mergedPatch, () =>
+      deps.updateLavorazione(row.id, mergedPatch),
+    );
+    logIngressoSavePipeline("save_response", { ...stageCtx, requestId, patchKeys });
   }
 
   if (ingressoTagliandoFieldsChanged(row, tagliandoFields) && tagliandoFields) {
@@ -174,14 +199,14 @@ export async function syncIngressoBackendFromFrozenCatalog(
     }
   }
 
-  logIngressoSavePipeline("backend_sync_end", { runId, correlationId: corr, lavorazioneId: row.id, patchKeys });
+  logIngressoSaveStageEnd("backend_sync", { ...stageCtx, patchKeys });
 
   const patchAttId =
     typeof mergedPatch.attrezzatura_id === "string" ? mergedPatch.attrezzatura_id.trim() : "";
   return {
     attrezzaturaId:
       patchAttId ||
-      (result.ok ? result.attrezzaturaId?.trim() || null : null) ||
+      upsertAttrezzaturaId ||
       campi.attrezzaturaId?.trim() ||
       row.attrezzatura_id?.trim() ||
       null,

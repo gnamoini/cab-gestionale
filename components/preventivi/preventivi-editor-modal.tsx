@@ -32,7 +32,7 @@ import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import {
   PREVENTIVO_RIGA_MATERIALI_ID,
 } from "@/lib/preventivi/preventivi-voci-standard";
-import { openPreventivoPdfPreviewFromRecord } from "@/lib/preventivi/preventivi-pdf";
+import { openPreventivoPdfPreviewFromRecordAsync } from "@/lib/preventivi/preventivi-pdf";
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -86,6 +86,11 @@ import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date
 import { PreventivoLavorazioniEditorSection } from "@/components/preventivi/preventivo-lavorazioni-editor-section";
 import { PreventivoRicambiEditorSection } from "@/components/preventivi/preventivo-ricambi-editor-section";
 import { PreventivoRiepilogoNoteSection } from "@/components/preventivi/preventivo-riepilogo-note-section";
+import {
+  isPreventivoVendita,
+  preventivoCategoriaNuovoLabel,
+} from "@/lib/preventivi/preventivo-categoria";
+import { validatePreventivoBeforeSave } from "@/lib/preventivi/preventivo-save-validation";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
@@ -294,6 +299,8 @@ export function PreventiviEditorModal({
   const canRegenerateDescription =
     Boolean(draft?.stato === "bozza" && draft.lavorazioneId?.trim() && prevPerms.canWrite);
 
+  const isVendita = draft ? isPreventivoVendita(draft) : false;
+
   const regenerateDescription = useCallback(async () => {
     if (!draft || !canRegenerateDescription) return;
     setDescRegenBusy(true);
@@ -456,17 +463,9 @@ export function PreventiviEditorModal({
 
   const staffEditable =
     isNew ||
-    (draft
-      ? isPreventivoEditableByStaff({
-          stato_workflow: draft.statoWorkflow,
-          stato_cliente: draft.statoCliente,
-        })
-      : false);
+    (draft ? isPreventivoEditableByStaff({ stato_workflow: draft.statoWorkflow }) : false);
   const canWithdraw =
-    draft != null &&
-    draft.statoWorkflow === "inviato" &&
-    draft.statoCliente === "pending" &&
-    prevPerms.canWrite;
+    draft != null && draft.statoWorkflow === "inviato" && prevPerms.canWrite;
 
   async function onRitiraPreventivo() {
     if (!draft || !canWithdraw || withdrawPending) return;
@@ -497,6 +496,11 @@ export function PreventiviEditorModal({
     await runButtonSubmit(modalRootRef.current, submitLock, () => ({ draft: draftRef.current }), async (snap) => {
     const cur = snap.draft;
     if (!cur) return;
+    const validationError = validatePreventivoBeforeSave(cur);
+    if (validationError) {
+      onSaveError?.(validationError);
+      return;
+    }
     const now = new Date().toISOString();
     const u = autore.trim() || "Operatore";
     const next = applyTotals({
@@ -551,7 +555,7 @@ export function PreventiviEditorModal({
       onRequestClose={requestClose}
       title={
         isNew
-          ? `Nuovo ${preventivoTipoDocumentoLabel(draft.tipoDocumento).toLowerCase()}`
+          ? `Nuovo ${preventivoCategoriaNuovoLabel(isVendita ? "vendita" : "lavorazione").toLowerCase()}`
           : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}${draft.versione > 1 ? ` v${draft.versione}` : ""}`
       }
       footer={
@@ -571,7 +575,7 @@ export function PreventiviEditorModal({
             className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
             onClick={() => {
               if (!draft) return;
-              openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore, pdfLogoRef.current);
+              void openPreventivoPdfPreviewFromRecordAsync(applyTotals(draft), autore);
             }}
           >
             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -598,8 +602,8 @@ export function PreventiviEditorModal({
       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
         {!staffEditable && !isNew ? (
           <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-            {draft.statoCliente === "pending"
-              ? "Preventivo in attesa di risposta cliente: modifica bloccata. Ritira in bozza per modificare."
+            {draft.statoWorkflow === "inviato"
+              ? "Preventivo inviato: modifica bloccata. Ritira in bozza per modificare."
               : "Preventivo non modificabile in questo stato."}
           </p>
         ) : null}
@@ -663,10 +667,14 @@ export function PreventiviEditorModal({
             </GestionaleCollapsibleSection>
 
             {anagraficaFields ? (
-              <GestionaleCollapsibleSection title="Scheda ingresso" defaultCollapsed variant="form">
+              <GestionaleCollapsibleSection
+                title={isVendita ? "Cliente" : "Scheda ingresso"}
+                defaultCollapsed={false}
+                variant="form"
+              >
                 <SchedaIngressoAnagraficaFields
                   surface="preventivo"
-                  sections={["cliente", "attrezzatura", "telaio"]}
+                  sections={isVendita ? ["cliente"] : ["cliente", "attrezzatura", "telaio"]}
                   value={anagraficaFields}
                   onPatch={patchAnagrafica}
                   mezzi={[]}
@@ -677,7 +685,7 @@ export function PreventiviEditorModal({
 
             <GestionaleCollapsibleSection
               title="Lavorazioni"
-              defaultCollapsed={false}
+              defaultCollapsed={isVendita}
               variant="form"
               action={
                 canRegenerateDescription ? (

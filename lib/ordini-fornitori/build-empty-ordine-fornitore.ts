@@ -27,6 +27,7 @@ export function buildEmptyOrdineFornitore(
     status: "bozza",
     oggettoOrdine: "",
     dataOrdine: todayIsoDate(),
+    dataConsegna: null,
     fornitoreLabel: "",
     fornitoreSnapshot: {},
     destinazione: "",

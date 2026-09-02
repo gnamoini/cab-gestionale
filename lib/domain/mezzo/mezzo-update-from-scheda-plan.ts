@@ -22,3 +22,9 @@ export const MEZZO_UPDATE_SCHEDA_ONLY: MezzoUpdateFromSchedaPlan = {
 export function mezzoUpdatePlanAllowsMezzoWrite(plan: MezzoUpdateFromSchedaPlan): boolean {
   return plan.updateAnagrafica || plan.updateMetering;
 }
+
+/** Nessuna scrittura mezzo/associazione — solo scheda + patch lavorazione. */
+export function isMezzoUpdateSchedaOnly(plan: MezzoUpdateFromSchedaPlan | undefined): boolean {
+  if (!plan) return true;
+  return !mezzoUpdatePlanAllowsMezzoWrite(plan) && !plan.associationChangeConfirmed;
+}

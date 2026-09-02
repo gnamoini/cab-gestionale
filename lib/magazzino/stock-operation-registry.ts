@@ -65,6 +65,13 @@ export function shouldSuppressStockRealtimeInvalidate(
   return isKnownStockOperation(operationId);
 }
 
+/** Mutation fallita — non sopprimere realtime remoti successivi con lo stesso operation_id. */
+export function abortPendingStockOperation(operationId: string): void {
+  const id = operationId?.trim();
+  if (!id) return;
+  pending.delete(id);
+}
+
 export function clearStockOperationRegistryForTest(): void {
   pending.clear();
   recentCompleted.clear();

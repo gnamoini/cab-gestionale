@@ -42,7 +42,9 @@ export function mapPreventiviRowsToRecords(
 ): PreventivoRecord[] {
   const mezziById = new Map(mezziRows.map((m) => [m.id, m]));
   return (remote ?? [])
-    .map((row) => preventivoRowToRecord(row, mezziById.get(row.mezzo_id) ?? null))
+    .map((row) =>
+      preventivoRowToRecord(row, row.mezzo_id ? mezziById.get(row.mezzo_id) ?? null : null),
+    )
     .sort((a, b) => b.dataCreazione.localeCompare(a.dataCreazione));
 }
 

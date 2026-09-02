@@ -15,7 +15,7 @@ assert.equal(lavorazioneCompletataDedupKey("abc12345"), "lav:abc12345:done");
 assert.equal(tagliandoDaEseguireDedupKey("lav-1"), "tagliando-due:lav-1");
 assert.equal(fattureScaduteDigestDedupKey("2026-07-01"), "fatt-scad:2026-07-01");
 
-assert.equal(magazzinoSottoScortaDedupKey("r1"), "mag:r1:crossing");
+assert.equal(magazzinoSottoScortaDedupKey("r1", "ep-1"), "mag:r1:below:ep-1");
 assert.equal(dipendentiPresenzeReminderDedupKey("2026-07-01"), "dip-pres:2026-07-01");
 
 const testKey = adminDashboardTestDedupKey("user-uuid", 120_000);

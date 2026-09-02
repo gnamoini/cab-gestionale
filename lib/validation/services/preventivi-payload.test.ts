@@ -22,7 +22,15 @@ assert(picked.cliente === "Cliente Test", "cliente trimmed");
 assert(!("created_at" in picked), "created_at stripped");
 assert(!("id" in picked), "non-uuid id stripped");
 assert(Array.isArray((picked.dettagli as { righe?: unknown }).righe), "dettagli kept");
-assert(PREVENTIVO_WRITABLE_KEYS.length === 6, "writable keys count");
+assert(PREVENTIVO_WRITABLE_KEYS.length === 7, "writable keys count");
+
+const withWorkflow = pickPreventivoWritePayload({
+  mezzo_id: "abc",
+  cliente: "Cliente",
+  stato_workflow: "bozza",
+  dettagli: {},
+});
+assert(withWorkflow.stato_workflow === "bozza", "stato_workflow picked");
 
 const withUuid = pickPreventivoWritePayload({
   id: VALID_UUID,

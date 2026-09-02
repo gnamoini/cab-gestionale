@@ -196,6 +196,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
     aggiornatoAt: now,
     ...PREVENTIVO_LIFECYCLE_DEFAULTS,
     tipoDocumento: PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
+    categoriaPreventivo: "lavorazione",
     lavorazioneId: lav.id,
     lavorazioneOrigine: origine,
     lavorazioneTimestamp: lav.dataIngresso || now,

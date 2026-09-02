@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi, managerCredentials, operatoreCredentials } from "../fixtures/auth";
 import { buildSchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-test-data";
 import {
@@ -28,17 +27,11 @@ import {
   waitForGlobalOptionsReady,
 } from "../helpers/lavorazioni-scheda";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
-
-const hasSmokeCreds = Boolean(
-  process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
-);
+import { registerMutatingSmokeGuards } from "../helpers/smoke-production-guard";
 
 test.describe.configure({ mode: "serial", timeout: 900_000 });
 
-test.beforeEach(({ page }) => {
-  test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
-  attachConsoleGuards(page);
-});
+registerMutatingSmokeGuards(test);
 
 test.afterAll(async () => {
   await applySmokeTeardown();
@@ -164,6 +157,98 @@ test("mezzo esistente: modifica anagrafica richiede conferma prima del salvatagg
   await confirmMezzoAnagraficaChanges(page);
   await createResponse;
   await expect(scheda).toBeHidden({ timeout: 60_000 });
+});
+
+test("edit ingresso: solo data ingresso → max 1 PATCH lavorazioni, zero upsert mezzo", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+  const newDataIngresso = "15/06/2026";
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  const dataIngressoField = editModal.getByLabel("Data ingresso");
+  await dataIngressoField.fill(newDataIngresso);
+  await dataIngressoField.blur();
+
+  let patchCount = 0;
+  let mezzoMutationCount = 0;
+  const onRequest = (req: import("@playwright/test").Request) => {
+    const url = req.url();
+    const method = req.method();
+    if (
+      url.includes("/rest/v1/lavorazioni") &&
+      (method === "PATCH" || method === "PUT")
+    ) {
+      patchCount += 1;
+    }
+    if (
+      (url.includes("/rest/v1/mezzi") || url.includes("/rest/v1/attrezzature")) &&
+      (method === "PATCH" || method === "POST" || method === "PUT")
+    ) {
+      mezzoMutationCount += 1;
+    }
+  };
+  page.on("request", onRequest);
+
+  await clickSalvaSchedaIngressoEdit(editModal, { confirmMezzoAnagrafica: false });
+  page.off("request", onRequest);
+
+  expect(patchCount).toBeLessThanOrEqual(1);
+  expect(mezzoMutationCount).toBe(0);
+
+  await expect(editModal).toBeHidden({ timeout: 60_000 });
+
+  await openIngressoEditorFromHub(page);
+  const editModal2 = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  await expect(editModal2.getByLabel("Data ingresso")).toHaveValue(newDataIngresso);
+});
+
+test("edit ingresso: re-save stessa data ingresso → zero PATCH lavorazioni", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  const dataField = editModal.getByLabel("Data ingresso");
+  const current = await dataField.inputValue();
+  await dataField.fill(current);
+
+  let patchCount = 0;
+  const onPatch = (req: import("@playwright/test").Request) => {
+    if (
+      req.url().includes("/rest/v1/lavorazioni") &&
+      (req.method() === "PATCH" || req.method() === "PUT")
+    ) {
+      patchCount += 1;
+    }
+  };
+  page.on("request", onPatch);
+
+  await clickSalvaSchedaIngressoEdit(editModal, {
+    confirmMezzoAnagrafica: false,
+    expectNetworkWrite: false,
+  });
+  page.off("request", onPatch);
+
+  expect(patchCount).toBe(0);
 });
 
 test("edit ingresso: un solo PATCH lavorazioni per salvataggio Info lavorazione", async ({ page }) => {

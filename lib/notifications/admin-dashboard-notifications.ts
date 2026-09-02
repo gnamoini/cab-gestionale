@@ -20,12 +20,12 @@ export type MagazzinoSottoScortaNotification = {
   kind: "magazzino_sotto_scorta";
   id: string;
   ricambioId: string;
+  episodeId?: string;
+  codice?: string;
   marca: string;
   descrizione: string;
   scorta: number;
   scortaMinima: number;
-  /** true quando scorta = 0 (esaurimento). */
-  esaurito?: boolean;
   createdAt: string;
 };
 

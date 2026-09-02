@@ -28,8 +28,6 @@ export function PwaIosInstallHint() {
         media={<PwaBannerAppIcon />}
         title={`Aggiungi l'app ${CAB_APP_PRODUCT_NAME}`}
         description="Su iPhone e iPad l'app si installa dalla barra di Safari."
-        onDismiss={handleDismiss}
-        dismissLabel="Chiudi suggerimento installazione"
         actions={
           <button type="button" className={dsSystemBannerGhostBtn} onClick={handleDismiss}>
             Non ora

@@ -85,8 +85,20 @@ import {
   LoadingTableSkeleton,
   PageToolbar,
   PageToolbarCtaLabel,
+  PageToolbarMetaSegments,
   PageToolbarResultCount,
 } from "@/components/design-system";
+import {
+  compareOrdiniFornitoreInCorso,
+  compareOrdiniFornitoreStorico,
+  ordineFornitoreDataPrevista,
+  ordineFornitoreHasNote,
+  ordineFornitoreHasPartialReceipt,
+  ordineFornitoreMatchesListScope,
+  ordineFornitoreRigheCount,
+  type OrdineFornitoreListScope,
+} from "@/lib/ordini-fornitori/ordine-fornitore-list-scope";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 const OrdineFornitoreEditorModal = dynamic(
   () =>
@@ -108,6 +120,14 @@ const OrdineFornitoreEliminaConfirmDialog = dynamic(
   () =>
     import("@/components/ordini-fornitori/ordine-fornitore-elimina-confirm-dialog").then(
       (m) => m.OrdineFornitoreEliminaConfirmDialog,
+    ),
+  { ssr: false },
+);
+
+const OrdineFornitoreDeliveryModal = dynamic(
+  () =>
+    import("@/components/ordini-fornitori/ordine-fornitore-delivery-modal").then(
+      (m) => m.OrdineFornitoreDeliveryModal,
     ),
   { ssr: false },
 );
@@ -143,6 +163,7 @@ export function OrdiniFornitoriView({
   listSurface,
   canRead,
   canWrite,
+  initialOrdineId,
 }: {
   listSurface: ListSurface;
   /** Permessi pagina Preventivi (read = visualizza, write = modifica). */
@@ -177,7 +198,10 @@ export function OrdiniFornitoriView({
   const [importOpen, setImportOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OrdineFornitoreRecord | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [listScope, setListScope] = useState<OrdineFornitoreListScope>("in_corso");
+  const [deliveryTarget, setDeliveryTarget] = useState<OrdineFornitoreRecord | null>(null);
   const pendingStatusRef = useRef(new Set<string>());
+  const initialOrdineHandledRef = useRef(false);
 
   const pageFilters = useMemo(
     (): OrdiniFornitoriPageFilters => ({ ...filters, search: searchApplied }),
@@ -192,21 +216,30 @@ export function OrdiniFornitoriView({
     [records, pageFilters, searchHaystackById],
   );
 
+  const scopedRows = useMemo(
+    () => filteredRows.filter((r) => ordineFornitoreMatchesListScope(r, listScope)),
+    [filteredRows, listScope],
+  );
+
   const sortedRows = useMemo(() => {
-    const copy = [...filteredRows];
+    const copy = [...scopedRows];
     if (sortColumn === null || sortPhase === "natural") {
-      copy.sort(compareCreatedDesc);
+      if (listScope === "in_corso") {
+        copy.sort(compareOrdiniFornitoreInCorso);
+      } else {
+        copy.sort(compareOrdiniFornitoreStorico);
+      }
       return copy;
     }
     copy.sort((a, b) => compareOrdini(a, b, sortColumn, sortPhase === "asc"));
     return copy;
-  }, [filteredRows, sortColumn, sortPhase]);
+  }, [scopedRows, sortColumn, sortPhase, listScope]);
 
   const pageSize = useResponsiveListPageSize();
   const ordiniPagerDeps = useMemo(
     () =>
-      `${pageFilters.fornitore}|${pageFilters.status}|${pageFilters.dateFrom}|${pageFilters.dateTo}|${searchApplied}`,
-    [pageFilters.fornitore, pageFilters.status, pageFilters.dateFrom, pageFilters.dateTo, searchApplied],
+      `${listScope}|${pageFilters.fornitore}|${pageFilters.status}|${pageFilters.dateFrom}|${pageFilters.dateTo}|${searchApplied}`,
+    [listScope, pageFilters.fornitore, pageFilters.status, pageFilters.dateFrom, pageFilters.dateTo, searchApplied],
   );
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(
     sortedRows.length,
@@ -222,7 +255,9 @@ export function OrdiniFornitoriView({
     ordiniFornitoriFiltersActive(filters) || searchInput.trim().length > 0;
   const tableEmptyMessage = hasOrdiniListFilters
     ? "Nessun ordine corrisponde alla ricerca o ai filtri selezionati."
-    : "Nessun ordine in archivio.";
+    : listScope === "in_corso"
+      ? "Nessun ordine in corso."
+      : "Nessun ordine in archivio.";
 
   function onSortMain(k: OrdineFornitoreSortKey) {
     if (sortColumn !== k) {
@@ -244,6 +279,15 @@ export function OrdiniFornitoriView({
   const reload = useCallback(async () => {
     clearDedupForQueryKey(ordiniFornitoriListQueryKey());
     await qc.invalidateQueries({ queryKey: ordiniFornitoriListQueryKey() });
+  }, [qc]);
+
+  const reloadAfterDelivery = useCallback(async () => {
+    clearDedupForQueryKey(ordiniFornitoriListQueryKey());
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ordiniFornitoriListQueryKey() }),
+      qc.invalidateQueries({ queryKey: QK.magazzino }),
+      qc.invalidateQueries({ queryKey: QK.movimenti }),
+    ]);
   }, [qc]);
 
   const upsertOrdineInListCache = useCallback(
@@ -278,6 +322,19 @@ export function OrdiniFornitoriView({
     [reload, resetPage, setSearchInput, upsertOrdineInListCache],
   );
 
+  const openDelivery = useCallback(
+    async (record: OrdineFornitoreRecord) => {
+      if (!canWrite || record.status !== "in_consegna") return;
+      const res = await ordiniFornitoriEntry.getDetail(record.id);
+      if (!res.success || !res.data) {
+        gestToast.errorOnce("ordine-delivery-open", res.error ?? "Ordine non trovato.");
+        return;
+      }
+      setDeliveryTarget(res.data);
+    },
+    [canWrite, gestToast],
+  );
+
   const openView = useCallback(
     async (record: OrdineFornitoreRecord) => {
       const res = await ordiniFornitoriEntry.getDetail(record.id);
@@ -289,6 +346,24 @@ export function OrdiniFornitoriView({
     },
     [gestToast],
   );
+
+  useEffect(() => {
+    if (!initialOrdineId || isLoading || initialOrdineHandledRef.current) return;
+    initialOrdineHandledRef.current = true;
+    void (async () => {
+      const fromList = records.find((r) => r.id === initialOrdineId);
+      if (fromList) {
+        await openView(fromList);
+        return;
+      }
+      const res = await ordiniFornitoriEntry.getDetail(initialOrdineId);
+      if (res.success && res.data) {
+        setEditor({ open: true, record: res.data, isNew: false, mode: "view" });
+      } else {
+        gestToast.errorOnce("ordine-deeplink", res.error ?? "Ordine non trovato.");
+      }
+    })();
+  }, [gestToast, initialOrdineId, isLoading, openView, records]);
 
   const openDuplicate = useCallback(
     (record: OrdineFornitoreRecord) => {
@@ -473,13 +548,37 @@ export function OrdiniFornitoriView({
             }
             onFilterReset={() => setFilters(ORDINI_FORNITORI_FILTERS_EMPTY)}
             meta={
-              <PageToolbarResultCount
-                count={sortedRows.length}
-                filtersActive={ordiniFornitoriFiltersActive(filters)}
-                searchActive={searchInput.trim().length > 0}
-                onSearchReset={() => setSearchInput("")}
-                onFilterReset={() => setFilters(ORDINI_FORNITORI_FILTERS_EMPTY)}
-              />
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <PageToolbarMetaSegments
+                  className="w-full sm:w-auto"
+                  options={[
+                    {
+                      id: "in_corso",
+                      label: "In corso",
+                      shortLabel: "Corso",
+                      checked: listScope === "in_corso",
+                      onChange: (checked) => {
+                        if (checked) setListScope("in_corso");
+                      },
+                    },
+                    {
+                      id: "storico",
+                      label: "Storico",
+                      checked: listScope === "storico",
+                      onChange: (checked) => {
+                        if (checked) setListScope("storico");
+                      },
+                    },
+                  ]}
+                />
+                <PageToolbarResultCount
+                  count={sortedRows.length}
+                  filtersActive={ordiniFornitoriFiltersActive(filters)}
+                  searchActive={searchInput.trim().length > 0}
+                  onSearchReset={() => setSearchInput("")}
+                  onFilterReset={() => setFilters(ORDINI_FORNITORI_FILTERS_EMPTY)}
+                />
+              </div>
             }
           />
         </section>
@@ -510,16 +609,24 @@ export function OrdiniFornitoriView({
                   <GlobalTableSortTh label="Numero" columnKey="numero" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
                   <GlobalTableSortTh label="Data" columnKey="dataOrdine" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
                   <GlobalTableSortTh label="Fornitore" columnKey="fornitore" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <th className={`hidden xl:table-cell ${gestionaleListTableTd} text-xs font-medium text-[color:var(--cab-text-muted)]`}>
+                    Righe
+                  </th>
+                  <th className={`hidden lg:table-cell ${gestionaleListTableTd} text-xs font-medium text-[color:var(--cab-text-muted)]`}>
+                    {listScope === "in_corso" ? "Consegna prev." : "Data cons."}
+                  </th>
                   <GlobalTableSortTh label="Oggetto" columnKey="oggettoOrdine" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                  <GlobalTableSortTh label="Destinazione" columnKey="destinazioneTipo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
                   <GlobalTableSortTh label="Totale" columnKey="totale" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} align="right" />
                   <GlobalTableSortTh label="Stato" columnKey="status" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <th className={`hidden md:table-cell ${gestionaleListTableTd} text-xs font-medium text-[color:var(--cab-text-muted)]`}>
+                    Info
+                  </th>
                   <GestionaleListTableActionsHead />
                 </>
               }
               empty={pageRows.length === 0}
               emptyMessage={tableEmptyMessage}
-              colSpan={8}
+              colSpan={10}
             >
               {pageRows.map((o) => (
                   <tr key={o.id} className={gestionaleListTableRowClass}>
@@ -530,11 +637,16 @@ export function OrdiniFornitoriView({
                       {formatOrdineFornitoreDate(o.dataOrdine)}
                     </td>
                     <td className={`min-w-0 ${gestionaleListTableTd}`}>{o.fornitoreLabel || "—"}</td>
+                    <td className={`hidden xl:table-cell whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums`}>
+                      {ordineFornitoreRigheCount(o)}
+                    </td>
+                    <td className={`hidden lg:table-cell whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums`}>
+                      {listScope === "in_corso"
+                        ? formatOrdineFornitoreDate(ordineFornitoreDataPrevista(o)) || "—"
+                        : formatOrdineFornitoreDate(o.dataConsegna ?? "") || "—"}
+                    </td>
                     <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd} truncate`}>
                       {ordineFornitoreListOggetto(o) || "—"}
-                    </td>
-                    <td className={`min-w-0 ${gestionaleListTableTd}`}>
-                      {ordineFornitoreListDestinazioneTipo(o)}
                     </td>
                     <td className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-medium tabular-nums`}>
                       {o.totale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
@@ -548,8 +660,45 @@ export function OrdiniFornitoriView({
                         />
                       </div>
                     </td>
+                    <td className={`hidden md:table-cell ${gestionaleListTableTd}`}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {ordineFornitoreHasNote(o) ? (
+                          <OptionalTooltip content={o.note}>
+                            <span
+                              className="inline-flex rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]"
+                              aria-label="Note presenti"
+                            >
+                              Note
+                            </span>
+                          </OptionalTooltip>
+                        ) : null}
+                        {ordineFornitoreHasPartialReceipt(o) ? (
+                          <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-950/50 dark:text-amber-100">
+                            Parziale
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className={gestionaleListTableTdAzioni}>
                       <div className={gestionaleListTableActionsGroup}>
+                        {o.status === "in_consegna" ? (
+                          <OptionalTooltip
+                            content={
+                              !canWrite
+                                ? READONLY_PERMISSION_HINT
+                                : "Registra quantità ricevute e opzionalmente carica il magazzino"
+                            }
+                          >
+                            <button
+                              type="button"
+                              className={`${dsTableActionTextBtnPrimary} hidden sm:inline-flex`}
+                              disabled={!canWrite}
+                              onClick={() => void openDelivery(o)}
+                            >
+                              Consegna
+                            </button>
+                          </OptionalTooltip>
+                        ) : null}
                         <IconActionButton
                           label="Visualizza"
                           tooltipForce
@@ -622,8 +771,24 @@ export function OrdiniFornitoriView({
                         </p>
                       ) : null}
                       <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-                        {formatOrdineFornitoreDate(o.dataOrdine)} · {ordineFornitoreListDestinazioneTipo(o)}
+                        {formatOrdineFornitoreDate(o.dataOrdine)} · {ordineFornitoreRigheCount(o)} righe
+                        {listScope === "in_corso" && ordineFornitoreDataPrevista(o)
+                          ? ` · prev. ${formatOrdineFornitoreDate(ordineFornitoreDataPrevista(o))}`
+                          : null}
+                        {listScope === "storico" && o.dataConsegna
+                          ? ` · cons. ${formatOrdineFornitoreDate(o.dataConsegna)}`
+                          : null}
                       </p>
+                      {ordineFornitoreHasNote(o) || ordineFornitoreHasPartialReceipt(o) ? (
+                        <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                          {ordineFornitoreHasNote(o) ? (
+                            <span className="font-medium text-[color:var(--cab-primary)]">Note</span>
+                          ) : null}
+                          {ordineFornitoreHasPartialReceipt(o) ? (
+                            <span className="font-medium text-amber-800 dark:text-amber-200">Parziale</span>
+                          ) : null}
+                        </p>
+                      ) : null}
                       <div className="mt-2 max-w-[12rem]">
                         <OrdineFornitoreStatusCell
                           record={o}
@@ -637,6 +802,18 @@ export function OrdiniFornitoriView({
                     </p>
                   </div>
                   <CardMobileActions>
+                    {o.status === "in_consegna" ? (
+                      <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
+                        <button
+                          type="button"
+                          className={dsTableActionTextBtnPrimary}
+                          disabled={!canWrite}
+                          onClick={() => void openDelivery(o)}
+                        >
+                          Consegna
+                        </button>
+                      </OptionalTooltip>
+                    ) : null}
                     <button type="button" className={dsTableActionTextBtnPrimary} onClick={() => void openView(o)}>
                       Visualizza
                     </button>
@@ -696,6 +873,27 @@ export function OrdiniFornitoriView({
           onDelete={() => {
             if (!canWrite) return;
             openDeleteConfirm(editor.record);
+          }}
+          onRegisterDelivery={() => void openDelivery(editor.record)}
+        />
+      ) : null}
+
+      {deliveryTarget ? (
+        <OrdineFornitoreDeliveryModal
+          record={deliveryTarget}
+          open={deliveryTarget != null}
+          onClose={() => setDeliveryTarget(null)}
+          onCompleted={() => {
+            const ordineId = deliveryTarget.id;
+            void (async () => {
+              await reloadAfterDelivery();
+              const detail = await ordiniFornitoriEntry.getDetail(ordineId);
+              if (detail.success && detail.data) {
+                setEditor((prev) =>
+                  prev?.record.id === ordineId ? { ...prev, record: detail.data! } : prev,
+                );
+              }
+            })();
           }}
         />
       ) : null}

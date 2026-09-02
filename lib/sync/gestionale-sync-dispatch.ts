@@ -29,7 +29,7 @@ import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/g
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 import { getGestionaleDirtySyncMode } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { markGestionaleDirty, clearGestionaleDirty } from "@/lib/sync/gestionale-dirty-state";
-import { shouldSkipOperationalDirtyMark } from "@/lib/sync/operational-dirty-mark-gate";
+import { decideGestionaleDirty } from "@/lib/sync/gestionale-dirty-decision";
 import { resolveSyncEffects } from "@/lib/sync/gestionale-sync-policy";
 import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
 import { logGestionaleSyncPipelineStage } from "@/lib/sync/gestionale-sync-pipeline-trace";
@@ -273,10 +273,22 @@ export function dispatchGestionaleAction(
 
     if (resolved.dirtyEntries.length > 0 && isDocumentVisible()) {
       for (const entry of resolved.dirtyEntries) {
-        if (
-          shouldSkipOperationalDirtyMark(entry.table, entry.entityId ?? undefined) ||
-          shouldSuppressRemoteCacheInvalidation(entry.table, entry.entityId ?? undefined)
-        ) {
+        const dirtyDecision = decideGestionaleDirty({
+          table: entry.table,
+          entityId: entry.entityId,
+          source: options.source,
+          queryClient: qc,
+        });
+        logGestionaleSyncPipelineStage(
+          dirtyDecision.action === "skip" ? "dirty_skipped" : "dirty_decision",
+          {
+            table: entry.table,
+            entityId: entry.entityId ?? undefined,
+            reason: dirtyDecision.reason,
+            source: options.source,
+          },
+        );
+        if (dirtyDecision.action === "skip") {
           continue;
         }
         markGestionaleDirty(entry);

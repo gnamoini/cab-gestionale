@@ -7,6 +7,7 @@ import {
 } from "@/components/design-system";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { SchedaIngressoUnknownSettingItem } from "@/lib/schede/scheda-ingresso-unknown-settings";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 export function SchedaIngressoUnknownSettingsDialog({
   open,
@@ -30,7 +31,7 @@ export function SchedaIngressoUnknownSettingsDialog({
       open={open}
       title="Nuovi valori negli elenchi globali"
       subtitle="Alcuni campi della scheda non sono presenti nelle impostazioni globali."
-      layerClassName="z-[125]"
+      layerClassName={cabModalZConfirm}
       pending={pending}
       onCancel={onCancel}
       footer={

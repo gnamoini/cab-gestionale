@@ -35,6 +35,7 @@ export function mapOrdineFornitoreRow(
     status: normalizeOrdineFornitoreStatus(row.status),
     oggettoOrdine: readOrdineOggetto(meta),
     dataOrdine: row.data_ordine,
+    dataConsegna: row.data_consegna ?? null,
     fornitoreLabel: row.fornitore_label,
     fornitoreSnapshot: (row.fornitore_snapshot ?? {}) as Record<string, unknown>,
     destinazione: row.destinazione ?? "",

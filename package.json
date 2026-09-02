@@ -109,6 +109,8 @@
     "ci:smoke:preflight:cert": "npx tsx scripts/ci-smoke-preflight.ts --tier=cert",
     "smoke:cleanup": "npx tsx scripts/cleanup-smoke-data.ts",
     "smoke:cleanup:apply": "npx tsx scripts/cleanup-smoke-data.ts --apply",
+    "smoke:secrets:local": "npx tsx scripts/ensure-local-smoke-secrets.ts",
+    "smoke:secrets:local:prod": "npx tsx scripts/ensure-local-smoke-secrets.ts --mark-production",
     "audit:smoke:residues": "npx tsx scripts/audit-smoke-residues.ts",
     "flex:baseline:generate": "npx tsx scripts/generate-flex-baseline.ts --update",
     "flex:baseline:diff": "npx tsx scripts/diff-flex-baseline.ts",

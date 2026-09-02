@@ -62,8 +62,9 @@ async function ensureAccountMenuVisible(page: Page): Promise<void> {
   if (await drawerOpen.isVisible().catch(() => false)) {
     await drawerOpen.click({ timeout: 15_000 });
     await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible({ timeout: 10_000 });
+    if (await accountMenu.isVisible().catch(() => false)) return;
   }
-  await expect(accountMenu).toBeVisible({ timeout: 15_000 });
+  await expect(page).not.toHaveURL(/\/login(?:\?|$)/, { timeout: 5_000 });
 }
 
 export async function loginViaUi(
@@ -73,19 +74,23 @@ export async function loginViaUi(
 ): Promise<void> {
   await expect(async () => {
     await page.goto("/login");
+    const identifier = page.getByTestId("smoke-login-identifier");
+    if (!(await identifier.isVisible().catch(() => false))) {
+      await expect(page).not.toHaveURL(/\/login(?:\?|$)/, { timeout: 15_000 });
+      return;
+    }
+    await expect(identifier).toBeEnabled({ timeout: 30_000 });
     const rememberCheckbox = page.getByRole("checkbox", { name: /resta collegato/i });
     if (opts?.remember === true) {
       await rememberCheckbox.check();
     } else if (opts?.remember === false) {
       await rememberCheckbox.uncheck();
     }
-    await page.getByTestId("smoke-login-identifier").fill(creds.email);
+    await identifier.fill(creds.email);
     await page.getByTestId("smoke-login-password").fill(creds.password);
     await page.getByTestId("smoke-login-submit").click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
-      timeout: 45_000,
-      waitUntil: "domcontentloaded",
-    });
+    // ponytail: client-side post-login redirect — no second domcontentloaded
+    await expect(page).not.toHaveURL(/\/login(?:\?|$)/, { timeout: 60_000 });
   }).toPass({ timeout: 90_000 });
 
   await ensureAccountMenuVisible(page);

@@ -2,7 +2,7 @@ import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
-  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationOpenMagazzinoHref,
 } from "@/lib/lavorazioni/admin-notifications";
 
 const ALLOWED_PREFIXES = [
@@ -50,7 +50,7 @@ export function resolvePushHrefFromNotification(input: {
     return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : "/lavorazioni-clienti";
   }
   if (type === "magazzino_sotto_scorta") {
-    return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
+    return entityId ? buildAdminNotificationOpenMagazzinoHref(entityId) : "/magazzino";
   }
   if (type === "lavorazioni_ritardo_digest") return "/lavorazioni";
   if (type === "preventivo_approvato" || type.startsWith("preventivo_")) return "/preventivi";

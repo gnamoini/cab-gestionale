@@ -40,7 +40,11 @@ import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast"
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { logGestionaleSyncPipelineStage } from "@/lib/sync/gestionale-sync-pipeline-trace";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
-import { tryMergeStockFromRealtime, isSelfOriginatedStockRealtimeEvent } from "@/lib/magazzino/stock-realtime-merge";
+import {
+  decideGestionaleDirty,
+  type GestionaleDirtyPayloadHint,
+} from "@/lib/sync/gestionale-dirty-decision";
+import { tryMergeStockFromRealtime } from "@/lib/magazzino/stock-realtime-merge";
 import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import {
@@ -319,13 +323,54 @@ export function GestionaleRealtimeBridge() {
 
       const isStockTable = table === "magazzino_ricambi" || table === "movimenti_ricambi";
 
-      if (isStockTable && stockRecord && isSelfOriginatedStockRealtimeEvent(table, stockRecord)) {
-        logGestionaleSyncPipelineStage("self_echo_check", { table });
-        tryMergeStockFromRealtime(qc, table, stockRecord);
+      const payloadHint: GestionaleDirtyPayloadHint | null = stockRecord
+        ? {
+            id: stockRecord.id,
+            stock_version: stockRecord.stock_version,
+            operation_id: stockRecord.operation_id,
+            ricambio_id: stockRecord.ricambio_id,
+            updated_at:
+              typeof payload.new?.updated_at === "string" ? payload.new.updated_at : undefined,
+          }
+        : payload.new
+          ? {
+              id: typeof payload.new.id === "string" ? payload.new.id : undefined,
+              stock_version: payload.new.stock_version as number | string | undefined,
+              updated_at:
+                typeof payload.new.updated_at === "string" ? payload.new.updated_at : undefined,
+            }
+          : null;
+
+      const entityId =
+        cabEvent && cabEvent.type !== "settings_updated" && cabEvent.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED"
+          ? cabEvent.id
+          : null;
+
+      const dirtyDecision = decideGestionaleDirty({
+        table,
+        entityId,
+        source: "realtime",
+        queryClient: qc,
+        payload: payloadHint,
+      });
+
+      if (dirtyDecision.action === "skip") {
+        logGestionaleSyncPipelineStage("dirty_skipped", {
+          table,
+          entityId: entityId ?? undefined,
+          reason: dirtyDecision.reason,
+        });
+        if (isStockTable && stockRecord) {
+          tryMergeStockFromRealtime(qc, table, stockRecord);
+        }
         return;
       }
 
-      logGestionaleSyncPipelineStage("realtime_received", { table, eventType: payload.eventType });
+      logGestionaleSyncPipelineStage("realtime_received", {
+        table,
+        eventType: payload.eventType,
+        reason: dirtyDecision.reason,
+      });
 
       if (isStockTable && stockRecord) {
         const eventType = payload.eventType;

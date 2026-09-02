@@ -1,7 +1,17 @@
-import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import { resolveDataIngressoWriteValue } from "@/lib/lavorazioni/data-ingresso-patch";
 import type { UpsertMezzoFromSchedaResult } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { LavorazioneListRow, LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import type { SchedaIngressoFields } from "@/types/schede";
+
+/** Patch `data_ingresso` idempotente (confronto YMD). */
+export function buildDataIngressoPatchFromFields(
+  row: LavorazioneListRow,
+  fields: SchedaIngressoFields,
+): LavorazioneUpdate {
+  const ingresso = resolveDataIngressoWriteValue(row.data_ingresso, fields.dataIngresso);
+  if (!ingresso.changed || !ingresso.value) return {};
+  return { data_ingresso: ingresso.value };
+}
 
 /** Patch lavorazione da upsert mezzo edit — non applicata; merge in ingresso-backend-sync. */
 export function buildEditLavorazionePatchFromUpsert(
@@ -9,9 +19,7 @@ export function buildEditLavorazionePatchFromUpsert(
   fields: SchedaIngressoFields,
   upsert: Pick<UpsertMezzoFromSchedaResult, "mezzoId" | "targetType" | "attrezzaturaId">,
 ): LavorazioneUpdate {
-  const lavPatch: LavorazioneUpdate = {};
-  const parsedIngresso = parseItalianDayDisplayToIso(fields.dataIngresso.trim());
-  if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
+  const lavPatch: LavorazioneUpdate = { ...buildDataIngressoPatchFromFields(row, fields) };
 
   const mezzoId = upsert.mezzoId?.trim() || null;
   const targetType = upsert.targetType ?? row.target_type;

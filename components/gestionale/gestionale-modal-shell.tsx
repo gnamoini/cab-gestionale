@@ -41,6 +41,13 @@ import {
   type OverlayCloseContext,
 } from "@/lib/ui/overlay-back-stack";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
+import {
+  createModalBackdropDismissState,
+  onModalBackdropPointerDown,
+  onModalBackdropPointerUp,
+  onModalDialogPointerDown,
+  resetModalBackdropDismissState,
+} from "@/lib/ui/modal-backdrop-dismiss";
 
 const GESTIONALE_MODAL_TITLE_ID = "gestionale-modal-title";
 
@@ -131,7 +138,7 @@ export function GestionaleModalTitleBar({
 
 export type GestionaleModalDialogSize = "hub" | "compact";
 
-/** Chiusura: click fuori, ESC, X in header; scroll lock condiviso. */
+/** Chiusura: backdrop (pointerdown→pointerup), ESC, X in header; scroll lock condiviso. */
 export function GestionaleModalShell({
   children,
   modalSize,
@@ -188,6 +195,19 @@ export function GestionaleModalShell({
   const maxMdDown = useMaxMdDown();
   // eslint-disable-next-line react-hooks/purity -- lint phase2: preserve existing hook contract
   const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
+  const backdropDismissRef = useRef(createModalBackdropDismissState());
+
+  useEffect(() => {
+    function onWindowPointerUp() {
+      resetModalBackdropDismissState(backdropDismissRef.current);
+    }
+    window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("pointercancel", onWindowPointerUp);
+    return () => {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const durationMs = Math.round(performance.now() - modalOpenStartRef.current);
@@ -236,10 +256,22 @@ export function GestionaleModalShell({
         <div
           className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""}`}
           role="presentation"
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             if (e.target === e.currentTarget) {
+              onModalBackdropPointerDown(backdropDismissRef.current, e.target, e.currentTarget);
+            }
+          }}
+          onPointerUp={(e) => {
+            if (
+              onModalBackdropPointerUp(backdropDismissRef.current, e.target, e.currentTarget)
+            ) {
               e.preventDefault();
               onRequestClose();
+            }
+          }}
+          onPointerCancel={(e) => {
+            if (e.target === e.currentTarget) {
+              resetModalBackdropDismissState(backdropDismissRef.current);
             }
           }}
         >
@@ -257,7 +289,10 @@ export function GestionaleModalShell({
             aria-labelledby={labelledBy}
             tabIndex={-1}
             onKeyDown={dialogFocus.onKeyDown}
-            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onModalDialogPointerDown(backdropDismissRef.current);
+            }}
           >
             <div
               {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}

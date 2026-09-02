@@ -36,6 +36,8 @@ export type OrdineFornitoreRecord = {
   /** Testo libero; persistito in meta.oggettoOrdine. */
   oggettoOrdine: string;
   dataOrdine: string;
+  /** Data chiusura ordine (tutte le righe ricevute). */
+  dataConsegna: string | null;
   fornitoreLabel: string;
   fornitoreSnapshot: Record<string, unknown>;
   destinazione: string;
