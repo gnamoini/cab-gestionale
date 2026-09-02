@@ -63,12 +63,12 @@ export async function handlePdfPreviewPost(
   request: Request,
   options?: PdfPreviewHandlerOptions,
 ): Promise<Response> {
-  if (await isPdfPreviewPostRateLimited(request)) {
-    return NextResponse.json({ error: "Troppe richieste. Riprova tra poco." }, { status: 429 });
-  }
-
   if (!(await canUsePdfPreview())) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+  }
+
+  if (await isPdfPreviewPostRateLimited(request)) {
+    return NextResponse.json({ error: "Troppe richieste. Riprova tra poco." }, { status: 429 });
   }
 
   let formData: FormData;

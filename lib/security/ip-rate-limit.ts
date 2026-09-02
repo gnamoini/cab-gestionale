@@ -67,6 +67,17 @@ async function isUpstashRateLimited(config: IpRateLimitConfig, clientKey: string
   }
 }
 
+/** Upstash se disponibile, altrimenti memory — mai fail-closed (route staff autenticate). */
+export async function isRateLimitedWithMemoryFallback(
+  config: IpRateLimitConfig,
+  clientKey: string,
+): Promise<boolean> {
+  const key = clientKey.trim() || "unknown";
+  const upstash = await isUpstashRateLimited(config, key);
+  if (upstash !== null) return upstash;
+  return isMemoryRateLimited(config, key);
+}
+
 /** true = bloccato (rate limited). */
 export async function isIpRateLimited(config: IpRateLimitConfig, clientKey: string): Promise<boolean> {
   const key = clientKey.trim() || "unknown";

@@ -5,6 +5,7 @@ import {
   CAB_LOGO_PDF_MAX_HEIGHT_MM,
   pdfImageFormatFromDataUrl,
 } from "@/lib/branding/branding-logo-for-pdf";
+import { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
 import { OFFICINA_LEGAL_NAME } from "@/lib/officina/officina-identity";
 
 export {
@@ -500,15 +501,21 @@ export function drawPdfTotalsSummary(
   return y + boxH + PDF_SECTION_GAP;
 }
 
+const PDF_FOOTER_ATTRIBUTION = `Documento redatto con ${CAB_APP_PRODUCT_NAME}`;
+
 export function drawPdfPageFooters(doc: JsPDFDoc, numero: string): void {
   const pageCount = doc.getNumberOfPages();
+  const pageW = doc.internal.pageSize.getWidth();
   const numeroClean = cleanField(numero) ?? "";
   for (let i = 1; i <= pageCount; i += 1) {
     doc.setPage(i);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...C_MUTED);
-    const footer = numeroClean ? `${numeroClean} · Pag. ${i}/${pageCount}` : `Pag. ${i}/${pageCount}`;
-    doc.text(footer, PDF_MARGIN_L, PDF_FOOTER_Y);
+    if (numeroClean) {
+      doc.text(numeroClean, PDF_MARGIN_L, PDF_FOOTER_Y);
+    }
+    doc.text(PDF_FOOTER_ATTRIBUTION, pageW / 2, PDF_FOOTER_Y, { align: "center" });
+    doc.text(`Pag. ${i}/${pageCount}`, pageW - PDF_MARGIN_R, PDF_FOOTER_Y, { align: "right" });
   }
 }

@@ -31,7 +31,15 @@ import {
   isDescrizioneMaterialiConsumo,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
+import type { PreventivoRecord, PreventivoTipoDocumento } from "@/lib/preventivi/types";
+
+export function preventivoPdfLavorazioniSectionTitle(tipo: PreventivoTipoDocumento): string {
+  return tipo === "consuntivo" ? "Lavorazioni da effettuare" : "Lavorazioni effettuate";
+}
+
+export function preventivoPdfMaterialiSectionTitle(tipo: PreventivoTipoDocumento): string {
+  return tipo === "consuntivo" ? "Materiali da usare" : "MATERIALI UTILIZZATI";
+}
 
 export type PreventivoPdfEconomics = {
   totaleRicambi: number;
@@ -219,7 +227,7 @@ export function drawPreventivoPdfBody(
       doc,
       y,
       pageW,
-      "Lavorazioni effettuate",
+      preventivoPdfLavorazioniSectionTitle(p.tipoDocumento),
       ["Descrizione"],
       lavBody,
       LAVORAZIONI_COLUMN_STYLES,
@@ -243,7 +251,7 @@ export function drawPreventivoPdfBody(
     doc,
     y,
     pageW,
-    "MATERIALI UTILIZZATI",
+    preventivoPdfMaterialiSectionTitle(p.tipoDocumento),
     [...RICAMBI_HEAD],
     ricBody.length ? ricBody : [["—", "Nessun ricambio", "—", "—", "—", "—"]],
     RICAMBI_COLUMN_STYLES,

@@ -5,6 +5,8 @@ import { test } from "node:test";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
   isPreventivoVendita,
+  PREVENTIVO_CATEGORIA_OPTIONS,
+  preventivoCategoriaBadgeLabel,
   resolvePreventivoCategoria,
 } from "@/lib/preventivi/preventivo-categoria";
 import {
@@ -14,6 +16,14 @@ import {
 import { validatePreventivoBeforeSave } from "@/lib/preventivi/preventivo-save-validation";
 import { pickPreventivoWritePayload } from "@/lib/validation/services/preventivi-payload";
 import type { PreventivoRow } from "@/src/types/supabase-tables";
+
+test("categoria options SSOT: due contesti distinti", () => {
+  assert.equal(PREVENTIVO_CATEGORIA_OPTIONS.length, 2);
+  assert.equal(PREVENTIVO_CATEGORIA_OPTIONS[0]?.id, "lavorazione");
+  assert.equal(PREVENTIVO_CATEGORIA_OPTIONS[1]?.id, "vendita");
+  assert.equal(preventivoCategoriaBadgeLabel("vendita", "chip"), "Vend");
+  assert.equal(preventivoCategoriaBadgeLabel("lavorazione", "chip"), "Lav");
+});
 
 test("categoria esplicita vendita vince su mezzoId", () => {
   assert.equal(

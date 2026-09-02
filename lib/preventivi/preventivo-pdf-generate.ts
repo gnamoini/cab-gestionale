@@ -54,4 +54,4 @@ export function preventivoPdfFileName(p: PreventivoRecord): string {
 }
 
 /** Bump per invalidare cache artifact PDF dopo cambi layout. */
-export const PREVENTIVO_PDF_LAYOUT_STAMP = "oggetto-compact-v5";
+export const PREVENTIVO_PDF_LAYOUT_STAMP = "consuntivo-labels-footer-v6";

@@ -49,7 +49,7 @@ assert.match(openUrl, /openBlankPopupWindow/);
 
 const openPreview = read("lib/pdf/open-pdf-blob-preview.ts");
 assert.match(openPreview, /submitPdfPreviewInNewTab/);
-assert.match(openPreview, /openSafePopup/);
+assert.match(openPreview, /openUrlInNewTab/);
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
 assert.match(requestArtifact, /tryOpenViaTemporaryAnchor/);

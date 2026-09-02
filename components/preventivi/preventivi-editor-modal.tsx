@@ -86,9 +86,12 @@ import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date
 import { PreventivoLavorazioniEditorSection } from "@/components/preventivi/preventivo-lavorazioni-editor-section";
 import { PreventivoRicambiEditorSection } from "@/components/preventivi/preventivo-ricambi-editor-section";
 import { PreventivoRiepilogoNoteSection } from "@/components/preventivi/preventivo-riepilogo-note-section";
+import { PreventivoCategoriaBadgeFromRecord } from "@/components/preventivi/preventivo-categoria-badge";
 import {
   isPreventivoVendita,
   preventivoCategoriaNuovoLabel,
+  preventivoCategoriaOptionMeta,
+  resolvePreventivoCategoriaFromRecord,
 } from "@/lib/preventivi/preventivo-categoria";
 import { validatePreventivoBeforeSave } from "@/lib/preventivi/preventivo-save-validation";
 
@@ -300,6 +303,7 @@ export function PreventiviEditorModal({
     Boolean(draft?.stato === "bozza" && draft.lavorazioneId?.trim() && prevPerms.canWrite);
 
   const isVendita = draft ? isPreventivoVendita(draft) : false;
+  const categoriaMeta = draft ? preventivoCategoriaOptionMeta(resolvePreventivoCategoriaFromRecord(draft)) : null;
 
   const regenerateDescription = useCallback(async () => {
     if (!draft || !canRegenerateDescription) return;
@@ -616,6 +620,17 @@ export function PreventiviEditorModal({
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <FormField label="Numero">
                     <input className={`${dsInput} tabular-nums`} readOnly value={draft.numero} />
+                  </FormField>
+                  <FormField label="Contesto">
+                    <div className="flex min-h-10 flex-wrap items-center gap-2">
+                      {draft ? <PreventivoCategoriaBadgeFromRecord record={draft} variant="inline" /> : null}
+                      {categoriaMeta ? (
+                        <span className={`${preventivoEditorHint} min-w-0`}>{categoriaMeta.subtitle}</span>
+                      ) : null}
+                    </div>
+                    {categoriaMeta && isNew ? (
+                      <p className={`${preventivoEditorHint} mt-1.5`}>{categoriaMeta.description}</p>
+                    ) : null}
                   </FormField>
                   <FormField label="Tipo documento">
                     <div role="tablist" aria-label="Tipo documento" className={preventivoIntestazioneSegmentWrap}>

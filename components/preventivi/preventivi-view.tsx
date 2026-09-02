@@ -166,7 +166,8 @@ import { GestionaleSectionGate } from "@/components/gestionale/gestionale-sectio
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
-import { preventivoCategoriaNuovoLabel } from "@/lib/preventivi/preventivo-categoria";
+import { PreventivoCategoriaBadgeFromRecord } from "@/components/preventivi/preventivo-categoria-badge";
+import { PreventivoNuovoCategoriaDialog } from "@/components/preventivi/preventivo-nuovo-categoria-dialog";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { computePreventivoProfitto, profittoTabellaFromResult } from "@/lib/preventivi/preventivo-profitto";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
@@ -446,8 +447,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     isNew: false,
     isRollbackDraft: false,
   });
-  const [nuovoMenuOpen, setNuovoMenuOpen] = useState(false);
-  const nuovoMenuRef = useRef<HTMLDivElement>(null);
+  const [nuovoCategoriaDialogOpen, setNuovoCategoriaDialogOpen] = useState(false);
   const [handoffDescProgress, setHandoffDescProgress] = useState<string | null>(null);
   const filterMezzoNeedsCatalog =
     Boolean(
@@ -890,7 +890,10 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             </span>
           </td>
           <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
-            <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="table" />
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="table" />
+              <PreventivoCategoriaBadgeFromRecord record={p} variant="table" />
+            </span>
           </td>
           <td className={`whitespace-nowrap ${gestionaleListTableTd} ${prevTableBodyTextClass} tabular-nums`}>
             {fmtDataCreazioneTabella(p.dataCreazione)}
@@ -1216,7 +1219,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const openNuovoPreventivo = useCallback(
     (categoria: PreventivoCategoria) => {
       if (!canEditWorkOrders) return;
-      setNuovoMenuOpen(false);
+      setNuovoCategoriaDialogOpen(false);
       setEditor({
         open: true,
         record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows, { categoria }),
@@ -1226,17 +1229,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     },
     [autore, canEditWorkOrders, rows],
   );
-
-  useEffect(() => {
-    if (!nuovoMenuOpen) return;
-    const onDocMouseDown = (event: MouseEvent) => {
-      if (!nuovoMenuRef.current?.contains(event.target as Node)) {
-        setNuovoMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [nuovoMenuOpen]);
 
   return (
     <GestionaleSectionGate module="preventivi">
@@ -1256,38 +1248,15 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           <PageToolbar
             testId="page-ready-toolbar"
             primaryAction={
-              <div className="relative" ref={nuovoMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => canEditWorkOrders && setNuovoMenuOpen((open) => !open)}
-                  className={dsPageToolbarCtaCompact}
-                  disabled={!canEditWorkOrders}
-                  aria-label="Nuovo preventivo"
-                  aria-expanded={nuovoMenuOpen}
-                  aria-haspopup="menu"
-                >
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
-                </button>
-                {nuovoMenuOpen ? (
-                  <div
-                    role="menu"
-                    aria-label="Tipo nuovo preventivo"
-                    className="absolute right-0 top-full z-50 mt-1 min-w-[15rem] overflow-hidden rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] py-1 shadow-lg"
-                  >
-                    {(["lavorazione", "vendita"] as const).map((categoria) => (
-                      <button
-                        key={categoria}
-                        type="button"
-                        role="menuitem"
-                        className="block w-full px-3 py-2 text-left text-sm text-[color:var(--cab-text)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]"
-                        onClick={() => openNuovoPreventivo(categoria)}
-                      >
-                        {preventivoCategoriaNuovoLabel(categoria)}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                onClick={() => canEditWorkOrders && setNuovoCategoriaDialogOpen(true)}
+                className={dsPageToolbarCtaCompact}
+                disabled={!canEditWorkOrders}
+                aria-label="Nuovo preventivo"
+              >
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
+              </button>
             }
             search={
               <GestionaleListSearchController
@@ -1449,6 +1418,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                       <div className="flex items-center gap-1.5 min-w-0 flex-nowrap sm:flex-wrap">
                         <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
                         <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="inline" />
+                        <PreventivoCategoriaBadgeFromRecord record={p} variant="inline" />
                         <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
                       </div>
                       <p className="mt-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
@@ -1558,6 +1528,12 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           </div>
         </LavorazioniModalShell>
       ) : null}
+
+      <PreventivoNuovoCategoriaDialog
+        open={nuovoCategoriaDialogOpen}
+        onCancel={() => setNuovoCategoriaDialogOpen(false)}
+        onSelect={openNuovoPreventivo}
+      />
 
       {editor.open && canEditWorkOrders ? (
         <PreventiviEditorModal

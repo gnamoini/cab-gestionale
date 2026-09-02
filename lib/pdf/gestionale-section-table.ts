@@ -92,6 +92,13 @@ function drawHeadBottomRule(doc: jsPDF, x: number, y: number, width: number, hei
   doc.line(x, y + height, x + width, y + height);
 }
 
+/** Celle body vuote (es. codice assente su materiali di consumo): senza bordi laterali, ma con separatore riga. */
+function drawEmptyBodyCellBottomRule(doc: jsPDF, data: CellHookData): void {
+  if (!isEmptyBodyCell(data)) return;
+  const { x, y, width, height } = data.cell;
+  drawHeadBottomRule(doc, x, y, width, height);
+}
+
 /** Rinforza il bordo inferiore dell'ultima riga header (tabelle senza titolo sezione gestionale). */
 export function drawAutoTableHeadBottomBorder(doc: jsPDF, data: CellHookData): void {
   if (data.section !== "head") return;
@@ -513,6 +520,7 @@ export function gestionaleSectionTableHooks(doc: jsPDF, opts?: { compactHead?: b
     },
     didDrawCell: (data: CellHookData) => {
       drawGestionaleTableHeadBorders(doc, data);
+      drawEmptyBodyCellBottomRule(doc, data);
     },
   };
 }

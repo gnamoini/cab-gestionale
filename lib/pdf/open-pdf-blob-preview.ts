@@ -2,7 +2,6 @@
 
 import { pushGestionaleToast } from "@/context/toast-context";
 import {
-  openSafePopup,
   type PopupGuardContext,
 } from "@/lib/browser/popup-guard";
 import {
@@ -61,7 +60,7 @@ export function submitPdfPreviewInNewTab(
 }
 
 /**
- * PDF già in memoria — preview server in nuova scheda (form POST target=_blank).
+ * PDF già in memoria — apre blob in nuova scheda (nessun round-trip server).
  */
 export function openPdfBlobInNewTab(
   blob: Blob,
@@ -85,19 +84,22 @@ export function openPdfBlobInNewTab(
     pushGestionaleToast("Apertura PDF in corso…", "info", 4000);
   }
 
-  const previewAction = options?.previewAction ?? PDF_PREVIEW_API_PATH;
-  if (submitPdfPreviewInNewTab(pdfFile, previewAction)) return true;
-
   const context = options?.context ?? "pdf";
-  const url = URL.createObjectURL(pdfFile);
-  const opened =
-    openSafePopup({ url, context, label: options?.label, phase: "sync" }).status === "opened" ||
-    openUrlInNewTab(url, { downloadFileName: downloadName, context, label: options?.label });
-  if (!opened) URL.revokeObjectURL(url);
-  if (!opened) {
-    pushGestionaleToast("Impossibile aprire il PDF.", "warning", 5200);
-  }
-  return opened;
+  const blobUrl = URL.createObjectURL(pdfFile);
+  const openedLocal = openUrlInNewTab(blobUrl, {
+    context,
+    label: options?.label,
+    revokeBlobUrlAfterMs: 120_000,
+  });
+  if (openedLocal) return true;
+  URL.revokeObjectURL(blobUrl);
+
+  pushGestionaleToast(
+    "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+    "warning",
+    5200,
+  );
+  return false;
 }
 
 /** PDF da fetch — tab pre-aperta (deferred) o form POST sync. */

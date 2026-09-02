@@ -4,6 +4,7 @@ import type { LavorazioniInCorsoPdfRow } from "@/lib/lavorazioni/lavorazioni-lis
 import {
   drawPdfBrandBlock,
   drawGestionaleDataSectionTable,
+  drawPdfPageFooters,
   fmtDateIt,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
@@ -13,11 +14,9 @@ const LAV_PDF_MARGIN_TOP = 6;
 const LAV_PDF_HEADER_TO_TABLE_GAP = 1;
 const LAV_PDF_TABLE_PAGE_MARGIN_TOP = 8;
 const LAV_PDF_TABLE_PAGE_MARGIN_BOTTOM = 5;
-const LAV_PDF_FOOTER_BOTTOM_OFFSET = 4;
 
 const C_PRIMARY: [number, number, number] = [24, 24, 27];
 const C_SECONDARY: [number, number, number] = [82, 82, 91];
-const C_MUTED: [number, number, number] = [113, 113, 122];
 
 function safeText(v: string | null | undefined): string {
   const t = (v ?? "").trim();
@@ -76,21 +75,6 @@ function drawLavorazioniInCorsoPdfHeader(
   return y + 2;
 }
 
-function drawLavorazioniInCorsoPdfFooters(doc: JsPDFDoc, numero: string): void {
-  const pageCount = doc.getNumberOfPages();
-  const pageH = doc.internal.pageSize.getHeight();
-  const footerY = pageH - LAV_PDF_FOOTER_BOTTOM_OFFSET;
-  const numeroClean = numero.trim();
-  for (let i = 1; i <= pageCount; i += 1) {
-    doc.setPage(i);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...C_MUTED);
-    const footer = numeroClean ? `${numeroClean} · Pag. ${i}/${pageCount}` : `Pag. ${i}/${pageCount}`;
-    doc.text(footer, 22, footerY);
-  }
-}
-
 export function buildLavorazioniInCorsoPdfFileName(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -137,7 +121,7 @@ export function generateLavorazioniInCorsoPdfBytes(
     },
   );
 
-  drawLavorazioniInCorsoPdfFooters(doc, "Lavorazioni in corso");
+  drawPdfPageFooters(doc, "Lavorazioni in corso");
   const buf = doc.output("arraybuffer");
   return new Uint8Array(buf);
 }
