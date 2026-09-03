@@ -10,30 +10,33 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
+function errorRedirect(request: Request, reason: string): NextResponse {
+  const url = new URL("/r/errore", request.url);
+  url.searchParams.set("reason", reason);
+  return NextResponse.redirect(url, 302);
+}
+
 export async function GET(request: Request, context: RouteContext) {
   const { token } = await context.params;
 
   const resolved = await resolveQrTokenForRedirect(token);
   if (!resolved.ok) {
     if (resolved.code === "invalid_format") {
-      return NextResponse.json({ error: "Token QR non valido" }, { status: 400 });
+      return errorRedirect(request, "invalid");
     }
     if (resolved.code === "inactive") {
-      return NextResponse.json(
-        { error: "Questa etichetta QR non è più attiva. Richiedi una nuova etichetta." },
-        { status: 410 },
-      );
+      return errorRedirect(request, "inactive");
     }
-    return NextResponse.json({ error: "Token QR non trovato" }, { status: 404 });
+    return errorRedirect(request, "not_found");
   }
 
   const canRead = await verifyServerPageRead("magazzino");
   if (!canRead) {
-    return NextResponse.redirect(new URL("/acesso-negato?denied=magazzino", request.url));
+    return errorRedirect(request, "forbidden");
   }
 
   if (resolved.entityType !== INVENTORY_ENTITY_MAGAZZINO_RICAMBIO) {
-    return NextResponse.json({ error: "Tipo entità non supportato" }, { status: 400 });
+    return errorRedirect(request, "invalid");
   }
 
   const sb = await createSupabaseServerUserClient();

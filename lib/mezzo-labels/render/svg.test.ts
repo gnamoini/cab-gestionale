@@ -13,7 +13,16 @@ void (async () => {
   assert.ok(!svg.includes('stroke="#888888"'), "no gray border on mezzo label");
 
   const comp = composeMezzoLabel(payload, qrUrl);
-  assert.equal(comp.logo.xMm, comp.qr.xMm + (comp.qr.sizeMm - comp.logo.maxWidthMm) / 2, "logo centered on QR");
+  const zoneLeft = comp.qr.xMm + comp.qr.sizeMm + MEZZO_LABEL_TEMPLATE.columnGutterMm;
+  const zoneRight =
+    MEZZO_LABEL_TEMPLATE.widthMm -
+    MEZZO_LABEL_TEMPLATE.cutBorderMm -
+    MEZZO_LABEL_TEMPLATE.innerPaddingMm;
+  const zoneCenter = zoneLeft + (zoneRight - zoneLeft) / 2;
+  assert.ok(
+    Math.abs(comp.logo.xMm + comp.logo.maxWidthMm / 2 - zoneCenter) < 0.05,
+    "logo centered in right column",
+  );
   assert.ok(svg.includes("<path d="), "text as paths expected");
   assert.ok(svg.includes("<image"), "logo image expected");
   assert.ok(!svg.includes("mm"), "pixel coords only — no mm units in SVG");

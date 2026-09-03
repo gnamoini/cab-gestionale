@@ -11,6 +11,7 @@ import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import {
   CardMobile,
   IconActionButton,
+  LoadingErrorState,
   LoadingFormSkeleton,
   SkeletonBoundary,
 } from "@/components/design-system";
@@ -77,6 +78,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { patchMagazzinoListCache, magazzinoListQueryKey } from "@/lib/magazzino/magazzino-list-cache";
+import { useMagazzinoOpenRicambioDeepLink } from "@/lib/magazzino/use-magazzino-open-ricambio-deeplink";
+import { magazzinoListQueryKey as magazzinoListQueryKeyFactory } from "@/lib/render/query-key-factory";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -223,7 +226,7 @@ import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/ke
 import { useCompatMezziListe } from "@/src/hooks/use-compat-mezzi-liste";
 import { useCabAppSettingsPayloadQuery, useMagazzinoSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
-import { Q_FOCUS_RICAMBIO, Q_OPEN_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 import { deleteGeneratedListinoRicambiRequest } from "@/lib/magazzino/listino-import/listino-import-client";
 
@@ -417,6 +420,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
     return { search: searchApplied.trim() };
   }, [searchApplied]);
+  const magazzinoListQueryKeyResolved = useMemo(
+    () => magazzinoListQueryKeyFactory("list", magazzinoFetchFilters ?? null),
+    [magazzinoFetchFilters],
+  );
   const rawMagazzinoListQ = useMagazzinoListQuery(magazzinoFetchFilters);
   const magazzinoListQ = useMagazzinoRicambiUIQuery(magazzinoFetchFilters);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- lint phase2: stable hook contract
@@ -723,18 +730,18 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusRicambioInTable]);
 
-  useEffect(() => {
-    const id = searchParams.get(Q_OPEN_RICAMBIO);
-    if (!id || magazzinoInitialLoading) return;
-    const t = window.setTimeout(() => {
-      const ricambio = prodotti.find((p) => p.id === id);
-      if (ricambio) {
-        setDetail({ id: ricambio.id, mode: "info" });
-      }
-      deferredRouterReplace(router, pathname, { scroll: false });
-    }, 150);
-    return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router, prodotti, magazzinoInitialLoading]);
+  const { qrOpenError, isResolvingOpen, isQrSource, retryQrOpen } = useMagazzinoOpenRicambioDeepLink({
+    searchParams,
+    router,
+    pathname,
+    listQuery: rawMagazzinoListQ,
+    prodotti,
+    queryClient,
+    mezziListe,
+    authorName,
+    setDetail,
+    listQueryKey: magazzinoListQueryKeyResolved,
+  });
 
   useEffect(() => {
     if (!globalPerm.isAdmin) return;
@@ -1620,6 +1627,25 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             selection={labelSelection}
             onClearSelection={clearLabelQuantities}
           />
+        ) : null}
+
+        {qrOpenError ? (
+          <LoadingErrorState
+            title="Impossibile caricare il ricambio"
+            description={
+              isQrSource
+                ? "Controlla la connessione e riprova. Se il problema persiste, verifica che l'etichetta QR sia ancora valida."
+                : qrOpenError
+            }
+            onRetry={retryQrOpen}
+            className="mt-4"
+          />
+        ) : null}
+
+        {isResolvingOpen ? (
+          <p className="mt-4 text-sm text-[color:var(--cab-text-muted)]" role="status">
+            Apertura ricambio…
+          </p>
         ) : null}
 
         <SkeletonBoundary loading={magazzinoInitialLoading}>

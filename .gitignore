@@ -90,6 +90,9 @@ artifacts/audit/dependency-graph/
 !artifacts/audit/dead-code-baseline/debt-score.json
 !artifacts/audit/dead-code-baseline/baseline-meta.json
 !artifacts/audit/removal-manifests/
+# UnoERP discovery raw output (may contain anonymized business data)
+artifacts/unoerp-discovery/
+artifacts/unoerp-discovery-2/
 
 .vercel
 .env*

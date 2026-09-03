@@ -1,0 +1,3864 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 13-list-layout-views.spec.ts >> list surface /mezzi: narrow container keeps table with controlled overflow
+- Location: e2e\smoke\13-list-layout-views.spec.ts:79:7
+
+# Error details
+
+```
+Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: true
+Received: false
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - link "C.A.B. Gestionale Officina" [ref=e15] [cursor=pointer]:
+        - /url: /dashboard
+        - img "C.A.B." [ref=e16]
+      - region "Sessione utente" [ref=e17]:
+        - generic [ref=e18]:
+          - 'button "Profilo account: Local Smoke Admin" [ref=e20] [cursor=pointer]':
+            - generic [ref=e24]: L
+            - generic: Local Smoke Admin
+          - button "Notifiche (19 nuove)" [ref=e25] [cursor=pointer]:
+            - img [ref=e29]
+            - generic: Notifiche
+      - navigation "Sezioni principali" [ref=e31]:
+        - generic [ref=e32]:
+          - link "Dashboard" [ref=e33] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e36]
+            - generic: Dashboard
+          - link "Agenda" [ref=e38] [cursor=pointer]:
+            - /url: /agenda
+            - img [ref=e41]
+            - generic: Agenda
+          - link "Lavorazioni" [ref=e44] [cursor=pointer]:
+            - /url: /lavorazioni
+            - img [ref=e47]
+            - generic: Lavorazioni
+          - link "Portale Clienti" [ref=e49] [cursor=pointer]:
+            - /url: /lavorazioni-clienti
+            - img [ref=e52]
+            - generic: Portale Clienti
+          - link "Preventivi" [ref=e58] [cursor=pointer]:
+            - /url: /preventivi
+            - img [ref=e61]
+            - generic: Preventivi
+          - link "Ordini fornitori" [ref=e63] [cursor=pointer]:
+            - /url: /ordini-fornitori
+            - img [ref=e66]
+            - generic: Ordini fornitori
+          - link "Fatturazione" [ref=e70] [cursor=pointer]:
+            - /url: /fatturazione
+            - img [ref=e73]
+            - generic: Fatturazione
+          - link "Documenti" [ref=e76] [cursor=pointer]:
+            - /url: /documenti
+            - img [ref=e79]
+            - generic: Documenti
+          - link "Magazzino" [ref=e82] [cursor=pointer]:
+            - /url: /magazzino
+            - img [ref=e85]
+            - generic: Magazzino
+          - link "Identifica ricambio" [ref=e88] [cursor=pointer]:
+            - /url: /identifica-ricambio
+            - img [ref=e91]
+            - generic: Identifica ricambio
+          - link "Mezzi" [ref=e96] [cursor=pointer]:
+            - /url: /mezzi
+            - img [ref=e99]
+            - generic: Mezzi
+          - link "Dipendenti" [ref=e104] [cursor=pointer]:
+            - /url: /dipendenti
+            - img [ref=e107]
+            - generic: Dipendenti
+          - link "Report" [ref=e111] [cursor=pointer]:
+            - /url: /report
+            - img [ref=e114]
+            - generic: Report
+          - link "Configurazione" [ref=e116] [cursor=pointer]:
+            - /url: /impostazioni
+            - img [ref=e119]
+            - generic: Configurazione
+          - link "Sicurezza" [ref=e122] [cursor=pointer]:
+            - /url: /sicurezza
+            - img [ref=e125]
+            - generic: Sicurezza
+    - main [ref=e129]:
+      - generic [ref=e132]:
+        - generic [ref=e135]:
+          - heading "Mezzi" [level=1] [ref=e137]
+          - button "Azioni pagina" [ref=e140] [cursor=pointer]:
+            - img [ref=e141]
+            - generic [ref=e145]: Azioni pagina
+        - generic [ref=e146]:
+          - button [ref=e148] [cursor=pointer]: Importa
+          - generic [ref=e149]:
+            - group "Vista pagina mezzi" [ref=e151]:
+              - button "Anagrafica" [pressed] [ref=e152] [cursor=pointer]
+              - button "Tagliandi" [ref=e153] [cursor=pointer]
+            - generic [ref=e155]:
+              - generic [ref=e156]:
+                - generic [ref=e157]:
+                  - generic [ref=e159]:
+                    - button "+ Nuovo mezzo" [ref=e161] [cursor=pointer]:
+                      - generic [ref=e162]: + Nuovo mezzo
+                    - generic [ref=e164]:
+                      - generic:
+                        - img
+                      - searchbox "Cerca mezzi" [ref=e165]
+                    - button "Filtri" [ref=e167] [cursor=pointer]:
+                      - generic [ref=e168]: Filtri
+                      - img [ref=e169]
+                  - generic [ref=e173]:
+                    - generic [ref=e176]:
+                      - generic [ref=e177]: "132"
+                      - generic [ref=e178]: risultati
+                    - switch "Stampa etichette" [ref=e179] [cursor=pointer]:
+                      - generic [ref=e180]: Stampa etichette
+                - generic "Filtri" [ref=e183]
+              - table [ref=e187]:
+                - rowgroup [ref=e197]:
+                  - 'row "Cliente: non ordinato. Clic per cambiare ordinamento Cantiere: non ordinato. Clic per cambiare ordinamento Attrezzatura: non ordinato. Clic per cambiare ordinamento Telaio Identificazione: non ordinato. Clic per cambiare ordinamento Ultima lavorazione: non ordinato. Clic per cambiare ordinamento N. lavorazioni: non ordinato. Clic per cambiare ordinamento Azioni" [ref=e198]':
+                    - 'columnheader "Cliente: non ordinato. Clic per cambiare ordinamento" [ref=e199]':
+                      - 'button "Cliente: non ordinato. Clic per cambiare ordinamento" [ref=e200] [cursor=pointer]':
+                        - generic [ref=e201]:
+                          - generic [ref=e202]: Cliente
+                          - img [ref=e204]
+                    - 'columnheader "Cantiere: non ordinato. Clic per cambiare ordinamento" [ref=e207]':
+                      - 'button "Cantiere: non ordinato. Clic per cambiare ordinamento" [ref=e208] [cursor=pointer]':
+                        - generic [ref=e209]:
+                          - generic [ref=e210]: Cantiere
+                          - img [ref=e212]
+                    - 'columnheader "Attrezzatura: non ordinato. Clic per cambiare ordinamento" [ref=e215]':
+                      - 'button "Attrezzatura: non ordinato. Clic per cambiare ordinamento" [ref=e216] [cursor=pointer]':
+                        - generic [ref=e217]:
+                          - generic [ref=e218]: Attrezzatura
+                          - img [ref=e220]
+                    - columnheader "Telaio" [ref=e223]:
+                      - generic [ref=e224]: Telaio
+                    - 'columnheader "Identificazione: non ordinato. Clic per cambiare ordinamento" [ref=e225]':
+                      - 'button "Identificazione: non ordinato. Clic per cambiare ordinamento" [ref=e226] [cursor=pointer]':
+                        - generic [ref=e227]:
+                          - generic [ref=e228]: Identificazione
+                          - img [ref=e230]
+                    - 'columnheader "Ultima lavorazione: non ordinato. Clic per cambiare ordinamento" [ref=e233]':
+                      - 'button "Ultima lavorazione: non ordinato. Clic per cambiare ordinamento" [ref=e234] [cursor=pointer]':
+                        - generic [ref=e235]:
+                          - generic [ref=e236]: Ultima lavorazione
+                          - img [ref=e238]
+                    - 'columnheader "N. lavorazioni: non ordinato. Clic per cambiare ordinamento" [ref=e241]':
+                      - 'button "N. lavorazioni: non ordinato. Clic per cambiare ordinamento" [ref=e242] [cursor=pointer]':
+                        - generic [ref=e243]:
+                          - generic [ref=e244]: N. lavorazioni
+                          - img [ref=e246]
+                    - columnheader "Azioni" [ref=e249]:
+                      - generic [ref=e250]: Azioni
+                - rowgroup [ref=e251]:
+                  - row "SI.ECO Sannicandro di Bari Tecno Industrie Zenit 25 Iveco Stralis EZ959WV TIMP28535/14 30 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e252]:
+                    - cell "SI.ECO" [ref=e253]:
+                      - generic [ref=e255]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e256]
+                    - cell "Tecno Industrie Zenit 25" [ref=e257]:
+                      - generic [ref=e258]:
+                        - generic [ref=e259]: Tecno Industrie
+                        - generic [ref=e260]: Zenit 25
+                    - cell "Iveco Stralis" [ref=e261]:
+                      - generic [ref=e262]:
+                        - generic [ref=e263]: Iveco
+                        - generic [ref=e264]: Stralis
+                    - cell "EZ959WV TIMP28535/14" [ref=e265]:
+                      - generic [ref=e266]:
+                        - generic [ref=e267]: EZ959WV
+                        - generic [ref=e268]: TIMP28535/14
+                    - cell "30 lug 2026" [ref=e269]
+                    - cell "1" [ref=e270]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e271]:
+                      - generic [ref=e272]:
+                        - button "Dettaglio" [ref=e273] [cursor=pointer]:
+                          - img [ref=e274]
+                        - button "Tagliandi" [ref=e276] [cursor=pointer]:
+                          - img [ref=e277]
+                        - link "Documenti" [ref=e280] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Zenit+25
+                          - img [ref=e281]
+                        - link "Lavorazioni" [ref=e283] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=02f7ad80-bd1b-4dbb-a988-6cdadcfc8e12
+                          - img [ref=e284]
+                        - link "Preventivi" [ref=e286] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=02f7ad80-bd1b-4dbb-a988-6cdadcfc8e12
+                          - img [ref=e287]
+                        - button "Stampa etichetta QR" [ref=e290] [cursor=pointer]:
+                          - img [ref=e291]
+                  - row "Specchia AMIU Bari Bari Nord Engineering Easy-J2 Iveco Magirus GZ923GX S NE296 1653 22 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e293]:
+                    - cell "Specchia AMIU Bari" [ref=e294]:
+                      - generic [ref=e295]:
+                        - generic [ref=e296]: Specchia
+                        - generic [ref=e297]: AMIU Bari
+                    - cell "Bari" [ref=e298]
+                    - cell "Nord Engineering Easy-J2" [ref=e299]:
+                      - generic [ref=e300]:
+                        - generic [ref=e301]: Nord Engineering
+                        - generic [ref=e302]: Easy-J2
+                    - cell "Iveco Magirus" [ref=e303]:
+                      - generic [ref=e304]:
+                        - generic [ref=e305]: Iveco
+                        - generic [ref=e306]: Magirus
+                    - cell "GZ923GX S NE296 1653" [ref=e307]:
+                      - generic [ref=e308]:
+                        - generic [ref=e309]: GZ923GX
+                        - generic [ref=e310]: S NE296
+                        - generic [ref=e311]: "1653"
+                    - cell "22 mag 2026" [ref=e312]
+                    - cell "1" [ref=e313]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e314]:
+                      - generic [ref=e315]:
+                        - button "Dettaglio" [ref=e316] [cursor=pointer]:
+                          - img [ref=e317]
+                        - button "Tagliandi" [ref=e319] [cursor=pointer]:
+                          - img [ref=e320]
+                        - link "Documenti" [ref=e323] [cursor=pointer]:
+                          - /url: /documenti?marca=Nord+Engineering&modello=Easy-J2
+                          - img [ref=e324]
+                        - link "Lavorazioni" [ref=e326] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=041c9ab4-3b6e-44f4-b946-c15473a1ef35
+                          - img [ref=e327]
+                        - link "Preventivi" [ref=e329] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=041c9ab4-3b6e-44f4-b946-c15473a1ef35
+                          - img [ref=e330]
+                        - button "Stampa etichetta QR" [ref=e333] [cursor=pointer]:
+                          - img [ref=e334]
+                  - row "AMIU Bari Bari Botti SO04FT010 Iveco Eurocargo GK259CK SMT0178 1460 26 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e336]:
+                    - cell "AMIU Bari" [ref=e337]:
+                      - generic [ref=e339]: AMIU Bari
+                    - cell "Bari" [ref=e340]
+                    - cell "Botti SO04FT010" [ref=e341]:
+                      - generic [ref=e342]:
+                        - generic [ref=e343]: Botti
+                        - generic [ref=e344]: SO04FT010
+                    - cell "Iveco Eurocargo" [ref=e345]:
+                      - generic [ref=e346]:
+                        - generic [ref=e347]: Iveco
+                        - generic [ref=e348]: Eurocargo
+                    - cell "GK259CK SMT0178 1460" [ref=e349]:
+                      - generic [ref=e350]:
+                        - generic [ref=e351]: GK259CK
+                        - generic [ref=e352]: SMT0178
+                        - generic [ref=e353]: "1460"
+                    - cell "26 ago 2026" [ref=e354]
+                    - cell "1" [ref=e355]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e356]:
+                      - generic [ref=e357]:
+                        - button "Dettaglio" [ref=e358] [cursor=pointer]:
+                          - img [ref=e359]
+                        - button "Tagliandi" [ref=e361] [cursor=pointer]:
+                          - img [ref=e362]
+                        - link "Documenti" [ref=e365] [cursor=pointer]:
+                          - /url: /documenti?marca=Botti&modello=SO04FT010
+                          - img [ref=e366]
+                        - link "Lavorazioni" [ref=e368] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=064f684e-49a6-49bc-a7ea-e807e62c0c25
+                          - img [ref=e369]
+                        - link "Preventivi" [ref=e371] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=064f684e-49a6-49bc-a7ea-e807e62c0c25
+                          - img [ref=e372]
+                        - button "Stampa etichetta QR" [ref=e375] [cursor=pointer]:
+                          - img [ref=e376]
+                  - row "AMIU Bari Bari Coseco K5 Eurocargo ISOE22 DR946RL 308/08 971 26 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e378]:
+                    - cell "AMIU Bari" [ref=e379]:
+                      - generic [ref=e381]: AMIU Bari
+                    - cell "Bari" [ref=e382]
+                    - cell "Coseco K5" [ref=e383]:
+                      - generic [ref=e384]:
+                        - generic [ref=e385]: Coseco
+                        - generic [ref=e386]: K5
+                    - cell "Eurocargo ISOE22" [ref=e387]:
+                      - generic [ref=e388]:
+                        - generic [ref=e389]: Eurocargo
+                        - generic [ref=e390]: ISOE22
+                    - cell "DR946RL 308/08 971" [ref=e391]:
+                      - generic [ref=e392]:
+                        - generic [ref=e393]: DR946RL
+                        - generic [ref=e394]: 308/08
+                        - generic [ref=e395]: "971"
+                    - cell "26 mag 2026" [ref=e396]
+                    - cell "1" [ref=e397]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e398]:
+                      - generic [ref=e399]:
+                        - button "Dettaglio" [ref=e400] [cursor=pointer]:
+                          - img [ref=e401]
+                        - button "Tagliandi" [ref=e403] [cursor=pointer]:
+                          - img [ref=e404]
+                        - link "Documenti" [ref=e407] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K5
+                          - img [ref=e408]
+                        - link "Lavorazioni" [ref=e410] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=066df972-c91a-4c54-abe3-a2c0cedbd016
+                          - img [ref=e411]
+                        - link "Preventivi" [ref=e413] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=066df972-c91a-4c54-abe3-a2c0cedbd016
+                          - img [ref=e414]
+                        - button "Stampa etichetta QR" [ref=e417] [cursor=pointer]:
+                          - img [ref=e418]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1R-K1V Isuzu P75 GB702MT 006/20 10 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e420]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e421]:
+                      - generic [ref=e422]:
+                        - generic [ref=e423]: Bellizzi SpA
+                        - generic [ref=e424]: AMIU Trani SpA
+                    - cell "Trani" [ref=e425]
+                    - cell "Coseco K1R-K1V" [ref=e426]:
+                      - generic [ref=e427]:
+                        - generic [ref=e428]: Coseco
+                        - generic [ref=e429]: K1R-K1V
+                    - cell "Isuzu P75" [ref=e430]:
+                      - generic [ref=e431]:
+                        - generic [ref=e432]: Isuzu
+                        - generic [ref=e433]: P75
+                    - cell "GB702MT 006/20" [ref=e434]:
+                      - generic [ref=e435]:
+                        - generic [ref=e436]: GB702MT
+                        - generic [ref=e437]: 006/20
+                    - cell "10 lug 2026" [ref=e438]
+                    - cell "1" [ref=e439]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e440]:
+                      - generic [ref=e441]:
+                        - button "Dettaglio" [ref=e442] [cursor=pointer]:
+                          - img [ref=e443]
+                        - button "Tagliandi" [ref=e445] [cursor=pointer]:
+                          - img [ref=e446]
+                        - link "Documenti" [ref=e449] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1R-K1V
+                          - img [ref=e450]
+                        - link "Lavorazioni" [ref=e452] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=0835233b-c262-4ee1-857f-3720af24ca62
+                          - img [ref=e453]
+                        - link "Preventivi" [ref=e455] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=0835233b-c262-4ee1-857f-3720af24ca62
+                          - img [ref=e456]
+                        - button "Stampa etichetta QR" [ref=e459] [cursor=pointer]:
+                          - img [ref=e460]
+                  - row "Ecodaunia Cerignola Ziliani ZBT15 — — XA103TW ZC23C0002 10 giu 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e462]:
+                    - cell "Ecodaunia" [ref=e463]:
+                      - generic [ref=e465]: Ecodaunia
+                    - cell "Cerignola" [ref=e466]
+                    - cell "Ziliani ZBT15" [ref=e467]:
+                      - generic [ref=e468]:
+                        - generic [ref=e469]: Ziliani
+                        - generic [ref=e470]: ZBT15
+                    - cell "— —" [ref=e471]:
+                      - generic [ref=e472]:
+                        - generic [ref=e473]: —
+                        - generic [ref=e474]: —
+                    - cell "XA103TW ZC23C0002" [ref=e475]:
+                      - generic [ref=e476]:
+                        - generic [ref=e477]: XA103TW
+                        - generic [ref=e478]: ZC23C0002
+                    - cell "10 giu 2026" [ref=e479]
+                    - cell "2" [ref=e480]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e481]:
+                      - generic [ref=e482]:
+                        - button "Dettaglio" [ref=e483] [cursor=pointer]:
+                          - img [ref=e484]
+                        - button "Tagliandi" [ref=e486] [cursor=pointer]:
+                          - img [ref=e487]
+                        - link "Documenti" [ref=e490] [cursor=pointer]:
+                          - /url: /documenti?marca=Ziliani&modello=ZBT15
+                          - img [ref=e491]
+                        - link "Lavorazioni" [ref=e493] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=0a2699fb-0b14-4d03-bab7-6f816296681a
+                          - img [ref=e494]
+                        - link "Preventivi" [ref=e496] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=0a2699fb-0b14-4d03-bab7-6f816296681a
+                          - img [ref=e497]
+                        - button "Stampa etichetta QR" [ref=e500] [cursor=pointer]:
+                          - img [ref=e501]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1R-K1V Isuzu P70 GB794MT 008/20 20 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e503]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e504]:
+                      - generic [ref=e505]:
+                        - generic [ref=e506]: Bellizzi SpA
+                        - generic [ref=e507]: AMIU Trani SpA
+                    - cell "Trani" [ref=e508]
+                    - cell "Coseco K1R-K1V" [ref=e509]:
+                      - generic [ref=e510]:
+                        - generic [ref=e511]: Coseco
+                        - generic [ref=e512]: K1R-K1V
+                    - cell "Isuzu P70" [ref=e513]:
+                      - generic [ref=e514]:
+                        - generic [ref=e515]: Isuzu
+                        - generic [ref=e516]: P70
+                    - cell "GB794MT 008/20" [ref=e517]:
+                      - generic [ref=e518]:
+                        - generic [ref=e519]: GB794MT
+                        - generic [ref=e520]: 008/20
+                    - cell "20 lug 2026" [ref=e521]
+                    - cell "1" [ref=e522]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e523]:
+                      - generic [ref=e524]:
+                        - button "Dettaglio" [ref=e525] [cursor=pointer]:
+                          - img [ref=e526]
+                        - button "Tagliandi" [ref=e528] [cursor=pointer]:
+                          - img [ref=e529]
+                        - link "Documenti" [ref=e532] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1R-K1V
+                          - img [ref=e533]
+                        - link "Lavorazioni" [ref=e535] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=0b0f1b37-f5cc-483c-b50c-089f5d8e1394
+                          - img [ref=e536]
+                        - link "Preventivi" [ref=e538] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=0b0f1b37-f5cc-483c-b50c-089f5d8e1394
+                          - img [ref=e539]
+                        - button "Stampa etichetta QR" [ref=e542] [cursor=pointer]:
+                          - img [ref=e543]
+                  - row "AMIU Bari Bari Schmidt CityJet 6000 — — AMD872 61D05073 1437 04 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e545]:
+                    - cell "AMIU Bari" [ref=e546]:
+                      - generic [ref=e548]: AMIU Bari
+                    - cell "Bari" [ref=e549]
+                    - cell "Schmidt CityJet 6000" [ref=e550]:
+                      - generic [ref=e551]:
+                        - generic [ref=e552]: Schmidt
+                        - generic [ref=e553]: CityJet 6000
+                    - cell "— —" [ref=e554]:
+                      - generic [ref=e555]:
+                        - generic [ref=e556]: —
+                        - generic [ref=e557]: —
+                    - cell "AMD872 61D05073 1437" [ref=e558]:
+                      - generic [ref=e559]:
+                        - generic [ref=e560]: AMD872
+                        - generic [ref=e561]: 61D05073
+                        - generic [ref=e562]: "1437"
+                    - cell "04 giu 2026" [ref=e563]
+                    - cell "1" [ref=e564]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e565]:
+                      - generic [ref=e566]:
+                        - button "Dettaglio" [ref=e567] [cursor=pointer]:
+                          - img [ref=e568]
+                        - button "Tagliandi" [ref=e570] [cursor=pointer]:
+                          - img [ref=e571]
+                        - link "Documenti" [ref=e574] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=CityJet+6000
+                          - img [ref=e575]
+                        - link "Lavorazioni" [ref=e577] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1086ffc5-a99a-4302-8687-d7a7678aaf78
+                          - img [ref=e578]
+                        - link "Preventivi" [ref=e580] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1086ffc5-a99a-4302-8687-d7a7678aaf78
+                          - img [ref=e581]
+                        - button "Stampa etichetta QR" [ref=e584] [cursor=pointer]:
+                          - img [ref=e585]
+                  - row "AMIU Bari Bari Guimatrag — — — 003 28 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e587]:
+                    - cell "AMIU Bari" [ref=e588]:
+                      - generic [ref=e590]: AMIU Bari
+                    - cell "Bari" [ref=e591]
+                    - cell "Guimatrag —" [ref=e592]:
+                      - generic [ref=e593]:
+                        - generic [ref=e594]: Guimatrag
+                        - generic [ref=e595]: —
+                    - cell "— —" [ref=e596]:
+                      - generic [ref=e597]:
+                        - generic [ref=e598]: —
+                        - generic [ref=e599]: —
+                    - cell "003" [ref=e600]:
+                      - generic [ref=e602]: "003"
+                    - cell "28 lug 2026" [ref=e603]
+                    - cell "1" [ref=e604]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e605]:
+                      - generic [ref=e606]:
+                        - button "Dettaglio" [ref=e607] [cursor=pointer]:
+                          - img [ref=e608]
+                        - button "Tagliandi" [ref=e610] [cursor=pointer]:
+                          - img [ref=e611]
+                        - link "Documenti" [ref=e614] [cursor=pointer]:
+                          - /url: /documenti?marca=Guimatrag&modello=%E2%80%94
+                          - img [ref=e615]
+                        - link "Lavorazioni" [ref=e617] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=11f108c9-4d6e-453c-9c22-85e1c2d1d00e
+                          - img [ref=e618]
+                        - link "Preventivi" [ref=e620] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=11f108c9-4d6e-453c-9c22-85e1c2d1d00e
+                          - img [ref=e621]
+                        - button "Stampa etichetta QR" [ref=e624] [cursor=pointer]:
+                          - img [ref=e625]
+                  - row "SI.ECO Sannicandro di Bari Coseco K3 Iveco 120EL22 FC775AT 040/15 15 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e627]:
+                    - cell "SI.ECO" [ref=e628]:
+                      - generic [ref=e630]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e631]
+                    - cell "Coseco K3" [ref=e632]:
+                      - generic [ref=e633]:
+                        - generic [ref=e634]: Coseco
+                        - generic [ref=e635]: K3
+                    - cell "Iveco 120EL22" [ref=e636]:
+                      - generic [ref=e637]:
+                        - generic [ref=e638]: Iveco
+                        - generic [ref=e639]: 120EL22
+                    - cell "FC775AT 040/15" [ref=e640]:
+                      - generic [ref=e641]:
+                        - generic [ref=e642]: FC775AT
+                        - generic [ref=e643]: 040/15
+                    - cell "15 lug 2026" [ref=e644]
+                    - cell "1" [ref=e645]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e646]:
+                      - generic [ref=e647]:
+                        - button "Dettaglio" [ref=e648] [cursor=pointer]:
+                          - img [ref=e649]
+                        - button "Tagliandi" [ref=e651] [cursor=pointer]:
+                          - img [ref=e652]
+                        - link "Documenti" [ref=e655] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K3
+                          - img [ref=e656]
+                        - link "Lavorazioni" [ref=e658] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=156263e4-11a5-407c-be98-6b3f97eeff97
+                          - img [ref=e659]
+                        - link "Preventivi" [ref=e661] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=156263e4-11a5-407c-be98-6b3f97eeff97
+                          - img [ref=e662]
+                        - button "Stampa etichetta QR" [ref=e665] [cursor=pointer]:
+                          - img [ref=e666]
+                  - row "SI.ECO Bitritto Ravo 540 — — AJW681 FA020294 03 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e668]:
+                    - cell "SI.ECO" [ref=e669]:
+                      - generic [ref=e671]: SI.ECO
+                    - cell "Bitritto" [ref=e672]
+                    - cell "Ravo 540" [ref=e673]:
+                      - generic [ref=e674]:
+                        - generic [ref=e675]: Ravo
+                        - generic [ref=e676]: "540"
+                    - cell "— —" [ref=e677]:
+                      - generic [ref=e678]:
+                        - generic [ref=e679]: —
+                        - generic [ref=e680]: —
+                    - cell "AJW681 FA020294" [ref=e681]:
+                      - generic [ref=e682]:
+                        - generic [ref=e683]: AJW681
+                        - generic [ref=e684]: FA020294
+                    - cell "03 ago 2026" [ref=e685]
+                    - cell "2" [ref=e686]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e687]:
+                      - generic [ref=e688]:
+                        - button "Dettaglio" [ref=e689] [cursor=pointer]:
+                          - img [ref=e690]
+                        - button "Tagliandi" [ref=e692] [cursor=pointer]:
+                          - img [ref=e693]
+                        - link "Documenti" [ref=e696] [cursor=pointer]:
+                          - /url: /documenti?marca=Ravo&modello=540
+                          - img [ref=e697]
+                        - link "Lavorazioni" [ref=e699] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=156f08fb-84ca-408c-bdb4-48dbef795f2a
+                          - img [ref=e700]
+                        - link "Preventivi" [ref=e702] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=156f08fb-84ca-408c-bdb4-48dbef795f2a
+                          - img [ref=e703]
+                        - button "Stampa etichetta QR" [ref=e706] [cursor=pointer]:
+                          - img [ref=e707]
+                  - row "Si.Eco Bitritto G.M.F. — Mercedes Axor DM688PC 0451 31 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e709]:
+                    - cell "Si.Eco" [ref=e710]:
+                      - generic [ref=e712]: Si.Eco
+                    - cell "Bitritto" [ref=e713]
+                    - cell "G.M.F. —" [ref=e714]:
+                      - generic [ref=e715]:
+                        - generic [ref=e716]: G.M.F.
+                        - generic [ref=e717]: —
+                    - cell "Mercedes Axor" [ref=e718]:
+                      - generic [ref=e719]:
+                        - generic [ref=e720]: Mercedes
+                        - generic [ref=e721]: Axor
+                    - cell "DM688PC 0451" [ref=e722]:
+                      - generic [ref=e723]:
+                        - generic [ref=e724]: DM688PC
+                        - generic [ref=e725]: "0451"
+                    - cell "31 ago 2026" [ref=e726]
+                    - cell "1" [ref=e727]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e728]:
+                      - generic [ref=e729]:
+                        - button "Dettaglio" [ref=e730] [cursor=pointer]:
+                          - img [ref=e731]
+                        - button "Tagliandi" [ref=e733] [cursor=pointer]:
+                          - img [ref=e734]
+                        - link "Documenti" [ref=e737] [cursor=pointer]:
+                          - /url: /documenti?marca=G.M.F.&modello=%E2%80%94
+                          - img [ref=e738]
+                        - link "Lavorazioni" [ref=e740] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=16622739-5fde-49a3-be77-2f009f661793
+                          - img [ref=e741]
+                        - link "Preventivi" [ref=e743] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=16622739-5fde-49a3-be77-2f009f661793
+                          - img [ref=e744]
+                        - button "Stampa etichetta QR" [ref=e747] [cursor=pointer]:
+                          - img [ref=e748]
+                  - row "AMIU Bari Bari Coseco — — — Non assegnata 1586 10 apr 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e750]:
+                    - cell "AMIU Bari" [ref=e751]:
+                      - generic [ref=e753]: AMIU Bari
+                    - cell "Bari" [ref=e754]
+                    - cell "Coseco —" [ref=e755]:
+                      - generic [ref=e756]:
+                        - generic [ref=e757]: Coseco
+                        - generic [ref=e758]: —
+                    - cell "— —" [ref=e759]:
+                      - generic [ref=e760]:
+                        - generic [ref=e761]: —
+                        - generic [ref=e762]: —
+                    - cell "Non assegnata 1586" [ref=e763]:
+                      - generic [ref=e764]:
+                        - generic [ref=e765]: Non assegnata
+                        - generic [ref=e766]: "1586"
+                    - cell "10 apr 2026" [ref=e767]
+                    - cell "1" [ref=e768]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e769]:
+                      - generic [ref=e770]:
+                        - button "Dettaglio" [ref=e771] [cursor=pointer]:
+                          - img [ref=e772]
+                        - button "Tagliandi" [ref=e774] [cursor=pointer]:
+                          - img [ref=e775]
+                        - link "Documenti" [ref=e778] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=%E2%80%94
+                          - img [ref=e779]
+                        - link "Lavorazioni" [ref=e781] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=17339c65-24a9-48f5-b71b-c589c0bddcd3
+                          - img [ref=e782]
+                        - link "Preventivi" [ref=e784] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=17339c65-24a9-48f5-b71b-c589c0bddcd3
+                          - img [ref=e785]
+                        - button "Stampa etichetta QR" [ref=e788] [cursor=pointer]:
+                          - img [ref=e789]
+                  - row "SI.ECO Adelfia Bucher CityCat 5000 — — AJM062 104615 18 giu 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e791]:
+                    - cell "SI.ECO" [ref=e792]:
+                      - generic [ref=e794]: SI.ECO
+                    - cell "Adelfia" [ref=e795]
+                    - cell "Bucher CityCat 5000" [ref=e796]:
+                      - generic [ref=e797]:
+                        - generic [ref=e798]: Bucher
+                        - generic [ref=e799]: CityCat 5000
+                    - cell "— —" [ref=e800]:
+                      - generic [ref=e801]:
+                        - generic [ref=e802]: —
+                        - generic [ref=e803]: —
+                    - cell "AJM062 104615" [ref=e804]:
+                      - generic [ref=e805]:
+                        - generic [ref=e806]: AJM062
+                        - generic [ref=e807]: "104615"
+                    - cell "18 giu 2026" [ref=e808]
+                    - cell "2" [ref=e809]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e810]:
+                      - generic [ref=e811]:
+                        - button "Dettaglio" [ref=e812] [cursor=pointer]:
+                          - img [ref=e813]
+                        - button "Tagliandi" [ref=e815] [cursor=pointer]:
+                          - img [ref=e816]
+                        - link "Documenti" [ref=e819] [cursor=pointer]:
+                          - /url: /documenti?marca=Bucher&modello=CityCat+5000
+                          - img [ref=e820]
+                        - link "Lavorazioni" [ref=e822] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=17a837e3-6293-441f-9dd2-3a95b42a8852
+                          - img [ref=e823]
+                        - link "Preventivi" [ref=e825] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=17a837e3-6293-441f-9dd2-3a95b42a8852
+                          - img [ref=e826]
+                        - button "Stampa etichetta QR" [ref=e829] [cursor=pointer]:
+                          - img [ref=e830]
+                  - row "RaccolGo Modugno Tecno Industrie Zenit 25 Volvo 350 FE HZ747FM 24C0486 07 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e832]:
+                    - cell "RaccolGo" [ref=e833]:
+                      - generic [ref=e835]: RaccolGo
+                    - cell "Modugno" [ref=e836]
+                    - cell "Tecno Industrie Zenit 25" [ref=e837]:
+                      - generic [ref=e838]:
+                        - generic [ref=e839]: Tecno Industrie
+                        - generic [ref=e840]: Zenit 25
+                    - cell "Volvo 350 FE" [ref=e841]:
+                      - generic [ref=e842]:
+                        - generic [ref=e843]: Volvo
+                        - generic [ref=e844]: 350 FE
+                    - cell "HZ747FM 24C0486" [ref=e845]:
+                      - generic [ref=e846]:
+                        - generic [ref=e847]: HZ747FM
+                        - generic [ref=e848]: 24C0486
+                    - cell "07 lug 2026" [ref=e849]
+                    - cell "1" [ref=e850]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e851]:
+                      - generic [ref=e852]:
+                        - button "Dettaglio" [ref=e853] [cursor=pointer]:
+                          - img [ref=e854]
+                        - button "Tagliandi" [ref=e856] [cursor=pointer]:
+                          - img [ref=e857]
+                        - link "Documenti" [ref=e860] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Zenit+25
+                          - img [ref=e861]
+                        - link "Lavorazioni" [ref=e863] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=17f8b7cf-5efb-4a70-8a96-2d5a11fab524
+                          - img [ref=e864]
+                        - link "Preventivi" [ref=e866] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=17f8b7cf-5efb-4a70-8a96-2d5a11fab524
+                          - img [ref=e867]
+                        - button "Stampa etichetta QR" [ref=e870] [cursor=pointer]:
+                          - img [ref=e871]
+                  - row "Omnitech Modugno OMB T-Rex Mitsubishi Fuso Canter GK559KM MV000929 01 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e873]:
+                    - cell "Omnitech" [ref=e874]:
+                      - generic [ref=e876]: Omnitech
+                    - cell "Modugno" [ref=e877]
+                    - cell "OMB T-Rex" [ref=e878]:
+                      - generic [ref=e879]:
+                        - generic [ref=e880]: OMB
+                        - generic [ref=e881]: T-Rex
+                    - cell "Mitsubishi Fuso Canter" [ref=e882]:
+                      - generic [ref=e883]:
+                        - generic [ref=e884]: Mitsubishi
+                        - generic [ref=e885]: Fuso Canter
+                    - cell "GK559KM MV000929" [ref=e886]:
+                      - generic [ref=e887]:
+                        - generic [ref=e888]: GK559KM
+                        - generic [ref=e889]: MV000929
+                    - cell "01 lug 2026" [ref=e890]
+                    - cell "1" [ref=e891]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e892]:
+                      - generic [ref=e893]:
+                        - button "Dettaglio" [ref=e894] [cursor=pointer]:
+                          - img [ref=e895]
+                        - button "Tagliandi" [ref=e897] [cursor=pointer]:
+                          - img [ref=e898]
+                        - link "Documenti" [ref=e901] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e902]
+                        - link "Lavorazioni" [ref=e904] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1b3326d4-e0d6-4b37-9a97-ab1ff7d89e45
+                          - img [ref=e905]
+                        - link "Preventivi" [ref=e907] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1b3326d4-e0d6-4b37-9a97-ab1ff7d89e45
+                          - img [ref=e908]
+                        - button "Stampa etichetta QR" [ref=e911] [cursor=pointer]:
+                          - img [ref=e912]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1P Mitsubishi Fuso Canter GB069MT 211/20 09 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e914]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e915]:
+                      - generic [ref=e916]:
+                        - generic [ref=e917]: Bellizzi SpA
+                        - generic [ref=e918]: AMIU Trani SpA
+                    - cell "Trani" [ref=e919]
+                    - cell "Coseco K1P" [ref=e920]:
+                      - generic [ref=e921]:
+                        - generic [ref=e922]: Coseco
+                        - generic [ref=e923]: K1P
+                    - cell "Mitsubishi Fuso Canter" [ref=e924]:
+                      - generic [ref=e925]:
+                        - generic [ref=e926]: Mitsubishi
+                        - generic [ref=e927]: Fuso Canter
+                    - cell "GB069MT 211/20" [ref=e928]:
+                      - generic [ref=e929]:
+                        - generic [ref=e930]: GB069MT
+                        - generic [ref=e931]: 211/20
+                    - cell "09 lug 2026" [ref=e932]
+                    - cell "1" [ref=e933]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e934]:
+                      - generic [ref=e935]:
+                        - button "Dettaglio" [ref=e936] [cursor=pointer]:
+                          - img [ref=e937]
+                        - button "Tagliandi" [ref=e939] [cursor=pointer]:
+                          - img [ref=e940]
+                        - link "Documenti" [ref=e943] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1P
+                          - img [ref=e944]
+                        - link "Lavorazioni" [ref=e946] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1b5b0d83-7dab-4c87-9b8f-a000e5f9e541
+                          - img [ref=e947]
+                        - link "Preventivi" [ref=e949] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1b5b0d83-7dab-4c87-9b8f-a000e5f9e541
+                          - img [ref=e950]
+                        - button "Stampa etichetta QR" [ref=e953] [cursor=pointer]:
+                          - img [ref=e954]
+                  - row "SI.ECO Bitritto Sistemi SCA — — 1186 28 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e956]:
+                    - cell "SI.ECO" [ref=e957]:
+                      - generic [ref=e959]: SI.ECO
+                    - cell "Bitritto" [ref=e960]
+                    - cell "Sistemi SCA" [ref=e961]:
+                      - generic [ref=e962]:
+                        - generic [ref=e963]: Sistemi
+                        - generic [ref=e964]: SCA
+                    - cell "— —" [ref=e965]:
+                      - generic [ref=e966]:
+                        - generic [ref=e967]: —
+                        - generic [ref=e968]: —
+                    - cell "1186" [ref=e969]:
+                      - generic [ref=e971]: "1186"
+                    - cell "28 mag 2026" [ref=e972]
+                    - cell "1" [ref=e973]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e974]:
+                      - generic [ref=e975]:
+                        - button "Dettaglio" [ref=e976] [cursor=pointer]:
+                          - img [ref=e977]
+                        - button "Tagliandi" [ref=e979] [cursor=pointer]:
+                          - img [ref=e980]
+                        - link "Documenti" [ref=e983] [cursor=pointer]:
+                          - /url: /documenti?marca=Sistemi&modello=SCA
+                          - img [ref=e984]
+                        - link "Lavorazioni" [ref=e986] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1c4dda57-7a7b-4861-a481-5902f733ad9c
+                          - img [ref=e987]
+                        - link "Preventivi" [ref=e989] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1c4dda57-7a7b-4861-a481-5902f733ad9c
+                          - img [ref=e990]
+                        - button "Stampa etichetta QR" [ref=e993] [cursor=pointer]:
+                          - img [ref=e994]
+                  - row "AMIU Bari Bari Schmidt Cleango 400 ET — — Non assegnata 1579 07 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e996]:
+                    - cell "AMIU Bari" [ref=e997]:
+                      - generic [ref=e999]: AMIU Bari
+                    - cell "Bari" [ref=e1000]
+                    - cell "Schmidt Cleango 400 ET" [ref=e1001]:
+                      - generic [ref=e1002]:
+                        - generic [ref=e1003]: Schmidt
+                        - generic [ref=e1004]: Cleango 400 ET
+                    - cell "— —" [ref=e1005]:
+                      - generic [ref=e1006]:
+                        - generic [ref=e1007]: —
+                        - generic [ref=e1008]: —
+                    - cell "Non assegnata 1579" [ref=e1009]:
+                      - generic [ref=e1010]:
+                        - generic [ref=e1011]: Non assegnata
+                        - generic [ref=e1012]: "1579"
+                    - cell "07 ago 2026" [ref=e1013]
+                    - cell "2" [ref=e1014]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1015]:
+                      - generic [ref=e1016]:
+                        - button "Dettaglio" [ref=e1017] [cursor=pointer]:
+                          - img [ref=e1018]
+                        - button "Tagliandi" [ref=e1020] [cursor=pointer]:
+                          - img [ref=e1021]
+                        - link "Documenti" [ref=e1024] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=Cleango+400+ET
+                          - img [ref=e1025]
+                        - link "Lavorazioni" [ref=e1027] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1dcedd1b-b05a-4c7e-b29a-01968f338ccc
+                          - img [ref=e1028]
+                        - link "Preventivi" [ref=e1030] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1dcedd1b-b05a-4c7e-b29a-01968f338ccc
+                          - img [ref=e1031]
+                        - button "Stampa etichetta QR" [ref=e1034] [cursor=pointer]:
+                          - img [ref=e1035]
+                  - row "AMIU Bari Bari AMS CL1 Iveco Stralis FZ583XH Non assegnata 1376 21 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1037]:
+                    - cell "AMIU Bari" [ref=e1038]:
+                      - generic [ref=e1040]: AMIU Bari
+                    - cell "Bari" [ref=e1041]
+                    - cell "AMS CL1" [ref=e1042]:
+                      - generic [ref=e1043]:
+                        - generic [ref=e1044]: AMS
+                        - generic [ref=e1045]: CL1
+                    - cell "Iveco Stralis" [ref=e1046]:
+                      - generic [ref=e1047]:
+                        - generic [ref=e1048]: Iveco
+                        - generic [ref=e1049]: Stralis
+                    - cell "FZ583XH Non assegnata 1376" [ref=e1050]:
+                      - generic [ref=e1051]:
+                        - generic [ref=e1052]: FZ583XH
+                        - generic [ref=e1053]: Non assegnata
+                        - generic [ref=e1054]: "1376"
+                    - cell "21 lug 2026" [ref=e1055]
+                    - cell "2" [ref=e1056]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1057]:
+                      - generic [ref=e1058]:
+                        - button "Dettaglio" [ref=e1059] [cursor=pointer]:
+                          - img [ref=e1060]
+                        - button "Tagliandi" [ref=e1062] [cursor=pointer]:
+                          - img [ref=e1063]
+                        - link "Documenti" [ref=e1066] [cursor=pointer]:
+                          - /url: /documenti?marca=AMS&modello=CL1
+                          - img [ref=e1067]
+                        - link "Lavorazioni" [ref=e1069] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=1eccb590-c8b8-43d9-bc7b-1d4065b96634
+                          - img [ref=e1070]
+                        - link "Preventivi" [ref=e1072] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=1eccb590-c8b8-43d9-bc7b-1d4065b96634
+                          - img [ref=e1073]
+                        - button "Stampa etichetta QR" [ref=e1076] [cursor=pointer]:
+                          - img [ref=e1077]
+                  - row "EcoAmbiente Sud Fasano Sistemi — — — 395 23 apr 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1079]:
+                    - cell "EcoAmbiente Sud" [ref=e1080]:
+                      - generic [ref=e1082]: EcoAmbiente Sud
+                    - cell "Fasano" [ref=e1083]
+                    - cell "Sistemi —" [ref=e1084]:
+                      - generic [ref=e1085]:
+                        - generic [ref=e1086]: Sistemi
+                        - generic [ref=e1087]: —
+                    - cell "— —" [ref=e1088]:
+                      - generic [ref=e1089]:
+                        - generic [ref=e1090]: —
+                        - generic [ref=e1091]: —
+                    - cell "395" [ref=e1092]:
+                      - generic [ref=e1094]: "395"
+                    - cell "23 apr 2026" [ref=e1095]
+                    - cell "1" [ref=e1096]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1097]:
+                      - generic [ref=e1098]:
+                        - button "Dettaglio" [ref=e1099] [cursor=pointer]:
+                          - img [ref=e1100]
+                        - button "Tagliandi" [ref=e1102] [cursor=pointer]:
+                          - img [ref=e1103]
+                        - link "Documenti" [ref=e1106] [cursor=pointer]:
+                          - /url: /documenti?marca=Sistemi&modello=%E2%80%94
+                          - img [ref=e1107]
+                        - link "Lavorazioni" [ref=e1109] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=2235df04-5fb4-4c36-928e-ace8288bd70c
+                          - img [ref=e1110]
+                        - link "Preventivi" [ref=e1112] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=2235df04-5fb4-4c36-928e-ace8288bd70c
+                          - img [ref=e1113]
+                        - button "Stampa etichetta QR" [ref=e1116] [cursor=pointer]:
+                          - img [ref=e1117]
+                  - row "EcoAmbiente Sud Fasano MEC CL.120.83.1Z1 — — 70188038 22 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1119]:
+                    - cell "EcoAmbiente Sud" [ref=e1120]:
+                      - generic [ref=e1122]: EcoAmbiente Sud
+                    - cell "Fasano" [ref=e1123]
+                    - cell "MEC CL.120.83.1Z1" [ref=e1124]:
+                      - generic [ref=e1125]:
+                        - generic [ref=e1126]: MEC
+                        - generic [ref=e1127]: CL.120.83.1Z1
+                    - cell "— —" [ref=e1128]:
+                      - generic [ref=e1129]:
+                        - generic [ref=e1130]: —
+                        - generic [ref=e1131]: —
+                    - cell "70188038" [ref=e1132]:
+                      - generic [ref=e1134]: "70188038"
+                    - cell "22 mag 2026" [ref=e1135]
+                    - cell "1" [ref=e1136]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1137]:
+                      - generic [ref=e1138]:
+                        - button "Dettaglio" [ref=e1139] [cursor=pointer]:
+                          - img [ref=e1140]
+                        - button "Tagliandi" [ref=e1142] [cursor=pointer]:
+                          - img [ref=e1143]
+                        - link "Documenti" [ref=e1146] [cursor=pointer]:
+                          - /url: /documenti?marca=MEC&modello=CL.120.83.1Z1
+                          - img [ref=e1147]
+                        - link "Lavorazioni" [ref=e1149] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=22717505-bd5c-4a99-b9b2-62c519ca194c
+                          - img [ref=e1150]
+                        - link "Preventivi" [ref=e1152] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=22717505-bd5c-4a99-b9b2-62c519ca194c
+                          - img [ref=e1153]
+                        - button "Stampa etichetta QR" [ref=e1156] [cursor=pointer]:
+                          - img [ref=e1157]
+                  - row "A.V.R. S.p.A. Acquaviva delle Fonti (Ba) Impianto Acq — — — Non assegnata 18 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1159]:
+                    - cell "A.V.R. S.p.A." [ref=e1160]:
+                      - generic [ref=e1162]: A.V.R. S.p.A.
+                    - cell "Acquaviva delle Fonti (Ba)" [ref=e1163]
+                    - cell "Impianto Acq —" [ref=e1164]:
+                      - generic [ref=e1165]:
+                        - generic [ref=e1166]: Impianto Acq
+                        - generic [ref=e1167]: —
+                    - cell "— —" [ref=e1168]:
+                      - generic [ref=e1169]:
+                        - generic [ref=e1170]: —
+                        - generic [ref=e1171]: —
+                    - cell "Non assegnata" [ref=e1172]:
+                      - generic [ref=e1174]: Non assegnata
+                    - cell "18 giu 2026" [ref=e1175]
+                    - cell "1" [ref=e1176]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1177]:
+                      - generic [ref=e1178]:
+                        - button "Dettaglio" [ref=e1179] [cursor=pointer]:
+                          - img [ref=e1180]
+                        - button "Tagliandi" [ref=e1182] [cursor=pointer]:
+                          - img [ref=e1183]
+                        - link "Documenti" [ref=e1186] [cursor=pointer]:
+                          - /url: /documenti?marca=Impianto+Acq&modello=%E2%80%94
+                          - img [ref=e1187]
+                        - link "Lavorazioni" [ref=e1189] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=2764df6f-002e-4ff7-bd1e-1f8de2e2f186
+                          - img [ref=e1190]
+                        - link "Preventivi" [ref=e1192] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=2764df6f-002e-4ff7-bd1e-1f8de2e2f186
+                          - img [ref=e1193]
+                        - button "Stampa etichetta QR" [ref=e1196] [cursor=pointer]:
+                          - img [ref=e1197]
+                  - row "AMIU Bari Bari Longo — Mercedes ECONIC FK012MM 165/340 1279 03 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1199]:
+                    - cell "AMIU Bari" [ref=e1200]:
+                      - generic [ref=e1202]: AMIU Bari
+                    - cell "Bari" [ref=e1203]
+                    - cell "Longo —" [ref=e1204]:
+                      - generic [ref=e1205]:
+                        - generic [ref=e1206]: Longo
+                        - generic [ref=e1207]: —
+                    - cell "Mercedes ECONIC" [ref=e1208]:
+                      - generic [ref=e1209]:
+                        - generic [ref=e1210]: Mercedes
+                        - generic [ref=e1211]: ECONIC
+                    - cell "FK012MM 165/340 1279" [ref=e1212]:
+                      - generic [ref=e1213]:
+                        - generic [ref=e1214]: FK012MM
+                        - generic [ref=e1215]: 165/340
+                        - generic [ref=e1216]: "1279"
+                    - cell "03 ago 2026" [ref=e1217]
+                    - cell "1" [ref=e1218]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1219]:
+                      - generic [ref=e1220]:
+                        - button "Dettaglio" [ref=e1221] [cursor=pointer]:
+                          - img [ref=e1222]
+                        - button "Tagliandi" [ref=e1224] [cursor=pointer]:
+                          - img [ref=e1225]
+                        - link "Documenti" [ref=e1228] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e1229]
+                        - link "Lavorazioni" [ref=e1231] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=2ab10221-22c1-4348-b3d1-a09bf8e4c16c
+                          - img [ref=e1232]
+                        - link "Preventivi" [ref=e1234] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=2ab10221-22c1-4348-b3d1-a09bf8e4c16c
+                          - img [ref=e1235]
+                        - button "Stampa etichetta QR" [ref=e1238] [cursor=pointer]:
+                          - img [ref=e1239]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1 R Iveco Daily 35 EY909SL 332/14 20 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1241]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e1242]:
+                      - generic [ref=e1243]:
+                        - generic [ref=e1244]: Bellizzi SpA
+                        - generic [ref=e1245]: AMIU Trani SpA
+                    - cell "Trani" [ref=e1246]
+                    - cell "Coseco K1 R" [ref=e1247]:
+                      - generic [ref=e1248]:
+                        - generic [ref=e1249]: Coseco
+                        - generic [ref=e1250]: K1 R
+                    - cell "Iveco Daily 35" [ref=e1251]:
+                      - generic [ref=e1252]:
+                        - generic [ref=e1253]: Iveco
+                        - generic [ref=e1254]: Daily 35
+                    - cell "EY909SL 332/14" [ref=e1255]:
+                      - generic [ref=e1256]:
+                        - generic [ref=e1257]: EY909SL
+                        - generic [ref=e1258]: 332/14
+                    - cell "20 lug 2026" [ref=e1259]
+                    - cell "1" [ref=e1260]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1261]:
+                      - generic [ref=e1262]:
+                        - button "Dettaglio" [ref=e1263] [cursor=pointer]:
+                          - img [ref=e1264]
+                        - button "Tagliandi" [ref=e1266] [cursor=pointer]:
+                          - img [ref=e1267]
+                        - link "Documenti" [ref=e1270] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1+R
+                          - img [ref=e1271]
+                        - link "Lavorazioni" [ref=e1273] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=2e1d2d45-fcd0-40ae-a45e-6c7d7df45119
+                          - img [ref=e1274]
+                        - link "Preventivi" [ref=e1276] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=2e1d2d45-fcd0-40ae-a45e-6c7d7df45119
+                          - img [ref=e1277]
+                        - button "Stampa etichetta QR" [ref=e1280] [cursor=pointer]:
+                          - img [ref=e1281]
+                  - row "B-Energy Foggia Locatelli M-PCS — — LE024659 26 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1283]:
+                    - cell "B-Energy" [ref=e1284]:
+                      - generic [ref=e1286]: B-Energy
+                    - cell "Foggia" [ref=e1287]
+                    - cell "Locatelli M-PCS" [ref=e1288]:
+                      - generic [ref=e1289]:
+                        - generic [ref=e1290]: Locatelli
+                        - generic [ref=e1291]: M-PCS
+                    - cell "— —" [ref=e1292]:
+                      - generic [ref=e1293]:
+                        - generic [ref=e1294]: —
+                        - generic [ref=e1295]: —
+                    - cell "LE024659" [ref=e1296]:
+                      - generic [ref=e1298]: LE024659
+                    - cell "26 ago 2026" [ref=e1299]
+                    - cell "1" [ref=e1300]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1301]:
+                      - generic [ref=e1302]:
+                        - button "Dettaglio" [ref=e1303] [cursor=pointer]:
+                          - img [ref=e1304]
+                        - button "Tagliandi" [ref=e1306] [cursor=pointer]:
+                          - img [ref=e1307]
+                        - link "Documenti" [ref=e1310] [cursor=pointer]:
+                          - /url: /documenti?marca=Locatelli&modello=M-PCS
+                          - img [ref=e1311]
+                        - link "Lavorazioni" [ref=e1313] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=31111642-90b3-44cc-867d-8ba41f8092f3
+                          - img [ref=e1314]
+                        - link "Preventivi" [ref=e1316] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=31111642-90b3-44cc-867d-8ba41f8092f3
+                          - img [ref=e1317]
+                        - button "Stampa etichetta QR" [ref=e1320] [cursor=pointer]:
+                          - img [ref=e1321]
+                  - row "SI.ECO Conversano BTE CMPU24APB50D — — 16P0131 24 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1323]:
+                    - cell "SI.ECO" [ref=e1324]:
+                      - generic [ref=e1326]: SI.ECO
+                    - cell "Conversano" [ref=e1327]
+                    - cell "BTE CMPU24APB50D" [ref=e1328]:
+                      - generic [ref=e1329]:
+                        - generic [ref=e1330]: BTE
+                        - generic [ref=e1331]: CMPU24APB50D
+                    - cell "— —" [ref=e1332]:
+                      - generic [ref=e1333]:
+                        - generic [ref=e1334]: —
+                        - generic [ref=e1335]: —
+                    - cell "16P0131" [ref=e1336]:
+                      - generic [ref=e1338]: 16P0131
+                    - cell "24 lug 2026" [ref=e1339]
+                    - cell "1" [ref=e1340]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1341]:
+                      - generic [ref=e1342]:
+                        - button "Dettaglio" [ref=e1343] [cursor=pointer]:
+                          - img [ref=e1344]
+                        - button "Tagliandi" [ref=e1346] [cursor=pointer]:
+                          - img [ref=e1347]
+                        - link "Documenti" [ref=e1350] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CMPU24APB50D
+                          - img [ref=e1351]
+                        - link "Lavorazioni" [ref=e1353] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=326730fa-a7e3-4d24-ada1-f6c25e56db39
+                          - img [ref=e1354]
+                        - link "Preventivi" [ref=e1356] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=326730fa-a7e3-4d24-ada1-f6c25e56db39
+                          - img [ref=e1357]
+                        - button "Stampa etichetta QR" [ref=e1360] [cursor=pointer]:
+                          - img [ref=e1361]
+                  - row "Simeone Bari — — Iveco 120E25 FY109RX Non assegnata 28 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1363]:
+                    - cell "Simeone" [ref=e1364]:
+                      - generic [ref=e1366]: Simeone
+                    - cell "Bari" [ref=e1367]
+                    - cell "— —" [ref=e1368]:
+                      - generic [ref=e1369]:
+                        - generic [ref=e1370]: —
+                        - generic [ref=e1371]: —
+                    - cell "Iveco 120E25" [ref=e1372]:
+                      - generic [ref=e1373]:
+                        - generic [ref=e1374]: Iveco
+                        - generic [ref=e1375]: "120E25"
+                    - cell "FY109RX Non assegnata" [ref=e1376]:
+                      - generic [ref=e1377]:
+                        - generic [ref=e1378]: FY109RX
+                        - generic [ref=e1379]: Non assegnata
+                    - cell "28 lug 2026" [ref=e1380]
+                    - cell "1" [ref=e1381]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1382]:
+                      - generic [ref=e1383]:
+                        - button "Dettaglio" [ref=e1384] [cursor=pointer]:
+                          - img [ref=e1385]
+                        - button "Tagliandi" [ref=e1387] [cursor=pointer]:
+                          - img [ref=e1388]
+                        - link "Documenti" [ref=e1391] [cursor=pointer]:
+                          - /url: /documenti?marca=%E2%80%94&modello=%E2%80%94
+                          - img [ref=e1392]
+                        - link "Lavorazioni" [ref=e1394] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=33cfd572-9e49-47c6-b9fc-6ba7a325c379
+                          - img [ref=e1395]
+                        - link "Preventivi" [ref=e1397] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=33cfd572-9e49-47c6-b9fc-6ba7a325c379
+                          - img [ref=e1398]
+                        - button "Stampa etichetta QR" [ref=e1401] [cursor=pointer]:
+                          - img [ref=e1402]
+                  - row "AMIU Bari Bari Longo C4000 Mercedes Antos Non assegnata 1277 09 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1404]:
+                    - cell "AMIU Bari" [ref=e1405]:
+                      - generic [ref=e1407]: AMIU Bari
+                    - cell "Bari" [ref=e1408]
+                    - cell "Longo C4000" [ref=e1409]:
+                      - generic [ref=e1410]:
+                        - generic [ref=e1411]: Longo
+                        - generic [ref=e1412]: C4000
+                    - cell "Mercedes Antos" [ref=e1413]:
+                      - generic [ref=e1414]:
+                        - generic [ref=e1415]: Mercedes
+                        - generic [ref=e1416]: Antos
+                    - cell "Non assegnata 1277" [ref=e1417]:
+                      - generic [ref=e1418]:
+                        - generic [ref=e1419]: Non assegnata
+                        - generic [ref=e1420]: "1277"
+                    - cell "09 lug 2026" [ref=e1421]
+                    - cell "1" [ref=e1422]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1423]:
+                      - generic [ref=e1424]:
+                        - button "Dettaglio" [ref=e1425] [cursor=pointer]:
+                          - img [ref=e1426]
+                        - button "Tagliandi" [ref=e1428] [cursor=pointer]:
+                          - img [ref=e1429]
+                        - link "Documenti" [ref=e1432] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=C4000
+                          - img [ref=e1433]
+                        - link "Lavorazioni" [ref=e1435] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=34d90977-9e85-44ab-b898-c139369650b7
+                          - img [ref=e1436]
+                        - link "Preventivi" [ref=e1438] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=34d90977-9e85-44ab-b898-c139369650b7
+                          - img [ref=e1439]
+                        - button "Stampa etichetta QR" [ref=e1442] [cursor=pointer]:
+                          - img [ref=e1443]
+                  - row "Simeone Bari Longo — — — HB976DL Non assegnata 29 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1445]:
+                    - cell "Simeone" [ref=e1446]:
+                      - generic [ref=e1448]: Simeone
+                    - cell "Bari" [ref=e1449]
+                    - cell "Longo —" [ref=e1450]:
+                      - generic [ref=e1451]:
+                        - generic [ref=e1452]: Longo
+                        - generic [ref=e1453]: —
+                    - cell "— —" [ref=e1454]:
+                      - generic [ref=e1455]:
+                        - generic [ref=e1456]: —
+                        - generic [ref=e1457]: —
+                    - cell "HB976DL Non assegnata" [ref=e1458]:
+                      - generic [ref=e1459]:
+                        - generic [ref=e1460]: HB976DL
+                        - generic [ref=e1461]: Non assegnata
+                    - cell "29 lug 2026" [ref=e1462]
+                    - cell "1" [ref=e1463]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1464]:
+                      - generic [ref=e1465]:
+                        - button "Dettaglio" [ref=e1466] [cursor=pointer]:
+                          - img [ref=e1467]
+                        - button "Tagliandi" [ref=e1469] [cursor=pointer]:
+                          - img [ref=e1470]
+                        - link "Documenti" [ref=e1473] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e1474]
+                        - link "Lavorazioni" [ref=e1476] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=35014d3d-73fb-4add-9457-dfafa726f12d
+                          - img [ref=e1477]
+                        - link "Preventivi" [ref=e1479] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=35014d3d-73fb-4add-9457-dfafa726f12d
+                          - img [ref=e1480]
+                        - button "Stampa etichetta QR" [ref=e1483] [cursor=pointer]:
+                          - img [ref=e1484]
+                  - row "GM Service Palo del Colle AMS SPL Iveco Eurocargo BM571RA 3348 25 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1486]:
+                    - cell "GM Service" [ref=e1487]:
+                      - generic [ref=e1489]: GM Service
+                    - cell "Palo del Colle" [ref=e1490]
+                    - cell "AMS SPL" [ref=e1491]:
+                      - generic [ref=e1492]:
+                        - generic [ref=e1493]: AMS
+                        - generic [ref=e1494]: SPL
+                    - cell "Iveco Eurocargo" [ref=e1495]:
+                      - generic [ref=e1496]:
+                        - generic [ref=e1497]: Iveco
+                        - generic [ref=e1498]: Eurocargo
+                    - cell "BM571RA 3348" [ref=e1499]:
+                      - generic [ref=e1500]:
+                        - generic [ref=e1501]: BM571RA
+                        - generic [ref=e1502]: "3348"
+                    - cell "25 giu 2026" [ref=e1503]
+                    - cell "1" [ref=e1504]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1505]:
+                      - generic [ref=e1506]:
+                        - button "Dettaglio" [ref=e1507] [cursor=pointer]:
+                          - img [ref=e1508]
+                        - button "Tagliandi" [ref=e1510] [cursor=pointer]:
+                          - img [ref=e1511]
+                        - link "Documenti" [ref=e1514] [cursor=pointer]:
+                          - /url: /documenti?marca=AMS&modello=SPL
+                          - img [ref=e1515]
+                        - link "Lavorazioni" [ref=e1517] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=3a1335ad-25ff-490e-9728-b81ebba0dd82
+                          - img [ref=e1518]
+                        - link "Preventivi" [ref=e1520] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=3a1335ad-25ff-490e-9728-b81ebba0dd82
+                          - img [ref=e1521]
+                        - button "Stampa etichetta QR" [ref=e1524] [cursor=pointer]:
+                          - img [ref=e1525]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1R-K1V Isuzu P75 GB697MT 004/20 13 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1527]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e1528]:
+                      - generic [ref=e1529]:
+                        - generic [ref=e1530]: Bellizzi SpA
+                        - generic [ref=e1531]: AMIU Trani SpA
+                    - cell "Trani" [ref=e1532]
+                    - cell "Coseco K1R-K1V" [ref=e1533]:
+                      - generic [ref=e1534]:
+                        - generic [ref=e1535]: Coseco
+                        - generic [ref=e1536]: K1R-K1V
+                    - cell "Isuzu P75" [ref=e1537]:
+                      - generic [ref=e1538]:
+                        - generic [ref=e1539]: Isuzu
+                        - generic [ref=e1540]: P75
+                    - cell "GB697MT 004/20" [ref=e1541]:
+                      - generic [ref=e1542]:
+                        - generic [ref=e1543]: GB697MT
+                        - generic [ref=e1544]: 004/20
+                    - cell "13 lug 2026" [ref=e1545]
+                    - cell "2" [ref=e1546]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1547]:
+                      - generic [ref=e1548]:
+                        - button "Dettaglio" [ref=e1549] [cursor=pointer]:
+                          - img [ref=e1550]
+                        - button "Tagliandi" [ref=e1552] [cursor=pointer]:
+                          - img [ref=e1553]
+                        - link "Documenti" [ref=e1556] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1R-K1V
+                          - img [ref=e1557]
+                        - link "Lavorazioni" [ref=e1559] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=3b86ff92-d9d3-441f-a16f-1313dd7520b7
+                          - img [ref=e1560]
+                        - link "Preventivi" [ref=e1562] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=3b86ff92-d9d3-441f-a16f-1313dd7520b7
+                          - img [ref=e1563]
+                        - button "Stampa etichetta QR" [ref=e1566] [cursor=pointer]:
+                          - img [ref=e1567]
+                  - row "MTA Maglie (Le) Coseco K5 Renault 220 DCI CW006KW 034/05 30 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1569]:
+                    - cell "MTA" [ref=e1570]:
+                      - generic [ref=e1572]: MTA
+                    - cell "Maglie (Le)" [ref=e1573]
+                    - cell "Coseco K5" [ref=e1574]:
+                      - generic [ref=e1575]:
+                        - generic [ref=e1576]: Coseco
+                        - generic [ref=e1577]: K5
+                    - cell "Renault 220 DCI" [ref=e1578]:
+                      - generic [ref=e1579]:
+                        - generic [ref=e1580]: Renault
+                        - generic [ref=e1581]: 220 DCI
+                    - cell "CW006KW 034/05" [ref=e1582]:
+                      - generic [ref=e1583]:
+                        - generic [ref=e1584]: CW006KW
+                        - generic [ref=e1585]: 034/05
+                    - cell "30 lug 2026" [ref=e1586]
+                    - cell "1" [ref=e1587]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1588]:
+                      - generic [ref=e1589]:
+                        - button "Dettaglio" [ref=e1590] [cursor=pointer]:
+                          - img [ref=e1591]
+                        - button "Tagliandi" [ref=e1593] [cursor=pointer]:
+                          - img [ref=e1594]
+                        - link "Documenti" [ref=e1597] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K5
+                          - img [ref=e1598]
+                        - link "Lavorazioni" [ref=e1600] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=3bb625d2-cc6f-4d72-a894-168bb858d408
+                          - img [ref=e1601]
+                        - link "Preventivi" [ref=e1603] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=3bb625d2-cc6f-4d72-a894-168bb858d408
+                          - img [ref=e1604]
+                        - button "Stampa etichetta QR" [ref=e1607] [cursor=pointer]:
+                          - img [ref=e1608]
+                  - row "INCO Raccolgo Modugno Tecno Industrie Honet Volvo 240 HC283FK 23B0236 25 giu 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1610]:
+                    - cell "INCO Raccolgo" [ref=e1611]:
+                      - generic [ref=e1612]:
+                        - generic [ref=e1613]: INCO
+                        - generic [ref=e1614]: Raccolgo
+                    - cell "Modugno" [ref=e1615]
+                    - cell "Tecno Industrie Honet" [ref=e1616]:
+                      - generic [ref=e1617]:
+                        - generic [ref=e1618]: Tecno Industrie
+                        - generic [ref=e1619]: Honet
+                    - cell "Volvo 240" [ref=e1620]:
+                      - generic [ref=e1621]:
+                        - generic [ref=e1622]: Volvo
+                        - generic [ref=e1623]: "240"
+                    - cell "HC283FK 23B0236" [ref=e1624]:
+                      - generic [ref=e1625]:
+                        - generic [ref=e1626]: HC283FK
+                        - generic [ref=e1627]: 23B0236
+                    - cell "25 giu 2026" [ref=e1628]
+                    - cell "2" [ref=e1629]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1630]:
+                      - generic [ref=e1631]:
+                        - button "Dettaglio" [ref=e1632] [cursor=pointer]:
+                          - img [ref=e1633]
+                        - button "Tagliandi" [ref=e1635] [cursor=pointer]:
+                          - img [ref=e1636]
+                        - link "Documenti" [ref=e1639] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Honet
+                          - img [ref=e1640]
+                        - link "Lavorazioni" [ref=e1642] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=3fe90fed-cdb3-45c2-8c0a-6fbf7d0cb15f
+                          - img [ref=e1643]
+                        - link "Preventivi" [ref=e1645] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=3fe90fed-cdb3-45c2-8c0a-6fbf7d0cb15f
+                          - img [ref=e1646]
+                        - button "Stampa etichetta QR" [ref=e1649] [cursor=pointer]:
+                          - img [ref=e1650]
+                  - row "Recuperi Pugliesi Modugno Nextra K-MD24T Iveco Stralis ET897CD 386/213 05 mar 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1652]:
+                    - cell "Recuperi Pugliesi" [ref=e1653]:
+                      - generic [ref=e1655]: Recuperi Pugliesi
+                    - cell "Modugno" [ref=e1656]
+                    - cell "Nextra K-MD24T" [ref=e1657]:
+                      - generic [ref=e1658]:
+                        - generic [ref=e1659]: Nextra
+                        - generic [ref=e1660]: K-MD24T
+                    - cell "Iveco Stralis" [ref=e1661]:
+                      - generic [ref=e1662]:
+                        - generic [ref=e1663]: Iveco
+                        - generic [ref=e1664]: Stralis
+                    - cell "ET897CD 386/213" [ref=e1665]:
+                      - generic [ref=e1666]:
+                        - generic [ref=e1667]: ET897CD
+                        - generic [ref=e1668]: 386/213
+                    - cell "05 mar 2026" [ref=e1669]
+                    - cell "1" [ref=e1670]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1671]:
+                      - generic [ref=e1672]:
+                        - button "Dettaglio" [ref=e1673] [cursor=pointer]:
+                          - img [ref=e1674]
+                        - button "Tagliandi" [ref=e1676] [cursor=pointer]:
+                          - img [ref=e1677]
+                        - link "Documenti" [ref=e1680] [cursor=pointer]:
+                          - /url: /documenti?marca=Nextra&modello=K-MD24T
+                          - img [ref=e1681]
+                        - link "Lavorazioni" [ref=e1683] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=43876bd6-4bdf-4b1d-af61-c2666270086d
+                          - img [ref=e1684]
+                        - link "Preventivi" [ref=e1686] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=43876bd6-4bdf-4b1d-af61-c2666270086d
+                          - img [ref=e1687]
+                        - button "Stampa etichetta QR" [ref=e1690] [cursor=pointer]:
+                          - img [ref=e1691]
+                  - row "AMIU Bari Bari Coseco K6 Mercedes ECONIC FT190BN 346/18 1340 20 lug 2026 3 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1693]:
+                    - cell "AMIU Bari" [ref=e1694]:
+                      - generic [ref=e1696]: AMIU Bari
+                    - cell "Bari" [ref=e1697]
+                    - cell "Coseco K6" [ref=e1698]:
+                      - generic [ref=e1699]:
+                        - generic [ref=e1700]: Coseco
+                        - generic [ref=e1701]: K6
+                    - cell "Mercedes ECONIC" [ref=e1702]:
+                      - generic [ref=e1703]:
+                        - generic [ref=e1704]: Mercedes
+                        - generic [ref=e1705]: ECONIC
+                    - cell "FT190BN 346/18 1340" [ref=e1706]:
+                      - generic [ref=e1707]:
+                        - generic [ref=e1708]: FT190BN
+                        - generic [ref=e1709]: 346/18
+                        - generic [ref=e1710]: "1340"
+                    - cell "20 lug 2026" [ref=e1711]
+                    - cell "3" [ref=e1712]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1713]:
+                      - generic [ref=e1714]:
+                        - button "Dettaglio" [ref=e1715] [cursor=pointer]:
+                          - img [ref=e1716]
+                        - button "Tagliandi" [ref=e1718] [cursor=pointer]:
+                          - img [ref=e1719]
+                        - link "Documenti" [ref=e1722] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K6
+                          - img [ref=e1723]
+                        - link "Lavorazioni" [ref=e1725] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=45a7a948-3c2d-4da6-9644-79ed4113dfdb
+                          - img [ref=e1726]
+                        - link "Preventivi" [ref=e1728] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=45a7a948-3c2d-4da6-9644-79ed4113dfdb
+                          - img [ref=e1729]
+                        - button "Stampa etichetta QR" [ref=e1732] [cursor=pointer]:
+                          - img [ref=e1733]
+                  - row "AMIU Bari Bari Schmidt Cleango 500 E6C — — ANG123 61005799 1580 04 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1735]:
+                    - cell "AMIU Bari" [ref=e1736]:
+                      - generic [ref=e1738]: AMIU Bari
+                    - cell "Bari" [ref=e1739]
+                    - cell "Schmidt Cleango 500 E6C" [ref=e1740]:
+                      - generic [ref=e1741]:
+                        - generic [ref=e1742]: Schmidt
+                        - generic [ref=e1743]: Cleango 500 E6C
+                    - cell "— —" [ref=e1744]:
+                      - generic [ref=e1745]:
+                        - generic [ref=e1746]: —
+                        - generic [ref=e1747]: —
+                    - cell "ANG123 61005799 1580" [ref=e1748]:
+                      - generic [ref=e1749]:
+                        - generic [ref=e1750]: ANG123
+                        - generic [ref=e1751]: "61005799"
+                        - generic [ref=e1752]: "1580"
+                    - cell "04 giu 2026" [ref=e1753]
+                    - cell "1" [ref=e1754]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1755]:
+                      - generic [ref=e1756]:
+                        - button "Dettaglio" [ref=e1757] [cursor=pointer]:
+                          - img [ref=e1758]
+                        - button "Tagliandi" [ref=e1760] [cursor=pointer]:
+                          - img [ref=e1761]
+                        - link "Documenti" [ref=e1764] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=Cleango+500+E6C
+                          - img [ref=e1765]
+                        - link "Lavorazioni" [ref=e1767] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=473881c6-5b73-40a4-862a-74a2f13cbff1
+                          - img [ref=e1768]
+                        - link "Preventivi" [ref=e1770] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=473881c6-5b73-40a4-862a-74a2f13cbff1
+                          - img [ref=e1771]
+                        - button "Stampa etichetta QR" [ref=e1774] [cursor=pointer]:
+                          - img [ref=e1775]
+                  - row "AMIU Bari Bari Schmidt Cleango 400 ET — — Non assegnata 1581 25 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1777]:
+                    - cell "AMIU Bari" [ref=e1778]:
+                      - generic [ref=e1780]: AMIU Bari
+                    - cell "Bari" [ref=e1781]
+                    - cell "Schmidt Cleango 400 ET" [ref=e1782]:
+                      - generic [ref=e1783]:
+                        - generic [ref=e1784]: Schmidt
+                        - generic [ref=e1785]: Cleango 400 ET
+                    - cell "— —" [ref=e1786]:
+                      - generic [ref=e1787]:
+                        - generic [ref=e1788]: —
+                        - generic [ref=e1789]: —
+                    - cell "Non assegnata 1581" [ref=e1790]:
+                      - generic [ref=e1791]:
+                        - generic [ref=e1792]: Non assegnata
+                        - generic [ref=e1793]: "1581"
+                    - cell "25 ago 2026" [ref=e1794]
+                    - cell "2" [ref=e1795]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1796]:
+                      - generic [ref=e1797]:
+                        - button "Dettaglio" [ref=e1798] [cursor=pointer]:
+                          - img [ref=e1799]
+                        - button "Tagliandi" [ref=e1801] [cursor=pointer]:
+                          - img [ref=e1802]
+                        - link "Documenti" [ref=e1805] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=Cleango+400+ET
+                          - img [ref=e1806]
+                        - link "Lavorazioni" [ref=e1808] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=474ed688-a6f2-4eef-b640-2921cf2ef7be
+                          - img [ref=e1809]
+                        - link "Preventivi" [ref=e1811] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=474ed688-a6f2-4eef-b640-2921cf2ef7be
+                          - img [ref=e1812]
+                        - button "Stampa etichetta QR" [ref=e1815] [cursor=pointer]:
+                          - img [ref=e1816]
+                  - row "AMIU Bari Bari Coseco K5 Mercedes ECONIC FT251BN 543/18 1347 31 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1818]:
+                    - cell "AMIU Bari" [ref=e1819]:
+                      - generic [ref=e1821]: AMIU Bari
+                    - cell "Bari" [ref=e1822]
+                    - cell "Coseco K5" [ref=e1823]:
+                      - generic [ref=e1824]:
+                        - generic [ref=e1825]: Coseco
+                        - generic [ref=e1826]: K5
+                    - cell "Mercedes ECONIC" [ref=e1827]:
+                      - generic [ref=e1828]:
+                        - generic [ref=e1829]: Mercedes
+                        - generic [ref=e1830]: ECONIC
+                    - cell "FT251BN 543/18 1347" [ref=e1831]:
+                      - generic [ref=e1832]:
+                        - generic [ref=e1833]: FT251BN
+                        - generic [ref=e1834]: 543/18
+                        - generic [ref=e1835]: "1347"
+                    - cell "31 lug 2026" [ref=e1836]
+                    - cell "1" [ref=e1837]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1838]:
+                      - generic [ref=e1839]:
+                        - button "Dettaglio" [ref=e1840] [cursor=pointer]:
+                          - img [ref=e1841]
+                        - button "Tagliandi" [ref=e1843] [cursor=pointer]:
+                          - img [ref=e1844]
+                        - link "Documenti" [ref=e1847] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K5
+                          - img [ref=e1848]
+                        - link "Lavorazioni" [ref=e1850] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=483e11cb-c3fb-4acc-a3ac-596feb15d04b
+                          - img [ref=e1851]
+                        - link "Preventivi" [ref=e1853] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=483e11cb-c3fb-4acc-a3ac-596feb15d04b
+                          - img [ref=e1854]
+                        - button "Stampa etichetta QR" [ref=e1857] [cursor=pointer]:
+                          - img [ref=e1858]
+                  - row "Bellizzi AMIU Trani Trani Coseco K1P Mitsubishi Fuso Canter FZ985XH 203/20 28 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1860]:
+                    - cell "Bellizzi AMIU Trani" [ref=e1861]:
+                      - generic [ref=e1862]:
+                        - generic [ref=e1863]: Bellizzi
+                        - generic [ref=e1864]: AMIU Trani
+                    - cell "Trani" [ref=e1865]
+                    - cell "Coseco K1P" [ref=e1866]:
+                      - generic [ref=e1867]:
+                        - generic [ref=e1868]: Coseco
+                        - generic [ref=e1869]: K1P
+                    - cell "Mitsubishi Fuso Canter" [ref=e1870]:
+                      - generic [ref=e1871]:
+                        - generic [ref=e1872]: Mitsubishi
+                        - generic [ref=e1873]: Fuso Canter
+                    - cell "FZ985XH 203/20" [ref=e1874]:
+                      - generic [ref=e1875]:
+                        - generic [ref=e1876]: FZ985XH
+                        - generic [ref=e1877]: 203/20
+                    - cell "28 ago 2026" [ref=e1878]
+                    - cell "1" [ref=e1879]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1880]:
+                      - generic [ref=e1881]:
+                        - button "Dettaglio" [ref=e1882] [cursor=pointer]:
+                          - img [ref=e1883]
+                        - button "Tagliandi" [ref=e1885] [cursor=pointer]:
+                          - img [ref=e1886]
+                        - link "Documenti" [ref=e1889] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1P
+                          - img [ref=e1890]
+                        - link "Lavorazioni" [ref=e1892] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=489cbd37-93e7-483b-96d6-51bf9af69171
+                          - img [ref=e1893]
+                        - link "Preventivi" [ref=e1895] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=489cbd37-93e7-483b-96d6-51bf9af69171
+                          - img [ref=e1896]
+                        - button "Stampa etichetta QR" [ref=e1899] [cursor=pointer]:
+                          - img [ref=e1900]
+                  - row "AVR per l'Ambiente — Autobren — — — FV436LR Non assegnata 04 nov 2025 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1902]:
+                    - cell "AVR per l'Ambiente" [ref=e1903]:
+                      - generic [ref=e1905]: AVR per l'Ambiente
+                    - cell "—" [ref=e1906]
+                    - cell "Autobren —" [ref=e1907]:
+                      - generic [ref=e1908]:
+                        - generic [ref=e1909]: Autobren
+                        - generic [ref=e1910]: —
+                    - cell "— —" [ref=e1911]:
+                      - generic [ref=e1912]:
+                        - generic [ref=e1913]: —
+                        - generic [ref=e1914]: —
+                    - cell "FV436LR Non assegnata" [ref=e1915]:
+                      - generic [ref=e1916]:
+                        - generic [ref=e1917]: FV436LR
+                        - generic [ref=e1918]: Non assegnata
+                    - cell "04 nov 2025" [ref=e1919]
+                    - cell "1" [ref=e1920]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1921]:
+                      - generic [ref=e1922]:
+                        - button "Dettaglio" [ref=e1923] [cursor=pointer]:
+                          - img [ref=e1924]
+                        - button "Tagliandi" [ref=e1926] [cursor=pointer]:
+                          - img [ref=e1927]
+                        - link "Documenti" [ref=e1930] [cursor=pointer]:
+                          - /url: /documenti?marca=Autobren&modello=%E2%80%94
+                          - img [ref=e1931]
+                        - link "Lavorazioni" [ref=e1933] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=498a394a-5a72-41bb-9876-755b611c0eaf
+                          - img [ref=e1934]
+                        - link "Preventivi" [ref=e1936] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=498a394a-5a72-41bb-9876-755b611c0eaf
+                          - img [ref=e1937]
+                        - button "Stampa etichetta QR" [ref=e1940] [cursor=pointer]:
+                          - img [ref=e1941]
+                  - row "MAZZOCCHIA Raccolgo Modugno Mazzochia Ministar Iveco Daily 35 GY864PB 017/24 04 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1943]:
+                    - cell "MAZZOCCHIA Raccolgo" [ref=e1944]:
+                      - generic [ref=e1945]:
+                        - generic [ref=e1946]: MAZZOCCHIA
+                        - generic [ref=e1947]: Raccolgo
+                    - cell "Modugno" [ref=e1948]
+                    - cell "Mazzochia Ministar" [ref=e1949]:
+                      - generic [ref=e1950]:
+                        - generic [ref=e1951]: Mazzochia
+                        - generic [ref=e1952]: Ministar
+                    - cell "Iveco Daily 35" [ref=e1953]:
+                      - generic [ref=e1954]:
+                        - generic [ref=e1955]: Iveco
+                        - generic [ref=e1956]: Daily 35
+                    - cell "GY864PB 017/24" [ref=e1957]:
+                      - generic [ref=e1958]:
+                        - generic [ref=e1959]: GY864PB
+                        - generic [ref=e1960]: 017/24
+                    - cell "04 ago 2026" [ref=e1961]
+                    - cell "2" [ref=e1962]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1963]:
+                      - generic [ref=e1964]:
+                        - button "Dettaglio" [ref=e1965] [cursor=pointer]:
+                          - img [ref=e1966]
+                        - button "Tagliandi" [ref=e1968] [cursor=pointer]:
+                          - img [ref=e1969]
+                        - link "Documenti" [ref=e1972] [cursor=pointer]:
+                          - /url: /documenti?marca=Mazzochia&modello=Ministar
+                          - img [ref=e1973]
+                        - link "Lavorazioni" [ref=e1975] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=5062f9e4-e47a-4100-acdf-70e2d3275834
+                          - img [ref=e1976]
+                        - link "Preventivi" [ref=e1978] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=5062f9e4-e47a-4100-acdf-70e2d3275834
+                          - img [ref=e1979]
+                        - button "Stampa etichetta QR" [ref=e1982] [cursor=pointer]:
+                          - img [ref=e1983]
+                  - row "MTA Maglie Novarini CT2 Iveco 120EL22 ZA865WA 03836 27 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e1985]:
+                    - cell "MTA" [ref=e1986]:
+                      - generic [ref=e1988]: MTA
+                    - cell "Maglie" [ref=e1989]
+                    - cell "Novarini CT2" [ref=e1990]:
+                      - generic [ref=e1991]:
+                        - generic [ref=e1992]: Novarini
+                        - generic [ref=e1993]: CT2
+                    - cell "Iveco 120EL22" [ref=e1994]:
+                      - generic [ref=e1995]:
+                        - generic [ref=e1996]: Iveco
+                        - generic [ref=e1997]: 120EL22
+                    - cell "ZA865WA 03836" [ref=e1998]:
+                      - generic [ref=e1999]:
+                        - generic [ref=e2000]: ZA865WA
+                        - generic [ref=e2001]: "03836"
+                    - cell "27 ago 2026" [ref=e2002]
+                    - cell "1" [ref=e2003]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2004]:
+                      - generic [ref=e2005]:
+                        - button "Dettaglio" [ref=e2006] [cursor=pointer]:
+                          - img [ref=e2007]
+                        - button "Tagliandi" [ref=e2009] [cursor=pointer]:
+                          - img [ref=e2010]
+                        - link "Documenti" [ref=e2013] [cursor=pointer]:
+                          - /url: /documenti?marca=Novarini&modello=CT2
+                          - img [ref=e2014]
+                        - link "Lavorazioni" [ref=e2016] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=507d1a78-7646-43d9-9614-a79abfc3caf2
+                          - img [ref=e2017]
+                        - link "Preventivi" [ref=e2019] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=507d1a78-7646-43d9-9614-a79abfc3caf2
+                          - img [ref=e2020]
+                        - button "Stampa etichetta QR" [ref=e2023] [cursor=pointer]:
+                          - img [ref=e2024]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1P Mitsubishi Fuso Canter FZ987XH Non assegnata 02 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2026]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e2027]:
+                      - generic [ref=e2028]:
+                        - generic [ref=e2029]: Bellizzi SpA
+                        - generic [ref=e2030]: AMIU Trani SpA
+                    - cell "Trani" [ref=e2031]
+                    - cell "Coseco K1P" [ref=e2032]:
+                      - generic [ref=e2033]:
+                        - generic [ref=e2034]: Coseco
+                        - generic [ref=e2035]: K1P
+                    - cell "Mitsubishi Fuso Canter" [ref=e2036]:
+                      - generic [ref=e2037]:
+                        - generic [ref=e2038]: Mitsubishi
+                        - generic [ref=e2039]: Fuso Canter
+                    - cell "FZ987XH Non assegnata" [ref=e2040]:
+                      - generic [ref=e2041]:
+                        - generic [ref=e2042]: FZ987XH
+                        - generic [ref=e2043]: Non assegnata
+                    - cell "02 lug 2026" [ref=e2044]
+                    - cell "1" [ref=e2045]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2046]:
+                      - generic [ref=e2047]:
+                        - button "Dettaglio" [ref=e2048] [cursor=pointer]:
+                          - img [ref=e2049]
+                        - button "Tagliandi" [ref=e2051] [cursor=pointer]:
+                          - img [ref=e2052]
+                        - link "Documenti" [ref=e2055] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1P
+                          - img [ref=e2056]
+                        - link "Lavorazioni" [ref=e2058] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=535d430b-3b67-44ff-b7cc-e1d0852a5d2d
+                          - img [ref=e2059]
+                        - link "Preventivi" [ref=e2061] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=535d430b-3b67-44ff-b7cc-e1d0852a5d2d
+                          - img [ref=e2062]
+                        - button "Stampa etichetta QR" [ref=e2065] [cursor=pointer]:
+                          - img [ref=e2066]
+                  - row "SI.ECO Sannicandro di Bari Tecno Industrie Urbis Piaggio Porter FR398LM TIS49319617 07 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2068]:
+                    - cell "SI.ECO" [ref=e2069]:
+                      - generic [ref=e2071]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e2072]
+                    - cell "Tecno Industrie Urbis" [ref=e2073]:
+                      - generic [ref=e2074]:
+                        - generic [ref=e2075]: Tecno Industrie
+                        - generic [ref=e2076]: Urbis
+                    - cell "Piaggio Porter" [ref=e2077]:
+                      - generic [ref=e2078]:
+                        - generic [ref=e2079]: Piaggio
+                        - generic [ref=e2080]: Porter
+                    - cell "FR398LM TIS49319617" [ref=e2081]:
+                      - generic [ref=e2082]:
+                        - generic [ref=e2083]: FR398LM
+                        - generic [ref=e2084]: TIS49319617
+                    - cell "07 lug 2026" [ref=e2085]
+                    - cell "1" [ref=e2086]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2087]:
+                      - generic [ref=e2088]:
+                        - button "Dettaglio" [ref=e2089] [cursor=pointer]:
+                          - img [ref=e2090]
+                        - button "Tagliandi" [ref=e2092] [cursor=pointer]:
+                          - img [ref=e2093]
+                        - link "Documenti" [ref=e2096] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Urbis
+                          - img [ref=e2097]
+                        - link "Lavorazioni" [ref=e2099] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=53d9c338-99e3-4acc-8869-663c22998877
+                          - img [ref=e2100]
+                        - link "Preventivi" [ref=e2102] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=53d9c338-99e3-4acc-8869-663c22998877
+                          - img [ref=e2103]
+                        - button "Stampa etichetta QR" [ref=e2106] [cursor=pointer]:
+                          - img [ref=e2107]
+                  - row "AMIU Bari Bari Longo — Mercedes Antos FK014MM 165/343 1281 18 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2109]:
+                    - cell "AMIU Bari" [ref=e2110]:
+                      - generic [ref=e2112]: AMIU Bari
+                    - cell "Bari" [ref=e2113]
+                    - cell "Longo —" [ref=e2114]:
+                      - generic [ref=e2115]:
+                        - generic [ref=e2116]: Longo
+                        - generic [ref=e2117]: —
+                    - cell "Mercedes Antos" [ref=e2118]:
+                      - generic [ref=e2119]:
+                        - generic [ref=e2120]: Mercedes
+                        - generic [ref=e2121]: Antos
+                    - cell "FK014MM 165/343 1281" [ref=e2122]:
+                      - generic [ref=e2123]:
+                        - generic [ref=e2124]: FK014MM
+                        - generic [ref=e2125]: 165/343
+                        - generic [ref=e2126]: "1281"
+                    - cell "18 giu 2026" [ref=e2127]
+                    - cell "1" [ref=e2128]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2129]:
+                      - generic [ref=e2130]:
+                        - button "Dettaglio" [ref=e2131] [cursor=pointer]:
+                          - img [ref=e2132]
+                        - button "Tagliandi" [ref=e2134] [cursor=pointer]:
+                          - img [ref=e2135]
+                        - link "Documenti" [ref=e2138] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e2139]
+                        - link "Lavorazioni" [ref=e2141] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=54b04adb-d65d-4c95-be60-6d8631f7aa05
+                          - img [ref=e2142]
+                        - link "Preventivi" [ref=e2144] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=54b04adb-d65d-4c95-be60-6d8631f7aa05
+                          - img [ref=e2145]
+                        - button "Stampa etichetta QR" [ref=e2148] [cursor=pointer]:
+                          - img [ref=e2149]
+                  - row "Omnitech Monteco Francavilla Fontana OMB CMPL7ETSB Iveco Sway 330 GH406EP M1003944 28 ago 2026 3 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2151]:
+                    - cell "Omnitech Monteco" [ref=e2152]:
+                      - generic [ref=e2153]:
+                        - generic [ref=e2154]: Omnitech
+                        - generic [ref=e2155]: Monteco
+                    - cell "Francavilla Fontana" [ref=e2156]
+                    - cell "OMB CMPL7ETSB" [ref=e2157]:
+                      - generic [ref=e2158]:
+                        - generic [ref=e2159]: OMB
+                        - generic [ref=e2160]: CMPL7ETSB
+                    - cell "Iveco Sway 330" [ref=e2161]:
+                      - generic [ref=e2162]:
+                        - generic [ref=e2163]: Iveco
+                        - generic [ref=e2164]: Sway 330
+                    - cell "GH406EP M1003944" [ref=e2165]:
+                      - generic [ref=e2166]:
+                        - generic [ref=e2167]: GH406EP
+                        - generic [ref=e2168]: M1003944
+                    - cell "28 ago 2026" [ref=e2169]
+                    - cell "3" [ref=e2170]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2171]:
+                      - generic [ref=e2172]:
+                        - button "Dettaglio" [ref=e2173] [cursor=pointer]:
+                          - img [ref=e2174]
+                        - button "Tagliandi" [ref=e2176] [cursor=pointer]:
+                          - img [ref=e2177]
+                        - link "Documenti" [ref=e2180] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=CMPL7ETSB
+                          - img [ref=e2181]
+                        - link "Lavorazioni" [ref=e2183] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=5618d201-0efd-4fa6-98ac-697f7abfd313
+                          - img [ref=e2184]
+                        - link "Preventivi" [ref=e2186] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=5618d201-0efd-4fa6-98ac-697f7abfd313
+                          - img [ref=e2187]
+                        - button "Stampa etichetta QR" [ref=e2190] [cursor=pointer]:
+                          - img [ref=e2191]
+                  - row "B-Energy Foggia Locatelli M-PCS — — LE024660 26 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2193]:
+                    - cell "B-Energy" [ref=e2194]:
+                      - generic [ref=e2196]: B-Energy
+                    - cell "Foggia" [ref=e2197]
+                    - cell "Locatelli M-PCS" [ref=e2198]:
+                      - generic [ref=e2199]:
+                        - generic [ref=e2200]: Locatelli
+                        - generic [ref=e2201]: M-PCS
+                    - cell "— —" [ref=e2202]:
+                      - generic [ref=e2203]:
+                        - generic [ref=e2204]: —
+                        - generic [ref=e2205]: —
+                    - cell "LE024660" [ref=e2206]:
+                      - generic [ref=e2208]: LE024660
+                    - cell "26 mag 2026" [ref=e2209]
+                    - cell "1" [ref=e2210]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2211]:
+                      - generic [ref=e2212]:
+                        - button "Dettaglio" [ref=e2213] [cursor=pointer]:
+                          - img [ref=e2214]
+                        - button "Tagliandi" [ref=e2216] [cursor=pointer]:
+                          - img [ref=e2217]
+                        - link "Documenti" [ref=e2220] [cursor=pointer]:
+                          - /url: /documenti?marca=Locatelli&modello=M-PCS
+                          - img [ref=e2221]
+                        - link "Lavorazioni" [ref=e2223] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=57978f43-b742-45f1-b183-567d125a9199
+                          - img [ref=e2224]
+                        - link "Preventivi" [ref=e2226] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=57978f43-b742-45f1-b183-567d125a9199
+                          - img [ref=e2227]
+                        - button "Stampa etichetta QR" [ref=e2230] [cursor=pointer]:
+                          - img [ref=e2231]
+                  - row "OMB Si.Eco Spa Statte OMB T-Rex Mitsubishi Fuso Canter HA903BV MV002450 31 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2233]:
+                    - cell "OMB Si.Eco Spa" [ref=e2234]:
+                      - generic [ref=e2235]:
+                        - generic [ref=e2236]: OMB
+                        - generic [ref=e2237]: Si.Eco Spa
+                    - cell "Statte" [ref=e2238]
+                    - cell "OMB T-Rex" [ref=e2239]:
+                      - generic [ref=e2240]:
+                        - generic [ref=e2241]: OMB
+                        - generic [ref=e2242]: T-Rex
+                    - cell "Mitsubishi Fuso Canter" [ref=e2243]:
+                      - generic [ref=e2244]:
+                        - generic [ref=e2245]: Mitsubishi
+                        - generic [ref=e2246]: Fuso Canter
+                    - cell "HA903BV MV002450" [ref=e2247]:
+                      - generic [ref=e2248]:
+                        - generic [ref=e2249]: HA903BV
+                        - generic [ref=e2250]: MV002450
+                    - cell "31 lug 2026" [ref=e2251]
+                    - cell "1" [ref=e2252]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2253]:
+                      - generic [ref=e2254]:
+                        - button "Dettaglio" [ref=e2255] [cursor=pointer]:
+                          - img [ref=e2256]
+                        - button "Tagliandi" [ref=e2258] [cursor=pointer]:
+                          - img [ref=e2259]
+                        - link "Documenti" [ref=e2262] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e2263]
+                        - link "Lavorazioni" [ref=e2265] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=5fa7a83e-422a-47ae-826e-82ec66413925
+                          - img [ref=e2266]
+                        - link "Preventivi" [ref=e2268] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=5fa7a83e-422a-47ae-826e-82ec66413925
+                          - img [ref=e2269]
+                        - button "Stampa etichetta QR" [ref=e2272] [cursor=pointer]:
+                          - img [ref=e2273]
+                  - row "CE.RE.BA. Rutigliano BTE CSM24B500D — — Non assegnata 6 26 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2275]:
+                    - cell "CE.RE.BA." [ref=e2276]:
+                      - generic [ref=e2278]: CE.RE.BA.
+                    - cell "Rutigliano" [ref=e2279]
+                    - cell "BTE CSM24B500D" [ref=e2280]:
+                      - generic [ref=e2281]:
+                        - generic [ref=e2282]: BTE
+                        - generic [ref=e2283]: CSM24B500D
+                    - cell "— —" [ref=e2284]:
+                      - generic [ref=e2285]:
+                        - generic [ref=e2286]: —
+                        - generic [ref=e2287]: —
+                    - cell "Non assegnata 6" [ref=e2288]:
+                      - generic [ref=e2289]:
+                        - generic [ref=e2290]: Non assegnata
+                        - generic [ref=e2291]: "6"
+                    - cell "26 ago 2026" [ref=e2292]
+                    - cell "1" [ref=e2293]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2294]:
+                      - generic [ref=e2295]:
+                        - button "Dettaglio" [ref=e2296] [cursor=pointer]:
+                          - img [ref=e2297]
+                        - button "Tagliandi" [ref=e2299] [cursor=pointer]:
+                          - img [ref=e2300]
+                        - link "Documenti" [ref=e2303] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CSM24B500D
+                          - img [ref=e2304]
+                        - link "Lavorazioni" [ref=e2306] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=61ab5c9a-5cf6-4a3a-a52e-617ce138d3d2
+                          - img [ref=e2307]
+                        - link "Preventivi" [ref=e2309] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=61ab5c9a-5cf6-4a3a-a52e-617ce138d3d2
+                          - img [ref=e2310]
+                        - button "Stampa etichetta QR" [ref=e2313] [cursor=pointer]:
+                          - img [ref=e2314]
+                  - row "SI.ECO Sannicandro di Bari Tecno Industrie Urbis Isuzu L35 ZA148YX TIS272294/14 13 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2316]:
+                    - cell "SI.ECO" [ref=e2317]:
+                      - generic [ref=e2319]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e2320]
+                    - cell "Tecno Industrie Urbis" [ref=e2321]:
+                      - generic [ref=e2322]:
+                        - generic [ref=e2323]: Tecno Industrie
+                        - generic [ref=e2324]: Urbis
+                    - cell "Isuzu L35" [ref=e2325]:
+                      - generic [ref=e2326]:
+                        - generic [ref=e2327]: Isuzu
+                        - generic [ref=e2328]: L35
+                    - cell "ZA148YX TIS272294/14" [ref=e2329]:
+                      - generic [ref=e2330]:
+                        - generic [ref=e2331]: ZA148YX
+                        - generic [ref=e2332]: TIS272294/14
+                    - cell "13 lug 2026" [ref=e2333]
+                    - cell "2" [ref=e2334]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2335]:
+                      - generic [ref=e2336]:
+                        - button "Dettaglio" [ref=e2337] [cursor=pointer]:
+                          - img [ref=e2338]
+                        - button "Tagliandi" [ref=e2340] [cursor=pointer]:
+                          - img [ref=e2341]
+                        - link "Documenti" [ref=e2344] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Urbis
+                          - img [ref=e2345]
+                        - link "Lavorazioni" [ref=e2347] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=64ca1cec-56d5-4cb3-b62c-a207283649a5
+                          - img [ref=e2348]
+                        - link "Preventivi" [ref=e2350] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=64ca1cec-56d5-4cb3-b62c-a207283649a5
+                          - img [ref=e2351]
+                        - button "Stampa etichetta QR" [ref=e2354] [cursor=pointer]:
+                          - img [ref=e2355]
+                  - row "Teknoservice — OMB T-Rex — — GY686HG Non assegnata 22 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2357]:
+                    - cell "Teknoservice" [ref=e2358]:
+                      - generic [ref=e2360]: Teknoservice
+                    - cell "—" [ref=e2361]
+                    - cell "OMB T-Rex" [ref=e2362]:
+                      - generic [ref=e2363]:
+                        - generic [ref=e2364]: OMB
+                        - generic [ref=e2365]: T-Rex
+                    - cell "— —" [ref=e2366]:
+                      - generic [ref=e2367]:
+                        - generic [ref=e2368]: —
+                        - generic [ref=e2369]: —
+                    - cell "GY686HG Non assegnata" [ref=e2370]:
+                      - generic [ref=e2371]:
+                        - generic [ref=e2372]: GY686HG
+                        - generic [ref=e2373]: Non assegnata
+                    - cell "22 mag 2026" [ref=e2374]
+                    - cell "1" [ref=e2375]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2376]:
+                      - generic [ref=e2377]:
+                        - button "Dettaglio" [ref=e2378] [cursor=pointer]:
+                          - img [ref=e2379]
+                        - button "Tagliandi" [ref=e2381] [cursor=pointer]:
+                          - img [ref=e2382]
+                        - link "Documenti" [ref=e2385] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e2386]
+                        - link "Lavorazioni" [ref=e2388] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=68e11e0c-0702-407c-bbe3-f4d039c52696
+                          - img [ref=e2389]
+                        - link "Preventivi" [ref=e2391] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=68e11e0c-0702-407c-bbe3-f4d039c52696
+                          - img [ref=e2392]
+                        - button "Stampa etichetta QR" [ref=e2395] [cursor=pointer]:
+                          - img [ref=e2396]
+                  - row "Si.Eco Valenzano Longo C4000 Isuzu M21 FT343BN 5/614 06 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2398]:
+                    - cell "Si.Eco" [ref=e2399]:
+                      - generic [ref=e2401]: Si.Eco
+                    - cell "Valenzano" [ref=e2402]
+                    - cell "Longo C4000" [ref=e2403]:
+                      - generic [ref=e2404]:
+                        - generic [ref=e2405]: Longo
+                        - generic [ref=e2406]: C4000
+                    - cell "Isuzu M21" [ref=e2407]:
+                      - generic [ref=e2408]:
+                        - generic [ref=e2409]: Isuzu
+                        - generic [ref=e2410]: M21
+                    - cell "FT343BN 5/614" [ref=e2411]:
+                      - generic [ref=e2412]:
+                        - generic [ref=e2413]: FT343BN
+                        - generic [ref=e2414]: 5/614
+                    - cell "06 ago 2026" [ref=e2415]
+                    - cell "2" [ref=e2416]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2417]:
+                      - generic [ref=e2418]:
+                        - button "Dettaglio" [ref=e2419] [cursor=pointer]:
+                          - img [ref=e2420]
+                        - button "Tagliandi" [ref=e2422] [cursor=pointer]:
+                          - img [ref=e2423]
+                        - link "Documenti" [ref=e2426] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=C4000
+                          - img [ref=e2427]
+                        - link "Lavorazioni" [ref=e2429] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=6a104697-ec19-49ff-9783-8ce99e01e3e0
+                          - img [ref=e2430]
+                        - link "Preventivi" [ref=e2432] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=6a104697-ec19-49ff-9783-8ce99e01e3e0
+                          - img [ref=e2433]
+                        - button "Stampa etichetta QR" [ref=e2436] [cursor=pointer]:
+                          - img [ref=e2437]
+                  - row "MEC Recuperi Pugliesi Modugno BTE CNTGRULS — — 25C2429/2025 02 set 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2439]:
+                    - cell "MEC Recuperi Pugliesi" [ref=e2440]:
+                      - generic [ref=e2441]:
+                        - generic [ref=e2442]: MEC
+                        - generic [ref=e2443]: Recuperi Pugliesi
+                    - cell "Modugno" [ref=e2444]
+                    - cell "BTE CNTGRULS" [ref=e2445]:
+                      - generic [ref=e2446]:
+                        - generic [ref=e2447]: BTE
+                        - generic [ref=e2448]: CNTGRULS
+                    - cell "— —" [ref=e2449]:
+                      - generic [ref=e2450]:
+                        - generic [ref=e2451]: —
+                        - generic [ref=e2452]: —
+                    - cell "25C2429/2025" [ref=e2453]:
+                      - generic [ref=e2455]: 25C2429/2025
+                    - cell "02 set 2026" [ref=e2456]
+                    - cell "1" [ref=e2457]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2458]:
+                      - generic [ref=e2459]:
+                        - button "Dettaglio" [ref=e2460] [cursor=pointer]:
+                          - img [ref=e2461]
+                        - button "Tagliandi" [ref=e2463] [cursor=pointer]:
+                          - img [ref=e2464]
+                        - link "Documenti" [ref=e2467] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CNTGRULS
+                          - img [ref=e2468]
+                        - link "Lavorazioni" [ref=e2470] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=6d534c7b-04a7-4e64-a261-59de174b76a5
+                          - img [ref=e2471]
+                        - link "Preventivi" [ref=e2473] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=6d534c7b-04a7-4e64-a261-59de174b76a5
+                          - img [ref=e2474]
+                        - button "Stampa etichetta QR" [ref=e2477] [cursor=pointer]:
+                          - img [ref=e2478]
+                  - row "Teknoservice Altamura - Ba Sicas NA4m3 — — AHL983 NA4M3A0084 15 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2480]:
+                    - cell "Teknoservice" [ref=e2481]:
+                      - generic [ref=e2483]: Teknoservice
+                    - cell "Altamura - Ba" [ref=e2484]
+                    - cell "Sicas NA4m3" [ref=e2485]:
+                      - generic [ref=e2486]:
+                        - generic [ref=e2487]: Sicas
+                        - generic [ref=e2488]: NA4m3
+                    - cell "— —" [ref=e2489]:
+                      - generic [ref=e2490]:
+                        - generic [ref=e2491]: —
+                        - generic [ref=e2492]: —
+                    - cell "AHL983 NA4M3A0084" [ref=e2493]:
+                      - generic [ref=e2494]:
+                        - generic [ref=e2495]: AHL983
+                        - generic [ref=e2496]: NA4M3A0084
+                    - cell "15 lug 2026" [ref=e2497]
+                    - cell "1" [ref=e2498]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2499]:
+                      - generic [ref=e2500]:
+                        - button "Dettaglio" [ref=e2501] [cursor=pointer]:
+                          - img [ref=e2502]
+                        - button "Tagliandi" [ref=e2504] [cursor=pointer]:
+                          - img [ref=e2505]
+                        - link "Documenti" [ref=e2508] [cursor=pointer]:
+                          - /url: /documenti?marca=Sicas&modello=NA4m3
+                          - img [ref=e2509]
+                        - link "Lavorazioni" [ref=e2511] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=6fe897ea-7aba-4a5e-9a8f-ccb78c6f8d3f
+                          - img [ref=e2512]
+                        - link "Preventivi" [ref=e2514] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=6fe897ea-7aba-4a5e-9a8f-ccb78c6f8d3f
+                          - img [ref=e2515]
+                        - button "Stampa etichetta QR" [ref=e2518] [cursor=pointer]:
+                          - img [ref=e2519]
+                  - row "AMIU Bari Bari Tech Servizi — — — Non assegnata 20 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2521]:
+                    - cell "AMIU Bari" [ref=e2522]:
+                      - generic [ref=e2524]: AMIU Bari
+                    - cell "Bari" [ref=e2525]
+                    - cell "Tech Servizi —" [ref=e2526]:
+                      - generic [ref=e2527]:
+                        - generic [ref=e2528]: Tech Servizi
+                        - generic [ref=e2529]: —
+                    - cell "— —" [ref=e2530]:
+                      - generic [ref=e2531]:
+                        - generic [ref=e2532]: —
+                        - generic [ref=e2533]: —
+                    - cell "Non assegnata" [ref=e2534]:
+                      - generic [ref=e2536]: Non assegnata
+                    - cell "20 mag 2026" [ref=e2537]
+                    - cell "1" [ref=e2538]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2539]:
+                      - generic [ref=e2540]:
+                        - button "Dettaglio" [ref=e2541] [cursor=pointer]:
+                          - img [ref=e2542]
+                        - button "Tagliandi" [ref=e2544] [cursor=pointer]:
+                          - img [ref=e2545]
+                        - link "Documenti" [ref=e2548] [cursor=pointer]:
+                          - /url: /documenti?marca=Tech+Servizi&modello=%E2%80%94
+                          - img [ref=e2549]
+                        - link "Lavorazioni" [ref=e2551] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=6fecc59c-3939-42ae-9316-95693cd3670e
+                          - img [ref=e2552]
+                        - link "Preventivi" [ref=e2554] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=6fecc59c-3939-42ae-9316-95693cd3670e
+                          - img [ref=e2555]
+                        - button "Stampa etichetta QR" [ref=e2558] [cursor=pointer]:
+                          - img [ref=e2559]
+                  - row "TecnoWaste Maglie Coseco K6 Iveco Stralis GP823GL 017/16 05 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2561]:
+                    - cell "TecnoWaste" [ref=e2562]:
+                      - generic [ref=e2564]: TecnoWaste
+                    - cell "Maglie" [ref=e2565]
+                    - cell "Coseco K6" [ref=e2566]:
+                      - generic [ref=e2567]:
+                        - generic [ref=e2568]: Coseco
+                        - generic [ref=e2569]: K6
+                    - cell "Iveco Stralis" [ref=e2570]:
+                      - generic [ref=e2571]:
+                        - generic [ref=e2572]: Iveco
+                        - generic [ref=e2573]: Stralis
+                    - cell "GP823GL 017/16" [ref=e2574]:
+                      - generic [ref=e2575]:
+                        - generic [ref=e2576]: GP823GL
+                        - generic [ref=e2577]: 017/16
+                    - cell "05 ago 2026" [ref=e2578]
+                    - cell "1" [ref=e2579]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2580]:
+                      - generic [ref=e2581]:
+                        - button "Dettaglio" [ref=e2582] [cursor=pointer]:
+                          - img [ref=e2583]
+                        - button "Tagliandi" [ref=e2585] [cursor=pointer]:
+                          - img [ref=e2586]
+                        - link "Documenti" [ref=e2589] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K6
+                          - img [ref=e2590]
+                        - link "Lavorazioni" [ref=e2592] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=72f8a7c3-8d2c-413a-a444-bac2ff10d38b
+                          - img [ref=e2593]
+                        - link "Preventivi" [ref=e2595] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=72f8a7c3-8d2c-413a-a444-bac2ff10d38b
+                          - img [ref=e2596]
+                        - button "Stampa etichetta QR" [ref=e2599] [cursor=pointer]:
+                          - img [ref=e2600]
+                  - row "INCO RaccolGo Noicattaro Tecno Industrie AZIMUT Mitsubishi Fuso Canter GJ226PE TIS115033/21 05 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2602]:
+                    - cell "INCO RaccolGo" [ref=e2603]:
+                      - generic [ref=e2604]:
+                        - generic [ref=e2605]: INCO
+                        - generic [ref=e2606]: RaccolGo
+                    - cell "Noicattaro" [ref=e2607]
+                    - cell "Tecno Industrie AZIMUT" [ref=e2608]:
+                      - generic [ref=e2609]:
+                        - generic [ref=e2610]: Tecno Industrie
+                        - generic [ref=e2611]: AZIMUT
+                    - cell "Mitsubishi Fuso Canter" [ref=e2612]:
+                      - generic [ref=e2613]:
+                        - generic [ref=e2614]: Mitsubishi
+                        - generic [ref=e2615]: Fuso Canter
+                    - cell "GJ226PE TIS115033/21" [ref=e2616]:
+                      - generic [ref=e2617]:
+                        - generic [ref=e2618]: GJ226PE
+                        - generic [ref=e2619]: TIS115033/21
+                    - cell "05 ago 2026" [ref=e2620]
+                    - cell "1" [ref=e2621]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2622]:
+                      - generic [ref=e2623]:
+                        - button "Dettaglio" [ref=e2624] [cursor=pointer]:
+                          - img [ref=e2625]
+                        - button "Tagliandi" [ref=e2627] [cursor=pointer]:
+                          - img [ref=e2628]
+                        - link "Documenti" [ref=e2631] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=AZIMUT
+                          - img [ref=e2632]
+                        - link "Lavorazioni" [ref=e2634] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=732f23f4-095c-4217-921a-f5beb5431856
+                          - img [ref=e2635]
+                        - link "Preventivi" [ref=e2637] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=732f23f4-095c-4217-921a-f5beb5431856
+                          - img [ref=e2638]
+                        - button "Stampa etichetta QR" [ref=e2641] [cursor=pointer]:
+                          - img [ref=e2642]
+                  - row "AMIU Bari Bari Longo LL26 Iveco Sway 420 GG304EK 21E223 1425 29 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2644]:
+                    - cell "AMIU Bari" [ref=e2645]:
+                      - generic [ref=e2647]: AMIU Bari
+                    - cell "Bari" [ref=e2648]
+                    - cell "Longo LL26" [ref=e2649]:
+                      - generic [ref=e2650]:
+                        - generic [ref=e2651]: Longo
+                        - generic [ref=e2652]: LL26
+                    - cell "Iveco Sway 420" [ref=e2653]:
+                      - generic [ref=e2654]:
+                        - generic [ref=e2655]: Iveco
+                        - generic [ref=e2656]: Sway 420
+                    - cell "GG304EK 21E223 1425" [ref=e2657]:
+                      - generic [ref=e2658]:
+                        - generic [ref=e2659]: GG304EK
+                        - generic [ref=e2660]: "21E223"
+                        - generic [ref=e2661]: "1425"
+                    - cell "29 lug 2026" [ref=e2662]
+                    - cell "1" [ref=e2663]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2664]:
+                      - generic [ref=e2665]:
+                        - button "Dettaglio" [ref=e2666] [cursor=pointer]:
+                          - img [ref=e2667]
+                        - button "Tagliandi" [ref=e2669] [cursor=pointer]:
+                          - img [ref=e2670]
+                        - link "Documenti" [ref=e2673] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=LL26
+                          - img [ref=e2674]
+                        - link "Lavorazioni" [ref=e2676] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=733d93f7-15a1-4c37-aaae-35612240f1c8
+                          - img [ref=e2677]
+                        - link "Preventivi" [ref=e2679] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=733d93f7-15a1-4c37-aaae-35612240f1c8
+                          - img [ref=e2680]
+                        - button "Stampa etichetta QR" [ref=e2683] [cursor=pointer]:
+                          - img [ref=e2684]
+                  - row "B-Energy Foggia BTE CMP26APL40 — — 16P0277 02 set 2026 3 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2686]:
+                    - cell "B-Energy" [ref=e2687]:
+                      - generic [ref=e2689]: B-Energy
+                    - cell "Foggia" [ref=e2690]
+                    - cell "BTE CMP26APL40" [ref=e2691]:
+                      - generic [ref=e2692]:
+                        - generic [ref=e2693]: BTE
+                        - generic [ref=e2694]: CMP26APL40
+                    - cell "— —" [ref=e2695]:
+                      - generic [ref=e2696]:
+                        - generic [ref=e2697]: —
+                        - generic [ref=e2698]: —
+                    - cell "16P0277" [ref=e2699]:
+                      - generic [ref=e2701]: 16P0277
+                    - cell "02 set 2026" [ref=e2702]
+                    - cell "3" [ref=e2703]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2704]:
+                      - generic [ref=e2705]:
+                        - button "Dettaglio" [ref=e2706] [cursor=pointer]:
+                          - img [ref=e2707]
+                        - button "Tagliandi" [ref=e2709] [cursor=pointer]:
+                          - img [ref=e2710]
+                        - link "Documenti" [ref=e2713] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CMP26APL40
+                          - img [ref=e2714]
+                        - link "Lavorazioni" [ref=e2716] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=74716332-4376-4642-b691-80a8da26d191
+                          - img [ref=e2717]
+                        - link "Preventivi" [ref=e2719] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=74716332-4376-4642-b691-80a8da26d191
+                          - img [ref=e2720]
+                        - button "Stampa etichetta QR" [ref=e2723] [cursor=pointer]:
+                          - img [ref=e2724]
+                  - row "Maglie Territorio Ambiente SpA Maglie (Le) Novarini CT2 Iveco Eurocargo ZA864WA 03837 20 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2726]:
+                    - cell "Maglie Territorio Ambiente SpA" [ref=e2727]:
+                      - generic [ref=e2729]: Maglie Territorio Ambiente SpA
+                    - cell "Maglie (Le)" [ref=e2730]
+                    - cell "Novarini CT2" [ref=e2731]:
+                      - generic [ref=e2732]:
+                        - generic [ref=e2733]: Novarini
+                        - generic [ref=e2734]: CT2
+                    - cell "Iveco Eurocargo" [ref=e2735]:
+                      - generic [ref=e2736]:
+                        - generic [ref=e2737]: Iveco
+                        - generic [ref=e2738]: Eurocargo
+                    - cell "ZA864WA 03837" [ref=e2739]:
+                      - generic [ref=e2740]:
+                        - generic [ref=e2741]: ZA864WA
+                        - generic [ref=e2742]: "03837"
+                    - cell "20 lug 2026" [ref=e2743]
+                    - cell "1" [ref=e2744]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2745]:
+                      - generic [ref=e2746]:
+                        - button "Dettaglio" [ref=e2747] [cursor=pointer]:
+                          - img [ref=e2748]
+                        - button "Tagliandi" [ref=e2750] [cursor=pointer]:
+                          - img [ref=e2751]
+                        - link "Documenti" [ref=e2754] [cursor=pointer]:
+                          - /url: /documenti?marca=Novarini&modello=CT2
+                          - img [ref=e2755]
+                        - link "Lavorazioni" [ref=e2757] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=7561cd74-c8a4-438d-b50f-75721b934a74
+                          - img [ref=e2758]
+                        - link "Preventivi" [ref=e2760] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=7561cd74-c8a4-438d-b50f-75721b934a74
+                          - img [ref=e2761]
+                        - button "Stampa etichetta QR" [ref=e2764] [cursor=pointer]:
+                          - img [ref=e2765]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Comecol KS4 Titan Iveco 175-24 BAA66171 180354 17 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2767]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e2768]:
+                      - generic [ref=e2769]:
+                        - generic [ref=e2770]: Bellizzi SpA
+                        - generic [ref=e2771]: AMIU Trani SpA
+                    - cell "Trani" [ref=e2772]
+                    - cell "Comecol KS4 Titan" [ref=e2773]:
+                      - generic [ref=e2774]:
+                        - generic [ref=e2775]: Comecol
+                        - generic [ref=e2776]: KS4 Titan
+                    - cell "Iveco 175-24" [ref=e2777]:
+                      - generic [ref=e2778]:
+                        - generic [ref=e2779]: Iveco
+                        - generic [ref=e2780]: 175-24
+                    - cell "BAA66171 180354" [ref=e2781]:
+                      - generic [ref=e2782]:
+                        - generic [ref=e2783]: BAA66171
+                        - generic [ref=e2784]: "180354"
+                    - cell "17 lug 2026" [ref=e2785]
+                    - cell "2" [ref=e2786]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2787]:
+                      - generic [ref=e2788]:
+                        - button "Dettaglio" [ref=e2789] [cursor=pointer]:
+                          - img [ref=e2790]
+                        - button "Tagliandi" [ref=e2792] [cursor=pointer]:
+                          - img [ref=e2793]
+                        - link "Documenti" [ref=e2796] [cursor=pointer]:
+                          - /url: /documenti?marca=Comecol&modello=KS4+Titan
+                          - img [ref=e2797]
+                        - link "Lavorazioni" [ref=e2799] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=784c5e59-ce7f-4efa-9377-3618db20daa0
+                          - img [ref=e2800]
+                        - link "Preventivi" [ref=e2802] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=784c5e59-ce7f-4efa-9377-3618db20daa0
+                          - img [ref=e2803]
+                        - button "Stampa etichetta QR" [ref=e2806] [cursor=pointer]:
+                          - img [ref=e2807]
+                  - row "MAZZOCCHIA Si.Eco Spa Statte Mazzocchia Ministar Mitsubishi Fuso Canter HB388DP 222/25 23 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2809]:
+                    - cell "MAZZOCCHIA Si.Eco Spa" [ref=e2810]:
+                      - generic [ref=e2811]:
+                        - generic [ref=e2812]: MAZZOCCHIA
+                        - generic [ref=e2813]: Si.Eco Spa
+                    - cell "Statte" [ref=e2814]
+                    - cell "Mazzocchia Ministar" [ref=e2815]:
+                      - generic [ref=e2816]:
+                        - generic [ref=e2817]: Mazzocchia
+                        - generic [ref=e2818]: Ministar
+                    - cell "Mitsubishi Fuso Canter" [ref=e2819]:
+                      - generic [ref=e2820]:
+                        - generic [ref=e2821]: Mitsubishi
+                        - generic [ref=e2822]: Fuso Canter
+                    - cell "HB388DP 222/25" [ref=e2823]:
+                      - generic [ref=e2824]:
+                        - generic [ref=e2825]: HB388DP
+                        - generic [ref=e2826]: 222/25
+                    - cell "23 lug 2026" [ref=e2827]
+                    - cell "1" [ref=e2828]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2829]:
+                      - generic [ref=e2830]:
+                        - button "Dettaglio" [ref=e2831] [cursor=pointer]:
+                          - img [ref=e2832]
+                        - button "Tagliandi" [ref=e2834] [cursor=pointer]:
+                          - img [ref=e2835]
+                        - link "Documenti" [ref=e2838] [cursor=pointer]:
+                          - /url: /documenti?marca=Mazzocchia&modello=Ministar
+                          - img [ref=e2839]
+                        - link "Lavorazioni" [ref=e2841] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=78aa89f8-461d-42ec-b81f-2bf1891c30c1
+                          - img [ref=e2842]
+                        - link "Preventivi" [ref=e2844] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=78aa89f8-461d-42ec-b81f-2bf1891c30c1
+                          - img [ref=e2845]
+                        - button "Stampa etichetta QR" [ref=e2848] [cursor=pointer]:
+                          - img [ref=e2849]
+                  - row "AVR per l'Ambiente Capurso Tecno Industrie Zenit 25 Iveco Stralis EL419BA TIMP21507/11 03 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2851]:
+                    - cell "AVR per l'Ambiente" [ref=e2852]:
+                      - generic [ref=e2854]: AVR per l'Ambiente
+                    - cell "Capurso" [ref=e2855]
+                    - cell "Tecno Industrie Zenit 25" [ref=e2856]:
+                      - generic [ref=e2857]:
+                        - generic [ref=e2858]: Tecno Industrie
+                        - generic [ref=e2859]: Zenit 25
+                    - cell "Iveco Stralis" [ref=e2860]:
+                      - generic [ref=e2861]:
+                        - generic [ref=e2862]: Iveco
+                        - generic [ref=e2863]: Stralis
+                    - cell "EL419BA TIMP21507/11" [ref=e2864]:
+                      - generic [ref=e2865]:
+                        - generic [ref=e2866]: EL419BA
+                        - generic [ref=e2867]: TIMP21507/11
+                    - cell "03 giu 2026" [ref=e2868]
+                    - cell "1" [ref=e2869]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2870]:
+                      - generic [ref=e2871]:
+                        - button "Dettaglio" [ref=e2872] [cursor=pointer]:
+                          - img [ref=e2873]
+                        - button "Tagliandi" [ref=e2875] [cursor=pointer]:
+                          - img [ref=e2876]
+                        - link "Documenti" [ref=e2879] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Zenit+25
+                          - img [ref=e2880]
+                        - link "Lavorazioni" [ref=e2882] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=7a524842-9171-44d1-be70-d6a428baf9d3
+                          - img [ref=e2883]
+                        - link "Preventivi" [ref=e2885] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=7a524842-9171-44d1-be70-d6a428baf9d3
+                          - img [ref=e2886]
+                        - button "Stampa etichetta QR" [ref=e2889] [cursor=pointer]:
+                          - img [ref=e2890]
+                  - row "AMIU Bari Bari BTE — — — Non assegnata S26 15 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2892]:
+                    - cell "AMIU Bari" [ref=e2893]:
+                      - generic [ref=e2895]: AMIU Bari
+                    - cell "Bari" [ref=e2896]
+                    - cell "BTE —" [ref=e2897]:
+                      - generic [ref=e2898]:
+                        - generic [ref=e2899]: BTE
+                        - generic [ref=e2900]: —
+                    - cell "— —" [ref=e2901]:
+                      - generic [ref=e2902]:
+                        - generic [ref=e2903]: —
+                        - generic [ref=e2904]: —
+                    - cell "Non assegnata S26" [ref=e2905]:
+                      - generic [ref=e2906]:
+                        - generic [ref=e2907]: Non assegnata
+                        - generic [ref=e2908]: S26
+                    - cell "15 mag 2026" [ref=e2909]
+                    - cell "1" [ref=e2910]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2911]:
+                      - generic [ref=e2912]:
+                        - button "Dettaglio" [ref=e2913] [cursor=pointer]:
+                          - img [ref=e2914]
+                        - button "Tagliandi" [ref=e2916] [cursor=pointer]:
+                          - img [ref=e2917]
+                        - link "Documenti" [ref=e2920] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=%E2%80%94
+                          - img [ref=e2921]
+                        - link "Lavorazioni" [ref=e2923] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=7ae19fec-dcd8-4af8-b9c6-4cb05f52752a
+                          - img [ref=e2924]
+                        - link "Preventivi" [ref=e2926] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=7ae19fec-dcd8-4af8-b9c6-4cb05f52752a
+                          - img [ref=e2927]
+                        - button "Stampa etichetta QR" [ref=e2930] [cursor=pointer]:
+                          - img [ref=e2931]
+                  - row "Navita — OMB T-Rex — — GM391JS MV001287 — 0 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2933]:
+                    - cell "Navita" [ref=e2934]:
+                      - generic [ref=e2936]: Navita
+                    - cell "—" [ref=e2937]
+                    - cell "OMB T-Rex" [ref=e2938]:
+                      - generic [ref=e2939]:
+                        - generic [ref=e2940]: OMB
+                        - generic [ref=e2941]: T-Rex
+                    - cell "— —" [ref=e2942]:
+                      - generic [ref=e2943]:
+                        - generic [ref=e2944]: —
+                        - generic [ref=e2945]: —
+                    - cell "GM391JS MV001287" [ref=e2946]:
+                      - generic [ref=e2947]:
+                        - generic [ref=e2948]: GM391JS
+                        - generic [ref=e2949]: MV001287
+                    - cell "—" [ref=e2950]
+                    - cell "0" [ref=e2951]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2952]:
+                      - generic [ref=e2953]:
+                        - button "Dettaglio" [ref=e2954] [cursor=pointer]:
+                          - img [ref=e2955]
+                        - button "Tagliandi" [ref=e2957] [cursor=pointer]:
+                          - img [ref=e2958]
+                        - link "Documenti" [ref=e2961] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e2962]
+                        - link "Lavorazioni" [ref=e2964] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=7c4a379c-b341-4f47-8673-ea7a5ffca493
+                          - img [ref=e2965]
+                        - link "Preventivi" [ref=e2967] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=7c4a379c-b341-4f47-8673-ea7a5ffca493
+                          - img [ref=e2968]
+                        - button "Stampa etichetta QR" [ref=e2971] [cursor=pointer]:
+                          - img [ref=e2972]
+                  - row "Impresa Edile Rossi S.p.A. Mario Bianchi Cantiere Autostrada A1 - Lotto 4 Caterpillar 320D Iveco Trakker EY789ZZ CAT0320DV12345 ESC-78 — 0 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2974]:
+                    - cell "Impresa Edile Rossi S.p.A. Mario Bianchi" [ref=e2975]:
+                      - generic [ref=e2976]:
+                        - generic [ref=e2977]: Impresa Edile Rossi S.p.A.
+                        - generic [ref=e2978]: Mario Bianchi
+                    - cell "Cantiere Autostrada A1 - Lotto 4" [ref=e2979]
+                    - cell "Caterpillar 320D" [ref=e2980]:
+                      - generic [ref=e2981]:
+                        - generic [ref=e2982]: Caterpillar
+                        - generic [ref=e2983]: 320D
+                    - cell "Iveco Trakker" [ref=e2984]:
+                      - generic [ref=e2985]:
+                        - generic [ref=e2986]: Iveco
+                        - generic [ref=e2987]: Trakker
+                    - cell "EY789ZZ CAT0320DV12345 ESC-78" [ref=e2988]:
+                      - generic [ref=e2989]:
+                        - generic [ref=e2990]: EY789ZZ
+                        - generic [ref=e2991]: CAT0320DV12345
+                        - generic [ref=e2992]: ESC-78
+                    - cell "—" [ref=e2993]
+                    - cell "0" [ref=e2994]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e2995]:
+                      - generic [ref=e2996]:
+                        - button "Dettaglio" [ref=e2997] [cursor=pointer]:
+                          - img [ref=e2998]
+                        - button "Tagliandi" [ref=e3000] [cursor=pointer]:
+                          - img [ref=e3001]
+                        - link "Documenti" [ref=e3004] [cursor=pointer]:
+                          - /url: /documenti?marca=Caterpillar&modello=320D
+                          - img [ref=e3005]
+                        - link "Lavorazioni" [ref=e3007] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=7e5517c9-95bc-462a-9315-fd7b47b174fd
+                          - img [ref=e3008]
+                        - link "Preventivi" [ref=e3010] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=7e5517c9-95bc-462a-9315-fd7b47b174fd
+                          - img [ref=e3011]
+                        - button "Stampa etichetta QR" [ref=e3014] [cursor=pointer]:
+                          - img [ref=e3015]
+                  - row "SI.ECO Conversano BTE CMPU24APB40D — — 16P0736 — 0 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3017]:
+                    - cell "SI.ECO" [ref=e3018]:
+                      - generic [ref=e3020]: SI.ECO
+                    - cell "Conversano" [ref=e3021]
+                    - cell "BTE CMPU24APB40D" [ref=e3022]:
+                      - generic [ref=e3023]:
+                        - generic [ref=e3024]: BTE
+                        - generic [ref=e3025]: CMPU24APB40D
+                    - cell "— —" [ref=e3026]:
+                      - generic [ref=e3027]:
+                        - generic [ref=e3028]: —
+                        - generic [ref=e3029]: —
+                    - cell "16P0736" [ref=e3030]:
+                      - generic [ref=e3032]: 16P0736
+                    - cell "—" [ref=e3033]
+                    - cell "0" [ref=e3034]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3035]:
+                      - generic [ref=e3036]:
+                        - button "Dettaglio" [ref=e3037] [cursor=pointer]:
+                          - img [ref=e3038]
+                        - button "Tagliandi" [ref=e3040] [cursor=pointer]:
+                          - img [ref=e3041]
+                        - link "Documenti" [ref=e3044] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CMPU24APB40D
+                          - img [ref=e3045]
+                        - link "Lavorazioni" [ref=e3047] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=81e07031-f82f-4dc4-a798-f100924f28a4
+                          - img [ref=e3048]
+                        - link "Preventivi" [ref=e3050] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=81e07031-f82f-4dc4-a798-f100924f28a4
+                          - img [ref=e3051]
+                        - button "Stampa etichetta QR" [ref=e3054] [cursor=pointer]:
+                          - img [ref=e3055]
+                  - row "OMB Si.Eco Spa Statte OMB T-Rex Mitsubishi Fuso Canter HB647DP MV002452 23 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3057]:
+                    - cell "OMB Si.Eco Spa" [ref=e3058]:
+                      - generic [ref=e3059]:
+                        - generic [ref=e3060]: OMB
+                        - generic [ref=e3061]: Si.Eco Spa
+                    - cell "Statte" [ref=e3062]
+                    - cell "OMB T-Rex" [ref=e3063]:
+                      - generic [ref=e3064]:
+                        - generic [ref=e3065]: OMB
+                        - generic [ref=e3066]: T-Rex
+                    - cell "Mitsubishi Fuso Canter" [ref=e3067]:
+                      - generic [ref=e3068]:
+                        - generic [ref=e3069]: Mitsubishi
+                        - generic [ref=e3070]: Fuso Canter
+                    - cell "HB647DP MV002452" [ref=e3071]:
+                      - generic [ref=e3072]:
+                        - generic [ref=e3073]: HB647DP
+                        - generic [ref=e3074]: MV002452
+                    - cell "23 lug 2026" [ref=e3075]
+                    - cell "1" [ref=e3076]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3077]:
+                      - generic [ref=e3078]:
+                        - button "Dettaglio" [ref=e3079] [cursor=pointer]:
+                          - img [ref=e3080]
+                        - button "Tagliandi" [ref=e3082] [cursor=pointer]:
+                          - img [ref=e3083]
+                        - link "Documenti" [ref=e3086] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e3087]
+                        - link "Lavorazioni" [ref=e3089] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=83d96b3a-ad23-4b04-9d41-9b5937726195
+                          - img [ref=e3090]
+                        - link "Preventivi" [ref=e3092] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=83d96b3a-ad23-4b04-9d41-9b5937726195
+                          - img [ref=e3093]
+                        - button "Stampa etichetta QR" [ref=e3096] [cursor=pointer]:
+                          - img [ref=e3097]
+                  - row "SI.ECO Valenzano (Ba) Ecotec Titano 5T Mitsubishi Fuso Canter FN990AV Non assegnata 16 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3099]:
+                    - cell "SI.ECO" [ref=e3100]:
+                      - generic [ref=e3102]: SI.ECO
+                    - cell "Valenzano (Ba)" [ref=e3103]
+                    - cell "Ecotec Titano 5T" [ref=e3104]:
+                      - generic [ref=e3105]:
+                        - generic [ref=e3106]: Ecotec
+                        - generic [ref=e3107]: Titano 5T
+                    - cell "Mitsubishi Fuso Canter" [ref=e3108]:
+                      - generic [ref=e3109]:
+                        - generic [ref=e3110]: Mitsubishi
+                        - generic [ref=e3111]: Fuso Canter
+                    - cell "FN990AV Non assegnata" [ref=e3112]:
+                      - generic [ref=e3113]:
+                        - generic [ref=e3114]: FN990AV
+                        - generic [ref=e3115]: Non assegnata
+                    - cell "16 giu 2026" [ref=e3116]
+                    - cell "1" [ref=e3117]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3118]:
+                      - generic [ref=e3119]:
+                        - button "Dettaglio" [ref=e3120] [cursor=pointer]:
+                          - img [ref=e3121]
+                        - button "Tagliandi" [ref=e3123] [cursor=pointer]:
+                          - img [ref=e3124]
+                        - link "Documenti" [ref=e3127] [cursor=pointer]:
+                          - /url: /documenti?marca=Ecotec&modello=Titano+5T
+                          - img [ref=e3128]
+                        - link "Lavorazioni" [ref=e3130] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=8603f9a3-8d7c-4530-bb9b-b0f0785054bf
+                          - img [ref=e3131]
+                        - link "Preventivi" [ref=e3133] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=8603f9a3-8d7c-4530-bb9b-b0f0785054bf
+                          - img [ref=e3134]
+                        - button "Stampa etichetta QR" [ref=e3137] [cursor=pointer]:
+                          - img [ref=e3138]
+                  - row "SI.ECO Sannicandro di Bari Calabrese CH405 H/18 Iveco Eurocargo CA0990YM 2434 13 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3140]:
+                    - cell "SI.ECO" [ref=e3141]:
+                      - generic [ref=e3143]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e3144]
+                    - cell "Calabrese CH405 H/18" [ref=e3145]:
+                      - generic [ref=e3146]:
+                        - generic [ref=e3147]: Calabrese
+                        - generic [ref=e3148]: CH405 H/18
+                    - cell "Iveco Eurocargo" [ref=e3149]:
+                      - generic [ref=e3150]:
+                        - generic [ref=e3151]: Iveco
+                        - generic [ref=e3152]: Eurocargo
+                    - cell "CA0990YM 2434" [ref=e3153]:
+                      - generic [ref=e3154]:
+                        - generic [ref=e3155]: CA0990YM
+                        - generic [ref=e3156]: "2434"
+                    - cell "13 lug 2026" [ref=e3157]
+                    - cell "1" [ref=e3158]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3159]:
+                      - generic [ref=e3160]:
+                        - button "Dettaglio" [ref=e3161] [cursor=pointer]:
+                          - img [ref=e3162]
+                        - button "Tagliandi" [ref=e3164] [cursor=pointer]:
+                          - img [ref=e3165]
+                        - link "Documenti" [ref=e3168] [cursor=pointer]:
+                          - /url: /documenti?marca=Calabrese&modello=CH405+H%2F18
+                          - img [ref=e3169]
+                        - link "Lavorazioni" [ref=e3171] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=866e3fcd-9e91-40da-a9de-c53feb24ea5d
+                          - img [ref=e3172]
+                        - link "Preventivi" [ref=e3174] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=866e3fcd-9e91-40da-a9de-c53feb24ea5d
+                          - img [ref=e3175]
+                        - button "Stampa etichetta QR" [ref=e3178] [cursor=pointer]:
+                          - img [ref=e3179]
+                  - row "SI.ECO Bitritto OSB LC/4500/AC Iveco Eurocargo CJ747JM 013 19 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3181]:
+                    - cell "SI.ECO" [ref=e3182]:
+                      - generic [ref=e3184]: SI.ECO
+                    - cell "Bitritto" [ref=e3185]
+                    - cell "OSB LC/4500/AC" [ref=e3186]:
+                      - generic [ref=e3187]:
+                        - generic [ref=e3188]: OSB
+                        - generic [ref=e3189]: LC/4500/AC
+                    - cell "Iveco Eurocargo" [ref=e3190]:
+                      - generic [ref=e3191]:
+                        - generic [ref=e3192]: Iveco
+                        - generic [ref=e3193]: Eurocargo
+                    - cell "CJ747JM 013" [ref=e3194]:
+                      - generic [ref=e3195]:
+                        - generic [ref=e3196]: CJ747JM
+                        - generic [ref=e3197]: "013"
+                    - cell "19 giu 2026" [ref=e3198]
+                    - cell "1" [ref=e3199]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3200]:
+                      - generic [ref=e3201]:
+                        - button "Dettaglio" [ref=e3202] [cursor=pointer]:
+                          - img [ref=e3203]
+                        - button "Tagliandi" [ref=e3205] [cursor=pointer]:
+                          - img [ref=e3206]
+                        - link "Documenti" [ref=e3209] [cursor=pointer]:
+                          - /url: /documenti?marca=OSB&modello=LC%2F4500%2FAC
+                          - img [ref=e3210]
+                        - link "Lavorazioni" [ref=e3212] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=872cb34a-0f0b-458e-a394-2594ba48fe01
+                          - img [ref=e3213]
+                        - link "Preventivi" [ref=e3215] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=872cb34a-0f0b-458e-a394-2594ba48fe01
+                          - img [ref=e3216]
+                        - button "Stampa etichetta QR" [ref=e3219] [cursor=pointer]:
+                          - img [ref=e3220]
+                  - row "INCO Raccolgo Bari Tecno Industrie Zenit 25 Volvo Electric GP170GM 22C0141 05 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3222]:
+                    - cell "INCO Raccolgo" [ref=e3223]:
+                      - generic [ref=e3224]:
+                        - generic [ref=e3225]: INCO
+                        - generic [ref=e3226]: Raccolgo
+                    - cell "Bari" [ref=e3227]
+                    - cell "Tecno Industrie Zenit 25" [ref=e3228]:
+                      - generic [ref=e3229]:
+                        - generic [ref=e3230]: Tecno Industrie
+                        - generic [ref=e3231]: Zenit 25
+                    - cell "Volvo Electric" [ref=e3232]:
+                      - generic [ref=e3233]:
+                        - generic [ref=e3234]: Volvo
+                        - generic [ref=e3235]: Electric
+                    - cell "GP170GM 22C0141" [ref=e3236]:
+                      - generic [ref=e3237]:
+                        - generic [ref=e3238]: GP170GM
+                        - generic [ref=e3239]: 22C0141
+                    - cell "05 ago 2026" [ref=e3240]
+                    - cell "2" [ref=e3241]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3242]:
+                      - generic [ref=e3243]:
+                        - button "Dettaglio" [ref=e3244] [cursor=pointer]:
+                          - img [ref=e3245]
+                        - button "Tagliandi" [ref=e3247] [cursor=pointer]:
+                          - img [ref=e3248]
+                        - link "Documenti" [ref=e3251] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=Zenit+25
+                          - img [ref=e3252]
+                        - link "Lavorazioni" [ref=e3254] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=8cfbe18a-6c9a-4728-95e1-5bc41c9d2c49
+                          - img [ref=e3255]
+                        - link "Preventivi" [ref=e3257] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=8cfbe18a-6c9a-4728-95e1-5bc41c9d2c49
+                          - img [ref=e3258]
+                        - button "Stampa etichetta QR" [ref=e3261] [cursor=pointer]:
+                          - img [ref=e3262]
+                  - row "Bellizzi SpA AMIU Trani SpA Trani Coseco K1 R Iveco Daily 35 EC889LT Non assegnata 16 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3264]:
+                    - cell "Bellizzi SpA AMIU Trani SpA" [ref=e3265]:
+                      - generic [ref=e3266]:
+                        - generic [ref=e3267]: Bellizzi SpA
+                        - generic [ref=e3268]: AMIU Trani SpA
+                    - cell "Trani" [ref=e3269]
+                    - cell "Coseco K1 R" [ref=e3270]:
+                      - generic [ref=e3271]:
+                        - generic [ref=e3272]: Coseco
+                        - generic [ref=e3273]: K1 R
+                    - cell "Iveco Daily 35" [ref=e3274]:
+                      - generic [ref=e3275]:
+                        - generic [ref=e3276]: Iveco
+                        - generic [ref=e3277]: Daily 35
+                    - cell "EC889LT Non assegnata" [ref=e3278]:
+                      - generic [ref=e3279]:
+                        - generic [ref=e3280]: EC889LT
+                        - generic [ref=e3281]: Non assegnata
+                    - cell "16 giu 2026" [ref=e3282]
+                    - cell "1" [ref=e3283]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3284]:
+                      - generic [ref=e3285]:
+                        - button "Dettaglio" [ref=e3286] [cursor=pointer]:
+                          - img [ref=e3287]
+                        - button "Tagliandi" [ref=e3289] [cursor=pointer]:
+                          - img [ref=e3290]
+                        - link "Documenti" [ref=e3293] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K1+R
+                          - img [ref=e3294]
+                        - link "Lavorazioni" [ref=e3296] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=8de8fb46-59bc-43e6-8f91-723422c7e2a6
+                          - img [ref=e3297]
+                        - link "Preventivi" [ref=e3299] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=8de8fb46-59bc-43e6-8f91-723422c7e2a6
+                          - img [ref=e3300]
+                        - button "Stampa etichetta QR" [ref=e3303] [cursor=pointer]:
+                          - img [ref=e3304]
+                  - row "AMIU Bari Bari Mathieu Azura MC2000 — — AJK437 30685 1150 18 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3306]:
+                    - cell "AMIU Bari" [ref=e3307]:
+                      - generic [ref=e3309]: AMIU Bari
+                    - cell "Bari" [ref=e3310]
+                    - cell "Mathieu Azura MC2000" [ref=e3311]:
+                      - generic [ref=e3312]:
+                        - generic [ref=e3313]: Mathieu
+                        - generic [ref=e3314]: Azura MC2000
+                    - cell "— —" [ref=e3315]:
+                      - generic [ref=e3316]:
+                        - generic [ref=e3317]: —
+                        - generic [ref=e3318]: —
+                    - cell "AJK437 30685 1150" [ref=e3319]:
+                      - generic [ref=e3320]:
+                        - generic [ref=e3321]: AJK437
+                        - generic [ref=e3322]: "30685"
+                        - generic [ref=e3323]: "1150"
+                    - cell "18 giu 2026" [ref=e3324]
+                    - cell "1" [ref=e3325]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3326]:
+                      - generic [ref=e3327]:
+                        - button "Dettaglio" [ref=e3328] [cursor=pointer]:
+                          - img [ref=e3329]
+                        - button "Tagliandi" [ref=e3331] [cursor=pointer]:
+                          - img [ref=e3332]
+                        - link "Documenti" [ref=e3335] [cursor=pointer]:
+                          - /url: /documenti?marca=Mathieu&modello=Azura+MC2000
+                          - img [ref=e3336]
+                        - link "Lavorazioni" [ref=e3338] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=9139c0ee-5924-48ea-b3d0-0bb2155603c3
+                          - img [ref=e3339]
+                        - link "Preventivi" [ref=e3341] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=9139c0ee-5924-48ea-b3d0-0bb2155603c3
+                          - img [ref=e3342]
+                        - button "Stampa etichetta QR" [ref=e3345] [cursor=pointer]:
+                          - img [ref=e3346]
+                  - row "AMIU Bari Bari Longo — — — 1272 11 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3348]:
+                    - cell "AMIU Bari" [ref=e3349]:
+                      - generic [ref=e3351]: AMIU Bari
+                    - cell "Bari" [ref=e3352]
+                    - cell "Longo —" [ref=e3353]:
+                      - generic [ref=e3354]:
+                        - generic [ref=e3355]: Longo
+                        - generic [ref=e3356]: —
+                    - cell "— —" [ref=e3357]:
+                      - generic [ref=e3358]:
+                        - generic [ref=e3359]: —
+                        - generic [ref=e3360]: —
+                    - cell "1272" [ref=e3361]:
+                      - generic [ref=e3363]: "1272"
+                    - cell "11 mag 2026" [ref=e3364]
+                    - cell "1" [ref=e3365]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3366]:
+                      - generic [ref=e3367]:
+                        - button "Dettaglio" [ref=e3368] [cursor=pointer]:
+                          - img [ref=e3369]
+                        - button "Tagliandi" [ref=e3371] [cursor=pointer]:
+                          - img [ref=e3372]
+                        - link "Documenti" [ref=e3375] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e3376]
+                        - link "Lavorazioni" [ref=e3378] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=91eef703-a32b-4a3d-a900-01df27bca786
+                          - img [ref=e3379]
+                        - link "Preventivi" [ref=e3381] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=91eef703-a32b-4a3d-a900-01df27bca786
+                          - img [ref=e3382]
+                        - button "Stampa etichetta QR" [ref=e3385] [cursor=pointer]:
+                          - img [ref=e3386]
+                  - row "AVR per l'Ambiente — Schmidt Cleango 400 ET — — AMI645 Non assegnata — 0 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3388]:
+                    - cell "AVR per l'Ambiente" [ref=e3389]:
+                      - generic [ref=e3391]: AVR per l'Ambiente
+                    - cell "—" [ref=e3392]
+                    - cell "Schmidt Cleango 400 ET" [ref=e3393]:
+                      - generic [ref=e3394]:
+                        - generic [ref=e3395]: Schmidt
+                        - generic [ref=e3396]: Cleango 400 ET
+                    - cell "— —" [ref=e3397]:
+                      - generic [ref=e3398]:
+                        - generic [ref=e3399]: —
+                        - generic [ref=e3400]: —
+                    - cell "AMI645 Non assegnata" [ref=e3401]:
+                      - generic [ref=e3402]:
+                        - generic [ref=e3403]: AMI645
+                        - generic [ref=e3404]: Non assegnata
+                    - cell "—" [ref=e3405]
+                    - cell "0" [ref=e3406]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3407]:
+                      - generic [ref=e3408]:
+                        - button "Dettaglio" [ref=e3409] [cursor=pointer]:
+                          - img [ref=e3410]
+                        - button "Tagliandi" [ref=e3412] [cursor=pointer]:
+                          - img [ref=e3413]
+                        - link "Documenti" [ref=e3416] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=Cleango+400+ET
+                          - img [ref=e3417]
+                        - link "Lavorazioni" [ref=e3419] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=921cdcc2-a9a5-4e64-94ce-00351e8f7d03
+                          - img [ref=e3420]
+                        - link "Preventivi" [ref=e3422] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=921cdcc2-a9a5-4e64-94ce-00351e8f7d03
+                          - img [ref=e3423]
+                        - button "Stampa etichetta QR" [ref=e3426] [cursor=pointer]:
+                          - img [ref=e3427]
+                  - row "AVR per l'Ambiente Capurso Tecno Industrie AZIMUT Isuzu M21 ZA135ZD TIS 213378/18 02 set 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3429]:
+                    - cell "AVR per l'Ambiente" [ref=e3430]:
+                      - generic [ref=e3432]: AVR per l'Ambiente
+                    - cell "Capurso" [ref=e3433]
+                    - cell "Tecno Industrie AZIMUT" [ref=e3434]:
+                      - generic [ref=e3435]:
+                        - generic [ref=e3436]: Tecno Industrie
+                        - generic [ref=e3437]: AZIMUT
+                    - cell "Isuzu M21" [ref=e3438]:
+                      - generic [ref=e3439]:
+                        - generic [ref=e3440]: Isuzu
+                        - generic [ref=e3441]: M21
+                    - cell "ZA135ZD TIS 213378/18" [ref=e3442]:
+                      - generic [ref=e3443]:
+                        - generic [ref=e3444]: ZA135ZD
+                        - generic [ref=e3445]: TIS 213378/18
+                    - cell "02 set 2026" [ref=e3446]
+                    - cell "2" [ref=e3447]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3448]:
+                      - generic [ref=e3449]:
+                        - button "Dettaglio" [ref=e3450] [cursor=pointer]:
+                          - img [ref=e3451]
+                        - button "Tagliandi" [ref=e3453] [cursor=pointer]:
+                          - img [ref=e3454]
+                        - link "Documenti" [ref=e3457] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=AZIMUT
+                          - img [ref=e3458]
+                        - link "Lavorazioni" [ref=e3460] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=960fc756-8203-4014-bcba-8dc02aaacb3a
+                          - img [ref=e3461]
+                        - link "Preventivi" [ref=e3463] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=960fc756-8203-4014-bcba-8dc02aaacb3a
+                          - img [ref=e3464]
+                        - button "Stampa etichetta QR" [ref=e3467] [cursor=pointer]:
+                          - img [ref=e3468]
+                  - row "INCO Raccolgo Modugno Tecno Industrie AZIMUT Mitsubishi Fuso Canter GF004AT T1S 094453/20 21 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3470]:
+                    - cell "INCO Raccolgo" [ref=e3471]:
+                      - generic [ref=e3472]:
+                        - generic [ref=e3473]: INCO
+                        - generic [ref=e3474]: Raccolgo
+                    - cell "Modugno" [ref=e3475]
+                    - cell "Tecno Industrie AZIMUT" [ref=e3476]:
+                      - generic [ref=e3477]:
+                        - generic [ref=e3478]: Tecno Industrie
+                        - generic [ref=e3479]: AZIMUT
+                    - cell "Mitsubishi Fuso Canter" [ref=e3480]:
+                      - generic [ref=e3481]:
+                        - generic [ref=e3482]: Mitsubishi
+                        - generic [ref=e3483]: Fuso Canter
+                    - cell "GF004AT T1S 094453/20" [ref=e3484]:
+                      - generic [ref=e3485]:
+                        - generic [ref=e3486]: GF004AT
+                        - generic [ref=e3487]: T1S 094453/20
+                    - cell "21 lug 2026" [ref=e3488]
+                    - cell "1" [ref=e3489]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3490]:
+                      - generic [ref=e3491]:
+                        - button "Dettaglio" [ref=e3492] [cursor=pointer]:
+                          - img [ref=e3493]
+                        - button "Tagliandi" [ref=e3495] [cursor=pointer]:
+                          - img [ref=e3496]
+                        - link "Documenti" [ref=e3499] [cursor=pointer]:
+                          - /url: /documenti?marca=Tecno+Industrie&modello=AZIMUT
+                          - img [ref=e3500]
+                        - link "Lavorazioni" [ref=e3502] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=96edd259-67a5-4e13-9d8e-2296409b46aa
+                          - img [ref=e3503]
+                        - link "Preventivi" [ref=e3505] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=96edd259-67a5-4e13-9d8e-2296409b46aa
+                          - img [ref=e3506]
+                        - button "Stampa etichetta QR" [ref=e3509] [cursor=pointer]:
+                          - img [ref=e3510]
+                  - row "RaccolGo Modugno Coseco K5 Iveco Eurocargo HC175GH 159/25 24 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3512]:
+                    - cell "RaccolGo" [ref=e3513]:
+                      - generic [ref=e3515]: RaccolGo
+                    - cell "Modugno" [ref=e3516]
+                    - cell "Coseco K5" [ref=e3517]:
+                      - generic [ref=e3518]:
+                        - generic [ref=e3519]: Coseco
+                        - generic [ref=e3520]: K5
+                    - cell "Iveco Eurocargo" [ref=e3521]:
+                      - generic [ref=e3522]:
+                        - generic [ref=e3523]: Iveco
+                        - generic [ref=e3524]: Eurocargo
+                    - cell "HC175GH 159/25" [ref=e3525]:
+                      - generic [ref=e3526]:
+                        - generic [ref=e3527]: HC175GH
+                        - generic [ref=e3528]: 159/25
+                    - cell "24 ago 2026" [ref=e3529]
+                    - cell "1" [ref=e3530]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3531]:
+                      - generic [ref=e3532]:
+                        - button "Dettaglio" [ref=e3533] [cursor=pointer]:
+                          - img [ref=e3534]
+                        - button "Tagliandi" [ref=e3536] [cursor=pointer]:
+                          - img [ref=e3537]
+                        - link "Documenti" [ref=e3540] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K5
+                          - img [ref=e3541]
+                        - link "Lavorazioni" [ref=e3543] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=975af095-7efc-47b7-bca0-b0a555afdb4f
+                          - img [ref=e3544]
+                        - link "Preventivi" [ref=e3546] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=975af095-7efc-47b7-bca0-b0a555afdb4f
+                          - img [ref=e3547]
+                        - button "Stampa etichetta QR" [ref=e3550] [cursor=pointer]:
+                          - img [ref=e3551]
+                  - row "AMIU Bari Bari AMS CL1-N Iveco Sway 330 GG993EK 4379 1432 06 ago 2026 3 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3553]:
+                    - cell "AMIU Bari" [ref=e3554]:
+                      - generic [ref=e3556]: AMIU Bari
+                    - cell "Bari" [ref=e3557]
+                    - cell "AMS CL1-N" [ref=e3558]:
+                      - generic [ref=e3559]:
+                        - generic [ref=e3560]: AMS
+                        - generic [ref=e3561]: CL1-N
+                    - cell "Iveco Sway 330" [ref=e3562]:
+                      - generic [ref=e3563]:
+                        - generic [ref=e3564]: Iveco
+                        - generic [ref=e3565]: Sway 330
+                    - cell "GG993EK 4379 1432" [ref=e3566]:
+                      - generic [ref=e3567]:
+                        - generic [ref=e3568]: GG993EK
+                        - generic [ref=e3569]: "4379"
+                        - generic [ref=e3570]: "1432"
+                    - cell "06 ago 2026" [ref=e3571]
+                    - cell "3" [ref=e3572]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3573]:
+                      - generic [ref=e3574]:
+                        - button "Dettaglio" [ref=e3575] [cursor=pointer]:
+                          - img [ref=e3576]
+                        - button "Tagliandi" [ref=e3578] [cursor=pointer]:
+                          - img [ref=e3579]
+                        - link "Documenti" [ref=e3582] [cursor=pointer]:
+                          - /url: /documenti?marca=AMS&modello=CL1-N
+                          - img [ref=e3583]
+                        - link "Lavorazioni" [ref=e3585] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=98d3be99-5832-4ed1-9948-2b57ba764623
+                          - img [ref=e3586]
+                        - link "Preventivi" [ref=e3588] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=98d3be99-5832-4ed1-9948-2b57ba764623
+                          - img [ref=e3589]
+                        - button "Stampa etichetta QR" [ref=e3592] [cursor=pointer]:
+                          - img [ref=e3593]
+                  - row "Si.Eco Bitritto Longo — — — CSA013 06 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3595]:
+                    - cell "Si.Eco" [ref=e3596]:
+                      - generic [ref=e3598]: Si.Eco
+                    - cell "Bitritto" [ref=e3599]
+                    - cell "Longo —" [ref=e3600]:
+                      - generic [ref=e3601]:
+                        - generic [ref=e3602]: Longo
+                        - generic [ref=e3603]: —
+                    - cell "— —" [ref=e3604]:
+                      - generic [ref=e3605]:
+                        - generic [ref=e3606]: —
+                        - generic [ref=e3607]: —
+                    - cell "CSA013" [ref=e3608]:
+                      - generic [ref=e3610]: CSA013
+                    - cell "06 ago 2026" [ref=e3611]
+                    - cell "1" [ref=e3612]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3613]:
+                      - generic [ref=e3614]:
+                        - button "Dettaglio" [ref=e3615] [cursor=pointer]:
+                          - img [ref=e3616]
+                        - button "Tagliandi" [ref=e3618] [cursor=pointer]:
+                          - img [ref=e3619]
+                        - link "Documenti" [ref=e3622] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e3623]
+                        - link "Lavorazioni" [ref=e3625] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=991237c9-8440-48f1-a0e2-b67a75f8aa19
+                          - img [ref=e3626]
+                        - link "Preventivi" [ref=e3628] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=991237c9-8440-48f1-a0e2-b67a75f8aa19
+                          - img [ref=e3629]
+                        - button "Stampa etichetta QR" [ref=e3632] [cursor=pointer]:
+                          - img [ref=e3633]
+                  - row "AVR per l'Ambiente Acquaviva delle Fonti Ecoservice EcoCompact 10CP Volvo 210 GW016XH 063 24 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3635]:
+                    - cell "AVR per l'Ambiente" [ref=e3636]:
+                      - generic [ref=e3638]: AVR per l'Ambiente
+                    - cell "Acquaviva delle Fonti" [ref=e3639]
+                    - cell "Ecoservice EcoCompact 10CP" [ref=e3640]:
+                      - generic [ref=e3641]:
+                        - generic [ref=e3642]: Ecoservice
+                        - generic [ref=e3643]: EcoCompact 10CP
+                    - cell "Volvo 210" [ref=e3644]:
+                      - generic [ref=e3645]:
+                        - generic [ref=e3646]: Volvo
+                        - generic [ref=e3647]: "210"
+                    - cell "GW016XH 063" [ref=e3648]:
+                      - generic [ref=e3649]:
+                        - generic [ref=e3650]: GW016XH
+                        - generic [ref=e3651]: "063"
+                    - cell "24 ago 2026" [ref=e3652]
+                    - cell "1" [ref=e3653]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3654]:
+                      - generic [ref=e3655]:
+                        - button "Dettaglio" [ref=e3656] [cursor=pointer]:
+                          - img [ref=e3657]
+                        - button "Tagliandi" [ref=e3659] [cursor=pointer]:
+                          - img [ref=e3660]
+                        - link "Documenti" [ref=e3663] [cursor=pointer]:
+                          - /url: /documenti?marca=Ecoservice&modello=EcoCompact+10CP
+                          - img [ref=e3664]
+                        - link "Lavorazioni" [ref=e3666] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=9b10659b-328e-4048-8e71-4867464b92a3
+                          - img [ref=e3667]
+                        - link "Preventivi" [ref=e3669] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=9b10659b-328e-4048-8e71-4867464b92a3
+                          - img [ref=e3670]
+                        - button "Stampa etichetta QR" [ref=e3673] [cursor=pointer]:
+                          - img [ref=e3674]
+                  - row "WL SRL Tito Scalo (Pz) walking floor — MAN TGX 18500 FL194MV Non assegnata 17 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3676]:
+                    - cell "WL SRL" [ref=e3677]:
+                      - generic [ref=e3679]: WL SRL
+                    - cell "Tito Scalo (Pz)" [ref=e3680]
+                    - cell "walking floor —" [ref=e3681]:
+                      - generic [ref=e3682]:
+                        - generic [ref=e3683]: walking floor
+                        - generic [ref=e3684]: —
+                    - cell "MAN TGX 18500" [ref=e3685]:
+                      - generic [ref=e3686]:
+                        - generic [ref=e3687]: MAN
+                        - generic [ref=e3688]: TGX 18500
+                    - cell "FL194MV Non assegnata" [ref=e3689]:
+                      - generic [ref=e3690]:
+                        - generic [ref=e3691]: FL194MV
+                        - generic [ref=e3692]: Non assegnata
+                    - cell "17 giu 2026" [ref=e3693]
+                    - cell "1" [ref=e3694]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3695]:
+                      - generic [ref=e3696]:
+                        - button "Dettaglio" [ref=e3697] [cursor=pointer]:
+                          - img [ref=e3698]
+                        - button "Tagliandi" [ref=e3700] [cursor=pointer]:
+                          - img [ref=e3701]
+                        - link "Documenti" [ref=e3704] [cursor=pointer]:
+                          - /url: /documenti?marca=walking+floor&modello=%E2%80%94
+                          - img [ref=e3705]
+                        - link "Lavorazioni" [ref=e3707] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=a047409a-c622-4e5d-8ffe-f7a3347477d1
+                          - img [ref=e3708]
+                        - link "Preventivi" [ref=e3710] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=a047409a-c622-4e5d-8ffe-f7a3347477d1
+                          - img [ref=e3711]
+                        - button "Stampa etichetta QR" [ref=e3714] [cursor=pointer]:
+                          - img [ref=e3715]
+                  - row "AVR per l'Ambiente Capurso Autobren PVR12 Iveco Eurocargo FK666ZJ 084/17 04 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3717]:
+                    - cell "AVR per l'Ambiente" [ref=e3718]:
+                      - generic [ref=e3720]: AVR per l'Ambiente
+                    - cell "Capurso" [ref=e3721]
+                    - cell "Autobren PVR12" [ref=e3722]:
+                      - generic [ref=e3723]:
+                        - generic [ref=e3724]: Autobren
+                        - generic [ref=e3725]: PVR12
+                    - cell "Iveco Eurocargo" [ref=e3726]:
+                      - generic [ref=e3727]:
+                        - generic [ref=e3728]: Iveco
+                        - generic [ref=e3729]: Eurocargo
+                    - cell "FK666ZJ 084/17" [ref=e3730]:
+                      - generic [ref=e3731]:
+                        - generic [ref=e3732]: FK666ZJ
+                        - generic [ref=e3733]: 084/17
+                    - cell "04 giu 2026" [ref=e3734]
+                    - cell "1" [ref=e3735]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3736]:
+                      - generic [ref=e3737]:
+                        - button "Dettaglio" [ref=e3738] [cursor=pointer]:
+                          - img [ref=e3739]
+                        - button "Tagliandi" [ref=e3741] [cursor=pointer]:
+                          - img [ref=e3742]
+                        - link "Documenti" [ref=e3745] [cursor=pointer]:
+                          - /url: /documenti?marca=Autobren&modello=PVR12
+                          - img [ref=e3746]
+                        - link "Lavorazioni" [ref=e3748] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=a0eaecca-4c83-4108-84e3-3f3634ae5ea3
+                          - img [ref=e3749]
+                        - link "Preventivi" [ref=e3751] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=a0eaecca-4c83-4108-84e3-3f3634ae5ea3
+                          - img [ref=e3752]
+                        - button "Stampa etichetta QR" [ref=e3755] [cursor=pointer]:
+                          - img [ref=e3756]
+                  - row "SI.ECO Conversano Sistemi SC21 — — 876 30 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3758]:
+                    - cell "SI.ECO" [ref=e3759]:
+                      - generic [ref=e3761]: SI.ECO
+                    - cell "Conversano" [ref=e3762]
+                    - cell "Sistemi SC21" [ref=e3763]:
+                      - generic [ref=e3764]:
+                        - generic [ref=e3765]: Sistemi
+                        - generic [ref=e3766]: SC21
+                    - cell "— —" [ref=e3767]:
+                      - generic [ref=e3768]:
+                        - generic [ref=e3769]: —
+                        - generic [ref=e3770]: —
+                    - cell "876" [ref=e3771]:
+                      - generic [ref=e3773]: "876"
+                    - cell "30 lug 2026" [ref=e3774]
+                    - cell "1" [ref=e3775]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3776]:
+                      - generic [ref=e3777]:
+                        - button "Dettaglio" [ref=e3778] [cursor=pointer]:
+                          - img [ref=e3779]
+                        - button "Tagliandi" [ref=e3781] [cursor=pointer]:
+                          - img [ref=e3782]
+                        - link "Documenti" [ref=e3785] [cursor=pointer]:
+                          - /url: /documenti?marca=Sistemi&modello=SC21
+                          - img [ref=e3786]
+                        - link "Lavorazioni" [ref=e3788] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=a34e2d78-3ddd-4b57-8735-40ce5625e609
+                          - img [ref=e3789]
+                        - link "Preventivi" [ref=e3791] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=a34e2d78-3ddd-4b57-8735-40ce5625e609
+                          - img [ref=e3792]
+                        - button "Stampa etichetta QR" [ref=e3795] [cursor=pointer]:
+                          - img [ref=e3796]
+                  - row "SI.ECO Valenzano (Ba) Farid RCV DAF 320 FS869LG 0065/01466 17 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3798]:
+                    - cell "SI.ECO" [ref=e3799]:
+                      - generic [ref=e3801]: SI.ECO
+                    - cell "Valenzano (Ba)" [ref=e3802]
+                    - cell "Farid RCV" [ref=e3803]:
+                      - generic [ref=e3804]:
+                        - generic [ref=e3805]: Farid
+                        - generic [ref=e3806]: RCV
+                    - cell "DAF 320" [ref=e3807]:
+                      - generic [ref=e3808]:
+                        - generic [ref=e3809]: DAF
+                        - generic [ref=e3810]: "320"
+                    - cell "FS869LG 0065/01466" [ref=e3811]:
+                      - generic [ref=e3812]:
+                        - generic [ref=e3813]: FS869LG
+                        - generic [ref=e3814]: 0065/01466
+                    - cell "17 giu 2026" [ref=e3815]
+                    - cell "1" [ref=e3816]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3817]:
+                      - generic [ref=e3818]:
+                        - button "Dettaglio" [ref=e3819] [cursor=pointer]:
+                          - img [ref=e3820]
+                        - button "Tagliandi" [ref=e3822] [cursor=pointer]:
+                          - img [ref=e3823]
+                        - link "Documenti" [ref=e3826] [cursor=pointer]:
+                          - /url: /documenti?marca=Farid&modello=RCV
+                          - img [ref=e3827]
+                        - link "Lavorazioni" [ref=e3829] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=a5581e30-8c9a-498e-98ea-4892cd627b4f
+                          - img [ref=e3830]
+                        - link "Preventivi" [ref=e3832] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=a5581e30-8c9a-498e-98ea-4892cd627b4f
+                          - img [ref=e3833]
+                        - button "Stampa etichetta QR" [ref=e3836] [cursor=pointer]:
+                          - img [ref=e3837]
+                  - row "Ecosveva Andria Eurogitano S10 Iveco Eurocargo CM060PY 6235 23 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3839]:
+                    - cell "Ecosveva" [ref=e3840]:
+                      - generic [ref=e3842]: Ecosveva
+                    - cell "Andria" [ref=e3843]
+                    - cell "Eurogitano S10" [ref=e3844]:
+                      - generic [ref=e3845]:
+                        - generic [ref=e3846]: Eurogitano
+                        - generic [ref=e3847]: S10
+                    - cell "Iveco Eurocargo" [ref=e3848]:
+                      - generic [ref=e3849]:
+                        - generic [ref=e3850]: Iveco
+                        - generic [ref=e3851]: Eurocargo
+                    - cell "CM060PY 6235" [ref=e3852]:
+                      - generic [ref=e3853]:
+                        - generic [ref=e3854]: CM060PY
+                        - generic [ref=e3855]: "6235"
+                    - cell "23 lug 2026" [ref=e3856]
+                    - cell "1" [ref=e3857]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3858]:
+                      - generic [ref=e3859]:
+                        - button "Dettaglio" [ref=e3860] [cursor=pointer]:
+                          - img [ref=e3861]
+                        - button "Tagliandi" [ref=e3863] [cursor=pointer]:
+                          - img [ref=e3864]
+                        - link "Documenti" [ref=e3867] [cursor=pointer]:
+                          - /url: /documenti?marca=Eurogitano&modello=S10
+                          - img [ref=e3868]
+                        - link "Lavorazioni" [ref=e3870] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=a6e52660-106a-47f5-bed1-caef1483d64f
+                          - img [ref=e3871]
+                        - link "Preventivi" [ref=e3873] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=a6e52660-106a-47f5-bed1-caef1483d64f
+                          - img [ref=e3874]
+                        - button "Stampa etichetta QR" [ref=e3877] [cursor=pointer]:
+                          - img [ref=e3878]
+                  - row "A.C.T.A. Modugno AMS CNTC06BIT — — 17C2164 01 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3880]:
+                    - cell "A.C.T.A." [ref=e3881]:
+                      - generic [ref=e3883]: A.C.T.A.
+                    - cell "Modugno" [ref=e3884]
+                    - cell "AMS CNTC06BIT" [ref=e3885]:
+                      - generic [ref=e3886]:
+                        - generic [ref=e3887]: AMS
+                        - generic [ref=e3888]: CNTC06BIT
+                    - cell "— —" [ref=e3889]:
+                      - generic [ref=e3890]:
+                        - generic [ref=e3891]: —
+                        - generic [ref=e3892]: —
+                    - cell "17C2164" [ref=e3893]:
+                      - generic [ref=e3895]: 17C2164
+                    - cell "01 lug 2026" [ref=e3896]
+                    - cell "2" [ref=e3897]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3898]:
+                      - generic [ref=e3899]:
+                        - button "Dettaglio" [ref=e3900] [cursor=pointer]:
+                          - img [ref=e3901]
+                        - button "Tagliandi" [ref=e3903] [cursor=pointer]:
+                          - img [ref=e3904]
+                        - link "Documenti" [ref=e3907] [cursor=pointer]:
+                          - /url: /documenti?marca=AMS&modello=CNTC06BIT
+                          - img [ref=e3908]
+                        - link "Lavorazioni" [ref=e3910] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=aa6b4fa5-ffbf-4987-92b2-b960d489092f
+                          - img [ref=e3911]
+                        - link "Preventivi" [ref=e3913] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=aa6b4fa5-ffbf-4987-92b2-b960d489092f
+                          - img [ref=e3914]
+                        - button "Stampa etichetta QR" [ref=e3917] [cursor=pointer]:
+                          - img [ref=e3918]
+                  - row "INCO ESA Bari — — — — GC972VZ Non assegnata 06 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3920]:
+                    - cell "INCO ESA" [ref=e3921]:
+                      - generic [ref=e3922]:
+                        - generic [ref=e3923]: INCO
+                        - generic [ref=e3924]: ESA
+                    - cell "Bari" [ref=e3925]
+                    - cell "— —" [ref=e3926]:
+                      - generic [ref=e3927]:
+                        - generic [ref=e3928]: —
+                        - generic [ref=e3929]: —
+                    - cell "— —" [ref=e3930]:
+                      - generic [ref=e3931]:
+                        - generic [ref=e3932]: —
+                        - generic [ref=e3933]: —
+                    - cell "GC972VZ Non assegnata" [ref=e3934]:
+                      - generic [ref=e3935]:
+                        - generic [ref=e3936]: GC972VZ
+                        - generic [ref=e3937]: Non assegnata
+                    - cell "06 ago 2026" [ref=e3938]
+                    - cell "1" [ref=e3939]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3940]:
+                      - generic [ref=e3941]:
+                        - button "Dettaglio" [ref=e3942] [cursor=pointer]:
+                          - img [ref=e3943]
+                        - button "Tagliandi" [ref=e3945] [cursor=pointer]:
+                          - img [ref=e3946]
+                        - link "Documenti" [ref=e3949] [cursor=pointer]:
+                          - /url: /documenti?marca=%E2%80%94&modello=%E2%80%94
+                          - img [ref=e3950]
+                        - link "Lavorazioni" [ref=e3952] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=ab1cba97-b0ab-4b8c-a734-eb20c9ffcc96
+                          - img [ref=e3953]
+                        - link "Preventivi" [ref=e3955] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=ab1cba97-b0ab-4b8c-a734-eb20c9ffcc96
+                          - img [ref=e3956]
+                        - button "Stampa etichetta QR" [ref=e3959] [cursor=pointer]:
+                          - img [ref=e3960]
+                  - row "Omnitech Navita Polignano a mare (Ba) OMB T-Rex Mitsubishi Fuso Canter GY691PC MV002020 27 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3962]:
+                    - cell "Omnitech Navita" [ref=e3963]:
+                      - generic [ref=e3964]:
+                        - generic [ref=e3965]: Omnitech
+                        - generic [ref=e3966]: Navita
+                    - cell "Polignano a mare (Ba)" [ref=e3967]
+                    - cell "OMB T-Rex" [ref=e3968]:
+                      - generic [ref=e3969]:
+                        - generic [ref=e3970]: OMB
+                        - generic [ref=e3971]: T-Rex
+                    - cell "Mitsubishi Fuso Canter" [ref=e3972]:
+                      - generic [ref=e3973]:
+                        - generic [ref=e3974]: Mitsubishi
+                        - generic [ref=e3975]: Fuso Canter
+                    - cell "GY691PC MV002020" [ref=e3976]:
+                      - generic [ref=e3977]:
+                        - generic [ref=e3978]: GY691PC
+                        - generic [ref=e3979]: MV002020
+                    - cell "27 ago 2026" [ref=e3980]
+                    - cell "1" [ref=e3981]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e3982]:
+                      - generic [ref=e3983]:
+                        - button "Dettaglio" [ref=e3984] [cursor=pointer]:
+                          - img [ref=e3985]
+                        - button "Tagliandi" [ref=e3987] [cursor=pointer]:
+                          - img [ref=e3988]
+                        - link "Documenti" [ref=e3991] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e3992]
+                        - link "Lavorazioni" [ref=e3994] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=aefdfba7-bfac-49a4-a8b6-3d58aa633620
+                          - img [ref=e3995]
+                        - link "Preventivi" [ref=e3997] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=aefdfba7-bfac-49a4-a8b6-3d58aa633620
+                          - img [ref=e3998]
+                        - button "Stampa etichetta QR" [ref=e4001] [cursor=pointer]:
+                          - img [ref=e4002]
+                  - row "AMIU Bari Bari Schmidt Cleango 500 E6C — — ANG126 Non assegnata 1583 20 lug 2026 3 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4004]:
+                    - cell "AMIU Bari" [ref=e4005]:
+                      - generic [ref=e4007]: AMIU Bari
+                    - cell "Bari" [ref=e4008]
+                    - cell "Schmidt Cleango 500 E6C" [ref=e4009]:
+                      - generic [ref=e4010]:
+                        - generic [ref=e4011]: Schmidt
+                        - generic [ref=e4012]: Cleango 500 E6C
+                    - cell "— —" [ref=e4013]:
+                      - generic [ref=e4014]:
+                        - generic [ref=e4015]: —
+                        - generic [ref=e4016]: —
+                    - cell "ANG126 Non assegnata 1583" [ref=e4017]:
+                      - generic [ref=e4018]:
+                        - generic [ref=e4019]: ANG126
+                        - generic [ref=e4020]: Non assegnata
+                        - generic [ref=e4021]: "1583"
+                    - cell "20 lug 2026" [ref=e4022]
+                    - cell "3" [ref=e4023]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4024]:
+                      - generic [ref=e4025]:
+                        - button "Dettaglio" [ref=e4026] [cursor=pointer]:
+                          - img [ref=e4027]
+                        - button "Tagliandi" [ref=e4029] [cursor=pointer]:
+                          - img [ref=e4030]
+                        - link "Documenti" [ref=e4033] [cursor=pointer]:
+                          - /url: /documenti?marca=Schmidt&modello=Cleango+500+E6C
+                          - img [ref=e4034]
+                        - link "Lavorazioni" [ref=e4036] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b0a370b5-5cce-4d78-b799-a821903382e0
+                          - img [ref=e4037]
+                        - link "Preventivi" [ref=e4039] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b0a370b5-5cce-4d78-b799-a821903382e0
+                          - img [ref=e4040]
+                        - button "Stampa etichetta QR" [ref=e4043] [cursor=pointer]:
+                          - img [ref=e4044]
+                  - row "Omnitech — OMB T-Rex — — GM129JS MV001021 25 mag 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4046]:
+                    - cell "Omnitech" [ref=e4047]:
+                      - generic [ref=e4049]: Omnitech
+                    - cell "—" [ref=e4050]
+                    - cell "OMB T-Rex" [ref=e4051]:
+                      - generic [ref=e4052]:
+                        - generic [ref=e4053]: OMB
+                        - generic [ref=e4054]: T-Rex
+                    - cell "— —" [ref=e4055]:
+                      - generic [ref=e4056]:
+                        - generic [ref=e4057]: —
+                        - generic [ref=e4058]: —
+                    - cell "GM129JS MV001021" [ref=e4059]:
+                      - generic [ref=e4060]:
+                        - generic [ref=e4061]: GM129JS
+                        - generic [ref=e4062]: MV001021
+                    - cell "25 mag 2026" [ref=e4063]
+                    - cell "1" [ref=e4064]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4065]:
+                      - generic [ref=e4066]:
+                        - button "Dettaglio" [ref=e4067] [cursor=pointer]:
+                          - img [ref=e4068]
+                        - button "Tagliandi" [ref=e4070] [cursor=pointer]:
+                          - img [ref=e4071]
+                        - link "Documenti" [ref=e4074] [cursor=pointer]:
+                          - /url: /documenti?marca=OMB&modello=T-Rex
+                          - img [ref=e4075]
+                        - link "Lavorazioni" [ref=e4077] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b2215b12-8014-44b5-bf29-cab3b3a9d070
+                          - img [ref=e4078]
+                        - link "Preventivi" [ref=e4080] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b2215b12-8014-44b5-bf29-cab3b3a9d070
+                          - img [ref=e4081]
+                        - button "Stampa etichetta QR" [ref=e4084] [cursor=pointer]:
+                          - img [ref=e4085]
+                  - row "Recuperi Pugliesi Modugno Nextra k-MD10T Iveco 150E28 EW867YZ 4/8 08 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4087]:
+                    - cell "Recuperi Pugliesi" [ref=e4088]:
+                      - generic [ref=e4090]: Recuperi Pugliesi
+                    - cell "Modugno" [ref=e4091]
+                    - cell "Nextra k-MD10T" [ref=e4092]:
+                      - generic [ref=e4093]:
+                        - generic [ref=e4094]: Nextra
+                        - generic [ref=e4095]: k-MD10T
+                    - cell "Iveco 150E28" [ref=e4096]:
+                      - generic [ref=e4097]:
+                        - generic [ref=e4098]: Iveco
+                        - generic [ref=e4099]: "150E28"
+                    - cell "EW867YZ 4/8" [ref=e4100]:
+                      - generic [ref=e4101]:
+                        - generic [ref=e4102]: EW867YZ
+                        - generic [ref=e4103]: 4/8
+                    - cell "08 giu 2026" [ref=e4104]
+                    - cell "1" [ref=e4105]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4106]:
+                      - generic [ref=e4107]:
+                        - button "Dettaglio" [ref=e4108] [cursor=pointer]:
+                          - img [ref=e4109]
+                        - button "Tagliandi" [ref=e4111] [cursor=pointer]:
+                          - img [ref=e4112]
+                        - link "Documenti" [ref=e4115] [cursor=pointer]:
+                          - /url: /documenti?marca=Nextra&modello=k-MD10T
+                          - img [ref=e4116]
+                        - link "Lavorazioni" [ref=e4118] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b57411a3-ee5a-4ffa-8391-7f47a88f98b5
+                          - img [ref=e4119]
+                        - link "Preventivi" [ref=e4121] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b57411a3-ee5a-4ffa-8391-7f47a88f98b5
+                          - img [ref=e4122]
+                        - button "Stampa etichetta QR" [ref=e4125] [cursor=pointer]:
+                          - img [ref=e4126]
+                  - row "AMIU Bari Bari Longo — Mercedes Antos FK004MM Non assegnata 1272 28 lug 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4128]:
+                    - cell "AMIU Bari" [ref=e4129]:
+                      - generic [ref=e4131]: AMIU Bari
+                    - cell "Bari" [ref=e4132]
+                    - cell "Longo —" [ref=e4133]:
+                      - generic [ref=e4134]:
+                        - generic [ref=e4135]: Longo
+                        - generic [ref=e4136]: —
+                    - cell "Mercedes Antos" [ref=e4137]:
+                      - generic [ref=e4138]:
+                        - generic [ref=e4139]: Mercedes
+                        - generic [ref=e4140]: Antos
+                    - cell "FK004MM Non assegnata 1272" [ref=e4141]:
+                      - generic [ref=e4142]:
+                        - generic [ref=e4143]: FK004MM
+                        - generic [ref=e4144]: Non assegnata
+                        - generic [ref=e4145]: "1272"
+                    - cell "28 lug 2026" [ref=e4146]
+                    - cell "1" [ref=e4147]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4148]:
+                      - generic [ref=e4149]:
+                        - button "Dettaglio" [ref=e4150] [cursor=pointer]:
+                          - img [ref=e4151]
+                        - button "Tagliandi" [ref=e4153] [cursor=pointer]:
+                          - img [ref=e4154]
+                        - link "Documenti" [ref=e4157] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=%E2%80%94
+                          - img [ref=e4158]
+                        - link "Lavorazioni" [ref=e4160] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b5ada6c7-1cd7-494f-bf53-1186980d03e2
+                          - img [ref=e4161]
+                        - link "Preventivi" [ref=e4163] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b5ada6c7-1cd7-494f-bf53-1186980d03e2
+                          - img [ref=e4164]
+                        - button "Stampa etichetta QR" [ref=e4167] [cursor=pointer]:
+                          - img [ref=e4168]
+                  - row "AMIU Bari Bari Longo C4000 Mercedes Antos FK016MM 165/346 1283 26 ago 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4170]:
+                    - cell "AMIU Bari" [ref=e4171]:
+                      - generic [ref=e4173]: AMIU Bari
+                    - cell "Bari" [ref=e4174]
+                    - cell "Longo C4000" [ref=e4175]:
+                      - generic [ref=e4176]:
+                        - generic [ref=e4177]: Longo
+                        - generic [ref=e4178]: C4000
+                    - cell "Mercedes Antos" [ref=e4179]:
+                      - generic [ref=e4180]:
+                        - generic [ref=e4181]: Mercedes
+                        - generic [ref=e4182]: Antos
+                    - cell "FK016MM 165/346 1283" [ref=e4183]:
+                      - generic [ref=e4184]:
+                        - generic [ref=e4185]: FK016MM
+                        - generic [ref=e4186]: 165/346
+                        - generic [ref=e4187]: "1283"
+                    - cell "26 ago 2026" [ref=e4188]
+                    - cell "2" [ref=e4189]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4190]:
+                      - generic [ref=e4191]:
+                        - button "Dettaglio" [ref=e4192] [cursor=pointer]:
+                          - img [ref=e4193]
+                        - button "Tagliandi" [ref=e4195] [cursor=pointer]:
+                          - img [ref=e4196]
+                        - link "Documenti" [ref=e4199] [cursor=pointer]:
+                          - /url: /documenti?marca=Longo&modello=C4000
+                          - img [ref=e4200]
+                        - link "Lavorazioni" [ref=e4202] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b7c9f064-02fa-403b-9f74-442b5342caac
+                          - img [ref=e4203]
+                        - link "Preventivi" [ref=e4205] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b7c9f064-02fa-403b-9f74-442b5342caac
+                          - img [ref=e4206]
+                        - button "Stampa etichetta QR" [ref=e4209] [cursor=pointer]:
+                          - img [ref=e4210]
+                  - row "B-Energy Foggia BTE — — — 18P0434 29 apr 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4212]:
+                    - cell "B-Energy" [ref=e4213]:
+                      - generic [ref=e4215]: B-Energy
+                    - cell "Foggia" [ref=e4216]
+                    - cell "BTE —" [ref=e4217]:
+                      - generic [ref=e4218]:
+                        - generic [ref=e4219]: BTE
+                        - generic [ref=e4220]: —
+                    - cell "— —" [ref=e4221]:
+                      - generic [ref=e4222]:
+                        - generic [ref=e4223]: —
+                        - generic [ref=e4224]: —
+                    - cell "18P0434" [ref=e4225]:
+                      - generic [ref=e4227]: 18P0434
+                    - cell "29 apr 2026" [ref=e4228]
+                    - cell "1" [ref=e4229]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4230]:
+                      - generic [ref=e4231]:
+                        - button "Dettaglio" [ref=e4232] [cursor=pointer]:
+                          - img [ref=e4233]
+                        - button "Tagliandi" [ref=e4235] [cursor=pointer]:
+                          - img [ref=e4236]
+                        - link "Documenti" [ref=e4239] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=%E2%80%94
+                          - img [ref=e4240]
+                        - link "Lavorazioni" [ref=e4242] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b840aa1a-5b2c-4a95-9fab-d8370599c5da
+                          - img [ref=e4243]
+                        - link "Preventivi" [ref=e4245] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b840aa1a-5b2c-4a95-9fab-d8370599c5da
+                          - img [ref=e4246]
+                        - button "Stampa etichetta QR" [ref=e4249] [cursor=pointer]:
+                          - img [ref=e4250]
+                  - row "SI.ECO Sannicandro di Bari Coseco K5 Iveco Eurocargo CL911DH 162/03 23 lug 2026 2 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4252]:
+                    - cell "SI.ECO" [ref=e4253]:
+                      - generic [ref=e4255]: SI.ECO
+                    - cell "Sannicandro di Bari" [ref=e4256]
+                    - cell "Coseco K5" [ref=e4257]:
+                      - generic [ref=e4258]:
+                        - generic [ref=e4259]: Coseco
+                        - generic [ref=e4260]: K5
+                    - cell "Iveco Eurocargo" [ref=e4261]:
+                      - generic [ref=e4262]:
+                        - generic [ref=e4263]: Iveco
+                        - generic [ref=e4264]: Eurocargo
+                    - cell "CL911DH 162/03" [ref=e4265]:
+                      - generic [ref=e4266]:
+                        - generic [ref=e4267]: CL911DH
+                        - generic [ref=e4268]: 162/03
+                    - cell "23 lug 2026" [ref=e4269]
+                    - cell "2" [ref=e4270]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4271]:
+                      - generic [ref=e4272]:
+                        - button "Dettaglio" [ref=e4273] [cursor=pointer]:
+                          - img [ref=e4274]
+                        - button "Tagliandi" [ref=e4276] [cursor=pointer]:
+                          - img [ref=e4277]
+                        - link "Documenti" [ref=e4280] [cursor=pointer]:
+                          - /url: /documenti?marca=Coseco&modello=K5
+                          - img [ref=e4281]
+                        - link "Lavorazioni" [ref=e4283] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=b91da4ed-d990-44e8-ae09-b8d727d54ee3
+                          - img [ref=e4284]
+                        - link "Preventivi" [ref=e4286] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=b91da4ed-d990-44e8-ae09-b8d727d54ee3
+                          - img [ref=e4287]
+                        - button "Stampa etichetta QR" [ref=e4290] [cursor=pointer]:
+                          - img [ref=e4291]
+                  - row "Navita Modugno BTE CNTC06BIT — — 17C2165 24 ago 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4293]:
+                    - cell "Navita" [ref=e4294]:
+                      - generic [ref=e4296]: Navita
+                    - cell "Modugno" [ref=e4297]
+                    - cell "BTE CNTC06BIT" [ref=e4298]:
+                      - generic [ref=e4299]:
+                        - generic [ref=e4300]: BTE
+                        - generic [ref=e4301]: CNTC06BIT
+                    - cell "— —" [ref=e4302]:
+                      - generic [ref=e4303]:
+                        - generic [ref=e4304]: —
+                        - generic [ref=e4305]: —
+                    - cell "17C2165" [ref=e4306]:
+                      - generic [ref=e4308]: 17C2165
+                    - cell "24 ago 2026" [ref=e4309]
+                    - cell "1" [ref=e4310]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4311]:
+                      - generic [ref=e4312]:
+                        - button "Dettaglio" [ref=e4313] [cursor=pointer]:
+                          - img [ref=e4314]
+                        - button "Tagliandi" [ref=e4316] [cursor=pointer]:
+                          - img [ref=e4317]
+                        - link "Documenti" [ref=e4320] [cursor=pointer]:
+                          - /url: /documenti?marca=BTE&modello=CNTC06BIT
+                          - img [ref=e4321]
+                        - link "Lavorazioni" [ref=e4323] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=bb3c00cf-f3d5-4fc2-97ab-44269341545e
+                          - img [ref=e4324]
+                        - link "Preventivi" [ref=e4326] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=bb3c00cf-f3d5-4fc2-97ab-44269341545e
+                          - img [ref=e4327]
+                        - button "Stampa etichetta QR" [ref=e4330] [cursor=pointer]:
+                          - img [ref=e4331]
+                  - row "Omnitech Triggiano Agazzi P24 — — P524.311.17 23 giu 2026 1 Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4333]:
+                    - cell "Omnitech" [ref=e4334]:
+                      - generic [ref=e4336]: Omnitech
+                    - cell "Triggiano" [ref=e4337]
+                    - cell "Agazzi P24" [ref=e4338]:
+                      - generic [ref=e4339]:
+                        - generic [ref=e4340]: Agazzi
+                        - generic [ref=e4341]: P24
+                    - cell "— —" [ref=e4342]:
+                      - generic [ref=e4343]:
+                        - generic [ref=e4344]: —
+                        - generic [ref=e4345]: —
+                    - cell "P524.311.17" [ref=e4346]:
+                      - generic [ref=e4348]: P524.311.17
+                    - cell "23 giu 2026" [ref=e4349]
+                    - cell "1" [ref=e4350]
+                    - cell "Dettaglio Tagliandi Documenti Lavorazioni Preventivi Stampa etichetta QR" [ref=e4351]:
+                      - generic [ref=e4352]:
+                        - button "Dettaglio" [ref=e4353] [cursor=pointer]:
+                          - img [ref=e4354]
+                        - button "Tagliandi" [ref=e4356] [cursor=pointer]:
+                          - img [ref=e4357]
+                        - link "Documenti" [ref=e4360] [cursor=pointer]:
+                          - /url: /documenti?marca=Agazzi&modello=P24
+                          - img [ref=e4361]
+                        - link "Lavorazioni" [ref=e4363] [cursor=pointer]:
+                          - /url: /lavorazioni?mezzoId=bb704d4c-621f-4786-9888-b1ac418cb4ed
+                          - img [ref=e4364]
+                        - link "Preventivi" [ref=e4366] [cursor=pointer]:
+                          - /url: /preventivi?prevMezzo=bb704d4c-621f-4786-9888-b1ac418cb4ed
+                          - img [ref=e4367]
+                        - button "Stampa etichetta QR" [ref=e4370] [cursor=pointer]:
+                          - img [ref=e4371]
+              - generic [ref=e4373]:
+                - paragraph [ref=e4374]: Mostrando 1–100 di 132 risultati
+                - navigation "Paginazione" [ref=e4375]:
+                  - button "Prima pagina" [disabled]: ≪
+                  - button "Pagina precedente" [disabled]: ‹
+                  - button "1" [ref=e4376] [cursor=pointer]
+                  - button "2" [ref=e4377] [cursor=pointer]
+                  - button "Pagina successiva" [ref=e4378] [cursor=pointer]: ›
+                  - button "Ultima pagina" [ref=e4379] [cursor=pointer]: ≫
+```
+
+# Test source
+
+```ts
+  1   | import { attachConsoleGuards } from "../helpers/console";
+  2   | import { adminCredentials, loginViaUi } from "../fixtures/auth";
+  3   | import { test, expect, type Page } from "@playwright/test";
+  4   | 
+  5   | const MOBILE_VIEWPORT = { width: 390, height: 844 };
+  6   | const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
+  7   | const LIST_SURFACE_COOKIE = "gestionale-list-surface";
+  8   | 
+  9   | type ListLayoutRoute = {
+  10  |   path: string;
+  11  |   readyText: string;
+  12  | };
+  13  | 
+  14  | const XL_LIST_ROUTES: ListLayoutRoute[] = [
+  15  |   { path: "/lavorazioni", readyText: "Lavorazioni in corso" },
+  16  |   { path: "/mezzi", readyText: "Mezzi" },
+  17  |   { path: "/magazzino", readyText: "Magazzino" },
+  18  |   { path: "/preventivi", readyText: "Preventivi" },
+  19  |   { path: "/lavorazioni-clienti", readyText: "Lavorazioni in corso" },
+  20  | ];
+  21  | 
+  22  | async function setListSurfaceCookie(page: Page, surface: "table" | "cards") {
+  23  |   const baseUrl = new URL(page.url() === "about:blank" ? "http://127.0.0.1:3000" : page.url());
+  24  |   await page.context().addCookies([
+  25  |     {
+  26  |       name: LIST_SURFACE_COOKIE,
+  27  |       value: surface,
+  28  |       domain: baseUrl.hostname,
+  29  |       path: "/",
+  30  |     },
+  31  |   ]);
+  32  | }
+  33  | 
+  34  | async function listTableMounted(page: Page): Promise<boolean> {
+  35  |   return page.evaluate(() => !!document.querySelector(".gestionale-list-table-scope table"));
+  36  | }
+  37  | 
+  38  | async function listCardsMounted(page: Page): Promise<boolean> {
+  39  |   return page.evaluate(() => {
+  40  |     const main = document.querySelector("main");
+  41  |     if (!main) return false;
+  42  |     return main.querySelectorAll("[class*='CardMobile'], .gestionale-list-table-scope table").length > 0
+  43  |       && !document.querySelector(".gestionale-list-table-scope table");
+  44  |   });
+  45  | }
+  46  | 
+  47  | async function gotoListRouteReady(page: Page, route: ListLayoutRoute) {
+  48  |   await page.goto(route.path);
+  49  |   await expect(page.locator("main").getByText(route.readyText, { exact: false })).toBeVisible({
+  50  |     timeout: 60_000,
+  51  |   });
+  52  | }
+  53  | 
+  54  | for (const route of XL_LIST_ROUTES) {
+  55  |   test(`list surface ${route.path}: cards cookie on mobile viewport`, async ({ page }) => {
+  56  |     test.setTimeout(90_000);
+  57  |     attachConsoleGuards(page);
+  58  |     await page.setViewportSize(MOBILE_VIEWPORT);
+  59  |     await setListSurfaceCookie(page, "cards");
+  60  |     await loginViaUi(page, adminCredentials());
+  61  |     await gotoListRouteReady(page, route);
+  62  | 
+  63  |     expect(await listTableMounted(page)).toBe(false);
+  64  |     expect(await listCardsMounted(page)).toBe(true);
+  65  |   });
+  66  | 
+  67  |   test(`list surface ${route.path}: table cookie on desktop viewport`, async ({ page }) => {
+  68  |     test.setTimeout(90_000);
+  69  |     attachConsoleGuards(page);
+  70  |     await page.setViewportSize(DESKTOP_VIEWPORT);
+  71  |     await setListSurfaceCookie(page, "table");
+  72  |     await loginViaUi(page, adminCredentials());
+  73  |     await gotoListRouteReady(page, route);
+  74  | 
+  75  |     expect(await listTableMounted(page)).toBe(true);
+  76  |     expect(await listCardsMounted(page)).toBe(false);
+  77  |   });
+  78  | 
+  79  |   test(`list surface ${route.path}: narrow container keeps table with controlled overflow`, async ({ page }) => {
+  80  |     test.setTimeout(90_000);
+  81  |     attachConsoleGuards(page);
+  82  |     await page.setViewportSize(DESKTOP_VIEWPORT);
+  83  |     await setListSurfaceCookie(page, "table");
+  84  |     await loginViaUi(page, adminCredentials());
+  85  |     await gotoListRouteReady(page, route);
+  86  | 
+  87  |     await page.evaluate(() => {
+  88  |       const root = document.querySelector(".gestionale-list-container, .lavorazioni-scroll-scope, .magazzino-scroll-scope");
+  89  |       if (root instanceof HTMLElement) {
+  90  |         root.style.width = "600px";
+  91  |         root.style.maxWidth = "600px";
+  92  |       }
+  93  |     });
+  94  | 
+> 95  |     expect(await listTableMounted(page)).toBe(true);
+      |                                          ^ Error: expect(received).toBe(expected) // Object.is equality
+  96  |     const overflow = await page.evaluate(() => {
+  97  |       const main = document.querySelector("main");
+  98  |       if (!main) return { ok: false };
+  99  |       return { ok: main.scrollWidth <= main.clientWidth + 4 };
+  100 |     });
+  101 |     expect(overflow.ok).toBe(true);
+  102 |   });
+  103 | }
+  104 | 
+  105 | test("list surface /dipendenti: cards cookie shows mobile timesheet branch", async ({ page }) => {
+  106 |   test.setTimeout(90_000);
+  107 |   attachConsoleGuards(page);
+  108 |   await page.setViewportSize(MOBILE_VIEWPORT);
+  109 |   await setListSurfaceCookie(page, "cards");
+  110 |   await loginViaUi(page, adminCredentials());
+  111 |   await gotoListRouteReady(page, { path: "/dipendenti", readyText: "Tabella presenze" });
+  112 | 
+  113 |   expect(await listTableMounted(page)).toBe(true);
+  114 | });
+  115 | 
+  116 | test("list surface /sicurezza: cards cookie shows user cards", async ({ page }) => {
+  117 |   test.setTimeout(90_000);
+  118 |   attachConsoleGuards(page);
+  119 |   await page.setViewportSize(MOBILE_VIEWPORT);
+  120 |   await setListSurfaceCookie(page, "cards");
+  121 |   await loginViaUi(page, adminCredentials());
+  122 |   await gotoListRouteReady(page, { path: "/sicurezza", readyText: "Utenti" });
+  123 | 
+  124 |   expect(await listTableMounted(page)).toBe(false);
+  125 | });
+  126 | 
+  127 | const OVERFLOW_ROUTES = ["/report", "/documenti", "/dashboard"] as const;
+  128 | 
+  129 | for (const route of OVERFLOW_ROUTES) {
+  130 |   test(`mobile ${route} main has no horizontal overflow`, async ({ page }) => {
+  131 |     test.setTimeout(90_000);
+  132 |     attachConsoleGuards(page);
+  133 |     await page.setViewportSize(MOBILE_VIEWPORT);
+  134 |     await loginViaUi(page, adminCredentials());
+  135 |     await page.goto(route);
+  136 | 
+  137 |     const overflow = await page.evaluate(() => {
+  138 |       const main = document.querySelector("main");
+  139 |       if (!main) return { ok: false, reason: "missing-main" };
+  140 |       return {
+  141 |         ok: main.scrollWidth <= main.clientWidth + 2,
+  142 |         scrollWidth: main.scrollWidth,
+  143 |         clientWidth: main.clientWidth,
+  144 |       };
+  145 |     });
+  146 | 
+  147 |     expect(overflow.ok, JSON.stringify(overflow)).toBe(true);
+  148 |   });
+  149 | }
+  150 | 
+```

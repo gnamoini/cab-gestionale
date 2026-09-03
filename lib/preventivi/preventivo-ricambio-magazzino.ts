@@ -1,5 +1,5 @@
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
-import { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-profitto";
+import { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-ricambio-costo";
 import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descrizione-display";
 import { parseRicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";

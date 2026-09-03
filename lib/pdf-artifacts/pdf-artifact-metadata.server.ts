@@ -5,6 +5,7 @@ import { fetchClienteAnagraficaByLabelServer } from "@/lib/clienti/clienti-anagr
 import { DDT_DOCUMENTS_COLUMNS, INVOICES_COLUMNS } from "@/lib/db/table-select-columns";
 import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import { fetchOrdineFornitoreRecordServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
+import { PREVENTIVO_PDF_LAYOUT_STAMP } from "@/lib/pdf/preventivo-pdf-section-labels";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { fetchSchedaPdfPayloadServer } from "@/lib/schede/schede-fetch-server";
 import type { PreventivoRecord, PreventivoManodopera } from "@/lib/preventivi/types";
@@ -41,6 +42,8 @@ export function buildPreventivoPdfHashInput(
     noteFinali: meta.noteFinali,
     collaudoPrezzo: meta.collaudoPrezzo,
     manodopera: meta.manodopera,
+    tipoDocumento: meta.tipoDocumento,
+    layoutStamp: PREVENTIVO_PDF_LAYOUT_STAMP,
   };
 }
 

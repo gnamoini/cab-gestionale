@@ -12,6 +12,7 @@ import {
   ORE_PREVENTIVO_ADDETTO_PRESET,
   resolveQuantityPreset,
 } from "@/lib/core/numeric-input-policy";
+import { simulateNumericDraftCommit } from "@/lib/ui/use-gestionale-numeric-draft";
 
 function legacyQty(raw: string): number {
   return Math.max(0.01, Number.parseFloat(raw) || 0);
@@ -53,5 +54,10 @@ for (const c of cases) {
     `shadow mismatch raw=${c.raw} committed=${c.committed}: new=${next} legacy=${old}`,
   );
 }
+
+assert.equal(simulateNumericDraftCommit(["12.5", "__blur__"], NUMERIC_PRESETS.prezzo, 0), 12.5);
+assert.equal(simulateNumericDraftCommit(["", "__blur__"], NUMERIC_PRESETS.prezzo, 48), 0);
+assert.equal(simulateNumericDraftCommit(["0", "__blur__"], ORE_PREVENTIVO_ADDETTO_PRESET, 1), 0.01);
+assert.equal(simulateNumericDraftCommit(["100000", "__blur__"], NUMERIC_PRESETS.prezzo, 0), 100000);
 
 console.log("preventivo-numeric-shadow.test.ts OK");

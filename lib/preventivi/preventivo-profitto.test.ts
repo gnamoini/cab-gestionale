@@ -3,10 +3,10 @@ import { test } from "node:test";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   computePreventivoProfitto,
-  costoUnitarioAcquistoRicambio,
   oreLavoroPerCostoPreventivo,
   profittoBreakdownFromResult,
 } from "@/lib/preventivi/preventivo-profitto";
+import { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-ricambio-costo";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
@@ -144,7 +144,52 @@ test("computePreventivoProfitto — ricambio magazzino e fuori magazzino", () =>
       magazzinoById: new Map([["mag-1", mag]]),
     }),
   );
-  assert.equal(r.costiRicambi, 105);
-  assert.equal(r.profitto, 95);
-  assert.equal(r.marginePercent, 47.5);
+  assert.equal(r.costiRicambi, 80);
+  assert.equal(r.profitto, 120);
+  assert.equal(r.marginePercent, 60);
+});
+
+test("computePreventivoProfitto — caso deterministico manodopera + ricambi", () => {
+  const preventivo: Pick<
+    PreventivoRecord,
+    | "totaleFinale"
+    | "manodopera"
+    | "righeRicambi"
+    | "sanificazioneOre"
+    | "sanificazionePrezzo"
+    | "collaudoOre"
+    | "collaudoPrezzo"
+  > = {
+    totaleFinale: 666.6,
+    manodopera: { oreTotali: 10, righeAddetti: [], costoOrario: 30, prezzoOrario: 50, scontoPercent: 0 },
+    righeRicambi: [
+      {
+        id: "pr-cost",
+        ricambioId: null,
+        codiceOE: "R1",
+        descrizione: "Ricambio test",
+        quantita: 1,
+        prezzoUnitario: 160,
+        costoUnitario: 100,
+        scontoPercent: 0,
+      },
+    ],
+    sanificazioneOre: 0,
+    sanificazionePrezzo: 0,
+    collaudoOre: 0,
+    collaudoPrezzo: 0,
+  };
+  const result = computePreventivoProfitto({ preventivo, bundle: null });
+  assert.equal(result.breakdown.manodopera.totale.costo, 300);
+  assert.equal(result.breakdown.manodopera.totale.ricavo, 500);
+  assert.equal(result.breakdown.manodopera.totale.profitto, 200);
+  assert.equal(result.breakdown.ricambi.totale.costo, 100);
+  assert.equal(result.breakdown.ricambi.totale.ricavo, 160);
+  assert.equal(result.breakdown.ricambi.totale.profitto, 60);
+  assert.equal(result.summary.costi, 400);
+  assert.equal(result.summary.profitto, 266.6);
+  assert.ok(
+    result.summary.margine != null && Math.abs(result.summary.margine - 39.99) < 0.1,
+    `margine % atteso ~40, got ${result.summary.margine}`,
+  );
 });

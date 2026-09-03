@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 import { createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 import {
+  isInventoryQrEntryPath,
   isMezzoQrEntryPath,
   resolveFirstAccessibleNavHref,
   resolvePostLoginRedirectPath,
@@ -69,6 +70,10 @@ assert.equal(isMezzoQrEntryPath("/m/q/CAB-TEST"), true);
 assert.equal(isMezzoQrEntryPath("/m/q/errore"), false);
 assert.equal(isMezzoQrEntryPath("/m/q/errore?reason=forbidden"), false);
 
+assert.equal(isInventoryQrEntryPath("/r/CAB-TEST"), true);
+assert.equal(isInventoryQrEntryPath("/r/errore"), false);
+assert.equal(isInventoryQrEntryPath("/r/errore?reason=inactive"), false);
+
 assert.equal(
   resolvePostLoginRedirectPath({
     user: { ruolo: "cliente", id: "c1" },
@@ -96,5 +101,15 @@ assert.equal(
 assert.equal(operatoreNav.canAccessHref("/dashboard"), false);
 assert.equal(operatoreNav.canAccessHref("/sicurezza"), false);
 assert.equal(operatoreNav.shouldHideHref("/sicurezza"), true);
+
+assert.equal(
+  resolvePostLoginRedirectPath({
+    user: { ruolo: "operatore", id: "o1" },
+    navAccess: operatoreNav,
+    snapshot: operatoreSnap,
+    requestedPath: "/r/CAB-TESTTOKEN",
+  }),
+  "/r/CAB-TESTTOKEN",
+);
 
 console.log("resolve-post-login-redirect.test.ts OK");

@@ -79,7 +79,7 @@ export function extractPreventivoLavorazioniClienteSpecifiche(composed: string):
 }
 
 /**
- * Righe sezione «Lavorazioni effettuate» nel PDF — stesso contenuto dell'editor
+ * Righe sezione lavorazioni nel PDF — stesso contenuto dell'editor
  * (sanificazione + specifiche pulite). Non usa righe strutturali né sorgente tecnica.
  */
 export function parsePreventivoLavorazioniClientePdfLines(

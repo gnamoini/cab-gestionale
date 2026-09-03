@@ -1,0 +1,3463 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 04-modal-scroll.spec.ts >> main scroll column spans full width on wide desktop
+- Location: e2e\smoke\04-modal-scroll.spec.ts:243:5
+
+# Error details
+
+```
+Error: {"ok":false,"reason":"missing-main"}
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: true
+Received: false
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - link "C.A.B. Gestionale Officina" [ref=e15] [cursor=pointer]:
+        - /url: /dashboard
+        - img "C.A.B." [ref=e16]
+      - region "Sessione utente" [ref=e17]:
+        - 'button "Profilo account: Local Smoke Admin" [ref=e20] [cursor=pointer]':
+          - generic [ref=e24]: L
+          - generic: Local Smoke Admin
+      - navigation "Sezioni principali" [ref=e25]:
+        - generic [ref=e26]:
+          - link "Dashboard" [ref=e27] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e30]
+            - generic: Dashboard
+          - link "Agenda" [ref=e32] [cursor=pointer]:
+            - /url: /agenda
+            - img [ref=e35]
+            - generic: Agenda
+          - link "Lavorazioni" [ref=e38] [cursor=pointer]:
+            - /url: /lavorazioni
+            - img [ref=e41]
+            - generic: Lavorazioni
+          - link "Portale Clienti" [ref=e43] [cursor=pointer]:
+            - /url: /lavorazioni-clienti
+            - img [ref=e46]
+            - generic: Portale Clienti
+          - link "Preventivi" [ref=e52] [cursor=pointer]:
+            - /url: /preventivi
+            - img [ref=e55]
+            - generic: Preventivi
+          - link "Ordini fornitori" [ref=e57] [cursor=pointer]:
+            - /url: /ordini-fornitori
+            - img [ref=e60]
+            - generic: Ordini fornitori
+          - link "Fatturazione" [ref=e64] [cursor=pointer]:
+            - /url: /fatturazione
+            - img [ref=e67]
+            - generic: Fatturazione
+          - link "Documenti" [ref=e70] [cursor=pointer]:
+            - /url: /documenti
+            - img [ref=e73]
+            - generic: Documenti
+          - link "Magazzino" [ref=e76] [cursor=pointer]:
+            - /url: /magazzino
+            - img [ref=e79]
+            - generic: Magazzino
+          - link "Identifica ricambio" [ref=e82] [cursor=pointer]:
+            - /url: /identifica-ricambio
+            - img [ref=e85]
+            - generic: Identifica ricambio
+          - link "Mezzi" [ref=e90] [cursor=pointer]:
+            - /url: /mezzi
+            - img [ref=e93]
+            - generic: Mezzi
+          - link "Dipendenti" [ref=e98] [cursor=pointer]:
+            - /url: /dipendenti
+            - img [ref=e101]
+            - generic: Dipendenti
+          - link "Report" [ref=e105] [cursor=pointer]:
+            - /url: /report
+            - img [ref=e108]
+            - generic: Report
+          - link "Configurazione" [ref=e110] [cursor=pointer]:
+            - /url: /impostazioni
+            - img [ref=e113]
+            - generic: Configurazione
+          - link "Sicurezza" [ref=e116] [cursor=pointer]:
+            - /url: /sicurezza
+            - img [ref=e119]
+            - generic: Sicurezza
+    - main [ref=e123]:
+      - generic [ref=e126]:
+        - generic [ref=e129]:
+          - heading "Magazzino ricambi" [level=1] [ref=e131]
+          - button "Azioni pagina" [ref=e134] [cursor=pointer]:
+            - img [ref=e135]
+            - generic [ref=e139]: Azioni pagina
+        - generic [ref=e143]:
+          - region "Azioni e filtri magazzino" [ref=e144]:
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - generic [ref=e148]:
+                  - generic [ref=e150]:
+                    - button "+ Nuovo ricambio" [ref=e151] [cursor=pointer]:
+                      - generic [ref=e152]: + Nuovo ricambio
+                    - button "Acquisizione DDT con AI" [ref=e153] [cursor=pointer]:
+                      - img [ref=e155]
+                      - generic [ref=e157]: Carico DDT AI
+                  - generic [ref=e159]:
+                    - generic:
+                      - img
+                    - combobox "Cerca in magazzino" [ref=e160]
+                  - button "Filtri" [ref=e162] [cursor=pointer]:
+                    - generic [ref=e163]: Filtri
+                    - img [ref=e164]
+                - generic [ref=e168]:
+                  - generic [ref=e171]:
+                    - generic [ref=e172]: "107"
+                    - generic [ref=e173]: risultati
+                  - generic [ref=e174]:
+                    - switch "Modalità modifica" [checked] [ref=e175] [cursor=pointer]:
+                      - generic [ref=e176]: Modalità modifica
+                    - switch "Etichette" [ref=e179] [cursor=pointer]:
+                      - generic [ref=e180]: Etichette
+              - generic "Filtri" [ref=e183]
+          - generic [ref=e185]:
+            - table [ref=e187]:
+              - rowgroup [ref=e199]:
+                - 'row "CODICE: non ordinato. Clic per cambiare ordinamento Marca: non ordinato. Clic per cambiare ordinamento Descrizione: non ordinato. Clic per cambiare ordinamento Compatibilità: non ordinato. Clic per cambiare ordinamento Categoria: non ordinato. Clic per cambiare ordinamento Scorta: non ordinato. Clic per cambiare ordinamento Scorta min.: non ordinato. Clic per cambiare ordinamento Ultima modifica: non ordinato. Clic per cambiare ordinamento P. vendita: non ordinato. Clic per cambiare ordinamento Consumo: non ordinato. Clic per cambiare ordinamento Azioni" [ref=e200]':
+                  - 'columnheader "CODICE: non ordinato. Clic per cambiare ordinamento" [ref=e201]':
+                    - 'button "CODICE: non ordinato. Clic per cambiare ordinamento" [ref=e202] [cursor=pointer]':
+                      - generic [ref=e203]:
+                        - generic [ref=e204]: CODICE
+                        - img [ref=e206]
+                  - 'columnheader "Marca: non ordinato. Clic per cambiare ordinamento" [ref=e209]':
+                    - 'button "Marca: non ordinato. Clic per cambiare ordinamento" [ref=e210] [cursor=pointer]':
+                      - generic [ref=e211]:
+                        - generic [ref=e212]: Marca
+                        - img [ref=e214]
+                  - 'columnheader "Descrizione: non ordinato. Clic per cambiare ordinamento Compatibilità: non ordinato. Clic per cambiare ordinamento" [ref=e217]':
+                    - generic [ref=e218]:
+                      - 'button "Descrizione: non ordinato. Clic per cambiare ordinamento" [ref=e219] [cursor=pointer]':
+                        - generic [ref=e220]: Descrizione
+                        - img [ref=e222]
+                      - 'button "Compatibilità: non ordinato. Clic per cambiare ordinamento" [ref=e225] [cursor=pointer]':
+                        - generic [ref=e226]: Compatibilità
+                        - img [ref=e228]
+                  - 'columnheader "Categoria: non ordinato. Clic per cambiare ordinamento" [ref=e231]':
+                    - 'button "Categoria: non ordinato. Clic per cambiare ordinamento" [ref=e232] [cursor=pointer]':
+                      - generic [ref=e233]:
+                        - generic [ref=e234]: Categoria
+                        - img [ref=e236]
+                  - 'columnheader "Scorta: non ordinato. Clic per cambiare ordinamento" [ref=e239]':
+                    - 'button "Scorta: non ordinato. Clic per cambiare ordinamento" [ref=e240] [cursor=pointer]':
+                      - generic [ref=e241]:
+                        - generic [ref=e242]: Scorta
+                        - img [ref=e244]
+                  - 'columnheader "Scorta min.: non ordinato. Clic per cambiare ordinamento" [ref=e247]':
+                    - 'button "Scorta min.: non ordinato. Clic per cambiare ordinamento" [ref=e248] [cursor=pointer]':
+                      - generic [ref=e249]:
+                        - generic [ref=e250]: Scorta min.
+                        - img [ref=e252]
+                  - 'columnheader "Ultima modifica: non ordinato. Clic per cambiare ordinamento" [ref=e255]':
+                    - 'button "Ultima modifica: non ordinato. Clic per cambiare ordinamento" [ref=e256] [cursor=pointer]':
+                      - generic [ref=e257]:
+                        - generic [ref=e258]: Ultima modifica
+                        - img [ref=e260]
+                  - 'columnheader "P. vendita: non ordinato. Clic per cambiare ordinamento" [ref=e263]':
+                    - 'button "P. vendita: non ordinato. Clic per cambiare ordinamento" [ref=e264] [cursor=pointer]':
+                      - generic [ref=e265]:
+                        - generic [ref=e266]: P. vendita
+                        - img [ref=e268]
+                  - 'columnheader "Consumo: non ordinato. Clic per cambiare ordinamento" [ref=e271]':
+                    - 'button "Consumo: non ordinato. Clic per cambiare ordinamento" [ref=e272] [cursor=pointer]':
+                      - generic [ref=e273]:
+                        - generic [ref=e274]: Consumo
+                        - img [ref=e276]
+                  - columnheader "Azioni" [ref=e279]:
+                    - generic [ref=e280]: Azioni
+              - rowgroup [ref=e281]:
+                - row "K57P — Pressostato a Pomello Tarabile Compatibilità universale Altro Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e282]:
+                  - cell "K57P" [ref=e283]:
+                    - generic [ref=e287]: K57P
+                  - cell "—" [ref=e288]
+                  - cell "Pressostato a Pomello Tarabile Compatibilità universale" [ref=e289]:
+                    - generic [ref=e290]: Pressostato a Pomello Tarabile
+                    - generic [ref=e291]: Compatibilità universale
+                  - cell "Altro" [ref=e292]:
+                    - generic [ref=e293]: Altro
+                  - cell "Giacenza 1" [ref=e294]:
+                    - generic "Giacenza 1" [ref=e296]:
+                      - generic [ref=e297]: "1"
+                  - cell "Scorta minima 0" [ref=e298]:
+                    - generic "Scorta minima 0" [ref=e300]:
+                      - generic [ref=e301]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e302]:
+                    - generic [ref=e303]:
+                      - generic [ref=e304]: 06 ago 2026
+                      - generic [ref=e305]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e306]
+                  - cell "—" [ref=e307]:
+                    - generic [ref=e308]: —
+                  - cell "Azioni ricambio" [ref=e309]:
+                    - group "Azioni ricambio" [ref=e310]:
+                      - button "Info" [ref=e311] [cursor=pointer]:
+                        - img [ref=e312]
+                      - button "Scarico" [ref=e314] [cursor=pointer]:
+                        - img [ref=e315]
+                      - button "Carico" [ref=e316] [cursor=pointer]:
+                        - img [ref=e317]
+                - row "— — Tubo Flessibile R2T 1000 Compatibilità universale Altro Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e319]:
+                  - cell "—" [ref=e320]:
+                    - generic [ref=e324]: —
+                  - cell "—" [ref=e325]
+                  - cell "Tubo Flessibile R2T 1000 Compatibilità universale" [ref=e326]:
+                    - generic [ref=e327]: Tubo Flessibile R2T 1000
+                    - generic [ref=e328]: Compatibilità universale
+                  - cell "Altro" [ref=e329]:
+                    - generic [ref=e330]: Altro
+                  - cell "Giacenza 1" [ref=e331]:
+                    - generic "Giacenza 1" [ref=e333]:
+                      - generic [ref=e334]: "1"
+                  - cell "Scorta minima 0" [ref=e335]:
+                    - generic "Scorta minima 0" [ref=e337]:
+                      - generic [ref=e338]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e339]:
+                    - generic [ref=e340]:
+                      - generic [ref=e341]: 01 set 2026
+                      - generic [ref=e342]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e343]
+                  - cell "—" [ref=e344]:
+                    - generic [ref=e345]: —
+                  - cell "Azioni ricambio" [ref=e346]:
+                    - group "Azioni ricambio" [ref=e347]:
+                      - button "Info" [ref=e348] [cursor=pointer]:
+                        - img [ref=e349]
+                      - button "Scarico" [ref=e351] [cursor=pointer]:
+                        - img [ref=e352]
+                      - button "Carico" [ref=e353] [cursor=pointer]:
+                        - img [ref=e354]
+                - row "— — Olio Motore 10/40 Compatibilità universale Motore Giacenza 20 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e356]:
+                  - cell "—" [ref=e357]:
+                    - generic [ref=e361]: —
+                  - cell "—" [ref=e362]
+                  - cell "Olio Motore 10/40 Compatibilità universale" [ref=e363]:
+                    - generic [ref=e364]: Olio Motore 10/40
+                    - generic [ref=e365]: Compatibilità universale
+                  - cell "Motore" [ref=e366]:
+                    - generic [ref=e367]: Motore
+                  - cell "Giacenza 20" [ref=e368]:
+                    - generic "Giacenza 20" [ref=e370]:
+                      - generic [ref=e371]: "20"
+                  - cell "Scorta minima 0" [ref=e372]:
+                    - generic "Scorta minima 0" [ref=e374]:
+                      - generic [ref=e375]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e376]:
+                    - generic [ref=e377]:
+                      - generic [ref=e378]: 01 set 2026
+                      - generic [ref=e379]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e380]
+                  - cell "—" [ref=e381]:
+                    - generic [ref=e382]: —
+                  - cell "Azioni ricambio" [ref=e383]:
+                    - group "Azioni ricambio" [ref=e384]:
+                      - button "Info" [ref=e385] [cursor=pointer]:
+                        - img [ref=e386]
+                      - button "Scarico" [ref=e388] [cursor=pointer]:
+                        - img [ref=e389]
+                      - button "Carico" [ref=e390] [cursor=pointer]:
+                        - img [ref=e391]
+                - row "OLIO0W30 — Olio Motore 0W30 Fuso Canter, Tecno Industrie (Universale) Motore Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e393]:
+                  - cell "OLIO0W30" [ref=e394]:
+                    - generic [ref=e398]: OLIO0W30
+                  - cell "—" [ref=e399]
+                  - cell "Olio Motore 0W30 Fuso Canter, Tecno Industrie (Universale)" [ref=e400]:
+                    - generic [ref=e401]: Olio Motore 0W30
+                    - generic [ref=e402]: Fuso Canter, Tecno Industrie (Universale)
+                  - cell "Motore" [ref=e403]:
+                    - generic [ref=e404]: Motore
+                  - cell "Giacenza 0" [ref=e405]:
+                    - generic "Giacenza 0" [ref=e407]:
+                      - generic [ref=e408]: "0"
+                  - cell "Scorta minima 0" [ref=e409]:
+                    - generic "Scorta minima 0" [ref=e411]:
+                      - generic [ref=e412]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e413]:
+                    - generic [ref=e414]:
+                      - generic [ref=e415]: 01 set 2026
+                      - generic [ref=e416]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e417]
+                  - cell "—" [ref=e418]:
+                    - generic [ref=e419]: —
+                  - cell "Azioni ricambio" [ref=e420]:
+                    - group "Azioni ricambio" [ref=e421]:
+                      - button "Info" [ref=e422] [cursor=pointer]:
+                        - img [ref=e423]
+                      - button "Scarico" [ref=e425] [cursor=pointer]:
+                        - img [ref=e426]
+                      - button "Carico" [ref=e427] [cursor=pointer]:
+                        - img [ref=e428]
+                - row "— — Olio Idraulico 48 (Fusti) Compatibilità universale Motore Giacenza 208 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e430]:
+                  - cell "—" [ref=e431]:
+                    - generic [ref=e435]: —
+                  - cell "—" [ref=e436]
+                  - cell "Olio Idraulico 48 (Fusti) Compatibilità universale" [ref=e437]:
+                    - generic [ref=e438]: Olio Idraulico 48 (Fusti)
+                    - generic [ref=e439]: Compatibilità universale
+                  - cell "Motore" [ref=e440]:
+                    - generic [ref=e441]: Motore
+                  - cell "Giacenza 208" [ref=e442]:
+                    - generic "Giacenza 208" [ref=e444]:
+                      - generic [ref=e445]: "208"
+                  - cell "Scorta minima 0" [ref=e446]:
+                    - generic "Scorta minima 0" [ref=e448]:
+                      - generic [ref=e449]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e450]:
+                    - generic [ref=e451]:
+                      - generic [ref=e452]: 01 set 2026
+                      - generic [ref=e453]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e454]
+                  - cell "—" [ref=e455]:
+                    - generic [ref=e456]: —
+                  - cell "Azioni ricambio" [ref=e457]:
+                    - group "Azioni ricambio" [ref=e458]:
+                      - button "Info" [ref=e459] [cursor=pointer]:
+                        - img [ref=e460]
+                      - button "Scarico" [ref=e462] [cursor=pointer]:
+                        - img [ref=e463]
+                      - button "Carico" [ref=e464] [cursor=pointer]:
+                        - img [ref=e465]
+                - row "— — Liquido Antigelo Compatibilità universale Motore Giacenza 10 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e467]:
+                  - cell "—" [ref=e468]:
+                    - generic [ref=e472]: —
+                  - cell "—" [ref=e473]
+                  - cell "Liquido Antigelo Compatibilità universale" [ref=e474]:
+                    - generic [ref=e475]: Liquido Antigelo
+                    - generic [ref=e476]: Compatibilità universale
+                  - cell "Motore" [ref=e477]:
+                    - generic [ref=e478]: Motore
+                  - cell "Giacenza 10" [ref=e479]:
+                    - generic "Giacenza 10" [ref=e481]:
+                      - generic [ref=e482]: "10"
+                  - cell "Scorta minima 0" [ref=e483]:
+                    - generic "Scorta minima 0" [ref=e485]:
+                      - generic [ref=e486]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e487]:
+                    - generic [ref=e488]:
+                      - generic [ref=e489]: 01 set 2026
+                      - generic [ref=e490]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e491]
+                  - cell "—" [ref=e492]:
+                    - generic [ref=e493]: —
+                  - cell "Azioni ricambio" [ref=e494]:
+                    - group "Azioni ricambio" [ref=e495]:
+                      - button "Info" [ref=e496] [cursor=pointer]:
+                        - img [ref=e497]
+                      - button "Scarico" [ref=e499] [cursor=pointer]:
+                        - img [ref=e500]
+                      - button "Carico" [ref=e501] [cursor=pointer]:
+                        - img [ref=e502]
+                - row "— — Olio Matic (Cambio Automatico) Compatibilità universale Motore Giacenza 20 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e504]:
+                  - cell "—" [ref=e505]:
+                    - generic [ref=e509]: —
+                  - cell "—" [ref=e510]
+                  - cell "Olio Matic (Cambio Automatico) Compatibilità universale" [ref=e511]:
+                    - generic [ref=e512]: Olio Matic (Cambio Automatico)
+                    - generic [ref=e513]: Compatibilità universale
+                  - cell "Motore" [ref=e514]:
+                    - generic [ref=e515]: Motore
+                  - cell "Giacenza 20" [ref=e516]:
+                    - generic "Giacenza 20" [ref=e518]:
+                      - generic [ref=e519]: "20"
+                  - cell "Scorta minima 0" [ref=e520]:
+                    - generic "Scorta minima 0" [ref=e522]:
+                      - generic [ref=e523]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e524]:
+                    - generic [ref=e525]:
+                      - generic [ref=e526]: 01 set 2026
+                      - generic [ref=e527]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e528]
+                  - cell "—" [ref=e529]:
+                    - generic [ref=e530]: —
+                  - cell "Azioni ricambio" [ref=e531]:
+                    - group "Azioni ricambio" [ref=e532]:
+                      - button "Info" [ref=e533] [cursor=pointer]:
+                        - img [ref=e534]
+                      - button "Scarico" [ref=e536] [cursor=pointer]:
+                        - img [ref=e537]
+                      - button "Carico" [ref=e538] [cursor=pointer]:
+                        - img [ref=e539]
+                - row "XALK178E — Fungo di Emergenza Completo Compatibilità universale Altro Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e541]:
+                  - cell "XALK178E" [ref=e542]:
+                    - generic [ref=e546]: XALK178E
+                  - cell "—" [ref=e547]
+                  - cell "Fungo di Emergenza Completo Compatibilità universale" [ref=e548]:
+                    - generic [ref=e549]: Fungo di Emergenza Completo
+                    - generic [ref=e550]: Compatibilità universale
+                  - cell "Altro" [ref=e551]:
+                    - generic [ref=e552]: Altro
+                  - cell "Giacenza 1" [ref=e553]:
+                    - generic "Giacenza 1" [ref=e555]:
+                      - generic [ref=e556]: "1"
+                  - cell "Scorta minima 0" [ref=e557]:
+                    - generic "Scorta minima 0" [ref=e559]:
+                      - generic [ref=e560]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e561]:
+                    - generic [ref=e562]:
+                      - generic [ref=e563]: 01 set 2026
+                      - generic [ref=e564]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e565]
+                  - cell "—" [ref=e566]:
+                    - generic [ref=e567]: —
+                  - cell "Azioni ricambio" [ref=e568]:
+                    - group "Azioni ricambio" [ref=e569]:
+                      - button "Info" [ref=e570] [cursor=pointer]:
+                        - img [ref=e571]
+                      - button "Scarico" [ref=e573] [cursor=pointer]:
+                        - img [ref=e574]
+                      - button "Carico" [ref=e575] [cursor=pointer]:
+                        - img [ref=e576]
+                - row "— — Olio ATF (Idroguida / Cambio DU5000) Compatibilità universale Motore Giacenza 25 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e578]:
+                  - cell "—" [ref=e579]:
+                    - generic [ref=e583]: —
+                  - cell "—" [ref=e584]
+                  - cell "Olio ATF (Idroguida / Cambio DU5000) Compatibilità universale" [ref=e585]:
+                    - generic [ref=e586]: Olio ATF (Idroguida / Cambio DU5000)
+                    - generic [ref=e587]: Compatibilità universale
+                  - cell "Motore" [ref=e588]:
+                    - generic [ref=e589]: Motore
+                  - cell "Giacenza 25" [ref=e590]:
+                    - generic "Giacenza 25" [ref=e592]:
+                      - generic [ref=e593]: "25"
+                  - cell "Scorta minima 0" [ref=e594]:
+                    - generic "Scorta minima 0" [ref=e596]:
+                      - generic [ref=e597]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e598]:
+                    - generic [ref=e599]:
+                      - generic [ref=e600]: 01 set 2026
+                      - generic [ref=e601]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e602]
+                  - cell "—" [ref=e603]:
+                    - generic [ref=e604]: —
+                  - cell "Azioni ricambio" [ref=e605]:
+                    - group "Azioni ricambio" [ref=e606]:
+                      - button "Info" [ref=e607] [cursor=pointer]:
+                        - img [ref=e608]
+                      - button "Scarico" [ref=e610] [cursor=pointer]:
+                        - img [ref=e611]
+                      - button "Carico" [ref=e612] [cursor=pointer]:
+                        - img [ref=e613]
+                - row "— — Olio 80/90 (Cambio) Compatibilità universale Motore Giacenza 20 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e615]:
+                  - cell "—" [ref=e616]:
+                    - generic [ref=e620]: —
+                  - cell "—" [ref=e621]
+                  - cell "Olio 80/90 (Cambio) Compatibilità universale" [ref=e622]:
+                    - generic [ref=e623]: Olio 80/90 (Cambio)
+                    - generic [ref=e624]: Compatibilità universale
+                  - cell "Motore" [ref=e625]:
+                    - generic [ref=e626]: Motore
+                  - cell "Giacenza 20" [ref=e627]:
+                    - generic "Giacenza 20" [ref=e629]:
+                      - generic [ref=e630]: "20"
+                  - cell "Scorta minima 0" [ref=e631]:
+                    - generic "Scorta minima 0" [ref=e633]:
+                      - generic [ref=e634]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e635]:
+                    - generic [ref=e636]:
+                      - generic [ref=e637]: 01 set 2026
+                      - generic [ref=e638]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e639]
+                  - cell "—" [ref=e640]:
+                    - generic [ref=e641]: —
+                  - cell "Azioni ricambio" [ref=e642]:
+                    - group "Azioni ricambio" [ref=e643]:
+                      - button "Info" [ref=e644] [cursor=pointer]:
+                        - img [ref=e645]
+                      - button "Scarico" [ref=e647] [cursor=pointer]:
+                        - img [ref=e648]
+                      - button "Carico" [ref=e649] [cursor=pointer]:
+                        - img [ref=e650]
+                - row "— — Grasso (Secchia) Compatibilità universale Altro Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e652]:
+                  - cell "—" [ref=e653]:
+                    - generic [ref=e657]: —
+                  - cell "—" [ref=e658]
+                  - cell "Grasso (Secchia) Compatibilità universale" [ref=e659]:
+                    - generic [ref=e660]: Grasso (Secchia)
+                    - generic [ref=e661]: Compatibilità universale
+                  - cell "Altro" [ref=e662]:
+                    - generic [ref=e663]: Altro
+                  - cell "Giacenza 1" [ref=e664]:
+                    - generic "Giacenza 1" [ref=e666]:
+                      - generic [ref=e667]: "1"
+                  - cell "Scorta minima 0" [ref=e668]:
+                    - generic "Scorta minima 0" [ref=e670]:
+                      - generic [ref=e671]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e672]:
+                    - generic [ref=e673]:
+                      - generic [ref=e674]: 01 set 2026
+                      - generic [ref=e675]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e676]
+                  - cell "—" [ref=e677]:
+                    - generic [ref=e678]: —
+                  - cell "Azioni ricambio" [ref=e679]:
+                    - group "Azioni ricambio" [ref=e680]:
+                      - button "Info" [ref=e681] [cursor=pointer]:
+                        - img [ref=e682]
+                      - button "Scarico" [ref=e684] [cursor=pointer]:
+                        - img [ref=e685]
+                      - button "Carico" [ref=e686] [cursor=pointer]:
+                        - img [ref=e687]
+                - row "— — Connettori con Luce a Led Compatibilità universale Elettronica Giacenza 3 Scorta minima 0 01 set 2026 Giorgio 0,00 € — Azioni ricambio" [ref=e689]:
+                  - cell "—" [ref=e690]:
+                    - generic [ref=e694]: —
+                  - cell "—" [ref=e695]
+                  - cell "Connettori con Luce a Led Compatibilità universale" [ref=e696]:
+                    - generic [ref=e697]: Connettori con Luce a Led
+                    - generic [ref=e698]: Compatibilità universale
+                  - cell "Elettronica" [ref=e699]:
+                    - generic [ref=e700]: Elettronica
+                  - cell "Giacenza 3" [ref=e701]:
+                    - generic "Giacenza 3" [ref=e703]:
+                      - generic [ref=e704]: "3"
+                  - cell "Scorta minima 0" [ref=e705]:
+                    - generic "Scorta minima 0" [ref=e707]:
+                      - generic [ref=e708]: "0"
+                  - cell "01 set 2026 Giorgio" [ref=e709]:
+                    - generic [ref=e710]:
+                      - generic [ref=e711]: 01 set 2026
+                      - generic [ref=e712]: Giorgio
+                  - cell "0,00 €" [ref=e713]
+                  - cell "—" [ref=e714]:
+                    - generic [ref=e715]: —
+                  - cell "Azioni ricambio" [ref=e716]:
+                    - group "Azioni ricambio" [ref=e717]:
+                      - button "Info" [ref=e718] [cursor=pointer]:
+                        - img [ref=e719]
+                      - button "Scarico" [ref=e721] [cursor=pointer]:
+                        - img [ref=e722]
+                      - button "Carico" [ref=e723] [cursor=pointer]:
+                        - img [ref=e724]
+                - row "XS518B1PAM12 AMS Sensore Prossimità D18 con Connettore AMS (Universale) Sensori Giacenza 0 Scorta minima 0 02 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e726]:
+                  - cell "XS518B1PAM12" [ref=e727]:
+                    - generic [ref=e731]: XS518B1PAM12
+                  - cell "AMS" [ref=e732]:
+                    - generic [ref=e733]: AMS
+                  - cell "Sensore Prossimità D18 con Connettore AMS (Universale)" [ref=e734]:
+                    - generic [ref=e735]: Sensore Prossimità D18 con Connettore
+                    - generic [ref=e736]: AMS (Universale)
+                  - cell "Sensori" [ref=e737]:
+                    - generic [ref=e738]: Sensori
+                  - cell "Giacenza 0" [ref=e739]:
+                    - generic "Giacenza 0" [ref=e741]:
+                      - generic [ref=e742]: "0"
+                  - cell "Scorta minima 0" [ref=e743]:
+                    - generic "Scorta minima 0" [ref=e745]:
+                      - generic [ref=e746]: "0"
+                  - cell "02 set 2026 Giorgio Namoini" [ref=e747]:
+                    - generic [ref=e748]:
+                      - generic [ref=e749]: 02 set 2026
+                      - generic [ref=e750]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e751]
+                  - cell "—" [ref=e752]:
+                    - generic [ref=e753]: —
+                  - cell "Azioni ricambio" [ref=e754]:
+                    - group "Azioni ricambio" [ref=e755]:
+                      - button "Info" [ref=e756] [cursor=pointer]:
+                        - img [ref=e757]
+                      - button "Scarico" [ref=e759] [cursor=pointer]:
+                        - img [ref=e760]
+                      - button "Carico" [ref=e761] [cursor=pointer]:
+                        - img [ref=e762]
+                - row "C117/09/13R0 Autobren Pressostato Elettronico Autobren (Universale) Elettronica Giacenza 2 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e764]:
+                  - cell "C117/09/13R0" [ref=e765]:
+                    - generic [ref=e769]: C117/09/13R0
+                  - cell "Autobren" [ref=e770]:
+                    - generic [ref=e771]: Autobren
+                  - cell "Pressostato Elettronico Autobren (Universale)" [ref=e772]:
+                    - generic [ref=e773]: Pressostato Elettronico
+                    - generic [ref=e774]: Autobren (Universale)
+                  - cell "Elettronica" [ref=e775]:
+                    - generic [ref=e776]: Elettronica
+                  - cell "Giacenza 2" [ref=e777]:
+                    - generic "Giacenza 2" [ref=e779]:
+                      - generic [ref=e780]: "2"
+                  - cell "Scorta minima 0" [ref=e781]:
+                    - generic "Scorta minima 0" [ref=e783]:
+                      - generic [ref=e784]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e785]:
+                    - generic [ref=e786]:
+                      - generic [ref=e787]: 06 ago 2026
+                      - generic [ref=e788]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e789]
+                  - cell "—" [ref=e790]:
+                    - generic [ref=e791]: —
+                  - cell "Azioni ricambio" [ref=e792]:
+                    - group "Azioni ricambio" [ref=e793]:
+                      - button "Info" [ref=e794] [cursor=pointer]:
+                        - img [ref=e795]
+                      - button "Scarico" [ref=e797] [cursor=pointer]:
+                        - img [ref=e798]
+                      - button "Carico" [ref=e799] [cursor=pointer]:
+                        - img [ref=e800]
+                - row "8EINT160000002 BTE Int Pos e Sicurezza Tot Asta Lun BTE (Universale) — Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 58,02 € — Azioni ricambio" [ref=e802]:
+                  - cell "8EINT160000002" [ref=e803]:
+                    - generic [ref=e807]: 8EINT160000002
+                  - cell "BTE" [ref=e808]:
+                    - generic [ref=e809]: BTE
+                  - cell "Int Pos e Sicurezza Tot Asta Lun BTE (Universale)" [ref=e810]:
+                    - generic [ref=e811]: Int Pos e Sicurezza Tot Asta Lun
+                    - generic [ref=e812]: BTE (Universale)
+                  - cell "—" [ref=e813]:
+                    - generic [ref=e814]: —
+                  - cell "Giacenza 1" [ref=e815]:
+                    - generic "Giacenza 1" [ref=e817]:
+                      - generic [ref=e818]: "1"
+                  - cell "Scorta minima 0" [ref=e819]:
+                    - generic "Scorta minima 0" [ref=e821]:
+                      - generic [ref=e822]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e823]:
+                    - generic [ref=e824]:
+                      - generic [ref=e825]: 01 set 2026
+                      - generic [ref=e826]: Giorgio Namoini
+                  - cell "58,02 €" [ref=e827]
+                  - cell "—" [ref=e828]:
+                    - generic [ref=e829]: —
+                  - cell "Azioni ricambio" [ref=e830]:
+                    - group "Azioni ricambio" [ref=e831]:
+                      - button "Info" [ref=e832] [cursor=pointer]:
+                        - img [ref=e833]
+                      - button "Scarico" [ref=e835] [cursor=pointer]:
+                        - img [ref=e836]
+                      - button "Carico" [ref=e837] [cursor=pointer]:
+                        - img [ref=e838]
+                - row "8ESNS030000001 BTE Sensore Fotoelettrico M12 NPN/PNP Compatibilità universale Sensori Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio Namoini 197,68 € — Azioni ricambio" [ref=e840]:
+                  - cell "8ESNS030000001" [ref=e841]:
+                    - generic [ref=e845]: 8ESNS030000001
+                  - cell "BTE" [ref=e846]:
+                    - generic [ref=e847]: BTE
+                  - cell "Sensore Fotoelettrico M12 NPN/PNP Compatibilità universale" [ref=e848]:
+                    - generic [ref=e849]: Sensore Fotoelettrico M12 NPN/PNP
+                    - generic [ref=e850]: Compatibilità universale
+                  - cell "Sensori" [ref=e851]:
+                    - generic [ref=e852]: Sensori
+                  - cell "Giacenza 1" [ref=e853]:
+                    - generic "Giacenza 1" [ref=e855]:
+                      - generic [ref=e856]: "1"
+                  - cell "Scorta minima 0" [ref=e857]:
+                    - generic "Scorta minima 0" [ref=e859]:
+                      - generic [ref=e860]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e861]:
+                    - generic [ref=e862]:
+                      - generic [ref=e863]: 06 ago 2026
+                      - generic [ref=e864]: Giorgio Namoini
+                  - cell "197,68 €" [ref=e865]
+                  - cell "—" [ref=e866]:
+                    - generic [ref=e867]: —
+                  - cell "Azioni ricambio" [ref=e868]:
+                    - group "Azioni ricambio" [ref=e869]:
+                      - button "Info" [ref=e870] [cursor=pointer]:
+                        - img [ref=e871]
+                      - button "Scarico" [ref=e873] [cursor=pointer]:
+                        - img [ref=e874]
+                      - button "Carico" [ref=e875] [cursor=pointer]:
+                        - img [ref=e876]
+                - row "8EINT110000010 BTE Invertitore Marcia Tripolare BTE (Universale) Elettronica Giacenza 2 Scorta minima 0 01 set 2026 Giorgio Namoini 165,26 € — Azioni ricambio" [ref=e878]:
+                  - cell "8EINT110000010" [ref=e879]:
+                    - generic [ref=e883]: 8EINT110000010
+                  - cell "BTE" [ref=e884]:
+                    - generic [ref=e885]: BTE
+                  - cell "Invertitore Marcia Tripolare BTE (Universale)" [ref=e886]:
+                    - generic [ref=e887]: Invertitore Marcia Tripolare
+                    - generic [ref=e888]: BTE (Universale)
+                  - cell "Elettronica" [ref=e889]:
+                    - generic [ref=e890]: Elettronica
+                  - cell "Giacenza 2" [ref=e891]:
+                    - generic "Giacenza 2" [ref=e893]:
+                      - generic [ref=e894]: "2"
+                  - cell "Scorta minima 0" [ref=e895]:
+                    - generic "Scorta minima 0" [ref=e897]:
+                      - generic [ref=e898]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e899]:
+                    - generic [ref=e900]:
+                      - generic [ref=e901]: 01 set 2026
+                      - generic [ref=e902]: Giorgio Namoini
+                  - cell "165,26 €" [ref=e903]
+                  - cell "—" [ref=e904]:
+                    - generic [ref=e905]: —
+                  - cell "Azioni ricambio" [ref=e906]:
+                    - group "Azioni ricambio" [ref=e907]:
+                      - button "Info" [ref=e908] [cursor=pointer]:
+                        - img [ref=e909]
+                      - button "Scarico" [ref=e911] [cursor=pointer]:
+                        - img [ref=e912]
+                      - button "Carico" [ref=e913] [cursor=pointer]:
+                        - img [ref=e914]
+                - row "BU5006SLM Bucher Spazzola Laterale Mista CityCat 5006 Spazzole Giacenza 12 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e916]:
+                  - cell "BU5006SLM" [ref=e917]:
+                    - generic [ref=e921]: BU5006SLM
+                  - cell "Bucher" [ref=e922]:
+                    - generic [ref=e923]: Bucher
+                  - cell "Spazzola Laterale Mista CityCat 5006" [ref=e924]:
+                    - generic [ref=e925]: Spazzola Laterale Mista
+                    - generic [ref=e926]: CityCat 5006
+                  - cell "Spazzole" [ref=e927]:
+                    - generic [ref=e928]: Spazzole
+                  - cell "Giacenza 12" [ref=e929]:
+                    - generic "Giacenza 12" [ref=e931]:
+                      - generic [ref=e932]: "12"
+                  - cell "Scorta minima 0" [ref=e933]:
+                    - generic "Scorta minima 0" [ref=e935]:
+                      - generic [ref=e936]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e937]:
+                    - generic [ref=e938]:
+                      - generic [ref=e939]: 01 set 2026
+                      - generic [ref=e940]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e941]
+                  - cell "—" [ref=e942]:
+                    - generic [ref=e943]: —
+                  - cell "Azioni ricambio" [ref=e944]:
+                    - group "Azioni ricambio" [ref=e945]:
+                      - button "Info" [ref=e946] [cursor=pointer]:
+                        - img [ref=e947]
+                      - button "Scarico" [ref=e949] [cursor=pointer]:
+                        - img [ref=e950]
+                      - button "Carico" [ref=e951] [cursor=pointer]:
+                        - img [ref=e952]
+                - row "15055731-0 Bucher Ruota Bocca Aspirazione con Supporto CityCat 5000, CityCat 5006 Ruote Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio 0,00 € — Azioni ricambio" [ref=e954]:
+                  - cell "15055731-0" [ref=e955]:
+                    - generic [ref=e959]: 15055731-0
+                  - cell "Bucher" [ref=e960]:
+                    - generic [ref=e961]: Bucher
+                  - cell "Ruota Bocca Aspirazione con Supporto CityCat 5000, CityCat 5006" [ref=e962]:
+                    - generic [ref=e963]: Ruota Bocca Aspirazione con Supporto
+                    - generic [ref=e964]: CityCat 5000, CityCat 5006
+                  - cell "Ruote" [ref=e965]:
+                    - generic [ref=e966]: Ruote
+                  - cell "Giacenza 1" [ref=e967]:
+                    - generic "Giacenza 1" [ref=e969]:
+                      - generic [ref=e970]: "1"
+                  - cell "Scorta minima 0" [ref=e971]:
+                    - generic "Scorta minima 0" [ref=e973]:
+                      - generic [ref=e974]: "0"
+                  - cell "06 ago 2026 Giorgio" [ref=e975]:
+                    - generic [ref=e976]:
+                      - generic [ref=e977]: 06 ago 2026
+                      - generic [ref=e978]: Giorgio
+                  - cell "0,00 €" [ref=e979]
+                  - cell "—" [ref=e980]:
+                    - generic [ref=e981]: —
+                  - cell "Azioni ricambio" [ref=e982]:
+                    - group "Azioni ricambio" [ref=e983]:
+                      - button "Info" [ref=e984] [cursor=pointer]:
+                        - img [ref=e985]
+                      - button "Scarico" [ref=e987] [cursor=pointer]:
+                        - img [ref=e988]
+                      - button "Carico" [ref=e989] [cursor=pointer]:
+                        - img [ref=e990]
+                - row "BU5000SLM Bucher Spazzola Laterale Mista CityCat 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e992]:
+                  - cell "BU5000SLM" [ref=e993]:
+                    - generic [ref=e997]: BU5000SLM
+                  - cell "Bucher" [ref=e998]:
+                    - generic [ref=e999]: Bucher
+                  - cell "Spazzola Laterale Mista CityCat 5000" [ref=e1000]:
+                    - generic [ref=e1001]: Spazzola Laterale Mista
+                    - generic [ref=e1002]: CityCat 5000
+                  - cell "Spazzole" [ref=e1003]:
+                    - generic [ref=e1004]: Spazzole
+                  - cell "Giacenza 0" [ref=e1005]:
+                    - generic "Giacenza 0" [ref=e1007]:
+                      - generic [ref=e1008]: "0"
+                  - cell "Scorta minima 0" [ref=e1009]:
+                    - generic "Scorta minima 0" [ref=e1011]:
+                      - generic [ref=e1012]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1013]:
+                    - generic [ref=e1014]:
+                      - generic [ref=e1015]: 01 set 2026
+                      - generic [ref=e1016]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1017]
+                  - cell "—" [ref=e1018]:
+                    - generic [ref=e1019]: —
+                  - cell "Azioni ricambio" [ref=e1020]:
+                    - group "Azioni ricambio" [ref=e1021]:
+                      - button "Info" [ref=e1022] [cursor=pointer]:
+                        - img [ref=e1023]
+                      - button "Scarico" [ref=e1025] [cursor=pointer]:
+                        - img [ref=e1026]
+                      - button "Carico" [ref=e1027] [cursor=pointer]:
+                        - img [ref=e1028]
+                - row "BU2020SLM Bucher Spazzola a Tazza Mista CityCat 2020 Spazzole Giacenza 2 Scorta minima 0 01 set 2026 Giorgio Namoini 38,00 € — Azioni ricambio" [ref=e1030]:
+                  - cell "BU2020SLM" [ref=e1031]:
+                    - generic [ref=e1035]: BU2020SLM
+                  - cell "Bucher" [ref=e1036]:
+                    - generic [ref=e1037]: Bucher
+                  - cell "Spazzola a Tazza Mista CityCat 2020" [ref=e1038]:
+                    - generic [ref=e1039]: Spazzola a Tazza Mista
+                    - generic [ref=e1040]: CityCat 2020
+                  - cell "Spazzole" [ref=e1041]:
+                    - generic [ref=e1042]: Spazzole
+                  - cell "Giacenza 2" [ref=e1043]:
+                    - generic "Giacenza 2" [ref=e1045]:
+                      - generic [ref=e1046]: "2"
+                  - cell "Scorta minima 0" [ref=e1047]:
+                    - generic "Scorta minima 0" [ref=e1049]:
+                      - generic [ref=e1050]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1051]:
+                    - generic [ref=e1052]:
+                      - generic [ref=e1053]: 01 set 2026
+                      - generic [ref=e1054]: Giorgio Namoini
+                  - cell "38,00 €" [ref=e1055]
+                  - cell "—" [ref=e1056]:
+                    - generic [ref=e1057]: —
+                  - cell "Azioni ricambio" [ref=e1058]:
+                    - group "Azioni ricambio" [ref=e1059]:
+                      - button "Info" [ref=e1060] [cursor=pointer]:
+                        - img [ref=e1061]
+                      - button "Scarico" [ref=e1063] [cursor=pointer]:
+                        - img [ref=e1064]
+                      - button "Carico" [ref=e1065] [cursor=pointer]:
+                        - img [ref=e1066]
+                - row "7-130-0311 Bucher Ruota Carrello Bocca Aspirazione CityFant 60 Generale Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1068]:
+                  - cell "7-130-0311" [ref=e1069]:
+                    - generic [ref=e1073]: 7-130-0311
+                  - cell "Bucher" [ref=e1074]:
+                    - generic [ref=e1075]: Bucher
+                  - cell "Ruota Carrello Bocca Aspirazione CityFant 60" [ref=e1076]:
+                    - generic [ref=e1077]: Ruota Carrello Bocca Aspirazione
+                    - generic [ref=e1078]: CityFant 60
+                  - cell "Generale" [ref=e1079]:
+                    - generic [ref=e1080]: Generale
+                  - cell "Giacenza 4" [ref=e1081]:
+                    - generic "Giacenza 4" [ref=e1083]:
+                      - generic [ref=e1084]: "4"
+                  - cell "Scorta minima 0" [ref=e1085]:
+                    - generic "Scorta minima 0" [ref=e1087]:
+                      - generic [ref=e1088]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1089]:
+                    - generic [ref=e1090]:
+                      - generic [ref=e1091]: 01 set 2026
+                      - generic [ref=e1092]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1093]
+                  - cell "—" [ref=e1094]:
+                    - generic [ref=e1095]: —
+                  - cell "Azioni ricambio" [ref=e1096]:
+                    - group "Azioni ricambio" [ref=e1097]:
+                      - button "Info" [ref=e1098] [cursor=pointer]:
+                        - img [ref=e1099]
+                      - button "Scarico" [ref=e1101] [cursor=pointer]:
+                        - img [ref=e1102]
+                      - button "Carico" [ref=e1103] [cursor=pointer]:
+                        - img [ref=e1104]
+                - row "BU2020SLA Bucher Spazzola a Tazza Acciaio CityCat 2020 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1106]:
+                  - cell "BU2020SLA" [ref=e1107]:
+                    - generic [ref=e1111]: BU2020SLA
+                  - cell "Bucher" [ref=e1112]:
+                    - generic [ref=e1113]: Bucher
+                  - cell "Spazzola a Tazza Acciaio CityCat 2020" [ref=e1114]:
+                    - generic [ref=e1115]: Spazzola a Tazza Acciaio
+                    - generic [ref=e1116]: CityCat 2020
+                  - cell "Spazzole" [ref=e1117]:
+                    - generic [ref=e1118]: Spazzole
+                  - cell "Giacenza 0" [ref=e1119]:
+                    - generic "Giacenza 0" [ref=e1121]:
+                      - generic [ref=e1122]: "0"
+                  - cell "Scorta minima 0" [ref=e1123]:
+                    - generic "Scorta minima 0" [ref=e1125]:
+                      - generic [ref=e1126]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1127]:
+                    - generic [ref=e1128]:
+                      - generic [ref=e1129]: 01 set 2026
+                      - generic [ref=e1130]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1131]
+                  - cell "—" [ref=e1132]:
+                    - generic [ref=e1133]: —
+                  - cell "Azioni ricambio" [ref=e1134]:
+                    - group "Azioni ricambio" [ref=e1135]:
+                      - button "Info" [ref=e1136] [cursor=pointer]:
+                        - img [ref=e1137]
+                      - button "Scarico" [ref=e1139] [cursor=pointer]:
+                        - img [ref=e1140]
+                      - button "Carico" [ref=e1141] [cursor=pointer]:
+                        - img [ref=e1142]
+                - row "BU5006SLA Bucher Spazzola Laterale Acciaio CityCat 5006 Spazzole Giacenza 7 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1144]:
+                  - cell "BU5006SLA" [ref=e1145]:
+                    - generic [ref=e1149]: BU5006SLA
+                  - cell "Bucher" [ref=e1150]:
+                    - generic [ref=e1151]: Bucher
+                  - cell "Spazzola Laterale Acciaio CityCat 5006" [ref=e1152]:
+                    - generic [ref=e1153]: Spazzola Laterale Acciaio
+                    - generic [ref=e1154]: CityCat 5006
+                  - cell "Spazzole" [ref=e1155]:
+                    - generic [ref=e1156]: Spazzole
+                  - cell "Giacenza 7" [ref=e1157]:
+                    - generic "Giacenza 7" [ref=e1159]:
+                      - generic [ref=e1160]: "7"
+                  - cell "Scorta minima 0" [ref=e1161]:
+                    - generic "Scorta minima 0" [ref=e1163]:
+                      - generic [ref=e1164]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1165]:
+                    - generic [ref=e1166]:
+                      - generic [ref=e1167]: 01 set 2026
+                      - generic [ref=e1168]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1169]
+                  - cell "—" [ref=e1170]:
+                    - generic [ref=e1171]: —
+                  - cell "Azioni ricambio" [ref=e1172]:
+                    - group "Azioni ricambio" [ref=e1173]:
+                      - button "Info" [ref=e1174] [cursor=pointer]:
+                        - img [ref=e1175]
+                      - button "Scarico" [ref=e1177] [cursor=pointer]:
+                        - img [ref=e1178]
+                      - button "Carico" [ref=e1179] [cursor=pointer]:
+                        - img [ref=e1180]
+                - row "BU5000SLA Bucher Spazzola Laterale Acciaio CityCat 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1182]:
+                  - cell "BU5000SLA" [ref=e1183]:
+                    - generic [ref=e1187]: BU5000SLA
+                  - cell "Bucher" [ref=e1188]:
+                    - generic [ref=e1189]: Bucher
+                  - cell "Spazzola Laterale Acciaio CityCat 5000" [ref=e1190]:
+                    - generic [ref=e1191]: Spazzola Laterale Acciaio
+                    - generic [ref=e1192]: CityCat 5000
+                  - cell "Spazzole" [ref=e1193]:
+                    - generic [ref=e1194]: Spazzole
+                  - cell "Giacenza 0" [ref=e1195]:
+                    - generic "Giacenza 0" [ref=e1197]:
+                      - generic [ref=e1198]: "0"
+                  - cell "Scorta minima 0" [ref=e1199]:
+                    - generic "Scorta minima 0" [ref=e1201]:
+                      - generic [ref=e1202]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1203]:
+                    - generic [ref=e1204]:
+                      - generic [ref=e1205]: 01 set 2026
+                      - generic [ref=e1206]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1207]
+                  - cell "—" [ref=e1208]:
+                    - generic [ref=e1209]: —
+                  - cell "Azioni ricambio" [ref=e1210]:
+                    - group "Azioni ricambio" [ref=e1211]:
+                      - button "Info" [ref=e1212] [cursor=pointer]:
+                        - img [ref=e1213]
+                      - button "Scarico" [ref=e1215] [cursor=pointer]:
+                        - img [ref=e1216]
+                      - button "Carico" [ref=e1217] [cursor=pointer]:
+                        - img [ref=e1218]
+                - row "CF60SLA SL500SLA Bucher Spazzola Laterale Acciaio CityCat 5006, SL500 Spazzole Giacenza 6 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1220]:
+                  - cell "CF60SLA SL500SLA" [ref=e1221]:
+                    - generic [ref=e1224]:
+                      - generic [ref=e1225]: CF60SLA
+                      - generic [ref=e1226]: SL500SLA
+                  - cell "Bucher" [ref=e1227]:
+                    - generic [ref=e1228]: Bucher
+                  - cell "Spazzola Laterale Acciaio CityCat 5006, SL500" [ref=e1229]:
+                    - generic [ref=e1230]: Spazzola Laterale Acciaio
+                    - generic [ref=e1231]: CityCat 5006, SL500
+                  - cell "Spazzole" [ref=e1232]:
+                    - generic [ref=e1233]: Spazzole
+                  - cell "Giacenza 6" [ref=e1234]:
+                    - generic "Giacenza 6" [ref=e1236]:
+                      - generic [ref=e1237]: "6"
+                  - cell "Scorta minima 0" [ref=e1238]:
+                    - generic "Scorta minima 0" [ref=e1240]:
+                      - generic [ref=e1241]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1242]:
+                    - generic [ref=e1243]:
+                      - generic [ref=e1244]: 01 set 2026
+                      - generic [ref=e1245]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1246]
+                  - cell "—" [ref=e1247]:
+                    - generic [ref=e1248]: —
+                  - cell "Azioni ricambio" [ref=e1249]:
+                    - group "Azioni ricambio" [ref=e1250]:
+                      - button "Info" [ref=e1251] [cursor=pointer]:
+                        - img [ref=e1252]
+                      - button "Scarico" [ref=e1254] [cursor=pointer]:
+                        - img [ref=e1255]
+                      - button "Carico" [ref=e1256] [cursor=pointer]:
+                        - img [ref=e1257]
+                - row "BU2020SLP Bucher Spazzola a Tazza PPN CityCat 2020 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1259]:
+                  - cell "BU2020SLP" [ref=e1260]:
+                    - generic [ref=e1264]: BU2020SLP
+                  - cell "Bucher" [ref=e1265]:
+                    - generic [ref=e1266]: Bucher
+                  - cell "Spazzola a Tazza PPN CityCat 2020" [ref=e1267]:
+                    - generic [ref=e1268]: Spazzola a Tazza PPN
+                    - generic [ref=e1269]: CityCat 2020
+                  - cell "Spazzole" [ref=e1270]:
+                    - generic [ref=e1271]: Spazzole
+                  - cell "Giacenza 0" [ref=e1272]:
+                    - generic "Giacenza 0" [ref=e1274]:
+                      - generic [ref=e1275]: "0"
+                  - cell "Scorta minima 0" [ref=e1276]:
+                    - generic "Scorta minima 0" [ref=e1278]:
+                      - generic [ref=e1279]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1280]:
+                    - generic [ref=e1281]:
+                      - generic [ref=e1282]: 01 set 2026
+                      - generic [ref=e1283]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1284]
+                  - cell "—" [ref=e1285]:
+                    - generic [ref=e1286]: —
+                  - cell "Azioni ricambio" [ref=e1287]:
+                    - group "Azioni ricambio" [ref=e1288]:
+                      - button "Info" [ref=e1289] [cursor=pointer]:
+                        - img [ref=e1290]
+                      - button "Scarico" [ref=e1292] [cursor=pointer]:
+                        - img [ref=e1293]
+                      - button "Carico" [ref=e1294] [cursor=pointer]:
+                        - img [ref=e1295]
+                - row "095532148-0 Bucher Ruota Bocca Aspirazione CityCat 5000, CityCat 5006 Ruote Giacenza 3 Scorta minima 0 06 ago 2026 Giorgio 0,00 € — Azioni ricambio" [ref=e1297]:
+                  - cell "095532148-0" [ref=e1298]:
+                    - generic [ref=e1302]: 095532148-0
+                  - cell "Bucher" [ref=e1303]:
+                    - generic [ref=e1304]: Bucher
+                  - cell "Ruota Bocca Aspirazione CityCat 5000, CityCat 5006" [ref=e1305]:
+                    - generic [ref=e1306]: Ruota Bocca Aspirazione
+                    - generic [ref=e1307]: CityCat 5000, CityCat 5006
+                  - cell "Ruote" [ref=e1308]:
+                    - generic [ref=e1309]: Ruote
+                  - cell "Giacenza 3" [ref=e1310]:
+                    - generic "Giacenza 3" [ref=e1312]:
+                      - generic [ref=e1313]: "3"
+                  - cell "Scorta minima 0" [ref=e1314]:
+                    - generic "Scorta minima 0" [ref=e1316]:
+                      - generic [ref=e1317]: "0"
+                  - cell "06 ago 2026 Giorgio" [ref=e1318]:
+                    - generic [ref=e1319]:
+                      - generic [ref=e1320]: 06 ago 2026
+                      - generic [ref=e1321]: Giorgio
+                  - cell "0,00 €" [ref=e1322]
+                  - cell "—" [ref=e1323]:
+                    - generic [ref=e1324]: —
+                  - cell "Azioni ricambio" [ref=e1325]:
+                    - group "Azioni ricambio" [ref=e1326]:
+                      - button "Info" [ref=e1327] [cursor=pointer]:
+                        - img [ref=e1328]
+                      - button "Scarico" [ref=e1330] [cursor=pointer]:
+                        - img [ref=e1331]
+                      - button "Carico" [ref=e1332] [cursor=pointer]:
+                        - img [ref=e1333]
+                - row "AD4248 Coseco Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato Coseco (Universale) Elettronica Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1335]:
+                  - cell "AD4248" [ref=e1336]:
+                    - generic [ref=e1340]: AD4248
+                  - cell "Coseco" [ref=e1341]:
+                    - generic [ref=e1342]: Coseco
+                  - cell "Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato Coseco (Universale)" [ref=e1343]:
+                    - generic [ref=e1344]: Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato
+                    - generic [ref=e1345]: Coseco (Universale)
+                  - cell "Elettronica" [ref=e1346]:
+                    - generic [ref=e1347]: Elettronica
+                  - cell "Giacenza 1" [ref=e1348]:
+                    - generic "Giacenza 1" [ref=e1350]:
+                      - generic [ref=e1351]: "1"
+                  - cell "Scorta minima 0" [ref=e1352]:
+                    - generic "Scorta minima 0" [ref=e1354]:
+                      - generic [ref=e1355]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1356]:
+                    - generic [ref=e1357]:
+                      - generic [ref=e1358]: 01 set 2026
+                      - generic [ref=e1359]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1360]
+                  - cell "—" [ref=e1361]:
+                    - generic [ref=e1362]: —
+                  - cell "Azioni ricambio" [ref=e1363]:
+                    - group "Azioni ricambio" [ref=e1364]:
+                      - button "Info" [ref=e1365] [cursor=pointer]:
+                        - img [ref=e1366]
+                      - button "Scarico" [ref=e1368] [cursor=pointer]:
+                        - img [ref=e1369]
+                      - button "Carico" [ref=e1370] [cursor=pointer]:
+                        - img [ref=e1371]
+                - row "AV5200-1 Coseco Sensore Cilindri (Bagno d'Olio) Coseco (Universale) Sensori Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 60,18 € — Azioni ricambio" [ref=e1373]:
+                  - cell "AV5200-1" [ref=e1374]:
+                    - generic [ref=e1378]: AV5200-1
+                  - cell "Coseco" [ref=e1379]:
+                    - generic [ref=e1380]: Coseco
+                  - cell "Sensore Cilindri (Bagno d'Olio) Coseco (Universale)" [ref=e1381]:
+                    - generic [ref=e1382]: Sensore Cilindri (Bagno d'Olio)
+                    - generic [ref=e1383]: Coseco (Universale)
+                  - cell "Sensori" [ref=e1384]:
+                    - generic [ref=e1385]: Sensori
+                  - cell "Giacenza 4" [ref=e1386]:
+                    - generic "Giacenza 4" [ref=e1388]:
+                      - generic [ref=e1389]: "4"
+                  - cell "Scorta minima 0" [ref=e1390]:
+                    - generic "Scorta minima 0" [ref=e1392]:
+                      - generic [ref=e1393]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1394]:
+                    - generic [ref=e1395]:
+                      - generic [ref=e1396]: 01 set 2026
+                      - generic [ref=e1397]: Giorgio Namoini
+                  - cell "60,18 €" [ref=e1398]
+                  - cell "—" [ref=e1399]:
+                    - generic [ref=e1400]: —
+                  - cell "Azioni ricambio" [ref=e1401]:
+                    - group "Azioni ricambio" [ref=e1402]:
+                      - button "Info" [ref=e1403] [cursor=pointer]:
+                        - img [ref=e1404]
+                      - button "Scarico" [ref=e1406] [cursor=pointer]:
+                        - img [ref=e1407]
+                      - button "Carico" [ref=e1408] [cursor=pointer]:
+                        - img [ref=e1409]
+                - row "AB3225 Coseco Elettrovalvola 3/2 Vie Att. 1/8\" N.C. 24V C/Solenoide A63 Coseco (Universale) Elettronica Giacenza 2 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1411]:
+                  - cell "AB3225" [ref=e1412]:
+                    - generic [ref=e1416]: AB3225
+                  - cell "Coseco" [ref=e1417]:
+                    - generic [ref=e1418]: Coseco
+                  - cell "Elettrovalvola 3/2 Vie Att. 1/8\" N.C. 24V C/Solenoide A63 Coseco (Universale)" [ref=e1419]:
+                    - generic [ref=e1420]: Elettrovalvola 3/2 Vie Att. 1/8" N.C. 24V C/Solenoide A63
+                    - generic [ref=e1421]: Coseco (Universale)
+                  - cell "Elettronica" [ref=e1422]:
+                    - generic [ref=e1423]: Elettronica
+                  - cell "Giacenza 2" [ref=e1424]:
+                    - generic "Giacenza 2" [ref=e1426]:
+                      - generic [ref=e1427]: "2"
+                  - cell "Scorta minima 0" [ref=e1428]:
+                    - generic "Scorta minima 0" [ref=e1430]:
+                      - generic [ref=e1431]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1432]:
+                    - generic [ref=e1433]:
+                      - generic [ref=e1434]: 01 set 2026
+                      - generic [ref=e1435]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1436]
+                  - cell "—" [ref=e1437]:
+                    - generic [ref=e1438]: —
+                  - cell "Azioni ricambio" [ref=e1439]:
+                    - group "Azioni ricambio" [ref=e1440]:
+                      - button "Info" [ref=e1441] [cursor=pointer]:
+                        - img [ref=e1442]
+                      - button "Scarico" [ref=e1444] [cursor=pointer]:
+                        - img [ref=e1445]
+                      - button "Carico" [ref=e1446] [cursor=pointer]:
+                        - img [ref=e1447]
+                - row "A0934 Coseco Cicalino Buzzer Bitonale Coseco (Universale) Elettronica Giacenza 1 Scorta minima 0 01 set 2026 Vito Namoini 37,50 € — Azioni ricambio" [ref=e1449]:
+                  - cell "A0934" [ref=e1450]:
+                    - generic [ref=e1454]: A0934
+                  - cell "Coseco" [ref=e1455]:
+                    - generic [ref=e1456]: Coseco
+                  - cell "Cicalino Buzzer Bitonale Coseco (Universale)" [ref=e1457]:
+                    - generic [ref=e1458]: Cicalino Buzzer Bitonale
+                    - generic [ref=e1459]: Coseco (Universale)
+                  - cell "Elettronica" [ref=e1460]:
+                    - generic [ref=e1461]: Elettronica
+                  - cell "Giacenza 1" [ref=e1462]:
+                    - generic "Giacenza 1" [ref=e1464]:
+                      - generic [ref=e1465]: "1"
+                  - cell "Scorta minima 0" [ref=e1466]:
+                    - generic "Scorta minima 0" [ref=e1468]:
+                      - generic [ref=e1469]: "0"
+                  - cell "01 set 2026 Vito Namoini" [ref=e1470]:
+                    - generic [ref=e1471]:
+                      - generic [ref=e1472]: 01 set 2026
+                      - generic [ref=e1473]: Vito Namoini
+                  - cell "37,50 €" [ref=e1474]
+                  - cell "—" [ref=e1475]:
+                    - generic [ref=e1476]: —
+                  - cell "Azioni ricambio" [ref=e1477]:
+                    - group "Azioni ricambio" [ref=e1478]:
+                      - button "Info" [ref=e1479] [cursor=pointer]:
+                        - img [ref=e1480]
+                      - button "Scarico" [ref=e1482] [cursor=pointer]:
+                        - img [ref=e1483]
+                      - button "Carico" [ref=e1484] [cursor=pointer]:
+                        - img [ref=e1485]
+                - row "DU5000SLM Dulevo Spazzola Laterale Mista PPL-ACC 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1487]:
+                  - cell "DU5000SLM" [ref=e1488]:
+                    - generic [ref=e1492]: DU5000SLM
+                  - cell "Dulevo" [ref=e1493]:
+                    - generic [ref=e1494]: Dulevo
+                  - cell "Spazzola Laterale Mista PPL-ACC 5000" [ref=e1495]:
+                    - generic [ref=e1496]: Spazzola Laterale Mista PPL-ACC
+                    - generic [ref=e1497]: "5000"
+                  - cell "Spazzole" [ref=e1498]:
+                    - generic [ref=e1499]: Spazzole
+                  - cell "Giacenza 0" [ref=e1500]:
+                    - generic "Giacenza 0" [ref=e1502]:
+                      - generic [ref=e1503]: "0"
+                  - cell "Scorta minima 0" [ref=e1504]:
+                    - generic "Scorta minima 0" [ref=e1506]:
+                      - generic [ref=e1507]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1508]:
+                    - generic [ref=e1509]:
+                      - generic [ref=e1510]: 01 set 2026
+                      - generic [ref=e1511]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1512]
+                  - cell "—" [ref=e1513]:
+                    - generic [ref=e1514]: —
+                  - cell "Azioni ricambio" [ref=e1515]:
+                    - group "Azioni ricambio" [ref=e1516]:
+                      - button "Info" [ref=e1517] [cursor=pointer]:
+                        - img [ref=e1518]
+                      - button "Scarico" [ref=e1520] [cursor=pointer]:
+                        - img [ref=e1521]
+                      - button "Carico" [ref=e1522] [cursor=pointer]:
+                        - img [ref=e1523]
+                - row "DU5000SLA Dulevo Spazzola Laterale Acciaio 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1525]:
+                  - cell "DU5000SLA" [ref=e1526]:
+                    - generic [ref=e1530]: DU5000SLA
+                  - cell "Dulevo" [ref=e1531]:
+                    - generic [ref=e1532]: Dulevo
+                  - cell "Spazzola Laterale Acciaio 5000" [ref=e1533]:
+                    - generic [ref=e1534]: Spazzola Laterale Acciaio
+                    - generic [ref=e1535]: "5000"
+                  - cell "Spazzole" [ref=e1536]:
+                    - generic [ref=e1537]: Spazzole
+                  - cell "Giacenza 0" [ref=e1538]:
+                    - generic "Giacenza 0" [ref=e1540]:
+                      - generic [ref=e1541]: "0"
+                  - cell "Scorta minima 0" [ref=e1542]:
+                    - generic "Scorta minima 0" [ref=e1544]:
+                      - generic [ref=e1545]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1546]:
+                    - generic [ref=e1547]:
+                      - generic [ref=e1548]: 01 set 2026
+                      - generic [ref=e1549]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1550]
+                  - cell "—" [ref=e1551]:
+                    - generic [ref=e1552]: —
+                  - cell "Azioni ricambio" [ref=e1553]:
+                    - group "Azioni ricambio" [ref=e1554]:
+                      - button "Info" [ref=e1555] [cursor=pointer]:
+                        - img [ref=e1556]
+                      - button "Scarico" [ref=e1558] [cursor=pointer]:
+                        - img [ref=e1559]
+                      - button "Carico" [ref=e1560] [cursor=pointer]:
+                        - img [ref=e1561]
+                - row "DU5000RCM Dulevo Rullo Centrale Misto 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1563]:
+                  - cell "DU5000RCM" [ref=e1564]:
+                    - generic [ref=e1568]: DU5000RCM
+                  - cell "Dulevo" [ref=e1569]:
+                    - generic [ref=e1570]: Dulevo
+                  - cell "Rullo Centrale Misto 5000" [ref=e1571]:
+                    - generic [ref=e1572]: Rullo Centrale Misto
+                    - generic [ref=e1573]: "5000"
+                  - cell "Spazzole" [ref=e1574]:
+                    - generic [ref=e1575]: Spazzole
+                  - cell "Giacenza 0" [ref=e1576]:
+                    - generic "Giacenza 0" [ref=e1578]:
+                      - generic [ref=e1579]: "0"
+                  - cell "Scorta minima 0" [ref=e1580]:
+                    - generic "Scorta minima 0" [ref=e1582]:
+                      - generic [ref=e1583]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1584]:
+                    - generic [ref=e1585]:
+                      - generic [ref=e1586]: 01 set 2026
+                      - generic [ref=e1587]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1588]
+                  - cell "—" [ref=e1589]:
+                    - generic [ref=e1590]: —
+                  - cell "Azioni ricambio" [ref=e1591]:
+                    - group "Azioni ricambio" [ref=e1592]:
+                      - button "Info" [ref=e1593] [cursor=pointer]:
+                        - img [ref=e1594]
+                      - button "Scarico" [ref=e1596] [cursor=pointer]:
+                        - img [ref=e1597]
+                      - button "Carico" [ref=e1598] [cursor=pointer]:
+                        - img [ref=e1599]
+                - row "DU5000SAM Dulevo Spazzola Anteriore Mista PPL-ACC 5000 Spazzole Giacenza 3 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1601]:
+                  - cell "DU5000SAM" [ref=e1602]:
+                    - generic [ref=e1606]: DU5000SAM
+                  - cell "Dulevo" [ref=e1607]:
+                    - generic [ref=e1608]: Dulevo
+                  - cell "Spazzola Anteriore Mista PPL-ACC 5000" [ref=e1609]:
+                    - generic [ref=e1610]: Spazzola Anteriore Mista PPL-ACC
+                    - generic [ref=e1611]: "5000"
+                  - cell "Spazzole" [ref=e1612]:
+                    - generic [ref=e1613]: Spazzole
+                  - cell "Giacenza 3" [ref=e1614]:
+                    - generic "Giacenza 3" [ref=e1616]:
+                      - generic [ref=e1617]: "3"
+                  - cell "Scorta minima 0" [ref=e1618]:
+                    - generic "Scorta minima 0" [ref=e1620]:
+                      - generic [ref=e1621]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1622]:
+                    - generic [ref=e1623]:
+                      - generic [ref=e1624]: 01 set 2026
+                      - generic [ref=e1625]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1626]
+                  - cell "—" [ref=e1627]:
+                    - generic [ref=e1628]: —
+                  - cell "Azioni ricambio" [ref=e1629]:
+                    - group "Azioni ricambio" [ref=e1630]:
+                      - button "Info" [ref=e1631] [cursor=pointer]:
+                        - img [ref=e1632]
+                      - button "Scarico" [ref=e1634] [cursor=pointer]:
+                        - img [ref=e1635]
+                      - button "Carico" [ref=e1636] [cursor=pointer]:
+                        - img [ref=e1637]
+                - row "DU3RCPP Dulevo Rullo Centrale PPL DU3 3000 Spazzole Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 135,00 € — Azioni ricambio" [ref=e1639]:
+                  - cell "DU3RCPP" [ref=e1640]:
+                    - generic [ref=e1644]: DU3RCPP
+                  - cell "Dulevo" [ref=e1645]:
+                    - generic [ref=e1646]: Dulevo
+                  - cell "Rullo Centrale PPL DU3 3000" [ref=e1647]:
+                    - generic [ref=e1648]: Rullo Centrale PPL
+                    - generic [ref=e1649]: DU3 3000
+                  - cell "Spazzole" [ref=e1650]:
+                    - generic [ref=e1651]: Spazzole
+                  - cell "Giacenza 4" [ref=e1652]:
+                    - generic "Giacenza 4" [ref=e1654]:
+                      - generic [ref=e1655]: "4"
+                  - cell "Scorta minima 0" [ref=e1656]:
+                    - generic "Scorta minima 0" [ref=e1658]:
+                      - generic [ref=e1659]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1660]:
+                    - generic [ref=e1661]:
+                      - generic [ref=e1662]: 01 set 2026
+                      - generic [ref=e1663]: Giorgio Namoini
+                  - cell "135,00 €" [ref=e1664]
+                  - cell "—" [ref=e1665]:
+                    - generic [ref=e1666]: —
+                  - cell "Azioni ricambio" [ref=e1667]:
+                    - group "Azioni ricambio" [ref=e1668]:
+                      - button "Info" [ref=e1669] [cursor=pointer]:
+                        - img [ref=e1670]
+                      - button "Scarico" [ref=e1672] [cursor=pointer]:
+                        - img [ref=e1673]
+                      - button "Carico" [ref=e1674] [cursor=pointer]:
+                        - img [ref=e1675]
+                - row "DU5000SAA Dulevo Spazzola Anteriore Acciaio 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 82,00 € — Azioni ricambio" [ref=e1677]:
+                  - cell "DU5000SAA" [ref=e1678]:
+                    - generic [ref=e1682]: DU5000SAA
+                  - cell "Dulevo" [ref=e1683]:
+                    - generic [ref=e1684]: Dulevo
+                  - cell "Spazzola Anteriore Acciaio 5000" [ref=e1685]:
+                    - generic [ref=e1686]: Spazzola Anteriore Acciaio
+                    - generic [ref=e1687]: "5000"
+                  - cell "Spazzole" [ref=e1688]:
+                    - generic [ref=e1689]: Spazzole
+                  - cell "Giacenza 0" [ref=e1690]:
+                    - generic "Giacenza 0" [ref=e1692]:
+                      - generic [ref=e1693]: "0"
+                  - cell "Scorta minima 0" [ref=e1694]:
+                    - generic "Scorta minima 0" [ref=e1696]:
+                      - generic [ref=e1697]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1698]:
+                    - generic [ref=e1699]:
+                      - generic [ref=e1700]: 01 set 2026
+                      - generic [ref=e1701]: Giorgio Namoini
+                  - cell "82,00 €" [ref=e1702]
+                  - cell "—" [ref=e1703]:
+                    - generic [ref=e1704]: —
+                  - cell "Azioni ricambio" [ref=e1705]:
+                    - group "Azioni ricambio" [ref=e1706]:
+                      - button "Info" [ref=e1707] [cursor=pointer]:
+                        - img [ref=e1708]
+                      - button "Scarico" [ref=e1710] [cursor=pointer]:
+                        - img [ref=e1711]
+                      - button "Carico" [ref=e1712] [cursor=pointer]:
+                        - img [ref=e1713]
+                - row "DU3SLM Dulevo Spazzola Laterale/Anteriore Mista DU3 3000 Spazzole Giacenza 6 Scorta minima 0 01 set 2026 Giorgio Namoini 42,00 € — Azioni ricambio" [ref=e1715]:
+                  - cell "DU3SLM" [ref=e1716]:
+                    - generic [ref=e1720]: DU3SLM
+                  - cell "Dulevo" [ref=e1721]:
+                    - generic [ref=e1722]: Dulevo
+                  - cell "Spazzola Laterale/Anteriore Mista DU3 3000" [ref=e1723]:
+                    - generic [ref=e1724]: Spazzola Laterale/Anteriore Mista
+                    - generic [ref=e1725]: DU3 3000
+                  - cell "Spazzole" [ref=e1726]:
+                    - generic [ref=e1727]: Spazzole
+                  - cell "Giacenza 6" [ref=e1728]:
+                    - generic "Giacenza 6" [ref=e1730]:
+                      - generic [ref=e1731]: "6"
+                  - cell "Scorta minima 0" [ref=e1732]:
+                    - generic "Scorta minima 0" [ref=e1734]:
+                      - generic [ref=e1735]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1736]:
+                    - generic [ref=e1737]:
+                      - generic [ref=e1738]: 01 set 2026
+                      - generic [ref=e1739]: Giorgio Namoini
+                  - cell "42,00 €" [ref=e1740]
+                  - cell "—" [ref=e1741]:
+                    - generic [ref=e1742]: —
+                  - cell "Azioni ricambio" [ref=e1743]:
+                    - group "Azioni ricambio" [ref=e1744]:
+                      - button "Info" [ref=e1745] [cursor=pointer]:
+                        - img [ref=e1746]
+                      - button "Scarico" [ref=e1748] [cursor=pointer]:
+                        - img [ref=e1749]
+                      - button "Carico" [ref=e1750] [cursor=pointer]:
+                        - img [ref=e1751]
+                - row "DU5000SLT Dulevo Spazzola Laterale Tagliaerba 5000 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1753]:
+                  - cell "DU5000SLT" [ref=e1754]:
+                    - generic [ref=e1758]: DU5000SLT
+                  - cell "Dulevo" [ref=e1759]:
+                    - generic [ref=e1760]: Dulevo
+                  - cell "Spazzola Laterale Tagliaerba 5000" [ref=e1761]:
+                    - generic [ref=e1762]: Spazzola Laterale Tagliaerba
+                    - generic [ref=e1763]: "5000"
+                  - cell "Spazzole" [ref=e1764]:
+                    - generic [ref=e1765]: Spazzole
+                  - cell "Giacenza 0" [ref=e1766]:
+                    - generic "Giacenza 0" [ref=e1768]:
+                      - generic [ref=e1769]: "0"
+                  - cell "Scorta minima 0" [ref=e1770]:
+                    - generic "Scorta minima 0" [ref=e1772]:
+                      - generic [ref=e1773]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1774]:
+                    - generic [ref=e1775]:
+                      - generic [ref=e1776]: 01 set 2026
+                      - generic [ref=e1777]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1778]
+                  - cell "—" [ref=e1779]:
+                    - generic [ref=e1780]: —
+                  - cell "Azioni ricambio" [ref=e1781]:
+                    - group "Azioni ricambio" [ref=e1782]:
+                      - button "Info" [ref=e1783] [cursor=pointer]:
+                        - img [ref=e1784]
+                      - button "Scarico" [ref=e1786] [cursor=pointer]:
+                        - img [ref=e1787]
+                      - button "Carico" [ref=e1788] [cursor=pointer]:
+                        - img [ref=e1789]
+                - row "05050001027 Farid Sensore Interruttore Magnetico di Sicurezza Farid (Universale) Sensori Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1791]:
+                  - cell "05050001027" [ref=e1792]:
+                    - generic [ref=e1796]: "05050001027"
+                  - cell "Farid" [ref=e1797]:
+                    - generic [ref=e1798]: Farid
+                  - cell "Sensore Interruttore Magnetico di Sicurezza Farid (Universale)" [ref=e1799]:
+                    - generic [ref=e1800]: Sensore Interruttore Magnetico di Sicurezza
+                    - generic [ref=e1801]: Farid (Universale)
+                  - cell "Sensori" [ref=e1802]:
+                    - generic [ref=e1803]: Sensori
+                  - cell "Giacenza 4" [ref=e1804]:
+                    - generic "Giacenza 4" [ref=e1806]:
+                      - generic [ref=e1807]: "4"
+                  - cell "Scorta minima 0" [ref=e1808]:
+                    - generic "Scorta minima 0" [ref=e1810]:
+                      - generic [ref=e1811]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1812]:
+                    - generic [ref=e1813]:
+                      - generic [ref=e1814]: 01 set 2026
+                      - generic [ref=e1815]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1816]
+                  - cell "—" [ref=e1817]:
+                    - generic [ref=e1818]: —
+                  - cell "Azioni ricambio" [ref=e1819]:
+                    - group "Azioni ricambio" [ref=e1820]:
+                      - button "Info" [ref=e1821] [cursor=pointer]:
+                        - img [ref=e1822]
+                      - button "Scarico" [ref=e1824] [cursor=pointer]:
+                        - img [ref=e1825]
+                      - button "Carico" [ref=e1826] [cursor=pointer]:
+                        - img [ref=e1827]
+                - row "45732000056 Farid Finecorsa Farid (Universale) Altro Giacenza 2 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1829]:
+                  - cell "45732000056" [ref=e1830]:
+                    - generic [ref=e1834]: "45732000056"
+                  - cell "Farid" [ref=e1835]:
+                    - generic [ref=e1836]: Farid
+                  - cell "Finecorsa Farid (Universale)" [ref=e1837]:
+                    - generic [ref=e1838]: Finecorsa
+                    - generic [ref=e1839]: Farid (Universale)
+                  - cell "Altro" [ref=e1840]:
+                    - generic [ref=e1841]: Altro
+                  - cell "Giacenza 2" [ref=e1842]:
+                    - generic "Giacenza 2" [ref=e1844]:
+                      - generic [ref=e1845]: "2"
+                  - cell "Scorta minima 0" [ref=e1846]:
+                    - generic "Scorta minima 0" [ref=e1848]:
+                      - generic [ref=e1849]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e1850]:
+                    - generic [ref=e1851]:
+                      - generic [ref=e1852]: 06 ago 2026
+                      - generic [ref=e1853]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e1854]
+                  - cell "—" [ref=e1855]:
+                    - generic [ref=e1856]: —
+                  - cell "Azioni ricambio" [ref=e1857]:
+                    - group "Azioni ricambio" [ref=e1858]:
+                      - button "Info" [ref=e1859] [cursor=pointer]:
+                        - img [ref=e1860]
+                      - button "Scarico" [ref=e1862] [cursor=pointer]:
+                        - img [ref=e1863]
+                      - button "Carico" [ref=e1864] [cursor=pointer]:
+                        - img [ref=e1865]
+                - row "JO401SLA Johnston Spazzola Laterale Acciaio C401 Spazzole Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 92,80 € — Azioni ricambio" [ref=e1867]:
+                  - cell "JO401SLA" [ref=e1868]:
+                    - generic [ref=e1872]: JO401SLA
+                  - cell "Johnston" [ref=e1873]:
+                    - generic [ref=e1874]: Johnston
+                  - cell "Spazzola Laterale Acciaio C401" [ref=e1875]:
+                    - generic [ref=e1876]: Spazzola Laterale Acciaio
+                    - generic [ref=e1877]: C401
+                  - cell "Spazzole" [ref=e1878]:
+                    - generic [ref=e1879]: Spazzole
+                  - cell "Giacenza 4" [ref=e1880]:
+                    - generic "Giacenza 4" [ref=e1882]:
+                      - generic [ref=e1883]: "4"
+                  - cell "Scorta minima 0" [ref=e1884]:
+                    - generic "Scorta minima 0" [ref=e1886]:
+                      - generic [ref=e1887]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1888]:
+                    - generic [ref=e1889]:
+                      - generic [ref=e1890]: 01 set 2026
+                      - generic [ref=e1891]: Giorgio Namoini
+                  - cell "92,80 €" [ref=e1892]
+                  - cell "—" [ref=e1893]:
+                    - generic [ref=e1894]: —
+                  - cell "Azioni ricambio" [ref=e1895]:
+                    - group "Azioni ricambio" [ref=e1896]:
+                      - button "Info" [ref=e1897] [cursor=pointer]:
+                        - img [ref=e1898]
+                      - button "Scarico" [ref=e1900] [cursor=pointer]:
+                        - img [ref=e1901]
+                      - button "Carico" [ref=e1902] [cursor=pointer]:
+                        - img [ref=e1903]
+                - row "— Locatelli Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2) Compatibilità universale Idraulica Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 3480,00 € — Azioni ricambio" [ref=e1905]:
+                  - cell "—" [ref=e1906]:
+                    - generic [ref=e1910]: —
+                  - cell "Locatelli" [ref=e1911]:
+                    - generic [ref=e1912]: Locatelli
+                  - cell "Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2) Compatibilità universale" [ref=e1913]:
+                    - generic [ref=e1914]: Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2)
+                    - generic [ref=e1915]: Compatibilità universale
+                  - cell "Idraulica" [ref=e1916]:
+                    - generic [ref=e1917]: Idraulica
+                  - cell "Giacenza 0" [ref=e1918]:
+                    - generic "Giacenza 0" [ref=e1920]:
+                      - generic [ref=e1921]: "0"
+                  - cell "Scorta minima 0" [ref=e1922]:
+                    - generic "Scorta minima 0" [ref=e1924]:
+                      - generic [ref=e1925]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1926]:
+                    - generic [ref=e1927]:
+                      - generic [ref=e1928]: 01 set 2026
+                      - generic [ref=e1929]: Giorgio Namoini
+                  - cell "3480,00 €" [ref=e1930]
+                  - cell "—" [ref=e1931]:
+                    - generic [ref=e1932]: —
+                  - cell "Azioni ricambio" [ref=e1933]:
+                    - group "Azioni ricambio" [ref=e1934]:
+                      - button "Info" [ref=e1935] [cursor=pointer]:
+                        - img [ref=e1936]
+                      - button "Scarico" [ref=e1938] [cursor=pointer]:
+                        - img [ref=e1939]
+                      - button "Carico" [ref=e1940] [cursor=pointer]:
+                        - img [ref=e1941]
+                - row "SL500RCM Longo Rullo Centrale Misto (Due Pezzi) SL500 Spazzole Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 85,00 € — Azioni ricambio" [ref=e1943]:
+                  - cell "SL500RCM" [ref=e1944]:
+                    - generic [ref=e1948]: SL500RCM
+                  - cell "Longo" [ref=e1949]:
+                    - generic [ref=e1950]: Longo
+                  - cell "Rullo Centrale Misto (Due Pezzi) SL500" [ref=e1951]:
+                    - generic [ref=e1952]: Rullo Centrale Misto (Due Pezzi)
+                    - generic [ref=e1953]: SL500
+                  - cell "Spazzole" [ref=e1954]:
+                    - generic [ref=e1955]: Spazzole
+                  - cell "Giacenza 1" [ref=e1956]:
+                    - generic "Giacenza 1" [ref=e1958]:
+                      - generic [ref=e1959]: "1"
+                  - cell "Scorta minima 0" [ref=e1960]:
+                    - generic "Scorta minima 0" [ref=e1962]:
+                      - generic [ref=e1963]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e1964]:
+                    - generic [ref=e1965]:
+                      - generic [ref=e1966]: 01 set 2026
+                      - generic [ref=e1967]: Giorgio Namoini
+                  - cell "85,00 €" [ref=e1968]
+                  - cell "—" [ref=e1969]:
+                    - generic [ref=e1970]: —
+                  - cell "Azioni ricambio" [ref=e1971]:
+                    - group "Azioni ricambio" [ref=e1972]:
+                      - button "Info" [ref=e1973] [cursor=pointer]:
+                        - img [ref=e1974]
+                      - button "Scarico" [ref=e1976] [cursor=pointer]:
+                        - img [ref=e1977]
+                      - button "Carico" [ref=e1978] [cursor=pointer]:
+                        - img [ref=e1979]
+                - row "OL140658 Nextra Tappo Sfiato Serbatorio Olio Idraulico Nextra (Universale) — Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e1981]:
+                  - cell "OL140658" [ref=e1982]:
+                    - generic [ref=e1986]: OL140658
+                  - cell "Nextra" [ref=e1987]:
+                    - generic [ref=e1988]: Nextra
+                  - cell "Tappo Sfiato Serbatorio Olio Idraulico Nextra (Universale)" [ref=e1989]:
+                    - generic [ref=e1990]: Tappo Sfiato Serbatorio Olio Idraulico
+                    - generic [ref=e1991]: Nextra (Universale)
+                  - cell "—" [ref=e1992]:
+                    - generic [ref=e1993]: —
+                  - cell "Giacenza 0" [ref=e1994]:
+                    - generic "Giacenza 0" [ref=e1996]:
+                      - generic [ref=e1997]: "0"
+                  - cell "Scorta minima 0" [ref=e1998]:
+                    - generic "Scorta minima 0" [ref=e2000]:
+                      - generic [ref=e2001]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2002]:
+                    - generic [ref=e2003]:
+                      - generic [ref=e2004]: 01 set 2026
+                      - generic [ref=e2005]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2006]
+                  - cell "—" [ref=e2007]:
+                    - generic [ref=e2008]: —
+                  - cell "Azioni ricambio" [ref=e2009]:
+                    - group "Azioni ricambio" [ref=e2010]:
+                      - button "Info" [ref=e2011] [cursor=pointer]:
+                        - img [ref=e2012]
+                      - button "Scarico" [ref=e2014] [cursor=pointer]:
+                        - img [ref=e2015]
+                      - button "Carico" [ref=e2016] [cursor=pointer]:
+                        - img [ref=e2017]
+                - row "XS7E1APAM8 Nextra Sensore Induttivo di Prossimità 12/24VDC Nextra (Universale) Sensori Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2019]:
+                  - cell "XS7E1APAM8" [ref=e2020]:
+                    - generic [ref=e2024]: XS7E1APAM8
+                  - cell "Nextra" [ref=e2025]:
+                    - generic [ref=e2026]: Nextra
+                  - cell "Sensore Induttivo di Prossimità 12/24VDC Nextra (Universale)" [ref=e2027]:
+                    - generic [ref=e2028]: Sensore Induttivo di Prossimità 12/24VDC
+                    - generic [ref=e2029]: Nextra (Universale)
+                  - cell "Sensori" [ref=e2030]:
+                    - generic [ref=e2031]: Sensori
+                  - cell "Giacenza 0" [ref=e2032]:
+                    - generic "Giacenza 0" [ref=e2034]:
+                      - generic [ref=e2035]: "0"
+                  - cell "Scorta minima 0" [ref=e2036]:
+                    - generic "Scorta minima 0" [ref=e2038]:
+                      - generic [ref=e2039]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2040]:
+                    - generic [ref=e2041]:
+                      - generic [ref=e2042]: 01 set 2026
+                      - generic [ref=e2043]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2044]
+                  - cell "—" [ref=e2045]:
+                    - generic [ref=e2046]: —
+                  - cell "Azioni ricambio" [ref=e2047]:
+                    - group "Azioni ricambio" [ref=e2048]:
+                      - button "Info" [ref=e2049] [cursor=pointer]:
+                        - img [ref=e2050]
+                      - button "Scarico" [ref=e2052] [cursor=pointer]:
+                        - img [ref=e2053]
+                      - button "Carico" [ref=e2054] [cursor=pointer]:
+                        - img [ref=e2055]
+                - row "8ESNS020000202 OMB Sensore di Prossimità Quadro 20mm NA/NC Ledfron Compatibilità universale Elettronica Giacenza 2 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2057]:
+                  - cell "8ESNS020000202" [ref=e2058]:
+                    - generic [ref=e2062]: 8ESNS020000202
+                  - cell "OMB" [ref=e2063]:
+                    - generic [ref=e2064]: OMB
+                  - cell "Sensore di Prossimità Quadro 20mm NA/NC Ledfron Compatibilità universale" [ref=e2065]:
+                    - generic [ref=e2066]: Sensore di Prossimità Quadro 20mm NA/NC Ledfron
+                    - generic [ref=e2067]: Compatibilità universale
+                  - cell "Elettronica" [ref=e2068]:
+                    - generic [ref=e2069]: Elettronica
+                  - cell "Giacenza 2" [ref=e2070]:
+                    - generic "Giacenza 2" [ref=e2072]:
+                      - generic [ref=e2073]: "2"
+                  - cell "Scorta minima 0" [ref=e2074]:
+                    - generic "Scorta minima 0" [ref=e2076]:
+                      - generic [ref=e2077]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e2078]:
+                    - generic [ref=e2079]:
+                      - generic [ref=e2080]: 06 ago 2026
+                      - generic [ref=e2081]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2082]
+                  - cell "—" [ref=e2083]:
+                    - generic [ref=e2084]: —
+                  - cell "Azioni ricambio" [ref=e2085]:
+                    - group "Azioni ricambio" [ref=e2086]:
+                      - button "Info" [ref=e2087] [cursor=pointer]:
+                        - img [ref=e2088]
+                      - button "Scarico" [ref=e2090] [cursor=pointer]:
+                        - img [ref=e2091]
+                      - button "Carico" [ref=e2092] [cursor=pointer]:
+                        - img [ref=e2093]
+                - row "8ESNS020000203 OMB Sensore Prossimità Induttivo M12 NO D30 OMB (Universale) Sensori Giacenza 10 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2095]:
+                  - cell "8ESNS020000203" [ref=e2096]:
+                    - generic [ref=e2100]: 8ESNS020000203
+                  - cell "OMB" [ref=e2101]:
+                    - generic [ref=e2102]: OMB
+                  - cell "Sensore Prossimità Induttivo M12 NO D30 OMB (Universale)" [ref=e2103]:
+                    - generic [ref=e2104]: Sensore Prossimità Induttivo M12 NO D30
+                    - generic [ref=e2105]: OMB (Universale)
+                  - cell "Sensori" [ref=e2106]:
+                    - generic [ref=e2107]: Sensori
+                  - cell "Giacenza 10" [ref=e2108]:
+                    - generic "Giacenza 10" [ref=e2110]:
+                      - generic [ref=e2111]: "10"
+                  - cell "Scorta minima 0" [ref=e2112]:
+                    - generic "Scorta minima 0" [ref=e2114]:
+                      - generic [ref=e2115]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e2116]:
+                    - generic [ref=e2117]:
+                      - generic [ref=e2118]: 06 ago 2026
+                      - generic [ref=e2119]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2120]
+                  - cell "—" [ref=e2121]:
+                    - generic [ref=e2122]: —
+                  - cell "Azioni ricambio" [ref=e2123]:
+                    - group "Azioni ricambio" [ref=e2124]:
+                      - button "Info" [ref=e2125] [cursor=pointer]:
+                        - img [ref=e2126]
+                      - button "Scarico" [ref=e2128] [cursor=pointer]:
+                        - img [ref=e2129]
+                      - button "Carico" [ref=e2130] [cursor=pointer]:
+                        - img [ref=e2131]
+                - row "0E091402 OMB Connettore Diritto 4 Poli L=5m OMB (Universale) Sensori Giacenza 20 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2133]:
+                  - cell "0E091402" [ref=e2134]:
+                    - generic [ref=e2138]: "0E091402"
+                  - cell "OMB" [ref=e2139]:
+                    - generic [ref=e2140]: OMB
+                  - cell "Connettore Diritto 4 Poli L=5m OMB (Universale)" [ref=e2141]:
+                    - generic [ref=e2142]: Connettore Diritto 4 Poli L=5m
+                    - generic [ref=e2143]: OMB (Universale)
+                  - cell "Sensori" [ref=e2144]:
+                    - generic [ref=e2145]: Sensori
+                  - cell "Giacenza 20" [ref=e2146]:
+                    - generic "Giacenza 20" [ref=e2148]:
+                      - generic [ref=e2149]: "20"
+                  - cell "Scorta minima 0" [ref=e2150]:
+                    - generic "Scorta minima 0" [ref=e2152]:
+                      - generic [ref=e2153]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2154]:
+                    - generic [ref=e2155]:
+                      - generic [ref=e2156]: 01 set 2026
+                      - generic [ref=e2157]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2158]
+                  - cell "—" [ref=e2159]:
+                    - generic [ref=e2160]: —
+                  - cell "Azioni ricambio" [ref=e2161]:
+                    - group "Azioni ricambio" [ref=e2162]:
+                      - button "Info" [ref=e2163] [cursor=pointer]:
+                        - img [ref=e2164]
+                      - button "Scarico" [ref=e2166] [cursor=pointer]:
+                        - img [ref=e2167]
+                      - button "Carico" [ref=e2168] [cursor=pointer]:
+                        - img [ref=e2169]
+                - row "8ESNS020000201 OMB Sensore di Prossimità Induttivo M12 NO D18 OMB (Universale) Sensori Giacenza 15 Scorta minima 1 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2171]:
+                  - cell "8ESNS020000201" [ref=e2172]:
+                    - generic [ref=e2176]: 8ESNS020000201
+                  - cell "OMB" [ref=e2177]:
+                    - generic [ref=e2178]: OMB
+                  - cell "Sensore di Prossimità Induttivo M12 NO D18 OMB (Universale)" [ref=e2179]:
+                    - generic [ref=e2180]: Sensore di Prossimità Induttivo M12 NO D18
+                    - generic [ref=e2181]: OMB (Universale)
+                  - cell "Sensori" [ref=e2182]:
+                    - generic [ref=e2183]: Sensori
+                  - cell "Giacenza 15" [ref=e2184]:
+                    - generic "Giacenza 15" [ref=e2186]:
+                      - generic [ref=e2187]: "15"
+                  - cell "Scorta minima 1" [ref=e2188]:
+                    - generic "Scorta minima 1" [ref=e2190]:
+                      - generic [ref=e2191]: "1"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e2192]:
+                    - generic [ref=e2193]:
+                      - generic [ref=e2194]: 06 ago 2026
+                      - generic [ref=e2195]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2196]
+                  - cell "—" [ref=e2197]:
+                    - generic [ref=e2198]: —
+                  - cell "Azioni ricambio" [ref=e2199]:
+                    - group "Azioni ricambio" [ref=e2200]:
+                      - button "Info" [ref=e2201] [cursor=pointer]:
+                        - img [ref=e2202]
+                      - button "Scarico" [ref=e2204] [cursor=pointer]:
+                        - img [ref=e2205]
+                      - button "Carico" [ref=e2206] [cursor=pointer]:
+                        - img [ref=e2207]
+                - row "0E130130B20T OMB Sensore di Prossimità M30x1,5 Compatibilità universale Sensori Giacenza 0 Scorta minima 0 02 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2209]:
+                  - cell "0E130130B20T" [ref=e2210]:
+                    - generic [ref=e2214]: 0E130130B20T
+                  - cell "OMB" [ref=e2215]:
+                    - generic [ref=e2216]: OMB
+                  - cell "Sensore di Prossimità M30x1,5 Compatibilità universale" [ref=e2217]:
+                    - generic [ref=e2218]: Sensore di Prossimità M30x1,5
+                    - generic [ref=e2219]: Compatibilità universale
+                  - cell "Sensori" [ref=e2220]:
+                    - generic [ref=e2221]: Sensori
+                  - cell "Giacenza 0" [ref=e2222]:
+                    - generic "Giacenza 0" [ref=e2224]:
+                      - generic [ref=e2225]: "0"
+                  - cell "Scorta minima 0" [ref=e2226]:
+                    - generic "Scorta minima 0" [ref=e2228]:
+                      - generic [ref=e2229]: "0"
+                  - cell "02 set 2026 Giorgio Namoini" [ref=e2230]:
+                    - generic [ref=e2231]:
+                      - generic [ref=e2232]: 02 set 2026
+                      - generic [ref=e2233]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2234]
+                  - cell "—" [ref=e2235]:
+                    - generic [ref=e2236]: —
+                  - cell "Azioni ricambio" [ref=e2237]:
+                    - group "Azioni ricambio" [ref=e2238]:
+                      - button "Info" [ref=e2239] [cursor=pointer]:
+                        - img [ref=e2240]
+                      - button "Scarico" [ref=e2242] [cursor=pointer]:
+                        - img [ref=e2243]
+                      - button "Carico" [ref=e2244] [cursor=pointer]:
+                        - img [ref=e2245]
+                - row "0O0548R01 OMB Bobina Elettrica 24V DT04 KBB16002400 OMB (Universale) Elettronica Giacenza 4 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2247]:
+                  - cell "0O0548R01" [ref=e2248]:
+                    - generic [ref=e2252]: 0O0548R01
+                  - cell "OMB" [ref=e2253]:
+                    - generic [ref=e2254]: OMB
+                  - cell "Bobina Elettrica 24V DT04 KBB16002400 OMB (Universale)" [ref=e2255]:
+                    - generic [ref=e2256]: Bobina Elettrica 24V DT04 KBB16002400
+                    - generic [ref=e2257]: OMB (Universale)
+                  - cell "Elettronica" [ref=e2258]:
+                    - generic [ref=e2259]: Elettronica
+                  - cell "Giacenza 4" [ref=e2260]:
+                    - generic "Giacenza 4" [ref=e2262]:
+                      - generic [ref=e2263]: "4"
+                  - cell "Scorta minima 0" [ref=e2264]:
+                    - generic "Scorta minima 0" [ref=e2266]:
+                      - generic [ref=e2267]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e2268]:
+                    - generic [ref=e2269]:
+                      - generic [ref=e2270]: 06 ago 2026
+                      - generic [ref=e2271]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2272]
+                  - cell "—" [ref=e2273]:
+                    - generic [ref=e2274]: —
+                  - cell "Azioni ricambio" [ref=e2275]:
+                    - group "Azioni ricambio" [ref=e2276]:
+                      - button "Info" [ref=e2277] [cursor=pointer]:
+                        - img [ref=e2278]
+                      - button "Scarico" [ref=e2280] [cursor=pointer]:
+                        - img [ref=e2281]
+                      - button "Carico" [ref=e2282] [cursor=pointer]:
+                        - img [ref=e2283]
+                - row "0E073303 OMB Cavo Pin 4 Poli Compatibilità universale Sensori Giacenza 0 Scorta minima 0 02 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2285]:
+                  - cell "0E073303" [ref=e2286]:
+                    - generic [ref=e2290]: "0E073303"
+                  - cell "OMB" [ref=e2291]:
+                    - generic [ref=e2292]: OMB
+                  - cell "Cavo Pin 4 Poli Compatibilità universale" [ref=e2293]:
+                    - generic [ref=e2294]: Cavo Pin 4 Poli
+                    - generic [ref=e2295]: Compatibilità universale
+                  - cell "Sensori" [ref=e2296]:
+                    - generic [ref=e2297]: Sensori
+                  - cell "Giacenza 0" [ref=e2298]:
+                    - generic "Giacenza 0" [ref=e2300]:
+                      - generic [ref=e2301]: "0"
+                  - cell "Scorta minima 0" [ref=e2302]:
+                    - generic "Scorta minima 0" [ref=e2304]:
+                      - generic [ref=e2305]: "0"
+                  - cell "02 set 2026 Giorgio Namoini" [ref=e2306]:
+                    - generic [ref=e2307]:
+                      - generic [ref=e2308]: 02 set 2026
+                      - generic [ref=e2309]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2310]
+                  - cell "—" [ref=e2311]:
+                    - generic [ref=e2312]: —
+                  - cell "Azioni ricambio" [ref=e2313]:
+                    - group "Azioni ricambio" [ref=e2314]:
+                      - button "Info" [ref=e2315] [cursor=pointer]:
+                        - img [ref=e2316]
+                      - button "Scarico" [ref=e2318] [cursor=pointer]:
+                        - img [ref=e2319]
+                      - button "Carico" [ref=e2320] [cursor=pointer]:
+                        - img [ref=e2321]
+                - row "0E131701 OMB Sensore di Prossimità SN=8 Compatibilità universale Sensori Giacenza 0 Scorta minima 0 02 set 2026 Giorgio Namoini 40,04 € — Azioni ricambio" [ref=e2323]:
+                  - cell "0E131701" [ref=e2324]:
+                    - generic [ref=e2328]: "0E131701"
+                  - cell "OMB" [ref=e2329]:
+                    - generic [ref=e2330]: OMB
+                  - cell "Sensore di Prossimità SN=8 Compatibilità universale" [ref=e2331]:
+                    - generic [ref=e2332]: Sensore di Prossimità SN=8
+                    - generic [ref=e2333]: Compatibilità universale
+                  - cell "Sensori" [ref=e2334]:
+                    - generic [ref=e2335]: Sensori
+                  - cell "Giacenza 0" [ref=e2336]:
+                    - generic "Giacenza 0" [ref=e2338]:
+                      - generic [ref=e2339]: "0"
+                  - cell "Scorta minima 0" [ref=e2340]:
+                    - generic "Scorta minima 0" [ref=e2342]:
+                      - generic [ref=e2343]: "0"
+                  - cell "02 set 2026 Giorgio Namoini" [ref=e2344]:
+                    - generic [ref=e2345]:
+                      - generic [ref=e2346]: 02 set 2026
+                      - generic [ref=e2347]: Giorgio Namoini
+                  - cell "40,04 €" [ref=e2348]
+                  - cell "—" [ref=e2349]:
+                    - generic [ref=e2350]: —
+                  - cell "Azioni ricambio" [ref=e2351]:
+                    - group "Azioni ricambio" [ref=e2352]:
+                      - button "Info" [ref=e2353] [cursor=pointer]:
+                        - img [ref=e2354]
+                      - button "Scarico" [ref=e2356] [cursor=pointer]:
+                        - img [ref=e2357]
+                      - button "Carico" [ref=e2358] [cursor=pointer]:
+                        - img [ref=e2359]
+                - row "0E091405 OMB Connettore 90 Gradi 4 Poli L=5m OMB (Universale) Sensori Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2361]:
+                  - cell "0E091405" [ref=e2362]:
+                    - generic [ref=e2366]: "0E091405"
+                  - cell "OMB" [ref=e2367]:
+                    - generic [ref=e2368]: OMB
+                  - cell "Connettore 90 Gradi 4 Poli L=5m OMB (Universale)" [ref=e2369]:
+                    - generic [ref=e2370]: Connettore 90 Gradi 4 Poli L=5m
+                    - generic [ref=e2371]: OMB (Universale)
+                  - cell "Sensori" [ref=e2372]:
+                    - generic [ref=e2373]: Sensori
+                  - cell "Giacenza 4" [ref=e2374]:
+                    - generic "Giacenza 4" [ref=e2376]:
+                      - generic [ref=e2377]: "4"
+                  - cell "Scorta minima 0" [ref=e2378]:
+                    - generic "Scorta minima 0" [ref=e2380]:
+                      - generic [ref=e2381]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2382]:
+                    - generic [ref=e2383]:
+                      - generic [ref=e2384]: 01 set 2026
+                      - generic [ref=e2385]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2386]
+                  - cell "—" [ref=e2387]:
+                    - generic [ref=e2388]: —
+                  - cell "Azioni ricambio" [ref=e2389]:
+                    - group "Azioni ricambio" [ref=e2390]:
+                      - button "Info" [ref=e2391] [cursor=pointer]:
+                        - img [ref=e2392]
+                      - button "Scarico" [ref=e2394] [cursor=pointer]:
+                        - img [ref=e2395]
+                      - button "Carico" [ref=e2396] [cursor=pointer]:
+                        - img [ref=e2397]
+                - row "RAVOSLAO Ravo Spazzola Laterale Acciaio Piatto Ferro Ravo (Universale) Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2399]:
+                  - cell "RAVOSLAO" [ref=e2400]:
+                    - generic [ref=e2404]: RAVOSLAO
+                  - cell "Ravo" [ref=e2405]:
+                    - generic [ref=e2406]: Ravo
+                  - cell "Spazzola Laterale Acciaio Piatto Ferro Ravo (Universale)" [ref=e2407]:
+                    - generic [ref=e2408]: Spazzola Laterale Acciaio Piatto Ferro
+                    - generic [ref=e2409]: Ravo (Universale)
+                  - cell "Spazzole" [ref=e2410]:
+                    - generic [ref=e2411]: Spazzole
+                  - cell "Giacenza 0" [ref=e2412]:
+                    - generic "Giacenza 0" [ref=e2414]:
+                      - generic [ref=e2415]: "0"
+                  - cell "Scorta minima 0" [ref=e2416]:
+                    - generic "Scorta minima 0" [ref=e2418]:
+                      - generic [ref=e2419]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2420]:
+                    - generic [ref=e2421]:
+                      - generic [ref=e2422]: 01 set 2026
+                      - generic [ref=e2423]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2424]
+                  - cell "—" [ref=e2425]:
+                    - generic [ref=e2426]: —
+                  - cell "Azioni ricambio" [ref=e2427]:
+                    - group "Azioni ricambio" [ref=e2428]:
+                      - button "Info" [ref=e2429] [cursor=pointer]:
+                        - img [ref=e2430]
+                      - button "Scarico" [ref=e2432] [cursor=pointer]:
+                        - img [ref=e2433]
+                      - button "Carico" [ref=e2434] [cursor=pointer]:
+                        - img [ref=e2435]
+                - row "RAVOSLA Ravo Spazzola Laterale Acciaio Ravo (Universale) Spazzole Giacenza 10 Scorta minima 0 01 set 2026 Giorgio Namoini 40,00 € — Azioni ricambio" [ref=e2437]:
+                  - cell "RAVOSLA" [ref=e2438]:
+                    - generic [ref=e2442]: RAVOSLA
+                  - cell "Ravo" [ref=e2443]:
+                    - generic [ref=e2444]: Ravo
+                  - cell "Spazzola Laterale Acciaio Ravo (Universale)" [ref=e2445]:
+                    - generic [ref=e2446]: Spazzola Laterale Acciaio
+                    - generic [ref=e2447]: Ravo (Universale)
+                  - cell "Spazzole" [ref=e2448]:
+                    - generic [ref=e2449]: Spazzole
+                  - cell "Giacenza 10" [ref=e2450]:
+                    - generic "Giacenza 10" [ref=e2452]:
+                      - generic [ref=e2453]: "10"
+                  - cell "Scorta minima 0" [ref=e2454]:
+                    - generic "Scorta minima 0" [ref=e2456]:
+                      - generic [ref=e2457]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2458]:
+                    - generic [ref=e2459]:
+                      - generic [ref=e2460]: 01 set 2026
+                      - generic [ref=e2461]: Giorgio Namoini
+                  - cell "40,00 €" [ref=e2462]
+                  - cell "—" [ref=e2463]:
+                    - generic [ref=e2464]: —
+                  - cell "Azioni ricambio" [ref=e2465]:
+                    - group "Azioni ricambio" [ref=e2466]:
+                      - button "Info" [ref=e2467] [cursor=pointer]:
+                        - img [ref=e2468]
+                      - button "Scarico" [ref=e2470] [cursor=pointer]:
+                        - img [ref=e2471]
+                      - button "Carico" [ref=e2472] [cursor=pointer]:
+                        - img [ref=e2473]
+                - row "RAVOSLTA Ravo Spazzola Laterale Tagliaerba Ravo (Universale) Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 126,00 € — Azioni ricambio" [ref=e2475]:
+                  - cell "RAVOSLTA" [ref=e2476]:
+                    - generic [ref=e2480]: RAVOSLTA
+                  - cell "Ravo" [ref=e2481]:
+                    - generic [ref=e2482]: Ravo
+                  - cell "Spazzola Laterale Tagliaerba Ravo (Universale)" [ref=e2483]:
+                    - generic [ref=e2484]: Spazzola Laterale Tagliaerba
+                    - generic [ref=e2485]: Ravo (Universale)
+                  - cell "Spazzole" [ref=e2486]:
+                    - generic [ref=e2487]: Spazzole
+                  - cell "Giacenza 0" [ref=e2488]:
+                    - generic "Giacenza 0" [ref=e2490]:
+                      - generic [ref=e2491]: "0"
+                  - cell "Scorta minima 0" [ref=e2492]:
+                    - generic "Scorta minima 0" [ref=e2494]:
+                      - generic [ref=e2495]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2496]:
+                    - generic [ref=e2497]:
+                      - generic [ref=e2498]: 01 set 2026
+                      - generic [ref=e2499]: Giorgio Namoini
+                  - cell "126,00 €" [ref=e2500]
+                  - cell "—" [ref=e2501]:
+                    - generic [ref=e2502]: —
+                  - cell "Azioni ricambio" [ref=e2503]:
+                    - group "Azioni ricambio" [ref=e2504]:
+                      - button "Info" [ref=e2505] [cursor=pointer]:
+                        - img [ref=e2506]
+                      - button "Scarico" [ref=e2508] [cursor=pointer]:
+                        - img [ref=e2509]
+                      - button "Carico" [ref=e2510] [cursor=pointer]:
+                        - img [ref=e2511]
+                - row "RAVOSLM Ravo Spazzola Laterale PPL/Acciaio Ravo (Universale) Spazzole Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2513]:
+                  - cell "RAVOSLM" [ref=e2514]:
+                    - generic [ref=e2518]: RAVOSLM
+                  - cell "Ravo" [ref=e2519]:
+                    - generic [ref=e2520]: Ravo
+                  - cell "Spazzola Laterale PPL/Acciaio Ravo (Universale)" [ref=e2521]:
+                    - generic [ref=e2522]: Spazzola Laterale PPL/Acciaio
+                    - generic [ref=e2523]: Ravo (Universale)
+                  - cell "Spazzole" [ref=e2524]:
+                    - generic [ref=e2525]: Spazzole
+                  - cell "Giacenza 4" [ref=e2526]:
+                    - generic "Giacenza 4" [ref=e2528]:
+                      - generic [ref=e2529]: "4"
+                  - cell "Scorta minima 0" [ref=e2530]:
+                    - generic "Scorta minima 0" [ref=e2532]:
+                      - generic [ref=e2533]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2534]:
+                    - generic [ref=e2535]:
+                      - generic [ref=e2536]: 01 set 2026
+                      - generic [ref=e2537]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2538]
+                  - cell "—" [ref=e2539]:
+                    - generic [ref=e2540]: —
+                  - cell "Azioni ricambio" [ref=e2541]:
+                    - group "Azioni ricambio" [ref=e2542]:
+                      - button "Info" [ref=e2543] [cursor=pointer]:
+                        - img [ref=e2544]
+                      - button "Scarico" [ref=e2546] [cursor=pointer]:
+                        - img [ref=e2547]
+                      - button "Carico" [ref=e2548] [cursor=pointer]:
+                        - img [ref=e2549]
+                - row "1405954-6 Schmidt Blocco Chiusura Finestrino Schmidt (Universale) Cabina Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio 0,00 € — Azioni ricambio" [ref=e2551]:
+                  - cell "1405954-6" [ref=e2552]:
+                    - generic [ref=e2556]: 1405954-6
+                  - cell "Schmidt" [ref=e2557]:
+                    - generic [ref=e2558]: Schmidt
+                  - cell "Blocco Chiusura Finestrino Schmidt (Universale)" [ref=e2559]:
+                    - generic [ref=e2560]: Blocco Chiusura Finestrino
+                    - generic [ref=e2561]: Schmidt (Universale)
+                  - cell "Cabina" [ref=e2562]:
+                    - generic [ref=e2563]: Cabina
+                  - cell "Giacenza 1" [ref=e2564]:
+                    - generic "Giacenza 1" [ref=e2566]:
+                      - generic [ref=e2567]: "1"
+                  - cell "Scorta minima 0" [ref=e2568]:
+                    - generic "Scorta minima 0" [ref=e2570]:
+                      - generic [ref=e2571]: "0"
+                  - cell "06 ago 2026 Giorgio" [ref=e2572]:
+                    - generic [ref=e2573]:
+                      - generic [ref=e2574]: 06 ago 2026
+                      - generic [ref=e2575]: Giorgio
+                  - cell "0,00 €" [ref=e2576]
+                  - cell "—" [ref=e2577]:
+                    - generic [ref=e2578]: —
+                  - cell "Azioni ricambio" [ref=e2579]:
+                    - group "Azioni ricambio" [ref=e2580]:
+                      - button "Info" [ref=e2581] [cursor=pointer]:
+                        - img [ref=e2582]
+                      - button "Scarico" [ref=e2584] [cursor=pointer]:
+                        - img [ref=e2585]
+                      - button "Carico" [ref=e2586] [cursor=pointer]:
+                        - img [ref=e2587]
+                - row "SWINGOSLA Schmidt Spazzola Laterale Acciaio Swingo 200 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2589]:
+                  - cell "SWINGOSLA" [ref=e2590]:
+                    - generic [ref=e2594]: SWINGOSLA
+                  - cell "Schmidt" [ref=e2595]:
+                    - generic [ref=e2596]: Schmidt
+                  - cell "Spazzola Laterale Acciaio Swingo 200" [ref=e2597]:
+                    - generic [ref=e2598]: Spazzola Laterale Acciaio
+                    - generic [ref=e2599]: Swingo 200
+                  - cell "Spazzole" [ref=e2600]:
+                    - generic [ref=e2601]: Spazzole
+                  - cell "Giacenza 0" [ref=e2602]:
+                    - generic "Giacenza 0" [ref=e2604]:
+                      - generic [ref=e2605]: "0"
+                  - cell "Scorta minima 0" [ref=e2606]:
+                    - generic "Scorta minima 0" [ref=e2608]:
+                      - generic [ref=e2609]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2610]:
+                    - generic [ref=e2611]:
+                      - generic [ref=e2612]: 01 set 2026
+                      - generic [ref=e2613]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2614]
+                  - cell "—" [ref=e2615]:
+                    - generic [ref=e2616]: —
+                  - cell "Azioni ricambio" [ref=e2617]:
+                    - group "Azioni ricambio" [ref=e2618]:
+                      - button "Info" [ref=e2619] [cursor=pointer]:
+                        - img [ref=e2620]
+                      - button "Scarico" [ref=e2622] [cursor=pointer]:
+                        - img [ref=e2623]
+                      - button "Carico" [ref=e2624] [cursor=pointer]:
+                        - img [ref=e2625]
+                - row "14-925029101 Schmidt Valvola a Sfera 3/8 Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 51,82 € — Azioni ricambio" [ref=e2627]:
+                  - cell "14-925029101" [ref=e2628]:
+                    - generic [ref=e2632]: 14-925029101
+                  - cell "Schmidt" [ref=e2633]:
+                    - generic [ref=e2634]: Schmidt
+                  - cell "Valvola a Sfera 3/8 Schmidt (Universale)" [ref=e2635]:
+                    - generic [ref=e2636]: Valvola a Sfera 3/8
+                    - generic [ref=e2637]: Schmidt (Universale)
+                  - cell "Altro" [ref=e2638]:
+                    - generic [ref=e2639]: Altro
+                  - cell "Giacenza 0" [ref=e2640]:
+                    - generic "Giacenza 0" [ref=e2642]:
+                      - generic [ref=e2643]: "0"
+                  - cell "Scorta minima 0" [ref=e2644]:
+                    - generic "Scorta minima 0" [ref=e2646]:
+                      - generic [ref=e2647]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2648]:
+                    - generic [ref=e2649]:
+                      - generic [ref=e2650]: 01 set 2026
+                      - generic [ref=e2651]: Giorgio Namoini
+                  - cell "51,82 €" [ref=e2652]
+                  - cell "—" [ref=e2653]:
+                    - generic [ref=e2654]: —
+                  - cell "Azioni ricambio" [ref=e2655]:
+                    - group "Azioni ricambio" [ref=e2656]:
+                      - button "Info" [ref=e2657] [cursor=pointer]:
+                        - img [ref=e2658]
+                      - button "Scarico" [ref=e2660] [cursor=pointer]:
+                        - img [ref=e2661]
+                      - button "Carico" [ref=e2662] [cursor=pointer]:
+                        - img [ref=e2663]
+                - row "1261870-4 Schmidt Filtro Olio Motore Cleango 500 E6C Motore Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2665]:
+                  - cell "1261870-4" [ref=e2666]:
+                    - generic [ref=e2670]: 1261870-4
+                  - cell "Schmidt" [ref=e2671]:
+                    - generic [ref=e2672]: Schmidt
+                  - cell "Filtro Olio Motore Cleango 500 E6C" [ref=e2673]:
+                    - generic [ref=e2674]: Filtro Olio Motore
+                    - generic [ref=e2675]: Cleango 500 E6C
+                  - cell "Motore" [ref=e2676]:
+                    - generic [ref=e2677]: Motore
+                  - cell "Giacenza 0" [ref=e2678]:
+                    - generic "Giacenza 0" [ref=e2680]:
+                      - generic [ref=e2681]: "0"
+                  - cell "Scorta minima 0" [ref=e2682]:
+                    - generic "Scorta minima 0" [ref=e2684]:
+                      - generic [ref=e2685]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2686]:
+                    - generic [ref=e2687]:
+                      - generic [ref=e2688]: 01 set 2026
+                      - generic [ref=e2689]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2690]
+                  - cell "—" [ref=e2691]:
+                    - generic [ref=e2692]: —
+                  - cell "Azioni ricambio" [ref=e2693]:
+                    - group "Azioni ricambio" [ref=e2694]:
+                      - button "Info" [ref=e2695] [cursor=pointer]:
+                        - img [ref=e2696]
+                      - button "Scarico" [ref=e2698] [cursor=pointer]:
+                        - img [ref=e2699]
+                      - button "Carico" [ref=e2700] [cursor=pointer]:
+                        - img [ref=e2701]
+                - row "SK660RCM Schmidt Rullo Centrale Misto (2 Pezzi) Compatibilità universale Spazzole Giacenza 1 Scorta minima 0 01 set 2026 Giorgio Namoini 130,50 € — Azioni ricambio" [ref=e2703]:
+                  - cell "SK660RCM" [ref=e2704]:
+                    - generic [ref=e2708]: SK660RCM
+                  - cell "Schmidt" [ref=e2709]:
+                    - generic [ref=e2710]: Schmidt
+                  - cell "Rullo Centrale Misto (2 Pezzi) Compatibilità universale" [ref=e2711]:
+                    - generic [ref=e2712]: Rullo Centrale Misto (2 Pezzi)
+                    - generic [ref=e2713]: Compatibilità universale
+                  - cell "Spazzole" [ref=e2714]:
+                    - generic [ref=e2715]: Spazzole
+                  - cell "Giacenza 1" [ref=e2716]:
+                    - generic "Giacenza 1" [ref=e2718]:
+                      - generic [ref=e2719]: "1"
+                  - cell "Scorta minima 0" [ref=e2720]:
+                    - generic "Scorta minima 0" [ref=e2722]:
+                      - generic [ref=e2723]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2724]:
+                    - generic [ref=e2725]:
+                      - generic [ref=e2726]: 01 set 2026
+                      - generic [ref=e2727]: Giorgio Namoini
+                  - cell "130,50 €" [ref=e2728]
+                  - cell "—" [ref=e2729]:
+                    - generic [ref=e2730]: —
+                  - cell "Azioni ricambio" [ref=e2731]:
+                    - group "Azioni ricambio" [ref=e2732]:
+                      - button "Info" [ref=e2733] [cursor=pointer]:
+                        - img [ref=e2734]
+                      - button "Scarico" [ref=e2736] [cursor=pointer]:
+                        - img [ref=e2737]
+                      - button "Carico" [ref=e2738] [cursor=pointer]:
+                        - img [ref=e2739]
+                - row "1054972-0 Schmidt Cartuccia Sicurezza Filtro Aria Cleango 500 E6C Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2741]:
+                  - cell "1054972-0" [ref=e2742]:
+                    - generic [ref=e2746]: 1054972-0
+                  - cell "Schmidt" [ref=e2747]:
+                    - generic [ref=e2748]: Schmidt
+                  - cell "Cartuccia Sicurezza Filtro Aria Cleango 500 E6C" [ref=e2749]:
+                    - generic [ref=e2750]: Cartuccia Sicurezza Filtro Aria
+                    - generic [ref=e2751]: Cleango 500 E6C
+                  - cell "Filtrazione" [ref=e2752]:
+                    - generic [ref=e2753]: Filtrazione
+                  - cell "Giacenza 0" [ref=e2754]:
+                    - generic "Giacenza 0" [ref=e2756]:
+                      - generic [ref=e2757]: "0"
+                  - cell "Scorta minima 0" [ref=e2758]:
+                    - generic "Scorta minima 0" [ref=e2760]:
+                      - generic [ref=e2761]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2762]:
+                    - generic [ref=e2763]:
+                      - generic [ref=e2764]: 01 set 2026
+                      - generic [ref=e2765]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2766]
+                  - cell "—" [ref=e2767]:
+                    - generic [ref=e2768]: —
+                  - cell "Azioni ricambio" [ref=e2769]:
+                    - group "Azioni ricambio" [ref=e2770]:
+                      - button "Info" [ref=e2771] [cursor=pointer]:
+                        - img [ref=e2772]
+                      - button "Scarico" [ref=e2774] [cursor=pointer]:
+                        - img [ref=e2775]
+                      - button "Carico" [ref=e2776] [cursor=pointer]:
+                        - img [ref=e2777]
+                - row "0287022-8 Schmidt Raccordo a 90° R1/4 Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 19,49 € — Azioni ricambio" [ref=e2779]:
+                  - cell "0287022-8" [ref=e2780]:
+                    - generic [ref=e2784]: 0287022-8
+                  - cell "Schmidt" [ref=e2785]:
+                    - generic [ref=e2786]: Schmidt
+                  - cell "Raccordo a 90° R1/4 Schmidt (Universale)" [ref=e2787]:
+                    - generic [ref=e2788]: Raccordo a 90° R1/4
+                    - generic [ref=e2789]: Schmidt (Universale)
+                  - cell "Altro" [ref=e2790]:
+                    - generic [ref=e2791]: Altro
+                  - cell "Giacenza 0" [ref=e2792]:
+                    - generic "Giacenza 0" [ref=e2794]:
+                      - generic [ref=e2795]: "0"
+                  - cell "Scorta minima 0" [ref=e2796]:
+                    - generic "Scorta minima 0" [ref=e2798]:
+                      - generic [ref=e2799]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2800]:
+                    - generic [ref=e2801]:
+                      - generic [ref=e2802]: 01 set 2026
+                      - generic [ref=e2803]: Giorgio Namoini
+                  - cell "19,49 €" [ref=e2804]
+                  - cell "—" [ref=e2805]:
+                    - generic [ref=e2806]: —
+                  - cell "Azioni ricambio" [ref=e2807]:
+                    - group "Azioni ricambio" [ref=e2808]:
+                      - button "Info" [ref=e2809] [cursor=pointer]:
+                        - img [ref=e2810]
+                      - button "Scarico" [ref=e2812] [cursor=pointer]:
+                        - img [ref=e2813]
+                      - button "Carico" [ref=e2814] [cursor=pointer]:
+                        - img [ref=e2815]
+                - row "0229502-0 Schmidt Adattatore Motore Turbina Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 23,72 € — Azioni ricambio" [ref=e2817]:
+                  - cell "0229502-0" [ref=e2818]:
+                    - generic [ref=e2822]: 0229502-0
+                  - cell "Schmidt" [ref=e2823]:
+                    - generic [ref=e2824]: Schmidt
+                  - cell "Adattatore Motore Turbina Schmidt (Universale)" [ref=e2825]:
+                    - generic [ref=e2826]: Adattatore Motore Turbina
+                    - generic [ref=e2827]: Schmidt (Universale)
+                  - cell "Altro" [ref=e2828]:
+                    - generic [ref=e2829]: Altro
+                  - cell "Giacenza 0" [ref=e2830]:
+                    - generic "Giacenza 0" [ref=e2832]:
+                      - generic [ref=e2833]: "0"
+                  - cell "Scorta minima 0" [ref=e2834]:
+                    - generic "Scorta minima 0" [ref=e2836]:
+                      - generic [ref=e2837]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2838]:
+                    - generic [ref=e2839]:
+                      - generic [ref=e2840]: 01 set 2026
+                      - generic [ref=e2841]: Giorgio Namoini
+                  - cell "23,72 €" [ref=e2842]
+                  - cell "—" [ref=e2843]:
+                    - generic [ref=e2844]: —
+                  - cell "Azioni ricambio" [ref=e2845]:
+                    - group "Azioni ricambio" [ref=e2846]:
+                      - button "Info" [ref=e2847] [cursor=pointer]:
+                        - img [ref=e2848]
+                      - button "Scarico" [ref=e2850] [cursor=pointer]:
+                        - img [ref=e2851]
+                      - button "Carico" [ref=e2852] [cursor=pointer]:
+                        - img [ref=e2853]
+                - row "1244104-8 Schmidt Motore Idraulico Cleango SNM2 Cleango 500 E6C Motore Giacenza 1 Scorta minima 1 06 ago 2026 Giorgio 1022,57 € — Azioni ricambio" [ref=e2855]:
+                  - cell "1244104-8" [ref=e2856]:
+                    - generic [ref=e2860]: 1244104-8
+                  - cell "Schmidt" [ref=e2861]:
+                    - generic [ref=e2862]: Schmidt
+                  - cell "Motore Idraulico Cleango SNM2 Cleango 500 E6C" [ref=e2863]:
+                    - generic [ref=e2864]: Motore Idraulico Cleango SNM2
+                    - generic [ref=e2865]: Cleango 500 E6C
+                  - cell "Motore" [ref=e2866]:
+                    - generic [ref=e2867]: Motore
+                  - cell "Giacenza 1" [ref=e2868]:
+                    - generic "Giacenza 1" [ref=e2870]:
+                      - generic [ref=e2871]: "1"
+                  - cell "Scorta minima 1" [ref=e2872]:
+                    - generic "Scorta minima 1" [ref=e2874]:
+                      - generic [ref=e2875]: "1"
+                  - cell "06 ago 2026 Giorgio" [ref=e2876]:
+                    - generic [ref=e2877]:
+                      - generic [ref=e2878]: 06 ago 2026
+                      - generic [ref=e2879]: Giorgio
+                  - cell "1022,57 €" [ref=e2880]
+                  - cell "—" [ref=e2881]:
+                    - generic [ref=e2882]: —
+                  - cell "Azioni ricambio" [ref=e2883]:
+                    - group "Azioni ricambio" [ref=e2884]:
+                      - button "Info" [ref=e2885] [cursor=pointer]:
+                        - img [ref=e2886]
+                      - button "Scarico" [ref=e2888] [cursor=pointer]:
+                        - img [ref=e2889]
+                      - button "Carico" [ref=e2890] [cursor=pointer]:
+                        - img [ref=e2891]
+                - row "0270398-1 Schmidt Cinghia Clima Cleango 500 E6C Motore Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2893]:
+                  - cell "0270398-1" [ref=e2894]:
+                    - generic [ref=e2898]: 0270398-1
+                  - cell "Schmidt" [ref=e2899]:
+                    - generic [ref=e2900]: Schmidt
+                  - cell "Cinghia Clima Cleango 500 E6C" [ref=e2901]:
+                    - generic [ref=e2902]: Cinghia Clima
+                    - generic [ref=e2903]: Cleango 500 E6C
+                  - cell "Motore" [ref=e2904]:
+                    - generic [ref=e2905]: Motore
+                  - cell "Giacenza 0" [ref=e2906]:
+                    - generic "Giacenza 0" [ref=e2908]:
+                      - generic [ref=e2909]: "0"
+                  - cell "Scorta minima 0" [ref=e2910]:
+                    - generic "Scorta minima 0" [ref=e2912]:
+                      - generic [ref=e2913]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2914]:
+                    - generic [ref=e2915]:
+                      - generic [ref=e2916]: 01 set 2026
+                      - generic [ref=e2917]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2918]
+                  - cell "—" [ref=e2919]:
+                    - generic [ref=e2920]: —
+                  - cell "Azioni ricambio" [ref=e2921]:
+                    - group "Azioni ricambio" [ref=e2922]:
+                      - button "Info" [ref=e2923] [cursor=pointer]:
+                        - img [ref=e2924]
+                      - button "Scarico" [ref=e2926] [cursor=pointer]:
+                        - img [ref=e2927]
+                      - button "Carico" [ref=e2928] [cursor=pointer]:
+                        - img [ref=e2929]
+                - row "1280683-1 Schmidt Motore Idraulico Spazzola Frontale / Laterali Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Idraulica Giacenza 2 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2931]:
+                  - cell "1280683-1" [ref=e2932]:
+                    - generic [ref=e2936]: 1280683-1
+                  - cell "Schmidt" [ref=e2937]:
+                    - generic [ref=e2938]: Schmidt
+                  - cell "Motore Idraulico Spazzola Frontale / Laterali Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2939]:
+                    - generic [ref=e2940]: Motore Idraulico Spazzola Frontale / Laterali
+                    - generic [ref=e2941]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Idraulica" [ref=e2942]:
+                    - generic [ref=e2943]: Idraulica
+                  - cell "Giacenza 2" [ref=e2944]:
+                    - generic "Giacenza 2" [ref=e2946]:
+                      - generic [ref=e2947]: "2"
+                  - cell "Scorta minima 0" [ref=e2948]:
+                    - generic "Scorta minima 0" [ref=e2950]:
+                      - generic [ref=e2951]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2952]:
+                    - generic [ref=e2953]:
+                      - generic [ref=e2954]: 01 set 2026
+                      - generic [ref=e2955]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2956]
+                  - cell "—" [ref=e2957]:
+                    - generic [ref=e2958]: —
+                  - cell "Azioni ricambio" [ref=e2959]:
+                    - group "Azioni ricambio" [ref=e2960]:
+                      - button "Info" [ref=e2961] [cursor=pointer]:
+                        - img [ref=e2962]
+                      - button "Scarico" [ref=e2964] [cursor=pointer]:
+                        - img [ref=e2965]
+                      - button "Carico" [ref=e2966] [cursor=pointer]:
+                        - img [ref=e2967]
+                - row "1175638-5 Schmidt Cartuccia Filtro Aria Cabina Cleango 500 E6C Cabina Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e2969]:
+                  - cell "1175638-5" [ref=e2970]:
+                    - generic [ref=e2974]: 1175638-5
+                  - cell "Schmidt" [ref=e2975]:
+                    - generic [ref=e2976]: Schmidt
+                  - cell "Cartuccia Filtro Aria Cabina Cleango 500 E6C" [ref=e2977]:
+                    - generic [ref=e2978]: Cartuccia Filtro Aria Cabina
+                    - generic [ref=e2979]: Cleango 500 E6C
+                  - cell "Cabina" [ref=e2980]:
+                    - generic [ref=e2981]: Cabina
+                  - cell "Giacenza 0" [ref=e2982]:
+                    - generic "Giacenza 0" [ref=e2984]:
+                      - generic [ref=e2985]: "0"
+                  - cell "Scorta minima 0" [ref=e2986]:
+                    - generic "Scorta minima 0" [ref=e2988]:
+                      - generic [ref=e2989]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e2990]:
+                    - generic [ref=e2991]:
+                      - generic [ref=e2992]: 01 set 2026
+                      - generic [ref=e2993]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e2994]
+                  - cell "—" [ref=e2995]:
+                    - generic [ref=e2996]: —
+                  - cell "Azioni ricambio" [ref=e2997]:
+                    - group "Azioni ricambio" [ref=e2998]:
+                      - button "Info" [ref=e2999] [cursor=pointer]:
+                        - img [ref=e3000]
+                      - button "Scarico" [ref=e3002] [cursor=pointer]:
+                        - img [ref=e3003]
+                      - button "Carico" [ref=e3004] [cursor=pointer]:
+                        - img [ref=e3005]
+                - row "SWINGOSLM Schmidt Spazzola Laterale Mista Swingo 200 Spazzole Giacenza 8 Scorta minima 3 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3007]:
+                  - cell "SWINGOSLM" [ref=e3008]:
+                    - generic [ref=e3012]: SWINGOSLM
+                  - cell "Schmidt" [ref=e3013]:
+                    - generic [ref=e3014]: Schmidt
+                  - cell "Spazzola Laterale Mista Swingo 200" [ref=e3015]:
+                    - generic [ref=e3016]: Spazzola Laterale Mista
+                    - generic [ref=e3017]: Swingo 200
+                  - cell "Spazzole" [ref=e3018]:
+                    - generic [ref=e3019]: Spazzole
+                  - cell "Giacenza 8" [ref=e3020]:
+                    - generic "Giacenza 8" [ref=e3022]:
+                      - generic [ref=e3023]: "8"
+                  - cell "Scorta minima 3" [ref=e3024]:
+                    - generic "Scorta minima 3" [ref=e3026]:
+                      - generic [ref=e3027]: "3"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3028]:
+                    - generic [ref=e3029]:
+                      - generic [ref=e3030]: 01 set 2026
+                      - generic [ref=e3031]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3032]
+                  - cell "—" [ref=e3033]:
+                    - generic [ref=e3034]: —
+                  - cell "Azioni ricambio" [ref=e3035]:
+                    - group "Azioni ricambio" [ref=e3036]:
+                      - button "Info" [ref=e3037] [cursor=pointer]:
+                        - img [ref=e3038]
+                      - button "Scarico" [ref=e3040] [cursor=pointer]:
+                        - img [ref=e3041]
+                      - button "Carico" [ref=e3042] [cursor=pointer]:
+                        - img [ref=e3043]
+                - row "1054251-2 Schmidt Cinghia Servizi Poly-V Cleango 500 E6C Motore Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3045]:
+                  - cell "1054251-2" [ref=e3046]:
+                    - generic [ref=e3050]: 1054251-2
+                  - cell "Schmidt" [ref=e3051]:
+                    - generic [ref=e3052]: Schmidt
+                  - cell "Cinghia Servizi Poly-V Cleango 500 E6C" [ref=e3053]:
+                    - generic [ref=e3054]: Cinghia Servizi Poly-V
+                    - generic [ref=e3055]: Cleango 500 E6C
+                  - cell "Motore" [ref=e3056]:
+                    - generic [ref=e3057]: Motore
+                  - cell "Giacenza 0" [ref=e3058]:
+                    - generic "Giacenza 0" [ref=e3060]:
+                      - generic [ref=e3061]: "0"
+                  - cell "Scorta minima 0" [ref=e3062]:
+                    - generic "Scorta minima 0" [ref=e3064]:
+                      - generic [ref=e3065]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3066]:
+                    - generic [ref=e3067]:
+                      - generic [ref=e3068]: 01 set 2026
+                      - generic [ref=e3069]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3070]
+                  - cell "—" [ref=e3071]:
+                    - generic [ref=e3072]: —
+                  - cell "Azioni ricambio" [ref=e3073]:
+                    - group "Azioni ricambio" [ref=e3074]:
+                      - button "Info" [ref=e3075] [cursor=pointer]:
+                        - img [ref=e3076]
+                      - button "Scarico" [ref=e3078] [cursor=pointer]:
+                        - img [ref=e3079]
+                      - button "Carico" [ref=e3080] [cursor=pointer]:
+                        - img [ref=e3081]
+                - row "CLEANGOSLAE Schmidt Spazzola Laterale Acciaio (E) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 42,00 € — Azioni ricambio" [ref=e3083]:
+                  - cell "CLEANGOSLAE" [ref=e3084]:
+                    - generic [ref=e3088]: CLEANGOSLAE
+                  - cell "Schmidt" [ref=e3089]:
+                    - generic [ref=e3090]: Schmidt
+                  - cell "Spazzola Laterale Acciaio (E) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3091]:
+                    - generic [ref=e3092]: Spazzola Laterale Acciaio (E)
+                    - generic [ref=e3093]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Spazzole" [ref=e3094]:
+                    - generic [ref=e3095]: Spazzole
+                  - cell "Giacenza 0" [ref=e3096]:
+                    - generic "Giacenza 0" [ref=e3098]:
+                      - generic [ref=e3099]: "0"
+                  - cell "Scorta minima 0" [ref=e3100]:
+                    - generic "Scorta minima 0" [ref=e3102]:
+                      - generic [ref=e3103]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3104]:
+                    - generic [ref=e3105]:
+                      - generic [ref=e3106]: 01 set 2026
+                      - generic [ref=e3107]: Giorgio Namoini
+                  - cell "42,00 €" [ref=e3108]
+                  - cell "—" [ref=e3109]:
+                    - generic [ref=e3110]: —
+                  - cell "Azioni ricambio" [ref=e3111]:
+                    - group "Azioni ricambio" [ref=e3112]:
+                      - button "Info" [ref=e3113] [cursor=pointer]:
+                        - img [ref=e3114]
+                      - button "Scarico" [ref=e3116] [cursor=pointer]:
+                        - img [ref=e3117]
+                      - button "Carico" [ref=e3118] [cursor=pointer]:
+                        - img [ref=e3119]
+                - row "1102908-6 Schmidt Filtro Gasolio Cleango 500 E6C Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3121]:
+                  - cell "1102908-6" [ref=e3122]:
+                    - generic [ref=e3126]: 1102908-6
+                  - cell "Schmidt" [ref=e3127]:
+                    - generic [ref=e3128]: Schmidt
+                  - cell "Filtro Gasolio Cleango 500 E6C" [ref=e3129]:
+                    - generic [ref=e3130]: Filtro Gasolio
+                    - generic [ref=e3131]: Cleango 500 E6C
+                  - cell "Filtrazione" [ref=e3132]:
+                    - generic [ref=e3133]: Filtrazione
+                  - cell "Giacenza 0" [ref=e3134]:
+                    - generic "Giacenza 0" [ref=e3136]:
+                      - generic [ref=e3137]: "0"
+                  - cell "Scorta minima 0" [ref=e3138]:
+                    - generic "Scorta minima 0" [ref=e3140]:
+                      - generic [ref=e3141]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3142]:
+                    - generic [ref=e3143]:
+                      - generic [ref=e3144]: 01 set 2026
+                      - generic [ref=e3145]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3146]
+                  - cell "—" [ref=e3147]:
+                    - generic [ref=e3148]: —
+                  - cell "Azioni ricambio" [ref=e3149]:
+                    - group "Azioni ricambio" [ref=e3150]:
+                      - button "Info" [ref=e3151] [cursor=pointer]:
+                        - img [ref=e3152]
+                      - button "Scarico" [ref=e3154] [cursor=pointer]:
+                        - img [ref=e3155]
+                      - button "Carico" [ref=e3156] [cursor=pointer]:
+                        - img [ref=e3157]
+                - row "1287379-5 Schmidt Filtro Urea Cleango 500 E6C Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3159]:
+                  - cell "1287379-5" [ref=e3160]:
+                    - generic [ref=e3164]: 1287379-5
+                  - cell "Schmidt" [ref=e3165]:
+                    - generic [ref=e3166]: Schmidt
+                  - cell "Filtro Urea Cleango 500 E6C" [ref=e3167]:
+                    - generic [ref=e3168]: Filtro Urea
+                    - generic [ref=e3169]: Cleango 500 E6C
+                  - cell "Filtrazione" [ref=e3170]:
+                    - generic [ref=e3171]: Filtrazione
+                  - cell "Giacenza 0" [ref=e3172]:
+                    - generic "Giacenza 0" [ref=e3174]:
+                      - generic [ref=e3175]: "0"
+                  - cell "Scorta minima 0" [ref=e3176]:
+                    - generic "Scorta minima 0" [ref=e3178]:
+                      - generic [ref=e3179]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3180]:
+                    - generic [ref=e3181]:
+                      - generic [ref=e3182]: 01 set 2026
+                      - generic [ref=e3183]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3184]
+                  - cell "—" [ref=e3185]:
+                    - generic [ref=e3186]: —
+                  - cell "Azioni ricambio" [ref=e3187]:
+                    - group "Azioni ricambio" [ref=e3188]:
+                      - button "Info" [ref=e3189] [cursor=pointer]:
+                        - img [ref=e3190]
+                      - button "Scarico" [ref=e3192] [cursor=pointer]:
+                        - img [ref=e3193]
+                      - button "Carico" [ref=e3194] [cursor=pointer]:
+                        - img [ref=e3195]
+                - row "1196545-7 Schmidt Angolare 41 x 37 x 4 x 30 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 22,11 € — Azioni ricambio" [ref=e3197]:
+                  - cell "1196545-7" [ref=e3198]:
+                    - generic [ref=e3202]: 1196545-7
+                  - cell "Schmidt" [ref=e3203]:
+                    - generic [ref=e3204]: Schmidt
+                  - cell "Angolare 41 x 37 x 4 x 30 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3205]:
+                    - generic [ref=e3206]: Angolare 41 x 37 x 4 x 30
+                    - generic [ref=e3207]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Altro" [ref=e3208]:
+                    - generic [ref=e3209]: Altro
+                  - cell "Giacenza 0" [ref=e3210]:
+                    - generic "Giacenza 0" [ref=e3212]:
+                      - generic [ref=e3213]: "0"
+                  - cell "Scorta minima 0" [ref=e3214]:
+                    - generic "Scorta minima 0" [ref=e3216]:
+                      - generic [ref=e3217]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3218]:
+                    - generic [ref=e3219]:
+                      - generic [ref=e3220]: 01 set 2026
+                      - generic [ref=e3221]: Giorgio Namoini
+                  - cell "22,11 €" [ref=e3222]
+                  - cell "—" [ref=e3223]:
+                    - generic [ref=e3224]: —
+                  - cell "Azioni ricambio" [ref=e3225]:
+                    - group "Azioni ricambio" [ref=e3226]:
+                      - button "Info" [ref=e3227] [cursor=pointer]:
+                        - img [ref=e3228]
+                      - button "Scarico" [ref=e3230] [cursor=pointer]:
+                        - img [ref=e3231]
+                      - button "Carico" [ref=e3232] [cursor=pointer]:
+                        - img [ref=e3233]
+                - row "SK660RLM Schmidt Rullini Bocca Aspirazione PPL 400/280/47 SK 600, SK 650, SK 660 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 50,75 € — Azioni ricambio" [ref=e3235]:
+                  - cell "SK660RLM" [ref=e3236]:
+                    - generic [ref=e3240]: SK660RLM
+                  - cell "Schmidt" [ref=e3241]:
+                    - generic [ref=e3242]: Schmidt
+                  - cell "Rullini Bocca Aspirazione PPL 400/280/47 SK 600, SK 650, SK 660" [ref=e3243]:
+                    - generic [ref=e3244]: Rullini Bocca Aspirazione PPL 400/280/47
+                    - generic [ref=e3245]: SK 600, SK 650, SK 660
+                  - cell "Spazzole" [ref=e3246]:
+                    - generic [ref=e3247]: Spazzole
+                  - cell "Giacenza 0" [ref=e3248]:
+                    - generic "Giacenza 0" [ref=e3250]:
+                      - generic [ref=e3251]: "0"
+                  - cell "Scorta minima 0" [ref=e3252]:
+                    - generic "Scorta minima 0" [ref=e3254]:
+                      - generic [ref=e3255]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3256]:
+                    - generic [ref=e3257]:
+                      - generic [ref=e3258]: 01 set 2026
+                      - generic [ref=e3259]: Giorgio Namoini
+                  - cell "50,75 €" [ref=e3260]
+                  - cell "—" [ref=e3261]:
+                    - generic [ref=e3262]: —
+                  - cell "Azioni ricambio" [ref=e3263]:
+                    - group "Azioni ricambio" [ref=e3264]:
+                      - button "Info" [ref=e3265] [cursor=pointer]:
+                        - img [ref=e3266]
+                      - button "Scarico" [ref=e3268] [cursor=pointer]:
+                        - img [ref=e3269]
+                      - button "Carico" [ref=e3270] [cursor=pointer]:
+                        - img [ref=e3271]
+                - row "02296503-1 Schmidt Ferma Tubo Flangiato Motore Turbina Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3273]:
+                  - cell "02296503-1" [ref=e3274]:
+                    - generic [ref=e3278]: 02296503-1
+                  - cell "Schmidt" [ref=e3279]:
+                    - generic [ref=e3280]: Schmidt
+                  - cell "Ferma Tubo Flangiato Motore Turbina Schmidt (Universale)" [ref=e3281]:
+                    - generic [ref=e3282]: Ferma Tubo Flangiato Motore Turbina
+                    - generic [ref=e3283]: Schmidt (Universale)
+                  - cell "Altro" [ref=e3284]:
+                    - generic [ref=e3285]: Altro
+                  - cell "Giacenza 0" [ref=e3286]:
+                    - generic "Giacenza 0" [ref=e3288]:
+                      - generic [ref=e3289]: "0"
+                  - cell "Scorta minima 0" [ref=e3290]:
+                    - generic "Scorta minima 0" [ref=e3292]:
+                      - generic [ref=e3293]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3294]:
+                    - generic [ref=e3295]:
+                      - generic [ref=e3296]: 01 set 2026
+                      - generic [ref=e3297]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3298]
+                  - cell "—" [ref=e3299]:
+                    - generic [ref=e3300]: —
+                  - cell "Azioni ricambio" [ref=e3301]:
+                    - group "Azioni ricambio" [ref=e3302]:
+                      - button "Info" [ref=e3303] [cursor=pointer]:
+                        - img [ref=e3304]
+                      - button "Scarico" [ref=e3306] [cursor=pointer]:
+                        - img [ref=e3307]
+                      - button "Carico" [ref=e3308] [cursor=pointer]:
+                        - img [ref=e3309]
+                - row "CLEANGOSLAO Schmidt Spazzola Laterale Acciaio (Tipo Originale) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET — Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3311]:
+                  - cell "CLEANGOSLAO" [ref=e3312]:
+                    - generic [ref=e3316]: CLEANGOSLAO
+                  - cell "Schmidt" [ref=e3317]:
+                    - generic [ref=e3318]: Schmidt
+                  - cell "Spazzola Laterale Acciaio (Tipo Originale) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3319]:
+                    - generic [ref=e3320]: Spazzola Laterale Acciaio (Tipo Originale)
+                    - generic [ref=e3321]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "—" [ref=e3322]:
+                    - generic [ref=e3323]: —
+                  - cell "Giacenza 0" [ref=e3324]:
+                    - generic "Giacenza 0" [ref=e3326]:
+                      - generic [ref=e3327]: "0"
+                  - cell "Scorta minima 0" [ref=e3328]:
+                    - generic "Scorta minima 0" [ref=e3330]:
+                      - generic [ref=e3331]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3332]:
+                    - generic [ref=e3333]:
+                      - generic [ref=e3334]: 01 set 2026
+                      - generic [ref=e3335]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3336]
+                  - cell "—" [ref=e3337]:
+                    - generic [ref=e3338]: —
+                  - cell "Azioni ricambio" [ref=e3339]:
+                    - group "Azioni ricambio" [ref=e3340]:
+                      - button "Info" [ref=e3341] [cursor=pointer]:
+                        - img [ref=e3342]
+                      - button "Scarico" [ref=e3344] [cursor=pointer]:
+                        - img [ref=e3345]
+                      - button "Carico" [ref=e3346] [cursor=pointer]:
+                        - img [ref=e3347]
+                - row "0280049-8 Schmidt Modulo Elettrovalvola CR2012 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Elettronica Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio Namoini 1661,67 € — Azioni ricambio" [ref=e3349]:
+                  - cell "0280049-8" [ref=e3350]:
+                    - generic [ref=e3354]: 0280049-8
+                  - cell "Schmidt" [ref=e3355]:
+                    - generic [ref=e3356]: Schmidt
+                  - cell "Modulo Elettrovalvola CR2012 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3357]:
+                    - generic [ref=e3358]: Modulo Elettrovalvola CR2012
+                    - generic [ref=e3359]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Elettronica" [ref=e3360]:
+                    - generic [ref=e3361]: Elettronica
+                  - cell "Giacenza 1" [ref=e3362]:
+                    - generic "Giacenza 1" [ref=e3364]:
+                      - generic [ref=e3365]: "1"
+                  - cell "Scorta minima 0" [ref=e3366]:
+                    - generic "Scorta minima 0" [ref=e3368]:
+                      - generic [ref=e3369]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e3370]:
+                    - generic [ref=e3371]:
+                      - generic [ref=e3372]: 06 ago 2026
+                      - generic [ref=e3373]: Giorgio Namoini
+                  - cell "1661,67 €" [ref=e3374]
+                  - cell "—" [ref=e3375]:
+                    - generic [ref=e3376]: —
+                  - cell "Azioni ricambio" [ref=e3377]:
+                    - group "Azioni ricambio" [ref=e3378]:
+                      - button "Info" [ref=e3379] [cursor=pointer]:
+                        - img [ref=e3380]
+                      - button "Scarico" [ref=e3382] [cursor=pointer]:
+                        - img [ref=e3383]
+                      - button "Carico" [ref=e3384] [cursor=pointer]:
+                        - img [ref=e3385]
+                - row "14-927084115 Schmidt Ugello D1/4\" Schmidt (Universale) Altro Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3387]:
+                  - cell "14-927084115" [ref=e3388]:
+                    - generic [ref=e3392]: 14-927084115
+                  - cell "Schmidt" [ref=e3393]:
+                    - generic [ref=e3394]: Schmidt
+                  - cell "Ugello D1/4\" Schmidt (Universale)" [ref=e3395]:
+                    - generic [ref=e3396]: Ugello D1/4"
+                    - generic [ref=e3397]: Schmidt (Universale)
+                  - cell "Altro" [ref=e3398]:
+                    - generic [ref=e3399]: Altro
+                  - cell "Giacenza 1" [ref=e3400]:
+                    - generic "Giacenza 1" [ref=e3402]:
+                      - generic [ref=e3403]: "1"
+                  - cell "Scorta minima 0" [ref=e3404]:
+                    - generic "Scorta minima 0" [ref=e3406]:
+                      - generic [ref=e3407]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e3408]:
+                    - generic [ref=e3409]:
+                      - generic [ref=e3410]: 06 ago 2026
+                      - generic [ref=e3411]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3412]
+                  - cell "—" [ref=e3413]:
+                    - generic [ref=e3414]: —
+                  - cell "Azioni ricambio" [ref=e3415]:
+                    - group "Azioni ricambio" [ref=e3416]:
+                      - button "Info" [ref=e3417] [cursor=pointer]:
+                        - img [ref=e3418]
+                      - button "Scarico" [ref=e3420] [cursor=pointer]:
+                        - img [ref=e3421]
+                      - button "Carico" [ref=e3422] [cursor=pointer]:
+                        - img [ref=e3423]
+                - row "1054821-3 Schmidt Alternatore Motore VM Compatibilità universale Motore Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 974,97 € — Azioni ricambio" [ref=e3425]:
+                  - cell "1054821-3" [ref=e3426]:
+                    - generic [ref=e3430]: 1054821-3
+                  - cell "Schmidt" [ref=e3431]:
+                    - generic [ref=e3432]: Schmidt
+                  - cell "Alternatore Motore VM Compatibilità universale" [ref=e3433]:
+                    - generic [ref=e3434]: Alternatore Motore VM
+                    - generic [ref=e3435]: Compatibilità universale
+                  - cell "Motore" [ref=e3436]:
+                    - generic [ref=e3437]: Motore
+                  - cell "Giacenza 0" [ref=e3438]:
+                    - generic "Giacenza 0" [ref=e3440]:
+                      - generic [ref=e3441]: "0"
+                  - cell "Scorta minima 0" [ref=e3442]:
+                    - generic "Scorta minima 0" [ref=e3444]:
+                      - generic [ref=e3445]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3446]:
+                    - generic [ref=e3447]:
+                      - generic [ref=e3448]: 01 set 2026
+                      - generic [ref=e3449]: Giorgio Namoini
+                  - cell "974,97 €" [ref=e3450]
+                  - cell "—" [ref=e3451]:
+                    - generic [ref=e3452]: —
+                  - cell "Azioni ricambio" [ref=e3453]:
+                    - group "Azioni ricambio" [ref=e3454]:
+                      - button "Info" [ref=e3455] [cursor=pointer]:
+                        - img [ref=e3456]
+                      - button "Scarico" [ref=e3458] [cursor=pointer]:
+                        - img [ref=e3459]
+                      - button "Carico" [ref=e3460] [cursor=pointer]:
+                        - img [ref=e3461]
+                - row "1264453-3 Schmidt Pompa Acqua Elettrica 24V 15lt 3,4bar Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Idraulica Giacenza 1 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3463]:
+                  - cell "1264453-3" [ref=e3464]:
+                    - generic [ref=e3468]: 1264453-3
+                  - cell "Schmidt" [ref=e3469]:
+                    - generic [ref=e3470]: Schmidt
+                  - cell "Pompa Acqua Elettrica 24V 15lt 3,4bar Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3471]:
+                    - generic [ref=e3472]: Pompa Acqua Elettrica 24V 15lt 3,4bar
+                    - generic [ref=e3473]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Idraulica" [ref=e3474]:
+                    - generic [ref=e3475]: Idraulica
+                  - cell "Giacenza 1" [ref=e3476]:
+                    - generic "Giacenza 1" [ref=e3478]:
+                      - generic [ref=e3479]: "1"
+                  - cell "Scorta minima 0" [ref=e3480]:
+                    - generic "Scorta minima 0" [ref=e3482]:
+                      - generic [ref=e3483]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e3484]:
+                    - generic [ref=e3485]:
+                      - generic [ref=e3486]: 06 ago 2026
+                      - generic [ref=e3487]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3488]
+                  - cell "—" [ref=e3489]:
+                    - generic [ref=e3490]: —
+                  - cell "Azioni ricambio" [ref=e3491]:
+                    - group "Azioni ricambio" [ref=e3492]:
+                      - button "Info" [ref=e3493] [cursor=pointer]:
+                        - img [ref=e3494]
+                      - button "Scarico" [ref=e3496] [cursor=pointer]:
+                        - img [ref=e3497]
+                      - button "Carico" [ref=e3498] [cursor=pointer]:
+                        - img [ref=e3499]
+                - row "12-15080011 Schmidt Supporto Ugello Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 38,64 € — Azioni ricambio" [ref=e3501]:
+                  - cell "12-15080011" [ref=e3502]:
+                    - generic [ref=e3506]: 12-15080011
+                  - cell "Schmidt" [ref=e3507]:
+                    - generic [ref=e3508]: Schmidt
+                  - cell "Supporto Ugello Schmidt (Universale)" [ref=e3509]:
+                    - generic [ref=e3510]: Supporto Ugello
+                    - generic [ref=e3511]: Schmidt (Universale)
+                  - cell "Altro" [ref=e3512]:
+                    - generic [ref=e3513]: Altro
+                  - cell "Giacenza 0" [ref=e3514]:
+                    - generic "Giacenza 0" [ref=e3516]:
+                      - generic [ref=e3517]: "0"
+                  - cell "Scorta minima 0" [ref=e3518]:
+                    - generic "Scorta minima 0" [ref=e3520]:
+                      - generic [ref=e3521]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3522]:
+                    - generic [ref=e3523]:
+                      - generic [ref=e3524]: 01 set 2026
+                      - generic [ref=e3525]: Giorgio Namoini
+                  - cell "38,64 €" [ref=e3526]
+                  - cell "—" [ref=e3527]:
+                    - generic [ref=e3528]: —
+                  - cell "Azioni ricambio" [ref=e3529]:
+                    - group "Azioni ricambio" [ref=e3530]:
+                      - button "Info" [ref=e3531] [cursor=pointer]:
+                        - img [ref=e3532]
+                      - button "Scarico" [ref=e3534] [cursor=pointer]:
+                        - img [ref=e3535]
+                      - button "Carico" [ref=e3536] [cursor=pointer]:
+                        - img [ref=e3537]
+                - row "1244098-6 Schmidt Valvola di Massima Cleango 500 E6C Idraulica Giacenza 1 Scorta minima 1 06 ago 2026 Giorgio Namoini 367,47 € — Azioni ricambio" [ref=e3539]:
+                  - cell "1244098-6" [ref=e3540]:
+                    - generic [ref=e3544]: 1244098-6
+                  - cell "Schmidt" [ref=e3545]:
+                    - generic [ref=e3546]: Schmidt
+                  - cell "Valvola di Massima Cleango 500 E6C" [ref=e3547]:
+                    - generic [ref=e3548]: Valvola di Massima
+                    - generic [ref=e3549]: Cleango 500 E6C
+                  - cell "Idraulica" [ref=e3550]:
+                    - generic [ref=e3551]: Idraulica
+                  - cell "Giacenza 1" [ref=e3552]:
+                    - generic "Giacenza 1" [ref=e3554]:
+                      - generic [ref=e3555]: "1"
+                  - cell "Scorta minima 1" [ref=e3556]:
+                    - generic "Scorta minima 1" [ref=e3558]:
+                      - generic [ref=e3559]: "1"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e3560]:
+                    - generic [ref=e3561]:
+                      - generic [ref=e3562]: 06 ago 2026
+                      - generic [ref=e3563]: Giorgio Namoini
+                  - cell "367,47 €" [ref=e3564]
+                  - cell "—" [ref=e3565]:
+                    - generic [ref=e3566]: —
+                  - cell "Azioni ricambio" [ref=e3567]:
+                    - group "Azioni ricambio" [ref=e3568]:
+                      - button "Info" [ref=e3569] [cursor=pointer]:
+                        - img [ref=e3570]
+                      - button "Scarico" [ref=e3572] [cursor=pointer]:
+                        - img [ref=e3573]
+                      - button "Carico" [ref=e3574] [cursor=pointer]:
+                        - img [ref=e3575]
+                - row "1264436-5 Schmidt Cartuccia Filtro Acqua Cleango 500 E6C Idraulica Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3577]:
+                  - cell "1264436-5" [ref=e3578]:
+                    - generic [ref=e3582]: 1264436-5
+                  - cell "Schmidt" [ref=e3583]:
+                    - generic [ref=e3584]: Schmidt
+                  - cell "Cartuccia Filtro Acqua Cleango 500 E6C" [ref=e3585]:
+                    - generic [ref=e3586]: Cartuccia Filtro Acqua
+                    - generic [ref=e3587]: Cleango 500 E6C
+                  - cell "Idraulica" [ref=e3588]:
+                    - generic [ref=e3589]: Idraulica
+                  - cell "Giacenza 0" [ref=e3590]:
+                    - generic "Giacenza 0" [ref=e3592]:
+                      - generic [ref=e3593]: "0"
+                  - cell "Scorta minima 0" [ref=e3594]:
+                    - generic "Scorta minima 0" [ref=e3596]:
+                      - generic [ref=e3597]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3598]:
+                    - generic [ref=e3599]:
+                      - generic [ref=e3600]: 01 set 2026
+                      - generic [ref=e3601]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3602]
+                  - cell "—" [ref=e3603]:
+                    - generic [ref=e3604]: —
+                  - cell "Azioni ricambio" [ref=e3605]:
+                    - group "Azioni ricambio" [ref=e3606]:
+                      - button "Info" [ref=e3607] [cursor=pointer]:
+                        - img [ref=e3608]
+                      - button "Scarico" [ref=e3610] [cursor=pointer]:
+                        - img [ref=e3611]
+                      - button "Carico" [ref=e3612] [cursor=pointer]:
+                        - img [ref=e3613]
+                - row "CLEANGOSLPP 1221617-6 Schmidt Spazzola Laterale PPL Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3615]:
+                  - cell "CLEANGOSLPP 1221617-6" [ref=e3616]:
+                    - generic [ref=e3619]:
+                      - generic [ref=e3620]: CLEANGOSLPP
+                      - generic [ref=e3621]: 1221617-6
+                  - cell "Schmidt" [ref=e3622]:
+                    - generic [ref=e3623]: Schmidt
+                  - cell "Spazzola Laterale PPL Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e3624]:
+                    - generic [ref=e3625]: Spazzola Laterale PPL
+                    - generic [ref=e3626]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                  - cell "Spazzole" [ref=e3627]:
+                    - generic [ref=e3628]: Spazzole
+                  - cell "Giacenza 0" [ref=e3629]:
+                    - generic "Giacenza 0" [ref=e3631]:
+                      - generic [ref=e3632]: "0"
+                  - cell "Scorta minima 0" [ref=e3633]:
+                    - generic "Scorta minima 0" [ref=e3635]:
+                      - generic [ref=e3636]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3637]:
+                    - generic [ref=e3638]:
+                      - generic [ref=e3639]: 01 set 2026
+                      - generic [ref=e3640]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3641]
+                  - cell "—" [ref=e3642]:
+                    - generic [ref=e3643]: —
+                  - cell "Azioni ricambio" [ref=e3644]:
+                    - group "Azioni ricambio" [ref=e3645]:
+                      - button "Info" [ref=e3646] [cursor=pointer]:
+                        - img [ref=e3647]
+                      - button "Scarico" [ref=e3649] [cursor=pointer]:
+                        - img [ref=e3650]
+                      - button "Carico" [ref=e3651] [cursor=pointer]:
+                        - img [ref=e3652]
+                - row "1054969-5 Schmidt Cartuccia Filtro Aria Compatibilità universale Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3654]:
+                  - cell "1054969-5" [ref=e3655]:
+                    - generic [ref=e3659]: 1054969-5
+                  - cell "Schmidt" [ref=e3660]:
+                    - generic [ref=e3661]: Schmidt
+                  - cell "Cartuccia Filtro Aria Compatibilità universale" [ref=e3662]:
+                    - generic [ref=e3663]: Cartuccia Filtro Aria
+                    - generic [ref=e3664]: Compatibilità universale
+                  - cell "Filtrazione" [ref=e3665]:
+                    - generic [ref=e3666]: Filtrazione
+                  - cell "Giacenza 0" [ref=e3667]:
+                    - generic "Giacenza 0" [ref=e3669]:
+                      - generic [ref=e3670]: "0"
+                  - cell "Scorta minima 0" [ref=e3671]:
+                    - generic "Scorta minima 0" [ref=e3673]:
+                      - generic [ref=e3674]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3675]:
+                    - generic [ref=e3676]:
+                      - generic [ref=e3677]: 01 set 2026
+                      - generic [ref=e3678]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3679]
+                  - cell "—" [ref=e3680]:
+                    - generic [ref=e3681]: —
+                  - cell "Azioni ricambio" [ref=e3682]:
+                    - group "Azioni ricambio" [ref=e3683]:
+                      - button "Info" [ref=e3684] [cursor=pointer]:
+                        - img [ref=e3685]
+                      - button "Scarico" [ref=e3687] [cursor=pointer]:
+                        - img [ref=e3688]
+                      - button "Carico" [ref=e3689] [cursor=pointer]:
+                        - img [ref=e3690]
+                - row "SK660SLA Schmidt Spazzola Laterale Acciaio SK 600, SK 650 Spazzole Giacenza 4 Scorta minima 0 01 set 2026 Giorgio Namoini 53,65 € — Azioni ricambio" [ref=e3692]:
+                  - cell "SK660SLA" [ref=e3693]:
+                    - generic [ref=e3697]: SK660SLA
+                  - cell "Schmidt" [ref=e3698]:
+                    - generic [ref=e3699]: Schmidt
+                  - cell "Spazzola Laterale Acciaio SK 600, SK 650" [ref=e3700]:
+                    - generic [ref=e3701]: Spazzola Laterale Acciaio
+                    - generic [ref=e3702]: SK 600, SK 650
+                  - cell "Spazzole" [ref=e3703]:
+                    - generic [ref=e3704]: Spazzole
+                  - cell "Giacenza 4" [ref=e3705]:
+                    - generic "Giacenza 4" [ref=e3707]:
+                      - generic [ref=e3708]: "4"
+                  - cell "Scorta minima 0" [ref=e3709]:
+                    - generic "Scorta minima 0" [ref=e3711]:
+                      - generic [ref=e3712]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3713]:
+                    - generic [ref=e3714]:
+                      - generic [ref=e3715]: 01 set 2026
+                      - generic [ref=e3716]: Giorgio Namoini
+                  - cell "53,65 €" [ref=e3717]
+                  - cell "—" [ref=e3718]:
+                    - generic [ref=e3719]: —
+                  - cell "Azioni ricambio" [ref=e3720]:
+                    - group "Azioni ricambio" [ref=e3721]:
+                      - button "Info" [ref=e3722] [cursor=pointer]:
+                        - img [ref=e3723]
+                      - button "Scarico" [ref=e3725] [cursor=pointer]:
+                        - img [ref=e3726]
+                      - button "Carico" [ref=e3727] [cursor=pointer]:
+                        - img [ref=e3728]
+                - row "CLEANGOSLM Schmidt Spazzola Laterale Mista Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 13 Scorta minima 3 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3730]:
+                  - cell "CLEANGOSLM" [ref=e3731]:
+                    - generic [ref=e3735]: CLEANGOSLM
+                  - cell "Schmidt" [ref=e3736]:
+                    - generic [ref=e3737]: Schmidt
+                  - cell "Spazzola Laterale Mista Cleango 500 E6C, Cleango 500 ET" [ref=e3738]:
+                    - generic [ref=e3739]: Spazzola Laterale Mista
+                    - generic [ref=e3740]: Cleango 500 E6C, Cleango 500 ET
+                  - cell "Spazzole" [ref=e3741]:
+                    - generic [ref=e3742]: Spazzole
+                  - cell "Giacenza 13" [ref=e3743]:
+                    - generic "Giacenza 13" [ref=e3745]:
+                      - generic [ref=e3746]: "13"
+                  - cell "Scorta minima 3" [ref=e3747]:
+                    - generic "Scorta minima 3" [ref=e3749]:
+                      - generic [ref=e3750]: "3"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3751]:
+                    - generic [ref=e3752]:
+                      - generic [ref=e3753]: 01 set 2026
+                      - generic [ref=e3754]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3755]
+                  - cell "—" [ref=e3756]:
+                    - generic [ref=e3757]: —
+                  - cell "Azioni ricambio" [ref=e3758]:
+                    - group "Azioni ricambio" [ref=e3759]:
+                      - button "Info" [ref=e3760] [cursor=pointer]:
+                        - img [ref=e3761]
+                      - button "Scarico" [ref=e3763] [cursor=pointer]:
+                        - img [ref=e3764]
+                      - button "Carico" [ref=e3765] [cursor=pointer]:
+                        - img [ref=e3766]
+                - row "0317162-6 Schmidt Pattino Sinistro 288x145x45 Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3768]:
+                  - cell "0317162-6" [ref=e3769]:
+                    - generic [ref=e3773]: 0317162-6
+                  - cell "Schmidt" [ref=e3774]:
+                    - generic [ref=e3775]: Schmidt
+                  - cell "Pattino Sinistro 288x145x45 Schmidt (Universale)" [ref=e3776]:
+                    - generic [ref=e3777]: Pattino Sinistro 288x145x45
+                    - generic [ref=e3778]: Schmidt (Universale)
+                  - cell "Altro" [ref=e3779]:
+                    - generic [ref=e3780]: Altro
+                  - cell "Giacenza 0" [ref=e3781]:
+                    - generic "Giacenza 0" [ref=e3783]:
+                      - generic [ref=e3784]: "0"
+                  - cell "Scorta minima 0" [ref=e3785]:
+                    - generic "Scorta minima 0" [ref=e3787]:
+                      - generic [ref=e3788]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3789]:
+                    - generic [ref=e3790]:
+                      - generic [ref=e3791]: 01 set 2026
+                      - generic [ref=e3792]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3793]
+                  - cell "—" [ref=e3794]:
+                    - generic [ref=e3795]: —
+                  - cell "Azioni ricambio" [ref=e3796]:
+                    - group "Azioni ricambio" [ref=e3797]:
+                      - button "Info" [ref=e3798] [cursor=pointer]:
+                        - img [ref=e3799]
+                      - button "Scarico" [ref=e3801] [cursor=pointer]:
+                        - img [ref=e3802]
+                      - button "Carico" [ref=e3803] [cursor=pointer]:
+                        - img [ref=e3804]
+                - row "0242528-8 Schmidt Cartuccia Filtro Olio Idraulico Cleango 500 E6C Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3806]:
+                  - cell "0242528-8" [ref=e3807]:
+                    - generic [ref=e3811]: 0242528-8
+                  - cell "Schmidt" [ref=e3812]:
+                    - generic [ref=e3813]: Schmidt
+                  - cell "Cartuccia Filtro Olio Idraulico Cleango 500 E6C" [ref=e3814]:
+                    - generic [ref=e3815]: Cartuccia Filtro Olio Idraulico
+                    - generic [ref=e3816]: Cleango 500 E6C
+                  - cell "Filtrazione" [ref=e3817]:
+                    - generic [ref=e3818]: Filtrazione
+                  - cell "Giacenza 0" [ref=e3819]:
+                    - generic "Giacenza 0" [ref=e3821]:
+                      - generic [ref=e3822]: "0"
+                  - cell "Scorta minima 0" [ref=e3823]:
+                    - generic "Scorta minima 0" [ref=e3825]:
+                      - generic [ref=e3826]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3827]:
+                    - generic [ref=e3828]:
+                      - generic [ref=e3829]: 01 set 2026
+                      - generic [ref=e3830]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3831]
+                  - cell "—" [ref=e3832]:
+                    - generic [ref=e3833]: —
+                  - cell "Azioni ricambio" [ref=e3834]:
+                    - group "Azioni ricambio" [ref=e3835]:
+                      - button "Info" [ref=e3836] [cursor=pointer]:
+                        - img [ref=e3837]
+                      - button "Scarico" [ref=e3839] [cursor=pointer]:
+                        - img [ref=e3840]
+                      - button "Carico" [ref=e3841] [cursor=pointer]:
+                        - img [ref=e3842]
+                - row "1053297-0 Schmidt Gomito 90° 1/2\" Schmidt (Universale) Altro Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3844]:
+                  - cell "1053297-0" [ref=e3845]:
+                    - generic [ref=e3849]: 1053297-0
+                  - cell "Schmidt" [ref=e3850]:
+                    - generic [ref=e3851]: Schmidt
+                  - cell "Gomito 90° 1/2\" Schmidt (Universale)" [ref=e3852]:
+                    - generic [ref=e3853]: Gomito 90° 1/2"
+                    - generic [ref=e3854]: Schmidt (Universale)
+                  - cell "Altro" [ref=e3855]:
+                    - generic [ref=e3856]: Altro
+                  - cell "Giacenza 0" [ref=e3857]:
+                    - generic "Giacenza 0" [ref=e3859]:
+                      - generic [ref=e3860]: "0"
+                  - cell "Scorta minima 0" [ref=e3861]:
+                    - generic "Scorta minima 0" [ref=e3863]:
+                      - generic [ref=e3864]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3865]:
+                    - generic [ref=e3866]:
+                      - generic [ref=e3867]: 01 set 2026
+                      - generic [ref=e3868]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3869]
+                  - cell "—" [ref=e3870]:
+                    - generic [ref=e3871]: —
+                  - cell "Azioni ricambio" [ref=e3872]:
+                    - group "Azioni ricambio" [ref=e3873]:
+                      - button "Info" [ref=e3874] [cursor=pointer]:
+                        - img [ref=e3875]
+                      - button "Scarico" [ref=e3877] [cursor=pointer]:
+                        - img [ref=e3878]
+                      - button "Carico" [ref=e3879] [cursor=pointer]:
+                        - img [ref=e3880]
+                - row "SK660SLM Schmidt Spazzola Laterale Mista 450/750 SK 600, SK 650, SK 660 Spazzole Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 53,65 € — Azioni ricambio" [ref=e3882]:
+                  - cell "SK660SLM" [ref=e3883]:
+                    - generic [ref=e3887]: SK660SLM
+                  - cell "Schmidt" [ref=e3888]:
+                    - generic [ref=e3889]: Schmidt
+                  - cell "Spazzola Laterale Mista 450/750 SK 600, SK 650, SK 660" [ref=e3890]:
+                    - generic [ref=e3891]: Spazzola Laterale Mista 450/750
+                    - generic [ref=e3892]: SK 600, SK 650, SK 660
+                  - cell "Spazzole" [ref=e3893]:
+                    - generic [ref=e3894]: Spazzole
+                  - cell "Giacenza 0" [ref=e3895]:
+                    - generic "Giacenza 0" [ref=e3897]:
+                      - generic [ref=e3898]: "0"
+                  - cell "Scorta minima 0" [ref=e3899]:
+                    - generic "Scorta minima 0" [ref=e3901]:
+                      - generic [ref=e3902]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3903]:
+                    - generic [ref=e3904]:
+                      - generic [ref=e3905]: 01 set 2026
+                      - generic [ref=e3906]: Giorgio Namoini
+                  - cell "53,65 €" [ref=e3907]
+                  - cell "—" [ref=e3908]:
+                    - generic [ref=e3909]: —
+                  - cell "Azioni ricambio" [ref=e3910]:
+                    - group "Azioni ricambio" [ref=e3911]:
+                      - button "Info" [ref=e3912] [cursor=pointer]:
+                        - img [ref=e3913]
+                      - button "Scarico" [ref=e3915] [cursor=pointer]:
+                        - img [ref=e3916]
+                      - button "Carico" [ref=e3917] [cursor=pointer]:
+                        - img [ref=e3918]
+                - row "SICASMSLM Sicas Spazzola Laterale Mista Millenium Spazzole Giacenza 5 Scorta minima 0 01 set 2026 Giorgio Namoini 72,50 € — Azioni ricambio" [ref=e3920]:
+                  - cell "SICASMSLM" [ref=e3921]:
+                    - generic [ref=e3925]: SICASMSLM
+                  - cell "Sicas" [ref=e3926]:
+                    - generic [ref=e3927]: Sicas
+                  - cell "Spazzola Laterale Mista Millenium" [ref=e3928]:
+                    - generic [ref=e3929]: Spazzola Laterale Mista
+                    - generic [ref=e3930]: Millenium
+                  - cell "Spazzole" [ref=e3931]:
+                    - generic [ref=e3932]: Spazzole
+                  - cell "Giacenza 5" [ref=e3933]:
+                    - generic "Giacenza 5" [ref=e3935]:
+                      - generic [ref=e3936]: "5"
+                  - cell "Scorta minima 0" [ref=e3937]:
+                    - generic "Scorta minima 0" [ref=e3939]:
+                      - generic [ref=e3940]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e3941]:
+                    - generic [ref=e3942]:
+                      - generic [ref=e3943]: 01 set 2026
+                      - generic [ref=e3944]: Giorgio Namoini
+                  - cell "72,50 €" [ref=e3945]
+                  - cell "—" [ref=e3946]:
+                    - generic [ref=e3947]: —
+                  - cell "Azioni ricambio" [ref=e3948]:
+                    - group "Azioni ricambio" [ref=e3949]:
+                      - button "Info" [ref=e3950] [cursor=pointer]:
+                        - img [ref=e3951]
+                      - button "Scarico" [ref=e3953] [cursor=pointer]:
+                        - img [ref=e3954]
+                      - button "Carico" [ref=e3955] [cursor=pointer]:
+                        - img [ref=e3956]
+                - row "850971 Tecnoindustrie Vite TCEI 5x35 8.8 ZB Compatibilità universale Altro Giacenza 4 Scorta minima 0 06 ago 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3958]:
+                  - cell "850971" [ref=e3959]:
+                    - generic [ref=e3963]: "850971"
+                  - cell "Tecnoindustrie" [ref=e3964]:
+                    - generic [ref=e3965]: Tecnoindustrie
+                  - cell "Vite TCEI 5x35 8.8 ZB Compatibilità universale" [ref=e3966]:
+                    - generic [ref=e3967]: Vite TCEI 5x35 8.8 ZB
+                    - generic [ref=e3968]: Compatibilità universale
+                  - cell "Altro" [ref=e3969]:
+                    - generic [ref=e3970]: Altro
+                  - cell "Giacenza 4" [ref=e3971]:
+                    - generic "Giacenza 4" [ref=e3973]:
+                      - generic [ref=e3974]: "4"
+                  - cell "Scorta minima 0" [ref=e3975]:
+                    - generic "Scorta minima 0" [ref=e3977]:
+                      - generic [ref=e3978]: "0"
+                  - cell "06 ago 2026 Giorgio Namoini" [ref=e3979]:
+                    - generic [ref=e3980]:
+                      - generic [ref=e3981]: 06 ago 2026
+                      - generic [ref=e3982]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e3983]
+                  - cell "—" [ref=e3984]:
+                    - generic [ref=e3985]: —
+                  - cell "Azioni ricambio" [ref=e3986]:
+                    - group "Azioni ricambio" [ref=e3987]:
+                      - button "Info" [ref=e3988] [cursor=pointer]:
+                        - img [ref=e3989]
+                      - button "Scarico" [ref=e3991] [cursor=pointer]:
+                        - img [ref=e3992]
+                      - button "Carico" [ref=e3993] [cursor=pointer]:
+                        - img [ref=e3994]
+                - row "QMK667920 Tecnoindustrie Filtro Gasolio Canter Fuso Fuso Canter, Tecno Industrie (Universale) Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e3996]:
+                  - cell "QMK667920" [ref=e3997]:
+                    - generic [ref=e4001]: QMK667920
+                  - cell "Tecnoindustrie" [ref=e4002]:
+                    - generic [ref=e4003]: Tecnoindustrie
+                  - cell "Filtro Gasolio Canter Fuso Fuso Canter, Tecno Industrie (Universale)" [ref=e4004]:
+                    - generic [ref=e4005]: Filtro Gasolio Canter Fuso
+                    - generic [ref=e4006]: Fuso Canter, Tecno Industrie (Universale)
+                  - cell "Filtrazione" [ref=e4007]:
+                    - generic [ref=e4008]: Filtrazione
+                  - cell "Giacenza 0" [ref=e4009]:
+                    - generic "Giacenza 0" [ref=e4011]:
+                      - generic [ref=e4012]: "0"
+                  - cell "Scorta minima 0" [ref=e4013]:
+                    - generic "Scorta minima 0" [ref=e4015]:
+                      - generic [ref=e4016]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e4017]:
+                    - generic [ref=e4018]:
+                      - generic [ref=e4019]: 01 set 2026
+                      - generic [ref=e4020]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e4021]
+                  - cell "—" [ref=e4022]:
+                    - generic [ref=e4023]: —
+                  - cell "Azioni ricambio" [ref=e4024]:
+                    - group "Azioni ricambio" [ref=e4025]:
+                      - button "Info" [ref=e4026] [cursor=pointer]:
+                        - img [ref=e4027]
+                      - button "Scarico" [ref=e4029] [cursor=pointer]:
+                        - img [ref=e4030]
+                      - button "Carico" [ref=e4031] [cursor=pointer]:
+                        - img [ref=e4032]
+                - row "QC000001 Tecnoindustrie Filtro Olio Tecno Industrie (Universale) Filtrazione Giacenza 0 Scorta minima 0 01 set 2026 Giorgio Namoini 0,00 € — Azioni ricambio" [ref=e4034]:
+                  - cell "QC000001" [ref=e4035]:
+                    - generic [ref=e4039]: QC000001
+                  - cell "Tecnoindustrie" [ref=e4040]:
+                    - generic [ref=e4041]: Tecnoindustrie
+                  - cell "Filtro Olio Tecno Industrie (Universale)" [ref=e4042]:
+                    - generic [ref=e4043]: Filtro Olio
+                    - generic [ref=e4044]: Tecno Industrie (Universale)
+                  - cell "Filtrazione" [ref=e4045]:
+                    - generic [ref=e4046]: Filtrazione
+                  - cell "Giacenza 0" [ref=e4047]:
+                    - generic "Giacenza 0" [ref=e4049]:
+                      - generic [ref=e4050]: "0"
+                  - cell "Scorta minima 0" [ref=e4051]:
+                    - generic "Scorta minima 0" [ref=e4053]:
+                      - generic [ref=e4054]: "0"
+                  - cell "01 set 2026 Giorgio Namoini" [ref=e4055]:
+                    - generic [ref=e4056]:
+                      - generic [ref=e4057]: 01 set 2026
+                      - generic [ref=e4058]: Giorgio Namoini
+                  - cell "0,00 €" [ref=e4059]
+                  - cell "—" [ref=e4060]:
+                    - generic [ref=e4061]: —
+                  - cell "Azioni ricambio" [ref=e4062]:
+                    - group "Azioni ricambio" [ref=e4063]:
+                      - button "Info" [ref=e4064] [cursor=pointer]:
+                        - img [ref=e4065]
+                      - button "Scarico" [ref=e4067] [cursor=pointer]:
+                        - img [ref=e4068]
+                      - button "Carico" [ref=e4069] [cursor=pointer]:
+                        - img [ref=e4070]
+            - generic [ref=e4072]:
+              - paragraph [ref=e4073]: Mostrando 1–100 di 107 risultati
+              - navigation "Paginazione" [ref=e4074]:
+                - button "Prima pagina" [disabled]: ≪
+                - button "Pagina precedente" [disabled]: ‹
+                - button "1" [ref=e4075] [cursor=pointer]
+                - button "2" [ref=e4076] [cursor=pointer]
+                - button "Pagina successiva" [ref=e4077] [cursor=pointer]: ›
+                - button "Ultima pagina" [ref=e4078] [cursor=pointer]: ≫
+```
+
+# Test source
+
+```ts
+  162 |     );
+  163 |     document.dispatchEvent(
+  164 |       new TouchEvent("touchmove", {
+  165 |         bubbles: true,
+  166 |         cancelable: true,
+  167 |         touches: [mkTouch(endX)],
+  168 |         targetTouches: [mkTouch(endX)],
+  169 |       }),
+  170 |     );
+  171 |     document.dispatchEvent(
+  172 |       new TouchEvent("touchend", {
+  173 |         bubbles: true,
+  174 |         cancelable: true,
+  175 |         touches: [],
+  176 |         changedTouches: [mkTouch(endX)],
+  177 |       }),
+  178 |     );
+  179 |   });
+  180 | 
+  181 |   await expect(page.getByRole("dialog", { name: "Menu principale" })).not.toBeVisible();
+  182 | });
+  183 | 
+  184 | test("mobile nav rapid open close", async ({ page }) => {
+  185 |   attachConsoleGuards(page);
+  186 |   await page.setViewportSize({ width: 390, height: 844 });
+  187 |   await loginViaUi(page, adminCredentials());
+  188 |   await page.goto("/dashboard");
+  189 |   const openBtn = page.getByTestId("smoke-nav-drawer-open");
+  190 |   await openBtn.click();
+  191 |   await openBtn.click({ force: true });
+  192 |   const dialog = page.getByRole("dialog", { name: "Menu principale" });
+  193 |   await expect(dialog).toBeVisible();
+  194 |   await dialog.getByRole("button", { name: "Chiudi" }).click();
+  195 |   await expect(dialog).not.toBeVisible();
+  196 |   await assertGestionalePageScrollUnlocked(page);
+  197 | });
+  198 | 
+  199 | test("main scrollbar track is reachable at viewport right edge", async ({ page }) => {
+  200 |   attachConsoleGuards(page);
+  201 |   await page.setViewportSize({ width: 1920, height: 720 });
+  202 |   await loginViaUi(page, adminCredentials());
+  203 |   await page.goto("/magazzino");
+  204 | 
+  205 |   const scrollOwner = page.locator("main.gestionale-scroll-y");
+  206 |   await expect(scrollOwner).toBeVisible();
+  207 | 
+  208 |   const hit = await page.evaluate(() => {
+  209 |     const main = document.querySelector("main.gestionale-scroll-y");
+  210 |     if (!main) return { ok: false, reason: "missing-main" };
+  211 | 
+  212 |     main.scrollTop = 0;
+  213 |     const before = main.scrollTop;
+  214 |     main.scrollTop = 400;
+  215 |     const scrolled = main.scrollTop > before;
+  216 |     const mainEl = main as HTMLElement;
+  217 |     if (!scrolled) {
+  218 |       mainEl.style.minHeight = "200vh";
+  219 |       mainEl.scrollTop = 400;
+  220 |     }
+  221 | 
+  222 |     const rect = main.getBoundingClientRect();
+  223 |     const x = Math.min(window.innerWidth - 2, rect.right - 2);
+  224 |     const y = rect.top + Math.min(rect.height * 0.5, 200);
+  225 |     const el = document.elementFromPoint(x, y);
+  226 |     const onMain =
+  227 |       el === main ||
+  228 |       (el instanceof Node && main.contains(el)) ||
+  229 |       rect.right - x <= 16;
+  230 | 
+  231 |     return {
+  232 |       ok: onMain,
+  233 |       scrollTop: main.scrollTop,
+  234 |       gutter: getComputedStyle(main).scrollbarGutter,
+  235 |       tag: el instanceof Element ? el.tagName : null,
+  236 |     };
+  237 |   });
+  238 | 
+  239 |   expect(hit.ok, JSON.stringify(hit)).toBe(true);
+  240 |   expect(hit.gutter).toBe("stable");
+  241 | });
+  242 | 
+  243 | test("main scroll column spans full width on wide desktop", async ({ page }) => {
+  244 |   attachConsoleGuards(page);
+  245 |   await page.setViewportSize({ width: 1920, height: 1080 });
+  246 |   await loginViaUi(page, adminCredentials());
+  247 |   await page.goto("/magazzino");
+  248 | 
+  249 |   const layout = await page.evaluate(() => {
+  250 |     const main = document.querySelector("main.gestionale-scroll-y");
+  251 |     if (!main) return { ok: false, reason: "missing-main" };
+  252 |     const rect = main.getBoundingClientRect();
+  253 |     const delta = window.innerWidth - rect.right;
+  254 |     return {
+  255 |       ok: delta <= 2,
+  256 |       delta,
+  257 |       rectRight: rect.right,
+  258 |       innerWidth: window.innerWidth,
+  259 |     };
+  260 |   });
+  261 | 
+> 262 |   expect(layout.ok, JSON.stringify(layout)).toBe(true);
+      |                                             ^ Error: {"ok":false,"reason":"missing-main"}
+  263 | });
+  264 | 
+  265 | test("mobile log drawer scroll host scrolls content", async ({ page }) => {
+  266 |   attachConsoleGuards(page);
+  267 |   await page.setViewportSize({ width: 390, height: 844 });
+  268 |   await loginViaUi(page, adminCredentials());
+  269 |   await page.goto("/magazzino");
+  270 | 
+  271 |   await page.getByRole("button", { name: "Log modifiche" }).click();
+  272 |   const logDrawer = page.locator('aside[aria-label="Log modifiche magazzino"]');
+  273 |   await expect(logDrawer).toBeVisible();
+  274 | 
+  275 |   const scrollHit = await page.evaluate(() => {
+  276 |     const aside = document.querySelector('aside[aria-label="Log modifiche magazzino"]');
+  277 |     if (!aside) return { ok: false, reason: "missing-aside" };
+  278 |     const host = aside.querySelector("[data-cab-modal-scroll]") as HTMLElement | null;
+  279 |     if (!host) return { ok: false, reason: "missing-scroll-host" };
+  280 | 
+  281 |     const inner = host.querySelector("ul, p, .gestionale-scrollbar") as HTMLElement | null;
+  282 |     if (inner && inner.scrollHeight <= host.clientHeight) {
+  283 |       inner.style.minHeight = `${host.clientHeight + 400}px`;
+  284 |     } else if (host.scrollHeight <= host.clientHeight) {
+  285 |       host.style.minHeight = `${host.clientHeight + 400}px`;
+  286 |     }
+  287 | 
+  288 |     const before = host.scrollTop;
+  289 |     host.scrollTop = 200;
+  290 |     return {
+  291 |       ok: host.scrollTop > before,
+  292 |       scrollTop: host.scrollTop,
+  293 |       clientHeight: host.clientHeight,
+  294 |       scrollHeight: host.scrollHeight,
+  295 |       overflowY: getComputedStyle(host).overflowY,
+  296 |     };
+  297 |   });
+  298 | 
+  299 |   expect(scrollHit.ok, JSON.stringify(scrollHit)).toBe(true);
+  300 | 
+  301 |   await page.getByRole("button", { name: "Chiudi" }).click();
+  302 |   await expect(logDrawer).not.toBeVisible();
+  303 |   await assertGestionalePageScrollUnlocked(page);
+  304 | });
+  305 | 
+  306 | test("log drawer locks body scroll and restores on close", async ({ page }) => {
+  307 |   attachConsoleGuards(page);
+  308 |   await page.setViewportSize({ width: 1280, height: 720 });
+  309 |   await loginViaUi(page, adminCredentials());
+  310 |   await page.goto("/magazzino");
+  311 | 
+  312 |   await page.getByRole("button", { name: "Log modifiche" }).click();
+  313 |   const logDrawer = page.locator('aside[aria-label="Log modifiche magazzino"]');
+  314 |   await expect(logDrawer).toBeVisible();
+  315 | 
+  316 |   const locked = await page.evaluate(() => ({
+  317 |     lockAttr: document.body.getAttribute("data-cab-scroll-lock-count"),
+  318 |     bodyOverflow: document.body.style.overflow,
+  319 |   }));
+  320 |   expect(locked.lockAttr || locked.bodyOverflow === "hidden").toBeTruthy();
+  321 | 
+  322 |   await page.getByRole("button", { name: "Chiudi" }).click();
+  323 |   await expect(logDrawer).not.toBeVisible();
+  324 |   await assertGestionalePageScrollUnlocked(page);
+  325 | });
+  326 | 
+```

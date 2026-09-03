@@ -1,0 +1,13 @@
+{
+  "module": "Produzione",
+  "file": "preventivi",
+  "primary_key": null,
+  "note": "Module not readable (HTTP 500) — use Produzione/ordini schema only as related, not equivalent",
+  "status": "BLOCKED",
+  "related_readable": {
+    "module": "Produzione",
+    "file": "ordini",
+    "primary_key": "id",
+    "fieldset_sample": ["anagrafica_id", "oggetto", "data", "task_id", "materiali", "risorse_umane", "note_integrazioni"]
+  }
+}

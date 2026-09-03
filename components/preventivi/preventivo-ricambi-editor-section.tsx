@@ -43,6 +43,10 @@ import {
   suggestionsForPreventivoRigaRicambio,
 } from "@/lib/preventivi/preventivo-ricambio-magazzino";
 import {
+  costoRicambiPreventivo,
+  magazzinoMapFromList,
+} from "@/lib/preventivi/preventivo-profitto";
+import {
   fmtPreventivoMarkupPercent,
   resolvePreventivoRigaRicambioCostoUnitario,
   resolvePreventivoRigaRicambioMarkup,
@@ -329,16 +333,11 @@ export function PreventivoRicambiEditorSection({
   const [acRowId, setAcRowId] = useState<string | null>(null);
 
   const totCostoRicambi = useMemo(() => {
-    const all = materialiConsumo ? [...righe, materialiConsumo] : [...righe];
-    let sum = 0;
-    for (const r of all) {
-      const qty = Number.isFinite(r.quantita) && r.quantita > 0 ? r.quantita : 0;
-      if (qty <= 0) continue;
-      const mag = magazzinoForRiga(r, prodotti);
-      const costo = resolvePreventivoRigaRicambioCostoUnitario(r, mag);
-      sum += qty * costo;
-    }
-    return Math.round(sum * 100) / 100;
+    const magMap = magazzinoMapFromList(prodotti);
+    return costoRicambiPreventivo(
+      { righeRicambi: materialiConsumo ? [...righe, materialiConsumo] : [...righe] },
+      magMap,
+    );
   }, [righe, materialiConsumo, prodotti]);
 
   return (

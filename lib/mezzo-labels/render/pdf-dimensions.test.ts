@@ -19,8 +19,8 @@ void (async () => {
 
   const labelWPt = mmToPt(MEZZO_LABEL_TEMPLATE.widthMm);
   const labelHPt = mmToPt(MEZZO_LABEL_TEMPLATE.heightMm);
-  assert.ok(Math.abs(labelWPt - 141.73) < 0.1, `label width pt ~141.73, got ${labelWPt}`);
-  assert.ok(Math.abs(labelHPt - 62.36) < 0.1, `label height pt ~62.36, got ${labelHPt}`);
+  assert.ok(Math.abs(labelWPt - 102.05) < 0.1, `label width pt ~102.05, got ${labelWPt}`);
+  assert.ok(Math.abs(labelHPt - 51.02) < 0.1, `label height pt ~51.02, got ${labelHPt}`);
 
   console.log("mezzo-labels/render/pdf-dimensions.test.ts OK");
 })().catch((e) => {

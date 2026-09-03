@@ -1,0 +1,7 @@
+{
+  "module": "Magazzino",
+  "file": "movimento",
+  "primary_key": "id_movimento",
+  "note": "Anonymized schema snapshot — discovery 2026-09-03",
+  "fieldset_sample": ["doc_number", "doc_number_padded", "data", "sezionale", "causale_id", "anagrafica_id", "clifor_id", "causale_trasporto_id", "vettore_id", "id_task", "vsrif"]
+}

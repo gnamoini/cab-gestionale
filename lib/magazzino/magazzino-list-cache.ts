@@ -32,6 +32,8 @@ export function ricambioUiFromMagazzinoRow(
 export type PatchMagazzinoListCacheOptions = {
   /** ponytail: solo quantita/updated_at (+ autore in meta) — es. +/- scorta, senza riserializzare compat. */
   quantitaOnly?: boolean;
+  /** Default: chiave lista senza filtri. */
+  queryKey?: readonly unknown[];
 };
 
 function patchRowMetaAutore(
@@ -100,7 +102,8 @@ export function patchMagazzinoListCache(
   mezziListe?: MezziListePrefs,
   options?: PatchMagazzinoListCacheOptions,
 ): void {
-  qc.setQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey(), (old) => {
+  const key = options?.queryKey ?? magazzinoListQueryKey();
+  qc.setQueryData<MagazzinoRicambioRow[]>(key, (old) => {
     const rows = old ?? [];
     if (options?.quantitaOnly) {
       const ui = rows.map((row) => magazzinoRowToRicambioUI(row, "", mezziListe));

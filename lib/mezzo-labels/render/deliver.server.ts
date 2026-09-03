@@ -84,7 +84,7 @@ async function storeMezzoLabelCache(
       entity_id: mezzoId,
       hash,
       format,
-      preset: "mezzo-keychain-50x22",
+      preset: "mezzo-keychain-36x18",
       template_id: MEZZO_LABEL_TEMPLATE.id,
       storage_path: storagePath,
       generator_version: MEZZO_LABEL_TEMPLATE.version,

@@ -1,0 +1,2440 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 04-modal-scroll.spec.ts >> log drawer locks body scroll and restores on close
+- Location: e2e\smoke\04-modal-scroll.spec.ts:306:5
+
+# Error details
+
+```
+TimeoutError: locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Log modifiche' })
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - region "Attiva notifiche gestionale" [ref=e12]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - img [ref=e18]
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - paragraph [ref=e22]: Attiva le notifiche
+            - generic [ref=e23]: Su questo browser
+          - paragraph [ref=e24]: Ricevi popup di sistema anche con il gestionale in un'altra scheda. Puoi cambiare idea in qualsiasi momento dal menu notifiche.
+      - generic [ref=e26]:
+        - button "No, grazie" [ref=e27] [cursor=pointer]
+        - button "Sì, attiva" [ref=e28] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e35]:
+      - generic [ref=e38]:
+        - button "Apri menu" [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+        - generic [ref=e43]:
+          - heading "Magazzino ricambi" [level=1]
+        - button "Azioni pagina" [ref=e46] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e51]: Azioni pagina
+      - generic [ref=e55]:
+        - region "Azioni e filtri magazzino" [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e60]:
+                - generic [ref=e62]:
+                  - button "+ Nuovo ricambio" [ref=e63] [cursor=pointer]:
+                    - generic [ref=e64]: + Nuovo ricambio
+                  - button "Acquisizione DDT con AI" [ref=e65] [cursor=pointer]:
+                    - img [ref=e67]
+                    - generic [ref=e69]: Carico DDT AI
+                - generic [ref=e71]:
+                  - generic:
+                    - img
+                  - combobox "Cerca in magazzino" [ref=e72]
+                - button "Filtri" [ref=e74] [cursor=pointer]:
+                  - generic [ref=e75]: Filtri
+                  - img [ref=e76]
+              - generic [ref=e80]:
+                - generic [ref=e83]:
+                  - generic [ref=e84]: "107"
+                  - generic [ref=e85]: risultati
+                - generic [ref=e86]:
+                  - switch "Modalità modifica" [checked] [ref=e87] [cursor=pointer]:
+                    - generic [ref=e88]: Modalità modifica
+                  - switch "Etichette" [ref=e91] [cursor=pointer]:
+                    - generic [ref=e92]: Etichette
+            - generic "Filtri" [ref=e95]
+        - generic [ref=e97]:
+          - table [ref=e99]:
+            - rowgroup [ref=e108]:
+              - 'row "CODICE: non ordinato. Clic per cambiare ordinamento Marca: non ordinato. Clic per cambiare ordinamento Descrizione: non ordinato. Clic per cambiare ordinamento Compatibilità: non ordinato. Clic per cambiare ordinamento Categoria: non ordinato. Clic per cambiare ordinamento Scorta: non ordinato. Clic per cambiare ordinamento P. vendita: non ordinato. Clic per cambiare ordinamento Azioni" [ref=e109]':
+                - 'columnheader "CODICE: non ordinato. Clic per cambiare ordinamento" [ref=e110]':
+                  - 'button "CODICE: non ordinato. Clic per cambiare ordinamento" [ref=e111] [cursor=pointer]':
+                    - generic [ref=e112]:
+                      - generic [ref=e113]: CODICE
+                      - img [ref=e115]
+                - 'columnheader "Marca: non ordinato. Clic per cambiare ordinamento" [ref=e118]':
+                  - 'button "Marca: non ordinato. Clic per cambiare ordinamento" [ref=e119] [cursor=pointer]':
+                    - generic [ref=e120]:
+                      - generic [ref=e121]: Marca
+                      - img [ref=e123]
+                - 'columnheader "Descrizione: non ordinato. Clic per cambiare ordinamento Compatibilità: non ordinato. Clic per cambiare ordinamento" [ref=e126]':
+                  - generic [ref=e127]:
+                    - 'button "Descrizione: non ordinato. Clic per cambiare ordinamento" [ref=e128] [cursor=pointer]':
+                      - generic [ref=e129]: Descrizione
+                      - img [ref=e131]
+                    - 'button "Compatibilità: non ordinato. Clic per cambiare ordinamento" [ref=e134] [cursor=pointer]':
+                      - generic [ref=e135]: Compatibilità
+                      - img [ref=e137]
+                - 'columnheader "Categoria: non ordinato. Clic per cambiare ordinamento" [ref=e140]':
+                  - 'button "Categoria: non ordinato. Clic per cambiare ordinamento" [ref=e141] [cursor=pointer]':
+                    - generic [ref=e142]:
+                      - generic [ref=e143]: Categoria
+                      - img [ref=e145]
+                - 'columnheader "Scorta: non ordinato. Clic per cambiare ordinamento" [ref=e148]':
+                  - 'button "Scorta: non ordinato. Clic per cambiare ordinamento" [ref=e149] [cursor=pointer]':
+                    - generic [ref=e150]:
+                      - generic [ref=e151]: Scorta
+                      - img [ref=e153]
+                - 'columnheader "P. vendita: non ordinato. Clic per cambiare ordinamento" [ref=e156]':
+                  - 'button "P. vendita: non ordinato. Clic per cambiare ordinamento" [ref=e157] [cursor=pointer]':
+                    - generic [ref=e158]:
+                      - generic [ref=e159]: P. vendita
+                      - img [ref=e161]
+                - columnheader "Azioni" [ref=e164]:
+                  - generic [ref=e165]: Azioni
+            - rowgroup [ref=e166]:
+              - row "— — Grasso (Secchia) Compatibilità universale Altro Giacenza 1 0,00 € Azioni ricambio" [ref=e167]:
+                - cell "—" [ref=e168]:
+                  - generic [ref=e172]: —
+                - cell "—" [ref=e173]
+                - cell "Grasso (Secchia) Compatibilità universale" [ref=e174]:
+                  - generic [ref=e175]: Grasso (Secchia)
+                  - generic [ref=e176]: Compatibilità universale
+                - cell "Altro" [ref=e177]:
+                  - generic [ref=e178]: Altro
+                - cell "Giacenza 1" [ref=e179]:
+                  - generic "Giacenza 1" [ref=e181]:
+                    - generic [ref=e182]: "1"
+                - cell "0,00 €" [ref=e183]
+                - cell "Azioni ricambio" [ref=e184]:
+                  - group "Azioni ricambio" [ref=e185]:
+                    - button "Info" [ref=e186] [cursor=pointer]:
+                      - img [ref=e187]
+                    - button "Scarico" [ref=e189] [cursor=pointer]:
+                      - img [ref=e190]
+                    - button "Carico" [ref=e191] [cursor=pointer]:
+                      - img [ref=e192]
+              - row "— — Liquido Antigelo Compatibilità universale Motore Giacenza 10 0,00 € Azioni ricambio" [ref=e194]:
+                - cell "—" [ref=e195]:
+                  - generic [ref=e199]: —
+                - cell "—" [ref=e200]
+                - cell "Liquido Antigelo Compatibilità universale" [ref=e201]:
+                  - generic [ref=e202]: Liquido Antigelo
+                  - generic [ref=e203]: Compatibilità universale
+                - cell "Motore" [ref=e204]:
+                  - generic [ref=e205]: Motore
+                - cell "Giacenza 10" [ref=e206]:
+                  - generic "Giacenza 10" [ref=e208]:
+                    - generic [ref=e209]: "10"
+                - cell "0,00 €" [ref=e210]
+                - cell "Azioni ricambio" [ref=e211]:
+                  - group "Azioni ricambio" [ref=e212]:
+                    - button "Info" [ref=e213] [cursor=pointer]:
+                      - img [ref=e214]
+                    - button "Scarico" [ref=e216] [cursor=pointer]:
+                      - img [ref=e217]
+                    - button "Carico" [ref=e218] [cursor=pointer]:
+                      - img [ref=e219]
+              - row "— — Tubo Flessibile R2T 1000 Compatibilità universale Altro Giacenza 1 0,00 € Azioni ricambio" [ref=e221]:
+                - cell "—" [ref=e222]:
+                  - generic [ref=e226]: —
+                - cell "—" [ref=e227]
+                - cell "Tubo Flessibile R2T 1000 Compatibilità universale" [ref=e228]:
+                  - generic [ref=e229]: Tubo Flessibile R2T 1000
+                  - generic [ref=e230]: Compatibilità universale
+                - cell "Altro" [ref=e231]:
+                  - generic [ref=e232]: Altro
+                - cell "Giacenza 1" [ref=e233]:
+                  - generic "Giacenza 1" [ref=e235]:
+                    - generic [ref=e236]: "1"
+                - cell "0,00 €" [ref=e237]
+                - cell "Azioni ricambio" [ref=e238]:
+                  - group "Azioni ricambio" [ref=e239]:
+                    - button "Info" [ref=e240] [cursor=pointer]:
+                      - img [ref=e241]
+                    - button "Scarico" [ref=e243] [cursor=pointer]:
+                      - img [ref=e244]
+                    - button "Carico" [ref=e245] [cursor=pointer]:
+                      - img [ref=e246]
+              - row "— — Connettori con Luce a Led Compatibilità universale Elettronica Giacenza 3 0,00 € Azioni ricambio" [ref=e248]:
+                - cell "—" [ref=e249]:
+                  - generic [ref=e253]: —
+                - cell "—" [ref=e254]
+                - cell "Connettori con Luce a Led Compatibilità universale" [ref=e255]:
+                  - generic [ref=e256]: Connettori con Luce a Led
+                  - generic [ref=e257]: Compatibilità universale
+                - cell "Elettronica" [ref=e258]:
+                  - generic [ref=e259]: Elettronica
+                - cell "Giacenza 3" [ref=e260]:
+                  - generic "Giacenza 3" [ref=e262]:
+                    - generic [ref=e263]: "3"
+                - cell "0,00 €" [ref=e264]
+                - cell "Azioni ricambio" [ref=e265]:
+                  - group "Azioni ricambio" [ref=e266]:
+                    - button "Info" [ref=e267] [cursor=pointer]:
+                      - img [ref=e268]
+                    - button "Scarico" [ref=e270] [cursor=pointer]:
+                      - img [ref=e271]
+                    - button "Carico" [ref=e272] [cursor=pointer]:
+                      - img [ref=e273]
+              - row "— — Olio ATF (Idroguida / Cambio DU5000) Compatibilità universale Motore Giacenza 25 0,00 € Azioni ricambio" [ref=e275]:
+                - cell "—" [ref=e276]:
+                  - generic [ref=e280]: —
+                - cell "—" [ref=e281]
+                - cell "Olio ATF (Idroguida / Cambio DU5000) Compatibilità universale" [ref=e282]:
+                  - generic [ref=e283]: Olio ATF (Idroguida / Cambio DU5000)
+                  - generic [ref=e284]: Compatibilità universale
+                - cell "Motore" [ref=e285]:
+                  - generic [ref=e286]: Motore
+                - cell "Giacenza 25" [ref=e287]:
+                  - generic "Giacenza 25" [ref=e289]:
+                    - generic [ref=e290]: "25"
+                - cell "0,00 €" [ref=e291]
+                - cell "Azioni ricambio" [ref=e292]:
+                  - group "Azioni ricambio" [ref=e293]:
+                    - button "Info" [ref=e294] [cursor=pointer]:
+                      - img [ref=e295]
+                    - button "Scarico" [ref=e297] [cursor=pointer]:
+                      - img [ref=e298]
+                    - button "Carico" [ref=e299] [cursor=pointer]:
+                      - img [ref=e300]
+              - row "— — Olio 80/90 (Cambio) Compatibilità universale Motore Giacenza 20 0,00 € Azioni ricambio" [ref=e302]:
+                - cell "—" [ref=e303]:
+                  - generic [ref=e307]: —
+                - cell "—" [ref=e308]
+                - cell "Olio 80/90 (Cambio) Compatibilità universale" [ref=e309]:
+                  - generic [ref=e310]: Olio 80/90 (Cambio)
+                  - generic [ref=e311]: Compatibilità universale
+                - cell "Motore" [ref=e312]:
+                  - generic [ref=e313]: Motore
+                - cell "Giacenza 20" [ref=e314]:
+                  - generic "Giacenza 20" [ref=e316]:
+                    - generic [ref=e317]: "20"
+                - cell "0,00 €" [ref=e318]
+                - cell "Azioni ricambio" [ref=e319]:
+                  - group "Azioni ricambio" [ref=e320]:
+                    - button "Info" [ref=e321] [cursor=pointer]:
+                      - img [ref=e322]
+                    - button "Scarico" [ref=e324] [cursor=pointer]:
+                      - img [ref=e325]
+                    - button "Carico" [ref=e326] [cursor=pointer]:
+                      - img [ref=e327]
+              - row "— — Olio Idraulico 48 (Fusti) Compatibilità universale Motore Giacenza 208 0,00 € Azioni ricambio" [ref=e329]:
+                - cell "—" [ref=e330]:
+                  - generic [ref=e334]: —
+                - cell "—" [ref=e335]
+                - cell "Olio Idraulico 48 (Fusti) Compatibilità universale" [ref=e336]:
+                  - generic [ref=e337]: Olio Idraulico 48 (Fusti)
+                  - generic [ref=e338]: Compatibilità universale
+                - cell "Motore" [ref=e339]:
+                  - generic [ref=e340]: Motore
+                - cell "Giacenza 208" [ref=e341]:
+                  - generic "Giacenza 208" [ref=e343]:
+                    - generic [ref=e344]: "208"
+                - cell "0,00 €" [ref=e345]
+                - cell "Azioni ricambio" [ref=e346]:
+                  - group "Azioni ricambio" [ref=e347]:
+                    - button "Info" [ref=e348] [cursor=pointer]:
+                      - img [ref=e349]
+                    - button "Scarico" [ref=e351] [cursor=pointer]:
+                      - img [ref=e352]
+                    - button "Carico" [ref=e353] [cursor=pointer]:
+                      - img [ref=e354]
+              - row "— — Olio Motore 10/40 Compatibilità universale Motore Giacenza 20 0,00 € Azioni ricambio" [ref=e356]:
+                - cell "—" [ref=e357]:
+                  - generic [ref=e361]: —
+                - cell "—" [ref=e362]
+                - cell "Olio Motore 10/40 Compatibilità universale" [ref=e363]:
+                  - generic [ref=e364]: Olio Motore 10/40
+                  - generic [ref=e365]: Compatibilità universale
+                - cell "Motore" [ref=e366]:
+                  - generic [ref=e367]: Motore
+                - cell "Giacenza 20" [ref=e368]:
+                  - generic "Giacenza 20" [ref=e370]:
+                    - generic [ref=e371]: "20"
+                - cell "0,00 €" [ref=e372]
+                - cell "Azioni ricambio" [ref=e373]:
+                  - group "Azioni ricambio" [ref=e374]:
+                    - button "Info" [ref=e375] [cursor=pointer]:
+                      - img [ref=e376]
+                    - button "Scarico" [ref=e378] [cursor=pointer]:
+                      - img [ref=e379]
+                    - button "Carico" [ref=e380] [cursor=pointer]:
+                      - img [ref=e381]
+              - row "— — Olio Matic (Cambio Automatico) Compatibilità universale Motore Giacenza 20 0,00 € Azioni ricambio" [ref=e383]:
+                - cell "—" [ref=e384]:
+                  - generic [ref=e388]: —
+                - cell "—" [ref=e389]
+                - cell "Olio Matic (Cambio Automatico) Compatibilità universale" [ref=e390]:
+                  - generic [ref=e391]: Olio Matic (Cambio Automatico)
+                  - generic [ref=e392]: Compatibilità universale
+                - cell "Motore" [ref=e393]:
+                  - generic [ref=e394]: Motore
+                - cell "Giacenza 20" [ref=e395]:
+                  - generic "Giacenza 20" [ref=e397]:
+                    - generic [ref=e398]: "20"
+                - cell "0,00 €" [ref=e399]
+                - cell "Azioni ricambio" [ref=e400]:
+                  - group "Azioni ricambio" [ref=e401]:
+                    - button "Info" [ref=e402] [cursor=pointer]:
+                      - img [ref=e403]
+                    - button "Scarico" [ref=e405] [cursor=pointer]:
+                      - img [ref=e406]
+                    - button "Carico" [ref=e407] [cursor=pointer]:
+                      - img [ref=e408]
+              - row "K57P — Pressostato a Pomello Tarabile Compatibilità universale Altro Giacenza 1 0,00 € Azioni ricambio" [ref=e410]:
+                - cell "K57P" [ref=e411]:
+                  - generic [ref=e415]: K57P
+                - cell "—" [ref=e416]
+                - cell "Pressostato a Pomello Tarabile Compatibilità universale" [ref=e417]:
+                  - generic [ref=e418]: Pressostato a Pomello Tarabile
+                  - generic [ref=e419]: Compatibilità universale
+                - cell "Altro" [ref=e420]:
+                  - generic [ref=e421]: Altro
+                - cell "Giacenza 1" [ref=e422]:
+                  - generic "Giacenza 1" [ref=e424]:
+                    - generic [ref=e425]: "1"
+                - cell "0,00 €" [ref=e426]
+                - cell "Azioni ricambio" [ref=e427]:
+                  - group "Azioni ricambio" [ref=e428]:
+                    - button "Info" [ref=e429] [cursor=pointer]:
+                      - img [ref=e430]
+                    - button "Scarico" [ref=e432] [cursor=pointer]:
+                      - img [ref=e433]
+                    - button "Carico" [ref=e434] [cursor=pointer]:
+                      - img [ref=e435]
+              - row "OLIO0W30 — Olio Motore 0W30 Fuso Canter, Tecno Industrie (Universale) Motore Giacenza 0 0,00 € Azioni ricambio" [ref=e437]:
+                - cell "OLIO0W30" [ref=e438]:
+                  - generic [ref=e442]: OLIO0W30
+                - cell "—" [ref=e443]
+                - cell "Olio Motore 0W30 Fuso Canter, Tecno Industrie (Universale)" [ref=e444]:
+                  - generic [ref=e445]: Olio Motore 0W30
+                  - generic [ref=e446]: Fuso Canter, Tecno Industrie (Universale)
+                - cell "Motore" [ref=e447]:
+                  - generic [ref=e448]: Motore
+                - cell "Giacenza 0" [ref=e449]:
+                  - generic "Giacenza 0" [ref=e451]:
+                    - generic [ref=e452]: "0"
+                - cell "0,00 €" [ref=e453]
+                - cell "Azioni ricambio" [ref=e454]:
+                  - group "Azioni ricambio" [ref=e455]:
+                    - button "Info" [ref=e456] [cursor=pointer]:
+                      - img [ref=e457]
+                    - button "Scarico" [ref=e459] [cursor=pointer]:
+                      - img [ref=e460]
+                    - button "Carico" [ref=e461] [cursor=pointer]:
+                      - img [ref=e462]
+              - row "XALK178E — Fungo di Emergenza Completo Compatibilità universale Altro Giacenza 1 0,00 € Azioni ricambio" [ref=e464]:
+                - cell "XALK178E" [ref=e465]:
+                  - generic [ref=e469]: XALK178E
+                - cell "—" [ref=e470]
+                - cell "Fungo di Emergenza Completo Compatibilità universale" [ref=e471]:
+                  - generic [ref=e472]: Fungo di Emergenza Completo
+                  - generic [ref=e473]: Compatibilità universale
+                - cell "Altro" [ref=e474]:
+                  - generic [ref=e475]: Altro
+                - cell "Giacenza 1" [ref=e476]:
+                  - generic "Giacenza 1" [ref=e478]:
+                    - generic [ref=e479]: "1"
+                - cell "0,00 €" [ref=e480]
+                - cell "Azioni ricambio" [ref=e481]:
+                  - group "Azioni ricambio" [ref=e482]:
+                    - button "Info" [ref=e483] [cursor=pointer]:
+                      - img [ref=e484]
+                    - button "Scarico" [ref=e486] [cursor=pointer]:
+                      - img [ref=e487]
+                    - button "Carico" [ref=e488] [cursor=pointer]:
+                      - img [ref=e489]
+              - row "XS518B1PAM12 AMS Sensore Prossimità D18 con Connettore AMS (Universale) Sensori Giacenza 0 0,00 € Azioni ricambio" [ref=e491]:
+                - cell "XS518B1PAM12" [ref=e492]:
+                  - generic [ref=e496]: XS518B1PAM12
+                - cell "AMS" [ref=e497]:
+                  - generic [ref=e498]: AMS
+                - cell "Sensore Prossimità D18 con Connettore AMS (Universale)" [ref=e499]:
+                  - generic [ref=e500]: Sensore Prossimità D18 con Connettore
+                  - generic [ref=e501]: AMS (Universale)
+                - cell "Sensori" [ref=e502]:
+                  - generic [ref=e503]: Sensori
+                - cell "Giacenza 0" [ref=e504]:
+                  - generic "Giacenza 0" [ref=e506]:
+                    - generic [ref=e507]: "0"
+                - cell "0,00 €" [ref=e508]
+                - cell "Azioni ricambio" [ref=e509]:
+                  - group "Azioni ricambio" [ref=e510]:
+                    - button "Info" [ref=e511] [cursor=pointer]:
+                      - img [ref=e512]
+                    - button "Scarico" [ref=e514] [cursor=pointer]:
+                      - img [ref=e515]
+                    - button "Carico" [ref=e516] [cursor=pointer]:
+                      - img [ref=e517]
+              - row "C117/09/13R0 Autobren Pressostato Elettronico Autobren (Universale) Elettronica Giacenza 2 0,00 € Azioni ricambio" [ref=e519]:
+                - cell "C117/09/13R0" [ref=e520]:
+                  - generic [ref=e524]: C117/09/13R0
+                - cell "Autobren" [ref=e525]:
+                  - generic [ref=e526]: Autobren
+                - cell "Pressostato Elettronico Autobren (Universale)" [ref=e527]:
+                  - generic [ref=e528]: Pressostato Elettronico
+                  - generic [ref=e529]: Autobren (Universale)
+                - cell "Elettronica" [ref=e530]:
+                  - generic [ref=e531]: Elettronica
+                - cell "Giacenza 2" [ref=e532]:
+                  - generic "Giacenza 2" [ref=e534]:
+                    - generic [ref=e535]: "2"
+                - cell "0,00 €" [ref=e536]
+                - cell "Azioni ricambio" [ref=e537]:
+                  - group "Azioni ricambio" [ref=e538]:
+                    - button "Info" [ref=e539] [cursor=pointer]:
+                      - img [ref=e540]
+                    - button "Scarico" [ref=e542] [cursor=pointer]:
+                      - img [ref=e543]
+                    - button "Carico" [ref=e544] [cursor=pointer]:
+                      - img [ref=e545]
+              - row "8EINT110000010 BTE Invertitore Marcia Tripolare BTE (Universale) Elettronica Giacenza 2 165,26 € Azioni ricambio" [ref=e547]:
+                - cell "8EINT110000010" [ref=e548]:
+                  - generic [ref=e552]: 8EINT110000010
+                - cell "BTE" [ref=e553]:
+                  - generic [ref=e554]: BTE
+                - cell "Invertitore Marcia Tripolare BTE (Universale)" [ref=e555]:
+                  - generic [ref=e556]: Invertitore Marcia Tripolare
+                  - generic [ref=e557]: BTE (Universale)
+                - cell "Elettronica" [ref=e558]:
+                  - generic [ref=e559]: Elettronica
+                - cell "Giacenza 2" [ref=e560]:
+                  - generic "Giacenza 2" [ref=e562]:
+                    - generic [ref=e563]: "2"
+                - cell "165,26 €" [ref=e564]
+                - cell "Azioni ricambio" [ref=e565]:
+                  - group "Azioni ricambio" [ref=e566]:
+                    - button "Info" [ref=e567] [cursor=pointer]:
+                      - img [ref=e568]
+                    - button "Scarico" [ref=e570] [cursor=pointer]:
+                      - img [ref=e571]
+                    - button "Carico" [ref=e572] [cursor=pointer]:
+                      - img [ref=e573]
+              - row "8EINT160000002 BTE Int Pos e Sicurezza Tot Asta Lun BTE (Universale) — Giacenza 1 58,02 € Azioni ricambio" [ref=e575]:
+                - cell "8EINT160000002" [ref=e576]:
+                  - generic [ref=e580]: 8EINT160000002
+                - cell "BTE" [ref=e581]:
+                  - generic [ref=e582]: BTE
+                - cell "Int Pos e Sicurezza Tot Asta Lun BTE (Universale)" [ref=e583]:
+                  - generic [ref=e584]: Int Pos e Sicurezza Tot Asta Lun
+                  - generic [ref=e585]: BTE (Universale)
+                - cell "—" [ref=e586]:
+                  - generic [ref=e587]: —
+                - cell "Giacenza 1" [ref=e588]:
+                  - generic "Giacenza 1" [ref=e590]:
+                    - generic [ref=e591]: "1"
+                - cell "58,02 €" [ref=e592]
+                - cell "Azioni ricambio" [ref=e593]:
+                  - group "Azioni ricambio" [ref=e594]:
+                    - button "Info" [ref=e595] [cursor=pointer]:
+                      - img [ref=e596]
+                    - button "Scarico" [ref=e598] [cursor=pointer]:
+                      - img [ref=e599]
+                    - button "Carico" [ref=e600] [cursor=pointer]:
+                      - img [ref=e601]
+              - row "8ESNS030000001 BTE Sensore Fotoelettrico M12 NPN/PNP Compatibilità universale Sensori Giacenza 1 197,68 € Azioni ricambio" [ref=e603]:
+                - cell "8ESNS030000001" [ref=e604]:
+                  - generic [ref=e608]: 8ESNS030000001
+                - cell "BTE" [ref=e609]:
+                  - generic [ref=e610]: BTE
+                - cell "Sensore Fotoelettrico M12 NPN/PNP Compatibilità universale" [ref=e611]:
+                  - generic [ref=e612]: Sensore Fotoelettrico M12 NPN/PNP
+                  - generic [ref=e613]: Compatibilità universale
+                - cell "Sensori" [ref=e614]:
+                  - generic [ref=e615]: Sensori
+                - cell "Giacenza 1" [ref=e616]:
+                  - generic "Giacenza 1" [ref=e618]:
+                    - generic [ref=e619]: "1"
+                - cell "197,68 €" [ref=e620]
+                - cell "Azioni ricambio" [ref=e621]:
+                  - group "Azioni ricambio" [ref=e622]:
+                    - button "Info" [ref=e623] [cursor=pointer]:
+                      - img [ref=e624]
+                    - button "Scarico" [ref=e626] [cursor=pointer]:
+                      - img [ref=e627]
+                    - button "Carico" [ref=e628] [cursor=pointer]:
+                      - img [ref=e629]
+              - row "095532148-0 Bucher Ruota Bocca Aspirazione CityCat 5000, CityCat 5006 Ruote Giacenza 3 0,00 € Azioni ricambio" [ref=e631]:
+                - cell "095532148-0" [ref=e632]:
+                  - generic [ref=e636]: 095532148-0
+                - cell "Bucher" [ref=e637]:
+                  - generic [ref=e638]: Bucher
+                - cell "Ruota Bocca Aspirazione CityCat 5000, CityCat 5006" [ref=e639]:
+                  - generic [ref=e640]: Ruota Bocca Aspirazione
+                  - generic [ref=e641]: CityCat 5000, CityCat 5006
+                - cell "Ruote" [ref=e642]:
+                  - generic [ref=e643]: Ruote
+                - cell "Giacenza 3" [ref=e644]:
+                  - generic "Giacenza 3" [ref=e646]:
+                    - generic [ref=e647]: "3"
+                - cell "0,00 €" [ref=e648]
+                - cell "Azioni ricambio" [ref=e649]:
+                  - group "Azioni ricambio" [ref=e650]:
+                    - button "Info" [ref=e651] [cursor=pointer]:
+                      - img [ref=e652]
+                    - button "Scarico" [ref=e654] [cursor=pointer]:
+                      - img [ref=e655]
+                    - button "Carico" [ref=e656] [cursor=pointer]:
+                      - img [ref=e657]
+              - row "15055731-0 Bucher Ruota Bocca Aspirazione con Supporto CityCat 5000, CityCat 5006 Ruote Giacenza 1 0,00 € Azioni ricambio" [ref=e659]:
+                - cell "15055731-0" [ref=e660]:
+                  - generic [ref=e664]: 15055731-0
+                - cell "Bucher" [ref=e665]:
+                  - generic [ref=e666]: Bucher
+                - cell "Ruota Bocca Aspirazione con Supporto CityCat 5000, CityCat 5006" [ref=e667]:
+                  - generic [ref=e668]: Ruota Bocca Aspirazione con Supporto
+                  - generic [ref=e669]: CityCat 5000, CityCat 5006
+                - cell "Ruote" [ref=e670]:
+                  - generic [ref=e671]: Ruote
+                - cell "Giacenza 1" [ref=e672]:
+                  - generic "Giacenza 1" [ref=e674]:
+                    - generic [ref=e675]: "1"
+                - cell "0,00 €" [ref=e676]
+                - cell "Azioni ricambio" [ref=e677]:
+                  - group "Azioni ricambio" [ref=e678]:
+                    - button "Info" [ref=e679] [cursor=pointer]:
+                      - img [ref=e680]
+                    - button "Scarico" [ref=e682] [cursor=pointer]:
+                      - img [ref=e683]
+                    - button "Carico" [ref=e684] [cursor=pointer]:
+                      - img [ref=e685]
+              - row "7-130-0311 Bucher Ruota Carrello Bocca Aspirazione CityFant 60 Generale Giacenza 4 0,00 € Azioni ricambio" [ref=e687]:
+                - cell "7-130-0311" [ref=e688]:
+                  - generic [ref=e692]: 7-130-0311
+                - cell "Bucher" [ref=e693]:
+                  - generic [ref=e694]: Bucher
+                - cell "Ruota Carrello Bocca Aspirazione CityFant 60" [ref=e695]:
+                  - generic [ref=e696]: Ruota Carrello Bocca Aspirazione
+                  - generic [ref=e697]: CityFant 60
+                - cell "Generale" [ref=e698]:
+                  - generic [ref=e699]: Generale
+                - cell "Giacenza 4" [ref=e700]:
+                  - generic "Giacenza 4" [ref=e702]:
+                    - generic [ref=e703]: "4"
+                - cell "0,00 €" [ref=e704]
+                - cell "Azioni ricambio" [ref=e705]:
+                  - group "Azioni ricambio" [ref=e706]:
+                    - button "Info" [ref=e707] [cursor=pointer]:
+                      - img [ref=e708]
+                    - button "Scarico" [ref=e710] [cursor=pointer]:
+                      - img [ref=e711]
+                    - button "Carico" [ref=e712] [cursor=pointer]:
+                      - img [ref=e713]
+              - row "BU2020SLA Bucher Spazzola a Tazza Acciaio CityCat 2020 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e715]:
+                - cell "BU2020SLA" [ref=e716]:
+                  - generic [ref=e720]: BU2020SLA
+                - cell "Bucher" [ref=e721]:
+                  - generic [ref=e722]: Bucher
+                - cell "Spazzola a Tazza Acciaio CityCat 2020" [ref=e723]:
+                  - generic [ref=e724]: Spazzola a Tazza Acciaio
+                  - generic [ref=e725]: CityCat 2020
+                - cell "Spazzole" [ref=e726]:
+                  - generic [ref=e727]: Spazzole
+                - cell "Giacenza 0" [ref=e728]:
+                  - generic "Giacenza 0" [ref=e730]:
+                    - generic [ref=e731]: "0"
+                - cell "0,00 €" [ref=e732]
+                - cell "Azioni ricambio" [ref=e733]:
+                  - group "Azioni ricambio" [ref=e734]:
+                    - button "Info" [ref=e735] [cursor=pointer]:
+                      - img [ref=e736]
+                    - button "Scarico" [ref=e738] [cursor=pointer]:
+                      - img [ref=e739]
+                    - button "Carico" [ref=e740] [cursor=pointer]:
+                      - img [ref=e741]
+              - row "BU2020SLM Bucher Spazzola a Tazza Mista CityCat 2020 Spazzole Giacenza 2 38,00 € Azioni ricambio" [ref=e743]:
+                - cell "BU2020SLM" [ref=e744]:
+                  - generic [ref=e748]: BU2020SLM
+                - cell "Bucher" [ref=e749]:
+                  - generic [ref=e750]: Bucher
+                - cell "Spazzola a Tazza Mista CityCat 2020" [ref=e751]:
+                  - generic [ref=e752]: Spazzola a Tazza Mista
+                  - generic [ref=e753]: CityCat 2020
+                - cell "Spazzole" [ref=e754]:
+                  - generic [ref=e755]: Spazzole
+                - cell "Giacenza 2" [ref=e756]:
+                  - generic "Giacenza 2" [ref=e758]:
+                    - generic [ref=e759]: "2"
+                - cell "38,00 €" [ref=e760]
+                - cell "Azioni ricambio" [ref=e761]:
+                  - group "Azioni ricambio" [ref=e762]:
+                    - button "Info" [ref=e763] [cursor=pointer]:
+                      - img [ref=e764]
+                    - button "Scarico" [ref=e766] [cursor=pointer]:
+                      - img [ref=e767]
+                    - button "Carico" [ref=e768] [cursor=pointer]:
+                      - img [ref=e769]
+              - row "BU2020SLP Bucher Spazzola a Tazza PPN CityCat 2020 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e771]:
+                - cell "BU2020SLP" [ref=e772]:
+                  - generic [ref=e776]: BU2020SLP
+                - cell "Bucher" [ref=e777]:
+                  - generic [ref=e778]: Bucher
+                - cell "Spazzola a Tazza PPN CityCat 2020" [ref=e779]:
+                  - generic [ref=e780]: Spazzola a Tazza PPN
+                  - generic [ref=e781]: CityCat 2020
+                - cell "Spazzole" [ref=e782]:
+                  - generic [ref=e783]: Spazzole
+                - cell "Giacenza 0" [ref=e784]:
+                  - generic "Giacenza 0" [ref=e786]:
+                    - generic [ref=e787]: "0"
+                - cell "0,00 €" [ref=e788]
+                - cell "Azioni ricambio" [ref=e789]:
+                  - group "Azioni ricambio" [ref=e790]:
+                    - button "Info" [ref=e791] [cursor=pointer]:
+                      - img [ref=e792]
+                    - button "Scarico" [ref=e794] [cursor=pointer]:
+                      - img [ref=e795]
+                    - button "Carico" [ref=e796] [cursor=pointer]:
+                      - img [ref=e797]
+              - row "BU5000SLA Bucher Spazzola Laterale Acciaio CityCat 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e799]:
+                - cell "BU5000SLA" [ref=e800]:
+                  - generic [ref=e804]: BU5000SLA
+                - cell "Bucher" [ref=e805]:
+                  - generic [ref=e806]: Bucher
+                - cell "Spazzola Laterale Acciaio CityCat 5000" [ref=e807]:
+                  - generic [ref=e808]: Spazzola Laterale Acciaio
+                  - generic [ref=e809]: CityCat 5000
+                - cell "Spazzole" [ref=e810]:
+                  - generic [ref=e811]: Spazzole
+                - cell "Giacenza 0" [ref=e812]:
+                  - generic "Giacenza 0" [ref=e814]:
+                    - generic [ref=e815]: "0"
+                - cell "0,00 €" [ref=e816]
+                - cell "Azioni ricambio" [ref=e817]:
+                  - group "Azioni ricambio" [ref=e818]:
+                    - button "Info" [ref=e819] [cursor=pointer]:
+                      - img [ref=e820]
+                    - button "Scarico" [ref=e822] [cursor=pointer]:
+                      - img [ref=e823]
+                    - button "Carico" [ref=e824] [cursor=pointer]:
+                      - img [ref=e825]
+              - row "BU5000SLM Bucher Spazzola Laterale Mista CityCat 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e827]:
+                - cell "BU5000SLM" [ref=e828]:
+                  - generic [ref=e832]: BU5000SLM
+                - cell "Bucher" [ref=e833]:
+                  - generic [ref=e834]: Bucher
+                - cell "Spazzola Laterale Mista CityCat 5000" [ref=e835]:
+                  - generic [ref=e836]: Spazzola Laterale Mista
+                  - generic [ref=e837]: CityCat 5000
+                - cell "Spazzole" [ref=e838]:
+                  - generic [ref=e839]: Spazzole
+                - cell "Giacenza 0" [ref=e840]:
+                  - generic "Giacenza 0" [ref=e842]:
+                    - generic [ref=e843]: "0"
+                - cell "0,00 €" [ref=e844]
+                - cell "Azioni ricambio" [ref=e845]:
+                  - group "Azioni ricambio" [ref=e846]:
+                    - button "Info" [ref=e847] [cursor=pointer]:
+                      - img [ref=e848]
+                    - button "Scarico" [ref=e850] [cursor=pointer]:
+                      - img [ref=e851]
+                    - button "Carico" [ref=e852] [cursor=pointer]:
+                      - img [ref=e853]
+              - row "BU5006SLA Bucher Spazzola Laterale Acciaio CityCat 5006 Spazzole Giacenza 7 0,00 € Azioni ricambio" [ref=e855]:
+                - cell "BU5006SLA" [ref=e856]:
+                  - generic [ref=e860]: BU5006SLA
+                - cell "Bucher" [ref=e861]:
+                  - generic [ref=e862]: Bucher
+                - cell "Spazzola Laterale Acciaio CityCat 5006" [ref=e863]:
+                  - generic [ref=e864]: Spazzola Laterale Acciaio
+                  - generic [ref=e865]: CityCat 5006
+                - cell "Spazzole" [ref=e866]:
+                  - generic [ref=e867]: Spazzole
+                - cell "Giacenza 7" [ref=e868]:
+                  - generic "Giacenza 7" [ref=e870]:
+                    - generic [ref=e871]: "7"
+                - cell "0,00 €" [ref=e872]
+                - cell "Azioni ricambio" [ref=e873]:
+                  - group "Azioni ricambio" [ref=e874]:
+                    - button "Info" [ref=e875] [cursor=pointer]:
+                      - img [ref=e876]
+                    - button "Scarico" [ref=e878] [cursor=pointer]:
+                      - img [ref=e879]
+                    - button "Carico" [ref=e880] [cursor=pointer]:
+                      - img [ref=e881]
+              - row "BU5006SLM Bucher Spazzola Laterale Mista CityCat 5006 Spazzole Giacenza 12 0,00 € Azioni ricambio" [ref=e883]:
+                - cell "BU5006SLM" [ref=e884]:
+                  - generic [ref=e888]: BU5006SLM
+                - cell "Bucher" [ref=e889]:
+                  - generic [ref=e890]: Bucher
+                - cell "Spazzola Laterale Mista CityCat 5006" [ref=e891]:
+                  - generic [ref=e892]: Spazzola Laterale Mista
+                  - generic [ref=e893]: CityCat 5006
+                - cell "Spazzole" [ref=e894]:
+                  - generic [ref=e895]: Spazzole
+                - cell "Giacenza 12" [ref=e896]:
+                  - generic "Giacenza 12" [ref=e898]:
+                    - generic [ref=e899]: "12"
+                - cell "0,00 €" [ref=e900]
+                - cell "Azioni ricambio" [ref=e901]:
+                  - group "Azioni ricambio" [ref=e902]:
+                    - button "Info" [ref=e903] [cursor=pointer]:
+                      - img [ref=e904]
+                    - button "Scarico" [ref=e906] [cursor=pointer]:
+                      - img [ref=e907]
+                    - button "Carico" [ref=e908] [cursor=pointer]:
+                      - img [ref=e909]
+              - row "CF60SLA SL500SLA Bucher Spazzola Laterale Acciaio CityCat 5006, SL500 Spazzole Giacenza 6 0,00 € Azioni ricambio" [ref=e911]:
+                - cell "CF60SLA SL500SLA" [ref=e912]:
+                  - generic [ref=e915]:
+                    - generic [ref=e916]: CF60SLA
+                    - generic [ref=e917]: SL500SLA
+                - cell "Bucher" [ref=e918]:
+                  - generic [ref=e919]: Bucher
+                - cell "Spazzola Laterale Acciaio CityCat 5006, SL500" [ref=e920]:
+                  - generic [ref=e921]: Spazzola Laterale Acciaio
+                  - generic [ref=e922]: CityCat 5006, SL500
+                - cell "Spazzole" [ref=e923]:
+                  - generic [ref=e924]: Spazzole
+                - cell "Giacenza 6" [ref=e925]:
+                  - generic "Giacenza 6" [ref=e927]:
+                    - generic [ref=e928]: "6"
+                - cell "0,00 €" [ref=e929]
+                - cell "Azioni ricambio" [ref=e930]:
+                  - group "Azioni ricambio" [ref=e931]:
+                    - button "Info" [ref=e932] [cursor=pointer]:
+                      - img [ref=e933]
+                    - button "Scarico" [ref=e935] [cursor=pointer]:
+                      - img [ref=e936]
+                    - button "Carico" [ref=e937] [cursor=pointer]:
+                      - img [ref=e938]
+              - row "A0934 Coseco Cicalino Buzzer Bitonale Coseco (Universale) Elettronica Giacenza 1 37,50 € Azioni ricambio" [ref=e940]:
+                - cell "A0934" [ref=e941]:
+                  - generic [ref=e945]: A0934
+                - cell "Coseco" [ref=e946]:
+                  - generic [ref=e947]: Coseco
+                - cell "Cicalino Buzzer Bitonale Coseco (Universale)" [ref=e948]:
+                  - generic [ref=e949]: Cicalino Buzzer Bitonale
+                  - generic [ref=e950]: Coseco (Universale)
+                - cell "Elettronica" [ref=e951]:
+                  - generic [ref=e952]: Elettronica
+                - cell "Giacenza 1" [ref=e953]:
+                  - generic "Giacenza 1" [ref=e955]:
+                    - generic [ref=e956]: "1"
+                - cell "37,50 €" [ref=e957]
+                - cell "Azioni ricambio" [ref=e958]:
+                  - group "Azioni ricambio" [ref=e959]:
+                    - button "Info" [ref=e960] [cursor=pointer]:
+                      - img [ref=e961]
+                    - button "Scarico" [ref=e963] [cursor=pointer]:
+                      - img [ref=e964]
+                    - button "Carico" [ref=e965] [cursor=pointer]:
+                      - img [ref=e966]
+              - row "AB3225 Coseco Elettrovalvola 3/2 Vie Att. 1/8\" N.C. 24V C/Solenoide A63 Coseco (Universale) Elettronica Giacenza 2 0,00 € Azioni ricambio" [ref=e968]:
+                - cell "AB3225" [ref=e969]:
+                  - generic [ref=e973]: AB3225
+                - cell "Coseco" [ref=e974]:
+                  - generic [ref=e975]: Coseco
+                - cell "Elettrovalvola 3/2 Vie Att. 1/8\" N.C. 24V C/Solenoide A63 Coseco (Universale)" [ref=e976]:
+                  - generic [ref=e977]: Elettrovalvola 3/2 Vie Att. 1/8" N.C. 24V C/Solenoide A63
+                  - generic [ref=e978]: Coseco (Universale)
+                - cell "Elettronica" [ref=e979]:
+                  - generic [ref=e980]: Elettronica
+                - cell "Giacenza 2" [ref=e981]:
+                  - generic "Giacenza 2" [ref=e983]:
+                    - generic [ref=e984]: "2"
+                - cell "0,00 €" [ref=e985]
+                - cell "Azioni ricambio" [ref=e986]:
+                  - group "Azioni ricambio" [ref=e987]:
+                    - button "Info" [ref=e988] [cursor=pointer]:
+                      - img [ref=e989]
+                    - button "Scarico" [ref=e991] [cursor=pointer]:
+                      - img [ref=e992]
+                    - button "Carico" [ref=e993] [cursor=pointer]:
+                      - img [ref=e994]
+              - row "AD4248 Coseco Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato Coseco (Universale) Elettronica Giacenza 1 0,00 € Azioni ricambio" [ref=e996]:
+                - cell "AD4248" [ref=e997]:
+                  - generic [ref=e1001]: AD4248
+                - cell "Coseco" [ref=e1002]:
+                  - generic [ref=e1003]: Coseco
+                - cell "Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato Coseco (Universale)" [ref=e1004]:
+                  - generic [ref=e1005]: Trasduttore 4-20mA Fili 0/400bar G1/4 Cablato
+                  - generic [ref=e1006]: Coseco (Universale)
+                - cell "Elettronica" [ref=e1007]:
+                  - generic [ref=e1008]: Elettronica
+                - cell "Giacenza 1" [ref=e1009]:
+                  - generic "Giacenza 1" [ref=e1011]:
+                    - generic [ref=e1012]: "1"
+                - cell "0,00 €" [ref=e1013]
+                - cell "Azioni ricambio" [ref=e1014]:
+                  - group "Azioni ricambio" [ref=e1015]:
+                    - button "Info" [ref=e1016] [cursor=pointer]:
+                      - img [ref=e1017]
+                    - button "Scarico" [ref=e1019] [cursor=pointer]:
+                      - img [ref=e1020]
+                    - button "Carico" [ref=e1021] [cursor=pointer]:
+                      - img [ref=e1022]
+              - row "AV5200-1 Coseco Sensore Cilindri (Bagno d'Olio) Coseco (Universale) Sensori Giacenza 4 60,18 € Azioni ricambio" [ref=e1024]:
+                - cell "AV5200-1" [ref=e1025]:
+                  - generic [ref=e1029]: AV5200-1
+                - cell "Coseco" [ref=e1030]:
+                  - generic [ref=e1031]: Coseco
+                - cell "Sensore Cilindri (Bagno d'Olio) Coseco (Universale)" [ref=e1032]:
+                  - generic [ref=e1033]: Sensore Cilindri (Bagno d'Olio)
+                  - generic [ref=e1034]: Coseco (Universale)
+                - cell "Sensori" [ref=e1035]:
+                  - generic [ref=e1036]: Sensori
+                - cell "Giacenza 4" [ref=e1037]:
+                  - generic "Giacenza 4" [ref=e1039]:
+                    - generic [ref=e1040]: "4"
+                - cell "60,18 €" [ref=e1041]
+                - cell "Azioni ricambio" [ref=e1042]:
+                  - group "Azioni ricambio" [ref=e1043]:
+                    - button "Info" [ref=e1044] [cursor=pointer]:
+                      - img [ref=e1045]
+                    - button "Scarico" [ref=e1047] [cursor=pointer]:
+                      - img [ref=e1048]
+                    - button "Carico" [ref=e1049] [cursor=pointer]:
+                      - img [ref=e1050]
+              - row "DU3RCPP Dulevo Rullo Centrale PPL DU3 3000 Spazzole Giacenza 4 135,00 € Azioni ricambio" [ref=e1052]:
+                - cell "DU3RCPP" [ref=e1053]:
+                  - generic [ref=e1057]: DU3RCPP
+                - cell "Dulevo" [ref=e1058]:
+                  - generic [ref=e1059]: Dulevo
+                - cell "Rullo Centrale PPL DU3 3000" [ref=e1060]:
+                  - generic [ref=e1061]: Rullo Centrale PPL
+                  - generic [ref=e1062]: DU3 3000
+                - cell "Spazzole" [ref=e1063]:
+                  - generic [ref=e1064]: Spazzole
+                - cell "Giacenza 4" [ref=e1065]:
+                  - generic "Giacenza 4" [ref=e1067]:
+                    - generic [ref=e1068]: "4"
+                - cell "135,00 €" [ref=e1069]
+                - cell "Azioni ricambio" [ref=e1070]:
+                  - group "Azioni ricambio" [ref=e1071]:
+                    - button "Info" [ref=e1072] [cursor=pointer]:
+                      - img [ref=e1073]
+                    - button "Scarico" [ref=e1075] [cursor=pointer]:
+                      - img [ref=e1076]
+                    - button "Carico" [ref=e1077] [cursor=pointer]:
+                      - img [ref=e1078]
+              - row "DU3SLM Dulevo Spazzola Laterale/Anteriore Mista DU3 3000 Spazzole Giacenza 6 42,00 € Azioni ricambio" [ref=e1080]:
+                - cell "DU3SLM" [ref=e1081]:
+                  - generic [ref=e1085]: DU3SLM
+                - cell "Dulevo" [ref=e1086]:
+                  - generic [ref=e1087]: Dulevo
+                - cell "Spazzola Laterale/Anteriore Mista DU3 3000" [ref=e1088]:
+                  - generic [ref=e1089]: Spazzola Laterale/Anteriore Mista
+                  - generic [ref=e1090]: DU3 3000
+                - cell "Spazzole" [ref=e1091]:
+                  - generic [ref=e1092]: Spazzole
+                - cell "Giacenza 6" [ref=e1093]:
+                  - generic "Giacenza 6" [ref=e1095]:
+                    - generic [ref=e1096]: "6"
+                - cell "42,00 €" [ref=e1097]
+                - cell "Azioni ricambio" [ref=e1098]:
+                  - group "Azioni ricambio" [ref=e1099]:
+                    - button "Info" [ref=e1100] [cursor=pointer]:
+                      - img [ref=e1101]
+                    - button "Scarico" [ref=e1103] [cursor=pointer]:
+                      - img [ref=e1104]
+                    - button "Carico" [ref=e1105] [cursor=pointer]:
+                      - img [ref=e1106]
+              - row "DU5000RCM Dulevo Rullo Centrale Misto 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e1108]:
+                - cell "DU5000RCM" [ref=e1109]:
+                  - generic [ref=e1113]: DU5000RCM
+                - cell "Dulevo" [ref=e1114]:
+                  - generic [ref=e1115]: Dulevo
+                - cell "Rullo Centrale Misto 5000" [ref=e1116]:
+                  - generic [ref=e1117]: Rullo Centrale Misto
+                  - generic [ref=e1118]: "5000"
+                - cell "Spazzole" [ref=e1119]:
+                  - generic [ref=e1120]: Spazzole
+                - cell "Giacenza 0" [ref=e1121]:
+                  - generic "Giacenza 0" [ref=e1123]:
+                    - generic [ref=e1124]: "0"
+                - cell "0,00 €" [ref=e1125]
+                - cell "Azioni ricambio" [ref=e1126]:
+                  - group "Azioni ricambio" [ref=e1127]:
+                    - button "Info" [ref=e1128] [cursor=pointer]:
+                      - img [ref=e1129]
+                    - button "Scarico" [ref=e1131] [cursor=pointer]:
+                      - img [ref=e1132]
+                    - button "Carico" [ref=e1133] [cursor=pointer]:
+                      - img [ref=e1134]
+              - row "DU5000SAA Dulevo Spazzola Anteriore Acciaio 5000 Spazzole Giacenza 0 82,00 € Azioni ricambio" [ref=e1136]:
+                - cell "DU5000SAA" [ref=e1137]:
+                  - generic [ref=e1141]: DU5000SAA
+                - cell "Dulevo" [ref=e1142]:
+                  - generic [ref=e1143]: Dulevo
+                - cell "Spazzola Anteriore Acciaio 5000" [ref=e1144]:
+                  - generic [ref=e1145]: Spazzola Anteriore Acciaio
+                  - generic [ref=e1146]: "5000"
+                - cell "Spazzole" [ref=e1147]:
+                  - generic [ref=e1148]: Spazzole
+                - cell "Giacenza 0" [ref=e1149]:
+                  - generic "Giacenza 0" [ref=e1151]:
+                    - generic [ref=e1152]: "0"
+                - cell "82,00 €" [ref=e1153]
+                - cell "Azioni ricambio" [ref=e1154]:
+                  - group "Azioni ricambio" [ref=e1155]:
+                    - button "Info" [ref=e1156] [cursor=pointer]:
+                      - img [ref=e1157]
+                    - button "Scarico" [ref=e1159] [cursor=pointer]:
+                      - img [ref=e1160]
+                    - button "Carico" [ref=e1161] [cursor=pointer]:
+                      - img [ref=e1162]
+              - row "DU5000SAM Dulevo Spazzola Anteriore Mista PPL-ACC 5000 Spazzole Giacenza 3 0,00 € Azioni ricambio" [ref=e1164]:
+                - cell "DU5000SAM" [ref=e1165]:
+                  - generic [ref=e1169]: DU5000SAM
+                - cell "Dulevo" [ref=e1170]:
+                  - generic [ref=e1171]: Dulevo
+                - cell "Spazzola Anteriore Mista PPL-ACC 5000" [ref=e1172]:
+                  - generic [ref=e1173]: Spazzola Anteriore Mista PPL-ACC
+                  - generic [ref=e1174]: "5000"
+                - cell "Spazzole" [ref=e1175]:
+                  - generic [ref=e1176]: Spazzole
+                - cell "Giacenza 3" [ref=e1177]:
+                  - generic "Giacenza 3" [ref=e1179]:
+                    - generic [ref=e1180]: "3"
+                - cell "0,00 €" [ref=e1181]
+                - cell "Azioni ricambio" [ref=e1182]:
+                  - group "Azioni ricambio" [ref=e1183]:
+                    - button "Info" [ref=e1184] [cursor=pointer]:
+                      - img [ref=e1185]
+                    - button "Scarico" [ref=e1187] [cursor=pointer]:
+                      - img [ref=e1188]
+                    - button "Carico" [ref=e1189] [cursor=pointer]:
+                      - img [ref=e1190]
+              - row "DU5000SLA Dulevo Spazzola Laterale Acciaio 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e1192]:
+                - cell "DU5000SLA" [ref=e1193]:
+                  - generic [ref=e1197]: DU5000SLA
+                - cell "Dulevo" [ref=e1198]:
+                  - generic [ref=e1199]: Dulevo
+                - cell "Spazzola Laterale Acciaio 5000" [ref=e1200]:
+                  - generic [ref=e1201]: Spazzola Laterale Acciaio
+                  - generic [ref=e1202]: "5000"
+                - cell "Spazzole" [ref=e1203]:
+                  - generic [ref=e1204]: Spazzole
+                - cell "Giacenza 0" [ref=e1205]:
+                  - generic "Giacenza 0" [ref=e1207]:
+                    - generic [ref=e1208]: "0"
+                - cell "0,00 €" [ref=e1209]
+                - cell "Azioni ricambio" [ref=e1210]:
+                  - group "Azioni ricambio" [ref=e1211]:
+                    - button "Info" [ref=e1212] [cursor=pointer]:
+                      - img [ref=e1213]
+                    - button "Scarico" [ref=e1215] [cursor=pointer]:
+                      - img [ref=e1216]
+                    - button "Carico" [ref=e1217] [cursor=pointer]:
+                      - img [ref=e1218]
+              - row "DU5000SLM Dulevo Spazzola Laterale Mista PPL-ACC 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e1220]:
+                - cell "DU5000SLM" [ref=e1221]:
+                  - generic [ref=e1225]: DU5000SLM
+                - cell "Dulevo" [ref=e1226]:
+                  - generic [ref=e1227]: Dulevo
+                - cell "Spazzola Laterale Mista PPL-ACC 5000" [ref=e1228]:
+                  - generic [ref=e1229]: Spazzola Laterale Mista PPL-ACC
+                  - generic [ref=e1230]: "5000"
+                - cell "Spazzole" [ref=e1231]:
+                  - generic [ref=e1232]: Spazzole
+                - cell "Giacenza 0" [ref=e1233]:
+                  - generic "Giacenza 0" [ref=e1235]:
+                    - generic [ref=e1236]: "0"
+                - cell "0,00 €" [ref=e1237]
+                - cell "Azioni ricambio" [ref=e1238]:
+                  - group "Azioni ricambio" [ref=e1239]:
+                    - button "Info" [ref=e1240] [cursor=pointer]:
+                      - img [ref=e1241]
+                    - button "Scarico" [ref=e1243] [cursor=pointer]:
+                      - img [ref=e1244]
+                    - button "Carico" [ref=e1245] [cursor=pointer]:
+                      - img [ref=e1246]
+              - row "DU5000SLT Dulevo Spazzola Laterale Tagliaerba 5000 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e1248]:
+                - cell "DU5000SLT" [ref=e1249]:
+                  - generic [ref=e1253]: DU5000SLT
+                - cell "Dulevo" [ref=e1254]:
+                  - generic [ref=e1255]: Dulevo
+                - cell "Spazzola Laterale Tagliaerba 5000" [ref=e1256]:
+                  - generic [ref=e1257]: Spazzola Laterale Tagliaerba
+                  - generic [ref=e1258]: "5000"
+                - cell "Spazzole" [ref=e1259]:
+                  - generic [ref=e1260]: Spazzole
+                - cell "Giacenza 0" [ref=e1261]:
+                  - generic "Giacenza 0" [ref=e1263]:
+                    - generic [ref=e1264]: "0"
+                - cell "0,00 €" [ref=e1265]
+                - cell "Azioni ricambio" [ref=e1266]:
+                  - group "Azioni ricambio" [ref=e1267]:
+                    - button "Info" [ref=e1268] [cursor=pointer]:
+                      - img [ref=e1269]
+                    - button "Scarico" [ref=e1271] [cursor=pointer]:
+                      - img [ref=e1272]
+                    - button "Carico" [ref=e1273] [cursor=pointer]:
+                      - img [ref=e1274]
+              - row "05050001027 Farid Sensore Interruttore Magnetico di Sicurezza Farid (Universale) Sensori Giacenza 4 0,00 € Azioni ricambio" [ref=e1276]:
+                - cell "05050001027" [ref=e1277]:
+                  - generic [ref=e1281]: "05050001027"
+                - cell "Farid" [ref=e1282]:
+                  - generic [ref=e1283]: Farid
+                - cell "Sensore Interruttore Magnetico di Sicurezza Farid (Universale)" [ref=e1284]:
+                  - generic [ref=e1285]: Sensore Interruttore Magnetico di Sicurezza
+                  - generic [ref=e1286]: Farid (Universale)
+                - cell "Sensori" [ref=e1287]:
+                  - generic [ref=e1288]: Sensori
+                - cell "Giacenza 4" [ref=e1289]:
+                  - generic "Giacenza 4" [ref=e1291]:
+                    - generic [ref=e1292]: "4"
+                - cell "0,00 €" [ref=e1293]
+                - cell "Azioni ricambio" [ref=e1294]:
+                  - group "Azioni ricambio" [ref=e1295]:
+                    - button "Info" [ref=e1296] [cursor=pointer]:
+                      - img [ref=e1297]
+                    - button "Scarico" [ref=e1299] [cursor=pointer]:
+                      - img [ref=e1300]
+                    - button "Carico" [ref=e1301] [cursor=pointer]:
+                      - img [ref=e1302]
+              - row "45732000056 Farid Finecorsa Farid (Universale) Altro Giacenza 2 0,00 € Azioni ricambio" [ref=e1304]:
+                - cell "45732000056" [ref=e1305]:
+                  - generic [ref=e1309]: "45732000056"
+                - cell "Farid" [ref=e1310]:
+                  - generic [ref=e1311]: Farid
+                - cell "Finecorsa Farid (Universale)" [ref=e1312]:
+                  - generic [ref=e1313]: Finecorsa
+                  - generic [ref=e1314]: Farid (Universale)
+                - cell "Altro" [ref=e1315]:
+                  - generic [ref=e1316]: Altro
+                - cell "Giacenza 2" [ref=e1317]:
+                  - generic "Giacenza 2" [ref=e1319]:
+                    - generic [ref=e1320]: "2"
+                - cell "0,00 €" [ref=e1321]
+                - cell "Azioni ricambio" [ref=e1322]:
+                  - group "Azioni ricambio" [ref=e1323]:
+                    - button "Info" [ref=e1324] [cursor=pointer]:
+                      - img [ref=e1325]
+                    - button "Scarico" [ref=e1327] [cursor=pointer]:
+                      - img [ref=e1328]
+                    - button "Carico" [ref=e1329] [cursor=pointer]:
+                      - img [ref=e1330]
+              - row "JO401SLA Johnston Spazzola Laterale Acciaio C401 Spazzole Giacenza 4 92,80 € Azioni ricambio" [ref=e1332]:
+                - cell "JO401SLA" [ref=e1333]:
+                  - generic [ref=e1337]: JO401SLA
+                - cell "Johnston" [ref=e1338]:
+                  - generic [ref=e1339]: Johnston
+                - cell "Spazzola Laterale Acciaio C401" [ref=e1340]:
+                  - generic [ref=e1341]: Spazzola Laterale Acciaio
+                  - generic [ref=e1342]: C401
+                - cell "Spazzole" [ref=e1343]:
+                  - generic [ref=e1344]: Spazzole
+                - cell "Giacenza 4" [ref=e1345]:
+                  - generic "Giacenza 4" [ref=e1347]:
+                    - generic [ref=e1348]: "4"
+                - cell "92,80 €" [ref=e1349]
+                - cell "Azioni ricambio" [ref=e1350]:
+                  - group "Azioni ricambio" [ref=e1351]:
+                    - button "Info" [ref=e1352] [cursor=pointer]:
+                      - img [ref=e1353]
+                    - button "Scarico" [ref=e1355] [cursor=pointer]:
+                      - img [ref=e1356]
+                    - button "Carico" [ref=e1357] [cursor=pointer]:
+                      - img [ref=e1358]
+              - row "— Locatelli Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2) Compatibilità universale Idraulica Giacenza 0 3480,00 € Azioni ricambio" [ref=e1360]:
+                - cell "—" [ref=e1361]:
+                  - generic [ref=e1365]: —
+                - cell "Locatelli" [ref=e1366]:
+                  - generic [ref=e1367]: Locatelli
+                - cell "Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2) Compatibilità universale" [ref=e1368]:
+                  - generic [ref=e1369]: Gruppo Pompe Centralina (Pompa Tandem GHPA2-D-50 + ALPP2-D-2)
+                  - generic [ref=e1370]: Compatibilità universale
+                - cell "Idraulica" [ref=e1371]:
+                  - generic [ref=e1372]: Idraulica
+                - cell "Giacenza 0" [ref=e1373]:
+                  - generic "Giacenza 0" [ref=e1375]:
+                    - generic [ref=e1376]: "0"
+                - cell "3480,00 €" [ref=e1377]
+                - cell "Azioni ricambio" [ref=e1378]:
+                  - group "Azioni ricambio" [ref=e1379]:
+                    - button "Info" [ref=e1380] [cursor=pointer]:
+                      - img [ref=e1381]
+                    - button "Scarico" [ref=e1383] [cursor=pointer]:
+                      - img [ref=e1384]
+                    - button "Carico" [ref=e1385] [cursor=pointer]:
+                      - img [ref=e1386]
+              - row "SL500RCM Longo Rullo Centrale Misto (Due Pezzi) SL500 Spazzole Giacenza 1 85,00 € Azioni ricambio" [ref=e1388]:
+                - cell "SL500RCM" [ref=e1389]:
+                  - generic [ref=e1393]: SL500RCM
+                - cell "Longo" [ref=e1394]:
+                  - generic [ref=e1395]: Longo
+                - cell "Rullo Centrale Misto (Due Pezzi) SL500" [ref=e1396]:
+                  - generic [ref=e1397]: Rullo Centrale Misto (Due Pezzi)
+                  - generic [ref=e1398]: SL500
+                - cell "Spazzole" [ref=e1399]:
+                  - generic [ref=e1400]: Spazzole
+                - cell "Giacenza 1" [ref=e1401]:
+                  - generic "Giacenza 1" [ref=e1403]:
+                    - generic [ref=e1404]: "1"
+                - cell "85,00 €" [ref=e1405]
+                - cell "Azioni ricambio" [ref=e1406]:
+                  - group "Azioni ricambio" [ref=e1407]:
+                    - button "Info" [ref=e1408] [cursor=pointer]:
+                      - img [ref=e1409]
+                    - button "Scarico" [ref=e1411] [cursor=pointer]:
+                      - img [ref=e1412]
+                    - button "Carico" [ref=e1413] [cursor=pointer]:
+                      - img [ref=e1414]
+              - row "OL140658 Nextra Tappo Sfiato Serbatorio Olio Idraulico Nextra (Universale) — Giacenza 0 0,00 € Azioni ricambio" [ref=e1416]:
+                - cell "OL140658" [ref=e1417]:
+                  - generic [ref=e1421]: OL140658
+                - cell "Nextra" [ref=e1422]:
+                  - generic [ref=e1423]: Nextra
+                - cell "Tappo Sfiato Serbatorio Olio Idraulico Nextra (Universale)" [ref=e1424]:
+                  - generic [ref=e1425]: Tappo Sfiato Serbatorio Olio Idraulico
+                  - generic [ref=e1426]: Nextra (Universale)
+                - cell "—" [ref=e1427]:
+                  - generic [ref=e1428]: —
+                - cell "Giacenza 0" [ref=e1429]:
+                  - generic "Giacenza 0" [ref=e1431]:
+                    - generic [ref=e1432]: "0"
+                - cell "0,00 €" [ref=e1433]
+                - cell "Azioni ricambio" [ref=e1434]:
+                  - group "Azioni ricambio" [ref=e1435]:
+                    - button "Info" [ref=e1436] [cursor=pointer]:
+                      - img [ref=e1437]
+                    - button "Scarico" [ref=e1439] [cursor=pointer]:
+                      - img [ref=e1440]
+                    - button "Carico" [ref=e1441] [cursor=pointer]:
+                      - img [ref=e1442]
+              - row "XS7E1APAM8 Nextra Sensore Induttivo di Prossimità 12/24VDC Nextra (Universale) Sensori Giacenza 0 0,00 € Azioni ricambio" [ref=e1444]:
+                - cell "XS7E1APAM8" [ref=e1445]:
+                  - generic [ref=e1449]: XS7E1APAM8
+                - cell "Nextra" [ref=e1450]:
+                  - generic [ref=e1451]: Nextra
+                - cell "Sensore Induttivo di Prossimità 12/24VDC Nextra (Universale)" [ref=e1452]:
+                  - generic [ref=e1453]: Sensore Induttivo di Prossimità 12/24VDC
+                  - generic [ref=e1454]: Nextra (Universale)
+                - cell "Sensori" [ref=e1455]:
+                  - generic [ref=e1456]: Sensori
+                - cell "Giacenza 0" [ref=e1457]:
+                  - generic "Giacenza 0" [ref=e1459]:
+                    - generic [ref=e1460]: "0"
+                - cell "0,00 €" [ref=e1461]
+                - cell "Azioni ricambio" [ref=e1462]:
+                  - group "Azioni ricambio" [ref=e1463]:
+                    - button "Info" [ref=e1464] [cursor=pointer]:
+                      - img [ref=e1465]
+                    - button "Scarico" [ref=e1467] [cursor=pointer]:
+                      - img [ref=e1468]
+                    - button "Carico" [ref=e1469] [cursor=pointer]:
+                      - img [ref=e1470]
+              - row "0E073303 OMB Cavo Pin 4 Poli Compatibilità universale Sensori Giacenza 0 0,00 € Azioni ricambio" [ref=e1472]:
+                - cell "0E073303" [ref=e1473]:
+                  - generic [ref=e1477]: "0E073303"
+                - cell "OMB" [ref=e1478]:
+                  - generic [ref=e1479]: OMB
+                - cell "Cavo Pin 4 Poli Compatibilità universale" [ref=e1480]:
+                  - generic [ref=e1481]: Cavo Pin 4 Poli
+                  - generic [ref=e1482]: Compatibilità universale
+                - cell "Sensori" [ref=e1483]:
+                  - generic [ref=e1484]: Sensori
+                - cell "Giacenza 0" [ref=e1485]:
+                  - generic "Giacenza 0" [ref=e1487]:
+                    - generic [ref=e1488]: "0"
+                - cell "0,00 €" [ref=e1489]
+                - cell "Azioni ricambio" [ref=e1490]:
+                  - group "Azioni ricambio" [ref=e1491]:
+                    - button "Info" [ref=e1492] [cursor=pointer]:
+                      - img [ref=e1493]
+                    - button "Scarico" [ref=e1495] [cursor=pointer]:
+                      - img [ref=e1496]
+                    - button "Carico" [ref=e1497] [cursor=pointer]:
+                      - img [ref=e1498]
+              - row "0E091402 OMB Connettore Diritto 4 Poli L=5m OMB (Universale) Sensori Giacenza 20 0,00 € Azioni ricambio" [ref=e1500]:
+                - cell "0E091402" [ref=e1501]:
+                  - generic [ref=e1505]: "0E091402"
+                - cell "OMB" [ref=e1506]:
+                  - generic [ref=e1507]: OMB
+                - cell "Connettore Diritto 4 Poli L=5m OMB (Universale)" [ref=e1508]:
+                  - generic [ref=e1509]: Connettore Diritto 4 Poli L=5m
+                  - generic [ref=e1510]: OMB (Universale)
+                - cell "Sensori" [ref=e1511]:
+                  - generic [ref=e1512]: Sensori
+                - cell "Giacenza 20" [ref=e1513]:
+                  - generic "Giacenza 20" [ref=e1515]:
+                    - generic [ref=e1516]: "20"
+                - cell "0,00 €" [ref=e1517]
+                - cell "Azioni ricambio" [ref=e1518]:
+                  - group "Azioni ricambio" [ref=e1519]:
+                    - button "Info" [ref=e1520] [cursor=pointer]:
+                      - img [ref=e1521]
+                    - button "Scarico" [ref=e1523] [cursor=pointer]:
+                      - img [ref=e1524]
+                    - button "Carico" [ref=e1525] [cursor=pointer]:
+                      - img [ref=e1526]
+              - row "0E091405 OMB Connettore 90 Gradi 4 Poli L=5m OMB (Universale) Sensori Giacenza 4 0,00 € Azioni ricambio" [ref=e1528]:
+                - cell "0E091405" [ref=e1529]:
+                  - generic [ref=e1533]: "0E091405"
+                - cell "OMB" [ref=e1534]:
+                  - generic [ref=e1535]: OMB
+                - cell "Connettore 90 Gradi 4 Poli L=5m OMB (Universale)" [ref=e1536]:
+                  - generic [ref=e1537]: Connettore 90 Gradi 4 Poli L=5m
+                  - generic [ref=e1538]: OMB (Universale)
+                - cell "Sensori" [ref=e1539]:
+                  - generic [ref=e1540]: Sensori
+                - cell "Giacenza 4" [ref=e1541]:
+                  - generic "Giacenza 4" [ref=e1543]:
+                    - generic [ref=e1544]: "4"
+                - cell "0,00 €" [ref=e1545]
+                - cell "Azioni ricambio" [ref=e1546]:
+                  - group "Azioni ricambio" [ref=e1547]:
+                    - button "Info" [ref=e1548] [cursor=pointer]:
+                      - img [ref=e1549]
+                    - button "Scarico" [ref=e1551] [cursor=pointer]:
+                      - img [ref=e1552]
+                    - button "Carico" [ref=e1553] [cursor=pointer]:
+                      - img [ref=e1554]
+              - row "0E130130B20T OMB Sensore di Prossimità M30x1,5 Compatibilità universale Sensori Giacenza 0 0,00 € Azioni ricambio" [ref=e1556]:
+                - cell "0E130130B20T" [ref=e1557]:
+                  - generic [ref=e1561]: 0E130130B20T
+                - cell "OMB" [ref=e1562]:
+                  - generic [ref=e1563]: OMB
+                - cell "Sensore di Prossimità M30x1,5 Compatibilità universale" [ref=e1564]:
+                  - generic [ref=e1565]: Sensore di Prossimità M30x1,5
+                  - generic [ref=e1566]: Compatibilità universale
+                - cell "Sensori" [ref=e1567]:
+                  - generic [ref=e1568]: Sensori
+                - cell "Giacenza 0" [ref=e1569]:
+                  - generic "Giacenza 0" [ref=e1571]:
+                    - generic [ref=e1572]: "0"
+                - cell "0,00 €" [ref=e1573]
+                - cell "Azioni ricambio" [ref=e1574]:
+                  - group "Azioni ricambio" [ref=e1575]:
+                    - button "Info" [ref=e1576] [cursor=pointer]:
+                      - img [ref=e1577]
+                    - button "Scarico" [ref=e1579] [cursor=pointer]:
+                      - img [ref=e1580]
+                    - button "Carico" [ref=e1581] [cursor=pointer]:
+                      - img [ref=e1582]
+              - row "0E131701 OMB Sensore di Prossimità SN=8 Compatibilità universale Sensori Giacenza 0 40,04 € Azioni ricambio" [ref=e1584]:
+                - cell "0E131701" [ref=e1585]:
+                  - generic [ref=e1589]: "0E131701"
+                - cell "OMB" [ref=e1590]:
+                  - generic [ref=e1591]: OMB
+                - cell "Sensore di Prossimità SN=8 Compatibilità universale" [ref=e1592]:
+                  - generic [ref=e1593]: Sensore di Prossimità SN=8
+                  - generic [ref=e1594]: Compatibilità universale
+                - cell "Sensori" [ref=e1595]:
+                  - generic [ref=e1596]: Sensori
+                - cell "Giacenza 0" [ref=e1597]:
+                  - generic "Giacenza 0" [ref=e1599]:
+                    - generic [ref=e1600]: "0"
+                - cell "40,04 €" [ref=e1601]
+                - cell "Azioni ricambio" [ref=e1602]:
+                  - group "Azioni ricambio" [ref=e1603]:
+                    - button "Info" [ref=e1604] [cursor=pointer]:
+                      - img [ref=e1605]
+                    - button "Scarico" [ref=e1607] [cursor=pointer]:
+                      - img [ref=e1608]
+                    - button "Carico" [ref=e1609] [cursor=pointer]:
+                      - img [ref=e1610]
+              - row "0O0548R01 OMB Bobina Elettrica 24V DT04 KBB16002400 OMB (Universale) Elettronica Giacenza 4 0,00 € Azioni ricambio" [ref=e1612]:
+                - cell "0O0548R01" [ref=e1613]:
+                  - generic [ref=e1617]: 0O0548R01
+                - cell "OMB" [ref=e1618]:
+                  - generic [ref=e1619]: OMB
+                - cell "Bobina Elettrica 24V DT04 KBB16002400 OMB (Universale)" [ref=e1620]:
+                  - generic [ref=e1621]: Bobina Elettrica 24V DT04 KBB16002400
+                  - generic [ref=e1622]: OMB (Universale)
+                - cell "Elettronica" [ref=e1623]:
+                  - generic [ref=e1624]: Elettronica
+                - cell "Giacenza 4" [ref=e1625]:
+                  - generic "Giacenza 4" [ref=e1627]:
+                    - generic [ref=e1628]: "4"
+                - cell "0,00 €" [ref=e1629]
+                - cell "Azioni ricambio" [ref=e1630]:
+                  - group "Azioni ricambio" [ref=e1631]:
+                    - button "Info" [ref=e1632] [cursor=pointer]:
+                      - img [ref=e1633]
+                    - button "Scarico" [ref=e1635] [cursor=pointer]:
+                      - img [ref=e1636]
+                    - button "Carico" [ref=e1637] [cursor=pointer]:
+                      - img [ref=e1638]
+              - row "8ESNS020000201 OMB Sensore di Prossimità Induttivo M12 NO D18 OMB (Universale) Sensori Giacenza 15 0,00 € Azioni ricambio" [ref=e1640]:
+                - cell "8ESNS020000201" [ref=e1641]:
+                  - generic [ref=e1645]: 8ESNS020000201
+                - cell "OMB" [ref=e1646]:
+                  - generic [ref=e1647]: OMB
+                - cell "Sensore di Prossimità Induttivo M12 NO D18 OMB (Universale)" [ref=e1648]:
+                  - generic [ref=e1649]: Sensore di Prossimità Induttivo M12 NO D18
+                  - generic [ref=e1650]: OMB (Universale)
+                - cell "Sensori" [ref=e1651]:
+                  - generic [ref=e1652]: Sensori
+                - cell "Giacenza 15" [ref=e1653]:
+                  - generic "Giacenza 15" [ref=e1655]:
+                    - generic [ref=e1656]: "15"
+                - cell "0,00 €" [ref=e1657]
+                - cell "Azioni ricambio" [ref=e1658]:
+                  - group "Azioni ricambio" [ref=e1659]:
+                    - button "Info" [ref=e1660] [cursor=pointer]:
+                      - img [ref=e1661]
+                    - button "Scarico" [ref=e1663] [cursor=pointer]:
+                      - img [ref=e1664]
+                    - button "Carico" [ref=e1665] [cursor=pointer]:
+                      - img [ref=e1666]
+              - row "8ESNS020000202 OMB Sensore di Prossimità Quadro 20mm NA/NC Ledfron Compatibilità universale Elettronica Giacenza 2 0,00 € Azioni ricambio" [ref=e1668]:
+                - cell "8ESNS020000202" [ref=e1669]:
+                  - generic [ref=e1673]: 8ESNS020000202
+                - cell "OMB" [ref=e1674]:
+                  - generic [ref=e1675]: OMB
+                - cell "Sensore di Prossimità Quadro 20mm NA/NC Ledfron Compatibilità universale" [ref=e1676]:
+                  - generic [ref=e1677]: Sensore di Prossimità Quadro 20mm NA/NC Ledfron
+                  - generic [ref=e1678]: Compatibilità universale
+                - cell "Elettronica" [ref=e1679]:
+                  - generic [ref=e1680]: Elettronica
+                - cell "Giacenza 2" [ref=e1681]:
+                  - generic "Giacenza 2" [ref=e1683]:
+                    - generic [ref=e1684]: "2"
+                - cell "0,00 €" [ref=e1685]
+                - cell "Azioni ricambio" [ref=e1686]:
+                  - group "Azioni ricambio" [ref=e1687]:
+                    - button "Info" [ref=e1688] [cursor=pointer]:
+                      - img [ref=e1689]
+                    - button "Scarico" [ref=e1691] [cursor=pointer]:
+                      - img [ref=e1692]
+                    - button "Carico" [ref=e1693] [cursor=pointer]:
+                      - img [ref=e1694]
+              - row "8ESNS020000203 OMB Sensore Prossimità Induttivo M12 NO D30 OMB (Universale) Sensori Giacenza 10 0,00 € Azioni ricambio" [ref=e1696]:
+                - cell "8ESNS020000203" [ref=e1697]:
+                  - generic [ref=e1701]: 8ESNS020000203
+                - cell "OMB" [ref=e1702]:
+                  - generic [ref=e1703]: OMB
+                - cell "Sensore Prossimità Induttivo M12 NO D30 OMB (Universale)" [ref=e1704]:
+                  - generic [ref=e1705]: Sensore Prossimità Induttivo M12 NO D30
+                  - generic [ref=e1706]: OMB (Universale)
+                - cell "Sensori" [ref=e1707]:
+                  - generic [ref=e1708]: Sensori
+                - cell "Giacenza 10" [ref=e1709]:
+                  - generic "Giacenza 10" [ref=e1711]:
+                    - generic [ref=e1712]: "10"
+                - cell "0,00 €" [ref=e1713]
+                - cell "Azioni ricambio" [ref=e1714]:
+                  - group "Azioni ricambio" [ref=e1715]:
+                    - button "Info" [ref=e1716] [cursor=pointer]:
+                      - img [ref=e1717]
+                    - button "Scarico" [ref=e1719] [cursor=pointer]:
+                      - img [ref=e1720]
+                    - button "Carico" [ref=e1721] [cursor=pointer]:
+                      - img [ref=e1722]
+              - row "RAVOSLA Ravo Spazzola Laterale Acciaio Ravo (Universale) Spazzole Giacenza 10 40,00 € Azioni ricambio" [ref=e1724]:
+                - cell "RAVOSLA" [ref=e1725]:
+                  - generic [ref=e1729]: RAVOSLA
+                - cell "Ravo" [ref=e1730]:
+                  - generic [ref=e1731]: Ravo
+                - cell "Spazzola Laterale Acciaio Ravo (Universale)" [ref=e1732]:
+                  - generic [ref=e1733]: Spazzola Laterale Acciaio
+                  - generic [ref=e1734]: Ravo (Universale)
+                - cell "Spazzole" [ref=e1735]:
+                  - generic [ref=e1736]: Spazzole
+                - cell "Giacenza 10" [ref=e1737]:
+                  - generic "Giacenza 10" [ref=e1739]:
+                    - generic [ref=e1740]: "10"
+                - cell "40,00 €" [ref=e1741]
+                - cell "Azioni ricambio" [ref=e1742]:
+                  - group "Azioni ricambio" [ref=e1743]:
+                    - button "Info" [ref=e1744] [cursor=pointer]:
+                      - img [ref=e1745]
+                    - button "Scarico" [ref=e1747] [cursor=pointer]:
+                      - img [ref=e1748]
+                    - button "Carico" [ref=e1749] [cursor=pointer]:
+                      - img [ref=e1750]
+              - row "RAVOSLAO Ravo Spazzola Laterale Acciaio Piatto Ferro Ravo (Universale) Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e1752]:
+                - cell "RAVOSLAO" [ref=e1753]:
+                  - generic [ref=e1757]: RAVOSLAO
+                - cell "Ravo" [ref=e1758]:
+                  - generic [ref=e1759]: Ravo
+                - cell "Spazzola Laterale Acciaio Piatto Ferro Ravo (Universale)" [ref=e1760]:
+                  - generic [ref=e1761]: Spazzola Laterale Acciaio Piatto Ferro
+                  - generic [ref=e1762]: Ravo (Universale)
+                - cell "Spazzole" [ref=e1763]:
+                  - generic [ref=e1764]: Spazzole
+                - cell "Giacenza 0" [ref=e1765]:
+                  - generic "Giacenza 0" [ref=e1767]:
+                    - generic [ref=e1768]: "0"
+                - cell "0,00 €" [ref=e1769]
+                - cell "Azioni ricambio" [ref=e1770]:
+                  - group "Azioni ricambio" [ref=e1771]:
+                    - button "Info" [ref=e1772] [cursor=pointer]:
+                      - img [ref=e1773]
+                    - button "Scarico" [ref=e1775] [cursor=pointer]:
+                      - img [ref=e1776]
+                    - button "Carico" [ref=e1777] [cursor=pointer]:
+                      - img [ref=e1778]
+              - row "RAVOSLM Ravo Spazzola Laterale PPL/Acciaio Ravo (Universale) Spazzole Giacenza 4 0,00 € Azioni ricambio" [ref=e1780]:
+                - cell "RAVOSLM" [ref=e1781]:
+                  - generic [ref=e1785]: RAVOSLM
+                - cell "Ravo" [ref=e1786]:
+                  - generic [ref=e1787]: Ravo
+                - cell "Spazzola Laterale PPL/Acciaio Ravo (Universale)" [ref=e1788]:
+                  - generic [ref=e1789]: Spazzola Laterale PPL/Acciaio
+                  - generic [ref=e1790]: Ravo (Universale)
+                - cell "Spazzole" [ref=e1791]:
+                  - generic [ref=e1792]: Spazzole
+                - cell "Giacenza 4" [ref=e1793]:
+                  - generic "Giacenza 4" [ref=e1795]:
+                    - generic [ref=e1796]: "4"
+                - cell "0,00 €" [ref=e1797]
+                - cell "Azioni ricambio" [ref=e1798]:
+                  - group "Azioni ricambio" [ref=e1799]:
+                    - button "Info" [ref=e1800] [cursor=pointer]:
+                      - img [ref=e1801]
+                    - button "Scarico" [ref=e1803] [cursor=pointer]:
+                      - img [ref=e1804]
+                    - button "Carico" [ref=e1805] [cursor=pointer]:
+                      - img [ref=e1806]
+              - row "RAVOSLTA Ravo Spazzola Laterale Tagliaerba Ravo (Universale) Spazzole Giacenza 0 126,00 € Azioni ricambio" [ref=e1808]:
+                - cell "RAVOSLTA" [ref=e1809]:
+                  - generic [ref=e1813]: RAVOSLTA
+                - cell "Ravo" [ref=e1814]:
+                  - generic [ref=e1815]: Ravo
+                - cell "Spazzola Laterale Tagliaerba Ravo (Universale)" [ref=e1816]:
+                  - generic [ref=e1817]: Spazzola Laterale Tagliaerba
+                  - generic [ref=e1818]: Ravo (Universale)
+                - cell "Spazzole" [ref=e1819]:
+                  - generic [ref=e1820]: Spazzole
+                - cell "Giacenza 0" [ref=e1821]:
+                  - generic "Giacenza 0" [ref=e1823]:
+                    - generic [ref=e1824]: "0"
+                - cell "126,00 €" [ref=e1825]
+                - cell "Azioni ricambio" [ref=e1826]:
+                  - group "Azioni ricambio" [ref=e1827]:
+                    - button "Info" [ref=e1828] [cursor=pointer]:
+                      - img [ref=e1829]
+                    - button "Scarico" [ref=e1831] [cursor=pointer]:
+                      - img [ref=e1832]
+                    - button "Carico" [ref=e1833] [cursor=pointer]:
+                      - img [ref=e1834]
+              - row "0229502-0 Schmidt Adattatore Motore Turbina Schmidt (Universale) Altro Giacenza 0 23,72 € Azioni ricambio" [ref=e1836]:
+                - cell "0229502-0" [ref=e1837]:
+                  - generic [ref=e1841]: 0229502-0
+                - cell "Schmidt" [ref=e1842]:
+                  - generic [ref=e1843]: Schmidt
+                - cell "Adattatore Motore Turbina Schmidt (Universale)" [ref=e1844]:
+                  - generic [ref=e1845]: Adattatore Motore Turbina
+                  - generic [ref=e1846]: Schmidt (Universale)
+                - cell "Altro" [ref=e1847]:
+                  - generic [ref=e1848]: Altro
+                - cell "Giacenza 0" [ref=e1849]:
+                  - generic "Giacenza 0" [ref=e1851]:
+                    - generic [ref=e1852]: "0"
+                - cell "23,72 €" [ref=e1853]
+                - cell "Azioni ricambio" [ref=e1854]:
+                  - group "Azioni ricambio" [ref=e1855]:
+                    - button "Info" [ref=e1856] [cursor=pointer]:
+                      - img [ref=e1857]
+                    - button "Scarico" [ref=e1859] [cursor=pointer]:
+                      - img [ref=e1860]
+                    - button "Carico" [ref=e1861] [cursor=pointer]:
+                      - img [ref=e1862]
+              - row "02296503-1 Schmidt Ferma Tubo Flangiato Motore Turbina Schmidt (Universale) Altro Giacenza 0 0,00 € Azioni ricambio" [ref=e1864]:
+                - cell "02296503-1" [ref=e1865]:
+                  - generic [ref=e1869]: 02296503-1
+                - cell "Schmidt" [ref=e1870]:
+                  - generic [ref=e1871]: Schmidt
+                - cell "Ferma Tubo Flangiato Motore Turbina Schmidt (Universale)" [ref=e1872]:
+                  - generic [ref=e1873]: Ferma Tubo Flangiato Motore Turbina
+                  - generic [ref=e1874]: Schmidt (Universale)
+                - cell "Altro" [ref=e1875]:
+                  - generic [ref=e1876]: Altro
+                - cell "Giacenza 0" [ref=e1877]:
+                  - generic "Giacenza 0" [ref=e1879]:
+                    - generic [ref=e1880]: "0"
+                - cell "0,00 €" [ref=e1881]
+                - cell "Azioni ricambio" [ref=e1882]:
+                  - group "Azioni ricambio" [ref=e1883]:
+                    - button "Info" [ref=e1884] [cursor=pointer]:
+                      - img [ref=e1885]
+                    - button "Scarico" [ref=e1887] [cursor=pointer]:
+                      - img [ref=e1888]
+                    - button "Carico" [ref=e1889] [cursor=pointer]:
+                      - img [ref=e1890]
+              - row "0242528-8 Schmidt Cartuccia Filtro Olio Idraulico Cleango 500 E6C Filtrazione Giacenza 0 0,00 € Azioni ricambio" [ref=e1892]:
+                - cell "0242528-8" [ref=e1893]:
+                  - generic [ref=e1897]: 0242528-8
+                - cell "Schmidt" [ref=e1898]:
+                  - generic [ref=e1899]: Schmidt
+                - cell "Cartuccia Filtro Olio Idraulico Cleango 500 E6C" [ref=e1900]:
+                  - generic [ref=e1901]: Cartuccia Filtro Olio Idraulico
+                  - generic [ref=e1902]: Cleango 500 E6C
+                - cell "Filtrazione" [ref=e1903]:
+                  - generic [ref=e1904]: Filtrazione
+                - cell "Giacenza 0" [ref=e1905]:
+                  - generic "Giacenza 0" [ref=e1907]:
+                    - generic [ref=e1908]: "0"
+                - cell "0,00 €" [ref=e1909]
+                - cell "Azioni ricambio" [ref=e1910]:
+                  - group "Azioni ricambio" [ref=e1911]:
+                    - button "Info" [ref=e1912] [cursor=pointer]:
+                      - img [ref=e1913]
+                    - button "Scarico" [ref=e1915] [cursor=pointer]:
+                      - img [ref=e1916]
+                    - button "Carico" [ref=e1917] [cursor=pointer]:
+                      - img [ref=e1918]
+              - row "0270398-1 Schmidt Cinghia Clima Cleango 500 E6C Motore Giacenza 0 0,00 € Azioni ricambio" [ref=e1920]:
+                - cell "0270398-1" [ref=e1921]:
+                  - generic [ref=e1925]: 0270398-1
+                - cell "Schmidt" [ref=e1926]:
+                  - generic [ref=e1927]: Schmidt
+                - cell "Cinghia Clima Cleango 500 E6C" [ref=e1928]:
+                  - generic [ref=e1929]: Cinghia Clima
+                  - generic [ref=e1930]: Cleango 500 E6C
+                - cell "Motore" [ref=e1931]:
+                  - generic [ref=e1932]: Motore
+                - cell "Giacenza 0" [ref=e1933]:
+                  - generic "Giacenza 0" [ref=e1935]:
+                    - generic [ref=e1936]: "0"
+                - cell "0,00 €" [ref=e1937]
+                - cell "Azioni ricambio" [ref=e1938]:
+                  - group "Azioni ricambio" [ref=e1939]:
+                    - button "Info" [ref=e1940] [cursor=pointer]:
+                      - img [ref=e1941]
+                    - button "Scarico" [ref=e1943] [cursor=pointer]:
+                      - img [ref=e1944]
+                    - button "Carico" [ref=e1945] [cursor=pointer]:
+                      - img [ref=e1946]
+              - row "0280049-8 Schmidt Modulo Elettrovalvola CR2012 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Elettronica Giacenza 1 1661,67 € Azioni ricambio" [ref=e1948]:
+                - cell "0280049-8" [ref=e1949]:
+                  - generic [ref=e1953]: 0280049-8
+                - cell "Schmidt" [ref=e1954]:
+                  - generic [ref=e1955]: Schmidt
+                - cell "Modulo Elettrovalvola CR2012 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e1956]:
+                  - generic [ref=e1957]: Modulo Elettrovalvola CR2012
+                  - generic [ref=e1958]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Elettronica" [ref=e1959]:
+                  - generic [ref=e1960]: Elettronica
+                - cell "Giacenza 1" [ref=e1961]:
+                  - generic "Giacenza 1" [ref=e1963]:
+                    - generic [ref=e1964]: "1"
+                - cell "1661,67 €" [ref=e1965]
+                - cell "Azioni ricambio" [ref=e1966]:
+                  - group "Azioni ricambio" [ref=e1967]:
+                    - button "Info" [ref=e1968] [cursor=pointer]:
+                      - img [ref=e1969]
+                    - button "Scarico" [ref=e1971] [cursor=pointer]:
+                      - img [ref=e1972]
+                    - button "Carico" [ref=e1973] [cursor=pointer]:
+                      - img [ref=e1974]
+              - row "0287022-8 Schmidt Raccordo a 90° R1/4 Schmidt (Universale) Altro Giacenza 0 19,49 € Azioni ricambio" [ref=e1976]:
+                - cell "0287022-8" [ref=e1977]:
+                  - generic [ref=e1981]: 0287022-8
+                - cell "Schmidt" [ref=e1982]:
+                  - generic [ref=e1983]: Schmidt
+                - cell "Raccordo a 90° R1/4 Schmidt (Universale)" [ref=e1984]:
+                  - generic [ref=e1985]: Raccordo a 90° R1/4
+                  - generic [ref=e1986]: Schmidt (Universale)
+                - cell "Altro" [ref=e1987]:
+                  - generic [ref=e1988]: Altro
+                - cell "Giacenza 0" [ref=e1989]:
+                  - generic "Giacenza 0" [ref=e1991]:
+                    - generic [ref=e1992]: "0"
+                - cell "19,49 €" [ref=e1993]
+                - cell "Azioni ricambio" [ref=e1994]:
+                  - group "Azioni ricambio" [ref=e1995]:
+                    - button "Info" [ref=e1996] [cursor=pointer]:
+                      - img [ref=e1997]
+                    - button "Scarico" [ref=e1999] [cursor=pointer]:
+                      - img [ref=e2000]
+                    - button "Carico" [ref=e2001] [cursor=pointer]:
+                      - img [ref=e2002]
+              - row "0317162-6 Schmidt Pattino Sinistro 288x145x45 Schmidt (Universale) Altro Giacenza 0 0,00 € Azioni ricambio" [ref=e2004]:
+                - cell "0317162-6" [ref=e2005]:
+                  - generic [ref=e2009]: 0317162-6
+                - cell "Schmidt" [ref=e2010]:
+                  - generic [ref=e2011]: Schmidt
+                - cell "Pattino Sinistro 288x145x45 Schmidt (Universale)" [ref=e2012]:
+                  - generic [ref=e2013]: Pattino Sinistro 288x145x45
+                  - generic [ref=e2014]: Schmidt (Universale)
+                - cell "Altro" [ref=e2015]:
+                  - generic [ref=e2016]: Altro
+                - cell "Giacenza 0" [ref=e2017]:
+                  - generic "Giacenza 0" [ref=e2019]:
+                    - generic [ref=e2020]: "0"
+                - cell "0,00 €" [ref=e2021]
+                - cell "Azioni ricambio" [ref=e2022]:
+                  - group "Azioni ricambio" [ref=e2023]:
+                    - button "Info" [ref=e2024] [cursor=pointer]:
+                      - img [ref=e2025]
+                    - button "Scarico" [ref=e2027] [cursor=pointer]:
+                      - img [ref=e2028]
+                    - button "Carico" [ref=e2029] [cursor=pointer]:
+                      - img [ref=e2030]
+              - row "1053297-0 Schmidt Gomito 90° 1/2\" Schmidt (Universale) Altro Giacenza 0 0,00 € Azioni ricambio" [ref=e2032]:
+                - cell "1053297-0" [ref=e2033]:
+                  - generic [ref=e2037]: 1053297-0
+                - cell "Schmidt" [ref=e2038]:
+                  - generic [ref=e2039]: Schmidt
+                - cell "Gomito 90° 1/2\" Schmidt (Universale)" [ref=e2040]:
+                  - generic [ref=e2041]: Gomito 90° 1/2"
+                  - generic [ref=e2042]: Schmidt (Universale)
+                - cell "Altro" [ref=e2043]:
+                  - generic [ref=e2044]: Altro
+                - cell "Giacenza 0" [ref=e2045]:
+                  - generic "Giacenza 0" [ref=e2047]:
+                    - generic [ref=e2048]: "0"
+                - cell "0,00 €" [ref=e2049]
+                - cell "Azioni ricambio" [ref=e2050]:
+                  - group "Azioni ricambio" [ref=e2051]:
+                    - button "Info" [ref=e2052] [cursor=pointer]:
+                      - img [ref=e2053]
+                    - button "Scarico" [ref=e2055] [cursor=pointer]:
+                      - img [ref=e2056]
+                    - button "Carico" [ref=e2057] [cursor=pointer]:
+                      - img [ref=e2058]
+              - row "1054251-2 Schmidt Cinghia Servizi Poly-V Cleango 500 E6C Motore Giacenza 0 0,00 € Azioni ricambio" [ref=e2060]:
+                - cell "1054251-2" [ref=e2061]:
+                  - generic [ref=e2065]: 1054251-2
+                - cell "Schmidt" [ref=e2066]:
+                  - generic [ref=e2067]: Schmidt
+                - cell "Cinghia Servizi Poly-V Cleango 500 E6C" [ref=e2068]:
+                  - generic [ref=e2069]: Cinghia Servizi Poly-V
+                  - generic [ref=e2070]: Cleango 500 E6C
+                - cell "Motore" [ref=e2071]:
+                  - generic [ref=e2072]: Motore
+                - cell "Giacenza 0" [ref=e2073]:
+                  - generic "Giacenza 0" [ref=e2075]:
+                    - generic [ref=e2076]: "0"
+                - cell "0,00 €" [ref=e2077]
+                - cell "Azioni ricambio" [ref=e2078]:
+                  - group "Azioni ricambio" [ref=e2079]:
+                    - button "Info" [ref=e2080] [cursor=pointer]:
+                      - img [ref=e2081]
+                    - button "Scarico" [ref=e2083] [cursor=pointer]:
+                      - img [ref=e2084]
+                    - button "Carico" [ref=e2085] [cursor=pointer]:
+                      - img [ref=e2086]
+              - row "1054821-3 Schmidt Alternatore Motore VM Compatibilità universale Motore Giacenza 0 974,97 € Azioni ricambio" [ref=e2088]:
+                - cell "1054821-3" [ref=e2089]:
+                  - generic [ref=e2093]: 1054821-3
+                - cell "Schmidt" [ref=e2094]:
+                  - generic [ref=e2095]: Schmidt
+                - cell "Alternatore Motore VM Compatibilità universale" [ref=e2096]:
+                  - generic [ref=e2097]: Alternatore Motore VM
+                  - generic [ref=e2098]: Compatibilità universale
+                - cell "Motore" [ref=e2099]:
+                  - generic [ref=e2100]: Motore
+                - cell "Giacenza 0" [ref=e2101]:
+                  - generic "Giacenza 0" [ref=e2103]:
+                    - generic [ref=e2104]: "0"
+                - cell "974,97 €" [ref=e2105]
+                - cell "Azioni ricambio" [ref=e2106]:
+                  - group "Azioni ricambio" [ref=e2107]:
+                    - button "Info" [ref=e2108] [cursor=pointer]:
+                      - img [ref=e2109]
+                    - button "Scarico" [ref=e2111] [cursor=pointer]:
+                      - img [ref=e2112]
+                    - button "Carico" [ref=e2113] [cursor=pointer]:
+                      - img [ref=e2114]
+              - row "1054969-5 Schmidt Cartuccia Filtro Aria Compatibilità universale Filtrazione Giacenza 0 0,00 € Azioni ricambio" [ref=e2116]:
+                - cell "1054969-5" [ref=e2117]:
+                  - generic [ref=e2121]: 1054969-5
+                - cell "Schmidt" [ref=e2122]:
+                  - generic [ref=e2123]: Schmidt
+                - cell "Cartuccia Filtro Aria Compatibilità universale" [ref=e2124]:
+                  - generic [ref=e2125]: Cartuccia Filtro Aria
+                  - generic [ref=e2126]: Compatibilità universale
+                - cell "Filtrazione" [ref=e2127]:
+                  - generic [ref=e2128]: Filtrazione
+                - cell "Giacenza 0" [ref=e2129]:
+                  - generic "Giacenza 0" [ref=e2131]:
+                    - generic [ref=e2132]: "0"
+                - cell "0,00 €" [ref=e2133]
+                - cell "Azioni ricambio" [ref=e2134]:
+                  - group "Azioni ricambio" [ref=e2135]:
+                    - button "Info" [ref=e2136] [cursor=pointer]:
+                      - img [ref=e2137]
+                    - button "Scarico" [ref=e2139] [cursor=pointer]:
+                      - img [ref=e2140]
+                    - button "Carico" [ref=e2141] [cursor=pointer]:
+                      - img [ref=e2142]
+              - row "1054972-0 Schmidt Cartuccia Sicurezza Filtro Aria Cleango 500 E6C Filtrazione Giacenza 0 0,00 € Azioni ricambio" [ref=e2144]:
+                - cell "1054972-0" [ref=e2145]:
+                  - generic [ref=e2149]: 1054972-0
+                - cell "Schmidt" [ref=e2150]:
+                  - generic [ref=e2151]: Schmidt
+                - cell "Cartuccia Sicurezza Filtro Aria Cleango 500 E6C" [ref=e2152]:
+                  - generic [ref=e2153]: Cartuccia Sicurezza Filtro Aria
+                  - generic [ref=e2154]: Cleango 500 E6C
+                - cell "Filtrazione" [ref=e2155]:
+                  - generic [ref=e2156]: Filtrazione
+                - cell "Giacenza 0" [ref=e2157]:
+                  - generic "Giacenza 0" [ref=e2159]:
+                    - generic [ref=e2160]: "0"
+                - cell "0,00 €" [ref=e2161]
+                - cell "Azioni ricambio" [ref=e2162]:
+                  - group "Azioni ricambio" [ref=e2163]:
+                    - button "Info" [ref=e2164] [cursor=pointer]:
+                      - img [ref=e2165]
+                    - button "Scarico" [ref=e2167] [cursor=pointer]:
+                      - img [ref=e2168]
+                    - button "Carico" [ref=e2169] [cursor=pointer]:
+                      - img [ref=e2170]
+              - row "1102908-6 Schmidt Filtro Gasolio Cleango 500 E6C Filtrazione Giacenza 0 0,00 € Azioni ricambio" [ref=e2172]:
+                - cell "1102908-6" [ref=e2173]:
+                  - generic [ref=e2177]: 1102908-6
+                - cell "Schmidt" [ref=e2178]:
+                  - generic [ref=e2179]: Schmidt
+                - cell "Filtro Gasolio Cleango 500 E6C" [ref=e2180]:
+                  - generic [ref=e2181]: Filtro Gasolio
+                  - generic [ref=e2182]: Cleango 500 E6C
+                - cell "Filtrazione" [ref=e2183]:
+                  - generic [ref=e2184]: Filtrazione
+                - cell "Giacenza 0" [ref=e2185]:
+                  - generic "Giacenza 0" [ref=e2187]:
+                    - generic [ref=e2188]: "0"
+                - cell "0,00 €" [ref=e2189]
+                - cell "Azioni ricambio" [ref=e2190]:
+                  - group "Azioni ricambio" [ref=e2191]:
+                    - button "Info" [ref=e2192] [cursor=pointer]:
+                      - img [ref=e2193]
+                    - button "Scarico" [ref=e2195] [cursor=pointer]:
+                      - img [ref=e2196]
+                    - button "Carico" [ref=e2197] [cursor=pointer]:
+                      - img [ref=e2198]
+              - row "1175638-5 Schmidt Cartuccia Filtro Aria Cabina Cleango 500 E6C Cabina Giacenza 0 0,00 € Azioni ricambio" [ref=e2200]:
+                - cell "1175638-5" [ref=e2201]:
+                  - generic [ref=e2205]: 1175638-5
+                - cell "Schmidt" [ref=e2206]:
+                  - generic [ref=e2207]: Schmidt
+                - cell "Cartuccia Filtro Aria Cabina Cleango 500 E6C" [ref=e2208]:
+                  - generic [ref=e2209]: Cartuccia Filtro Aria Cabina
+                  - generic [ref=e2210]: Cleango 500 E6C
+                - cell "Cabina" [ref=e2211]:
+                  - generic [ref=e2212]: Cabina
+                - cell "Giacenza 0" [ref=e2213]:
+                  - generic "Giacenza 0" [ref=e2215]:
+                    - generic [ref=e2216]: "0"
+                - cell "0,00 €" [ref=e2217]
+                - cell "Azioni ricambio" [ref=e2218]:
+                  - group "Azioni ricambio" [ref=e2219]:
+                    - button "Info" [ref=e2220] [cursor=pointer]:
+                      - img [ref=e2221]
+                    - button "Scarico" [ref=e2223] [cursor=pointer]:
+                      - img [ref=e2224]
+                    - button "Carico" [ref=e2225] [cursor=pointer]:
+                      - img [ref=e2226]
+              - row "1196545-7 Schmidt Angolare 41 x 37 x 4 x 30 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Altro Giacenza 0 22,11 € Azioni ricambio" [ref=e2228]:
+                - cell "1196545-7" [ref=e2229]:
+                  - generic [ref=e2233]: 1196545-7
+                - cell "Schmidt" [ref=e2234]:
+                  - generic [ref=e2235]: Schmidt
+                - cell "Angolare 41 x 37 x 4 x 30 Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2236]:
+                  - generic [ref=e2237]: Angolare 41 x 37 x 4 x 30
+                  - generic [ref=e2238]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Altro" [ref=e2239]:
+                  - generic [ref=e2240]: Altro
+                - cell "Giacenza 0" [ref=e2241]:
+                  - generic "Giacenza 0" [ref=e2243]:
+                    - generic [ref=e2244]: "0"
+                - cell "22,11 €" [ref=e2245]
+                - cell "Azioni ricambio" [ref=e2246]:
+                  - group "Azioni ricambio" [ref=e2247]:
+                    - button "Info" [ref=e2248] [cursor=pointer]:
+                      - img [ref=e2249]
+                    - button "Scarico" [ref=e2251] [cursor=pointer]:
+                      - img [ref=e2252]
+                    - button "Carico" [ref=e2253] [cursor=pointer]:
+                      - img [ref=e2254]
+              - row "12-15080011 Schmidt Supporto Ugello Schmidt (Universale) Altro Giacenza 0 38,64 € Azioni ricambio" [ref=e2256]:
+                - cell "12-15080011" [ref=e2257]:
+                  - generic [ref=e2261]: 12-15080011
+                - cell "Schmidt" [ref=e2262]:
+                  - generic [ref=e2263]: Schmidt
+                - cell "Supporto Ugello Schmidt (Universale)" [ref=e2264]:
+                  - generic [ref=e2265]: Supporto Ugello
+                  - generic [ref=e2266]: Schmidt (Universale)
+                - cell "Altro" [ref=e2267]:
+                  - generic [ref=e2268]: Altro
+                - cell "Giacenza 0" [ref=e2269]:
+                  - generic "Giacenza 0" [ref=e2271]:
+                    - generic [ref=e2272]: "0"
+                - cell "38,64 €" [ref=e2273]
+                - cell "Azioni ricambio" [ref=e2274]:
+                  - group "Azioni ricambio" [ref=e2275]:
+                    - button "Info" [ref=e2276] [cursor=pointer]:
+                      - img [ref=e2277]
+                    - button "Scarico" [ref=e2279] [cursor=pointer]:
+                      - img [ref=e2280]
+                    - button "Carico" [ref=e2281] [cursor=pointer]:
+                      - img [ref=e2282]
+              - row "1244098-6 Schmidt Valvola di Massima Cleango 500 E6C Idraulica Giacenza 1 367,47 € Azioni ricambio" [ref=e2284]:
+                - cell "1244098-6" [ref=e2285]:
+                  - generic [ref=e2289]: 1244098-6
+                - cell "Schmidt" [ref=e2290]:
+                  - generic [ref=e2291]: Schmidt
+                - cell "Valvola di Massima Cleango 500 E6C" [ref=e2292]:
+                  - generic [ref=e2293]: Valvola di Massima
+                  - generic [ref=e2294]: Cleango 500 E6C
+                - cell "Idraulica" [ref=e2295]:
+                  - generic [ref=e2296]: Idraulica
+                - cell "Giacenza 1" [ref=e2297]:
+                  - generic "Giacenza 1" [ref=e2299]:
+                    - generic [ref=e2300]: "1"
+                - cell "367,47 €" [ref=e2301]
+                - cell "Azioni ricambio" [ref=e2302]:
+                  - group "Azioni ricambio" [ref=e2303]:
+                    - button "Info" [ref=e2304] [cursor=pointer]:
+                      - img [ref=e2305]
+                    - button "Scarico" [ref=e2307] [cursor=pointer]:
+                      - img [ref=e2308]
+                    - button "Carico" [ref=e2309] [cursor=pointer]:
+                      - img [ref=e2310]
+              - row "1244104-8 Schmidt Motore Idraulico Cleango SNM2 Cleango 500 E6C Motore Giacenza 1 1022,57 € Azioni ricambio" [ref=e2312]:
+                - cell "1244104-8" [ref=e2313]:
+                  - generic [ref=e2317]: 1244104-8
+                - cell "Schmidt" [ref=e2318]:
+                  - generic [ref=e2319]: Schmidt
+                - cell "Motore Idraulico Cleango SNM2 Cleango 500 E6C" [ref=e2320]:
+                  - generic [ref=e2321]: Motore Idraulico Cleango SNM2
+                  - generic [ref=e2322]: Cleango 500 E6C
+                - cell "Motore" [ref=e2323]:
+                  - generic [ref=e2324]: Motore
+                - cell "Giacenza 1" [ref=e2325]:
+                  - generic "Giacenza 1" [ref=e2327]:
+                    - generic [ref=e2328]: "1"
+                - cell "1022,57 €" [ref=e2329]
+                - cell "Azioni ricambio" [ref=e2330]:
+                  - group "Azioni ricambio" [ref=e2331]:
+                    - button "Info" [ref=e2332] [cursor=pointer]:
+                      - img [ref=e2333]
+                    - button "Scarico" [ref=e2335] [cursor=pointer]:
+                      - img [ref=e2336]
+                    - button "Carico" [ref=e2337] [cursor=pointer]:
+                      - img [ref=e2338]
+              - row "1261870-4 Schmidt Filtro Olio Motore Cleango 500 E6C Motore Giacenza 0 0,00 € Azioni ricambio" [ref=e2340]:
+                - cell "1261870-4" [ref=e2341]:
+                  - generic [ref=e2345]: 1261870-4
+                - cell "Schmidt" [ref=e2346]:
+                  - generic [ref=e2347]: Schmidt
+                - cell "Filtro Olio Motore Cleango 500 E6C" [ref=e2348]:
+                  - generic [ref=e2349]: Filtro Olio Motore
+                  - generic [ref=e2350]: Cleango 500 E6C
+                - cell "Motore" [ref=e2351]:
+                  - generic [ref=e2352]: Motore
+                - cell "Giacenza 0" [ref=e2353]:
+                  - generic "Giacenza 0" [ref=e2355]:
+                    - generic [ref=e2356]: "0"
+                - cell "0,00 €" [ref=e2357]
+                - cell "Azioni ricambio" [ref=e2358]:
+                  - group "Azioni ricambio" [ref=e2359]:
+                    - button "Info" [ref=e2360] [cursor=pointer]:
+                      - img [ref=e2361]
+                    - button "Scarico" [ref=e2363] [cursor=pointer]:
+                      - img [ref=e2364]
+                    - button "Carico" [ref=e2365] [cursor=pointer]:
+                      - img [ref=e2366]
+              - row "1264436-5 Schmidt Cartuccia Filtro Acqua Cleango 500 E6C Idraulica Giacenza 0 0,00 € Azioni ricambio" [ref=e2368]:
+                - cell "1264436-5" [ref=e2369]:
+                  - generic [ref=e2373]: 1264436-5
+                - cell "Schmidt" [ref=e2374]:
+                  - generic [ref=e2375]: Schmidt
+                - cell "Cartuccia Filtro Acqua Cleango 500 E6C" [ref=e2376]:
+                  - generic [ref=e2377]: Cartuccia Filtro Acqua
+                  - generic [ref=e2378]: Cleango 500 E6C
+                - cell "Idraulica" [ref=e2379]:
+                  - generic [ref=e2380]: Idraulica
+                - cell "Giacenza 0" [ref=e2381]:
+                  - generic "Giacenza 0" [ref=e2383]:
+                    - generic [ref=e2384]: "0"
+                - cell "0,00 €" [ref=e2385]
+                - cell "Azioni ricambio" [ref=e2386]:
+                  - group "Azioni ricambio" [ref=e2387]:
+                    - button "Info" [ref=e2388] [cursor=pointer]:
+                      - img [ref=e2389]
+                    - button "Scarico" [ref=e2391] [cursor=pointer]:
+                      - img [ref=e2392]
+                    - button "Carico" [ref=e2393] [cursor=pointer]:
+                      - img [ref=e2394]
+              - row "1264453-3 Schmidt Pompa Acqua Elettrica 24V 15lt 3,4bar Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Idraulica Giacenza 1 0,00 € Azioni ricambio" [ref=e2396]:
+                - cell "1264453-3" [ref=e2397]:
+                  - generic [ref=e2401]: 1264453-3
+                - cell "Schmidt" [ref=e2402]:
+                  - generic [ref=e2403]: Schmidt
+                - cell "Pompa Acqua Elettrica 24V 15lt 3,4bar Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2404]:
+                  - generic [ref=e2405]: Pompa Acqua Elettrica 24V 15lt 3,4bar
+                  - generic [ref=e2406]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Idraulica" [ref=e2407]:
+                  - generic [ref=e2408]: Idraulica
+                - cell "Giacenza 1" [ref=e2409]:
+                  - generic "Giacenza 1" [ref=e2411]:
+                    - generic [ref=e2412]: "1"
+                - cell "0,00 €" [ref=e2413]
+                - cell "Azioni ricambio" [ref=e2414]:
+                  - group "Azioni ricambio" [ref=e2415]:
+                    - button "Info" [ref=e2416] [cursor=pointer]:
+                      - img [ref=e2417]
+                    - button "Scarico" [ref=e2419] [cursor=pointer]:
+                      - img [ref=e2420]
+                    - button "Carico" [ref=e2421] [cursor=pointer]:
+                      - img [ref=e2422]
+              - row "1280683-1 Schmidt Motore Idraulico Spazzola Frontale / Laterali Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Idraulica Giacenza 2 0,00 € Azioni ricambio" [ref=e2424]:
+                - cell "1280683-1" [ref=e2425]:
+                  - generic [ref=e2429]: 1280683-1
+                - cell "Schmidt" [ref=e2430]:
+                  - generic [ref=e2431]: Schmidt
+                - cell "Motore Idraulico Spazzola Frontale / Laterali Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2432]:
+                  - generic [ref=e2433]: Motore Idraulico Spazzola Frontale / Laterali
+                  - generic [ref=e2434]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Idraulica" [ref=e2435]:
+                  - generic [ref=e2436]: Idraulica
+                - cell "Giacenza 2" [ref=e2437]:
+                  - generic "Giacenza 2" [ref=e2439]:
+                    - generic [ref=e2440]: "2"
+                - cell "0,00 €" [ref=e2441]
+                - cell "Azioni ricambio" [ref=e2442]:
+                  - group "Azioni ricambio" [ref=e2443]:
+                    - button "Info" [ref=e2444] [cursor=pointer]:
+                      - img [ref=e2445]
+                    - button "Scarico" [ref=e2447] [cursor=pointer]:
+                      - img [ref=e2448]
+                    - button "Carico" [ref=e2449] [cursor=pointer]:
+                      - img [ref=e2450]
+              - row "1287379-5 Schmidt Filtro Urea Cleango 500 E6C Filtrazione Giacenza 0 0,00 € Azioni ricambio" [ref=e2452]:
+                - cell "1287379-5" [ref=e2453]:
+                  - generic [ref=e2457]: 1287379-5
+                - cell "Schmidt" [ref=e2458]:
+                  - generic [ref=e2459]: Schmidt
+                - cell "Filtro Urea Cleango 500 E6C" [ref=e2460]:
+                  - generic [ref=e2461]: Filtro Urea
+                  - generic [ref=e2462]: Cleango 500 E6C
+                - cell "Filtrazione" [ref=e2463]:
+                  - generic [ref=e2464]: Filtrazione
+                - cell "Giacenza 0" [ref=e2465]:
+                  - generic "Giacenza 0" [ref=e2467]:
+                    - generic [ref=e2468]: "0"
+                - cell "0,00 €" [ref=e2469]
+                - cell "Azioni ricambio" [ref=e2470]:
+                  - group "Azioni ricambio" [ref=e2471]:
+                    - button "Info" [ref=e2472] [cursor=pointer]:
+                      - img [ref=e2473]
+                    - button "Scarico" [ref=e2475] [cursor=pointer]:
+                      - img [ref=e2476]
+                    - button "Carico" [ref=e2477] [cursor=pointer]:
+                      - img [ref=e2478]
+              - row "14-925029101 Schmidt Valvola a Sfera 3/8 Schmidt (Universale) Altro Giacenza 0 51,82 € Azioni ricambio" [ref=e2480]:
+                - cell "14-925029101" [ref=e2481]:
+                  - generic [ref=e2485]: 14-925029101
+                - cell "Schmidt" [ref=e2486]:
+                  - generic [ref=e2487]: Schmidt
+                - cell "Valvola a Sfera 3/8 Schmidt (Universale)" [ref=e2488]:
+                  - generic [ref=e2489]: Valvola a Sfera 3/8
+                  - generic [ref=e2490]: Schmidt (Universale)
+                - cell "Altro" [ref=e2491]:
+                  - generic [ref=e2492]: Altro
+                - cell "Giacenza 0" [ref=e2493]:
+                  - generic "Giacenza 0" [ref=e2495]:
+                    - generic [ref=e2496]: "0"
+                - cell "51,82 €" [ref=e2497]
+                - cell "Azioni ricambio" [ref=e2498]:
+                  - group "Azioni ricambio" [ref=e2499]:
+                    - button "Info" [ref=e2500] [cursor=pointer]:
+                      - img [ref=e2501]
+                    - button "Scarico" [ref=e2503] [cursor=pointer]:
+                      - img [ref=e2504]
+                    - button "Carico" [ref=e2505] [cursor=pointer]:
+                      - img [ref=e2506]
+              - row "14-927084115 Schmidt Ugello D1/4\" Schmidt (Universale) Altro Giacenza 1 0,00 € Azioni ricambio" [ref=e2508]:
+                - cell "14-927084115" [ref=e2509]:
+                  - generic [ref=e2513]: 14-927084115
+                - cell "Schmidt" [ref=e2514]:
+                  - generic [ref=e2515]: Schmidt
+                - cell "Ugello D1/4\" Schmidt (Universale)" [ref=e2516]:
+                  - generic [ref=e2517]: Ugello D1/4"
+                  - generic [ref=e2518]: Schmidt (Universale)
+                - cell "Altro" [ref=e2519]:
+                  - generic [ref=e2520]: Altro
+                - cell "Giacenza 1" [ref=e2521]:
+                  - generic "Giacenza 1" [ref=e2523]:
+                    - generic [ref=e2524]: "1"
+                - cell "0,00 €" [ref=e2525]
+                - cell "Azioni ricambio" [ref=e2526]:
+                  - group "Azioni ricambio" [ref=e2527]:
+                    - button "Info" [ref=e2528] [cursor=pointer]:
+                      - img [ref=e2529]
+                    - button "Scarico" [ref=e2531] [cursor=pointer]:
+                      - img [ref=e2532]
+                    - button "Carico" [ref=e2533] [cursor=pointer]:
+                      - img [ref=e2534]
+              - row "1405954-6 Schmidt Blocco Chiusura Finestrino Schmidt (Universale) Cabina Giacenza 1 0,00 € Azioni ricambio" [ref=e2536]:
+                - cell "1405954-6" [ref=e2537]:
+                  - generic [ref=e2541]: 1405954-6
+                - cell "Schmidt" [ref=e2542]:
+                  - generic [ref=e2543]: Schmidt
+                - cell "Blocco Chiusura Finestrino Schmidt (Universale)" [ref=e2544]:
+                  - generic [ref=e2545]: Blocco Chiusura Finestrino
+                  - generic [ref=e2546]: Schmidt (Universale)
+                - cell "Cabina" [ref=e2547]:
+                  - generic [ref=e2548]: Cabina
+                - cell "Giacenza 1" [ref=e2549]:
+                  - generic "Giacenza 1" [ref=e2551]:
+                    - generic [ref=e2552]: "1"
+                - cell "0,00 €" [ref=e2553]
+                - cell "Azioni ricambio" [ref=e2554]:
+                  - group "Azioni ricambio" [ref=e2555]:
+                    - button "Info" [ref=e2556] [cursor=pointer]:
+                      - img [ref=e2557]
+                    - button "Scarico" [ref=e2559] [cursor=pointer]:
+                      - img [ref=e2560]
+                    - button "Carico" [ref=e2561] [cursor=pointer]:
+                      - img [ref=e2562]
+              - row "CLEANGOSLAE Schmidt Spazzola Laterale Acciaio (E) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 0 42,00 € Azioni ricambio" [ref=e2564]:
+                - cell "CLEANGOSLAE" [ref=e2565]:
+                  - generic [ref=e2569]: CLEANGOSLAE
+                - cell "Schmidt" [ref=e2570]:
+                  - generic [ref=e2571]: Schmidt
+                - cell "Spazzola Laterale Acciaio (E) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2572]:
+                  - generic [ref=e2573]: Spazzola Laterale Acciaio (E)
+                  - generic [ref=e2574]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Spazzole" [ref=e2575]:
+                  - generic [ref=e2576]: Spazzole
+                - cell "Giacenza 0" [ref=e2577]:
+                  - generic "Giacenza 0" [ref=e2579]:
+                    - generic [ref=e2580]: "0"
+                - cell "42,00 €" [ref=e2581]
+                - cell "Azioni ricambio" [ref=e2582]:
+                  - group "Azioni ricambio" [ref=e2583]:
+                    - button "Info" [ref=e2584] [cursor=pointer]:
+                      - img [ref=e2585]
+                    - button "Scarico" [ref=e2587] [cursor=pointer]:
+                      - img [ref=e2588]
+                    - button "Carico" [ref=e2589] [cursor=pointer]:
+                      - img [ref=e2590]
+              - row "CLEANGOSLAO Schmidt Spazzola Laterale Acciaio (Tipo Originale) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET — Giacenza 0 0,00 € Azioni ricambio" [ref=e2592]:
+                - cell "CLEANGOSLAO" [ref=e2593]:
+                  - generic [ref=e2597]: CLEANGOSLAO
+                - cell "Schmidt" [ref=e2598]:
+                  - generic [ref=e2599]: Schmidt
+                - cell "Spazzola Laterale Acciaio (Tipo Originale) Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2600]:
+                  - generic [ref=e2601]: Spazzola Laterale Acciaio (Tipo Originale)
+                  - generic [ref=e2602]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "—" [ref=e2603]:
+                  - generic [ref=e2604]: —
+                - cell "Giacenza 0" [ref=e2605]:
+                  - generic "Giacenza 0" [ref=e2607]:
+                    - generic [ref=e2608]: "0"
+                - cell "0,00 €" [ref=e2609]
+                - cell "Azioni ricambio" [ref=e2610]:
+                  - group "Azioni ricambio" [ref=e2611]:
+                    - button "Info" [ref=e2612] [cursor=pointer]:
+                      - img [ref=e2613]
+                    - button "Scarico" [ref=e2615] [cursor=pointer]:
+                      - img [ref=e2616]
+                    - button "Carico" [ref=e2617] [cursor=pointer]:
+                      - img [ref=e2618]
+              - row "CLEANGOSLM Schmidt Spazzola Laterale Mista Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 13 0,00 € Azioni ricambio" [ref=e2620]:
+                - cell "CLEANGOSLM" [ref=e2621]:
+                  - generic [ref=e2625]: CLEANGOSLM
+                - cell "Schmidt" [ref=e2626]:
+                  - generic [ref=e2627]: Schmidt
+                - cell "Spazzola Laterale Mista Cleango 500 E6C, Cleango 500 ET" [ref=e2628]:
+                  - generic [ref=e2629]: Spazzola Laterale Mista
+                  - generic [ref=e2630]: Cleango 500 E6C, Cleango 500 ET
+                - cell "Spazzole" [ref=e2631]:
+                  - generic [ref=e2632]: Spazzole
+                - cell "Giacenza 13" [ref=e2633]:
+                  - generic "Giacenza 13" [ref=e2635]:
+                    - generic [ref=e2636]: "13"
+                - cell "0,00 €" [ref=e2637]
+                - cell "Azioni ricambio" [ref=e2638]:
+                  - group "Azioni ricambio" [ref=e2639]:
+                    - button "Info" [ref=e2640] [cursor=pointer]:
+                      - img [ref=e2641]
+                    - button "Scarico" [ref=e2643] [cursor=pointer]:
+                      - img [ref=e2644]
+                    - button "Carico" [ref=e2645] [cursor=pointer]:
+                      - img [ref=e2646]
+              - row "CLEANGOSLPP 1221617-6 Schmidt Spazzola Laterale PPL Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e2648]:
+                - cell "CLEANGOSLPP 1221617-6" [ref=e2649]:
+                  - generic [ref=e2652]:
+                    - generic [ref=e2653]: CLEANGOSLPP
+                    - generic [ref=e2654]: 1221617-6
+                - cell "Schmidt" [ref=e2655]:
+                  - generic [ref=e2656]: Schmidt
+                - cell "Spazzola Laterale PPL Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET" [ref=e2657]:
+                  - generic [ref=e2658]: Spazzola Laterale PPL
+                  - generic [ref=e2659]: Cleango 400 ET, Cleango 500 E6C, Cleango 500 ET
+                - cell "Spazzole" [ref=e2660]:
+                  - generic [ref=e2661]: Spazzole
+                - cell "Giacenza 0" [ref=e2662]:
+                  - generic "Giacenza 0" [ref=e2664]:
+                    - generic [ref=e2665]: "0"
+                - cell "0,00 €" [ref=e2666]
+                - cell "Azioni ricambio" [ref=e2667]:
+                  - group "Azioni ricambio" [ref=e2668]:
+                    - button "Info" [ref=e2669] [cursor=pointer]:
+                      - img [ref=e2670]
+                    - button "Scarico" [ref=e2672] [cursor=pointer]:
+                      - img [ref=e2673]
+                    - button "Carico" [ref=e2674] [cursor=pointer]:
+                      - img [ref=e2675]
+              - row "SK660RCM Schmidt Rullo Centrale Misto (2 Pezzi) Compatibilità universale Spazzole Giacenza 1 130,50 € Azioni ricambio" [ref=e2677]:
+                - cell "SK660RCM" [ref=e2678]:
+                  - generic [ref=e2682]: SK660RCM
+                - cell "Schmidt" [ref=e2683]:
+                  - generic [ref=e2684]: Schmidt
+                - cell "Rullo Centrale Misto (2 Pezzi) Compatibilità universale" [ref=e2685]:
+                  - generic [ref=e2686]: Rullo Centrale Misto (2 Pezzi)
+                  - generic [ref=e2687]: Compatibilità universale
+                - cell "Spazzole" [ref=e2688]:
+                  - generic [ref=e2689]: Spazzole
+                - cell "Giacenza 1" [ref=e2690]:
+                  - generic "Giacenza 1" [ref=e2692]:
+                    - generic [ref=e2693]: "1"
+                - cell "130,50 €" [ref=e2694]
+                - cell "Azioni ricambio" [ref=e2695]:
+                  - group "Azioni ricambio" [ref=e2696]:
+                    - button "Info" [ref=e2697] [cursor=pointer]:
+                      - img [ref=e2698]
+                    - button "Scarico" [ref=e2700] [cursor=pointer]:
+                      - img [ref=e2701]
+                    - button "Carico" [ref=e2702] [cursor=pointer]:
+                      - img [ref=e2703]
+              - row "SK660RLM Schmidt Rullini Bocca Aspirazione PPL 400/280/47 SK 600, SK 650, SK 660 Spazzole Giacenza 0 50,75 € Azioni ricambio" [ref=e2705]:
+                - cell "SK660RLM" [ref=e2706]:
+                  - generic [ref=e2710]: SK660RLM
+                - cell "Schmidt" [ref=e2711]:
+                  - generic [ref=e2712]: Schmidt
+                - cell "Rullini Bocca Aspirazione PPL 400/280/47 SK 600, SK 650, SK 660" [ref=e2713]:
+                  - generic [ref=e2714]: Rullini Bocca Aspirazione PPL 400/280/47
+                  - generic [ref=e2715]: SK 600, SK 650, SK 660
+                - cell "Spazzole" [ref=e2716]:
+                  - generic [ref=e2717]: Spazzole
+                - cell "Giacenza 0" [ref=e2718]:
+                  - generic "Giacenza 0" [ref=e2720]:
+                    - generic [ref=e2721]: "0"
+                - cell "50,75 €" [ref=e2722]
+                - cell "Azioni ricambio" [ref=e2723]:
+                  - group "Azioni ricambio" [ref=e2724]:
+                    - button "Info" [ref=e2725] [cursor=pointer]:
+                      - img [ref=e2726]
+                    - button "Scarico" [ref=e2728] [cursor=pointer]:
+                      - img [ref=e2729]
+                    - button "Carico" [ref=e2730] [cursor=pointer]:
+                      - img [ref=e2731]
+              - row "SK660SLA Schmidt Spazzola Laterale Acciaio SK 600, SK 650 Spazzole Giacenza 4 53,65 € Azioni ricambio" [ref=e2733]:
+                - cell "SK660SLA" [ref=e2734]:
+                  - generic [ref=e2738]: SK660SLA
+                - cell "Schmidt" [ref=e2739]:
+                  - generic [ref=e2740]: Schmidt
+                - cell "Spazzola Laterale Acciaio SK 600, SK 650" [ref=e2741]:
+                  - generic [ref=e2742]: Spazzola Laterale Acciaio
+                  - generic [ref=e2743]: SK 600, SK 650
+                - cell "Spazzole" [ref=e2744]:
+                  - generic [ref=e2745]: Spazzole
+                - cell "Giacenza 4" [ref=e2746]:
+                  - generic "Giacenza 4" [ref=e2748]:
+                    - generic [ref=e2749]: "4"
+                - cell "53,65 €" [ref=e2750]
+                - cell "Azioni ricambio" [ref=e2751]:
+                  - group "Azioni ricambio" [ref=e2752]:
+                    - button "Info" [ref=e2753] [cursor=pointer]:
+                      - img [ref=e2754]
+                    - button "Scarico" [ref=e2756] [cursor=pointer]:
+                      - img [ref=e2757]
+                    - button "Carico" [ref=e2758] [cursor=pointer]:
+                      - img [ref=e2759]
+              - row "SK660SLM Schmidt Spazzola Laterale Mista 450/750 SK 600, SK 650, SK 660 Spazzole Giacenza 0 53,65 € Azioni ricambio" [ref=e2761]:
+                - cell "SK660SLM" [ref=e2762]:
+                  - generic [ref=e2766]: SK660SLM
+                - cell "Schmidt" [ref=e2767]:
+                  - generic [ref=e2768]: Schmidt
+                - cell "Spazzola Laterale Mista 450/750 SK 600, SK 650, SK 660" [ref=e2769]:
+                  - generic [ref=e2770]: Spazzola Laterale Mista 450/750
+                  - generic [ref=e2771]: SK 600, SK 650, SK 660
+                - cell "Spazzole" [ref=e2772]:
+                  - generic [ref=e2773]: Spazzole
+                - cell "Giacenza 0" [ref=e2774]:
+                  - generic "Giacenza 0" [ref=e2776]:
+                    - generic [ref=e2777]: "0"
+                - cell "53,65 €" [ref=e2778]
+                - cell "Azioni ricambio" [ref=e2779]:
+                  - group "Azioni ricambio" [ref=e2780]:
+                    - button "Info" [ref=e2781] [cursor=pointer]:
+                      - img [ref=e2782]
+                    - button "Scarico" [ref=e2784] [cursor=pointer]:
+                      - img [ref=e2785]
+                    - button "Carico" [ref=e2786] [cursor=pointer]:
+                      - img [ref=e2787]
+              - row "SWINGOSLA Schmidt Spazzola Laterale Acciaio Swingo 200 Spazzole Giacenza 0 0,00 € Azioni ricambio" [ref=e2789]:
+                - cell "SWINGOSLA" [ref=e2790]:
+                  - generic [ref=e2794]: SWINGOSLA
+                - cell "Schmidt" [ref=e2795]:
+                  - generic [ref=e2796]: Schmidt
+                - cell "Spazzola Laterale Acciaio Swingo 200" [ref=e2797]:
+                  - generic [ref=e2798]: Spazzola Laterale Acciaio
+                  - generic [ref=e2799]: Swingo 200
+                - cell "Spazzole" [ref=e2800]:
+                  - generic [ref=e2801]: Spazzole
+                - cell "Giacenza 0" [ref=e2802]:
+                  - generic "Giacenza 0" [ref=e2804]:
+                    - generic [ref=e2805]: "0"
+                - cell "0,00 €" [ref=e2806]
+                - cell "Azioni ricambio" [ref=e2807]:
+                  - group "Azioni ricambio" [ref=e2808]:
+                    - button "Info" [ref=e2809] [cursor=pointer]:
+                      - img [ref=e2810]
+                    - button "Scarico" [ref=e2812] [cursor=pointer]:
+                      - img [ref=e2813]
+                    - button "Carico" [ref=e2814] [cursor=pointer]:
+                      - img [ref=e2815]
+              - row "SWINGOSLM Schmidt Spazzola Laterale Mista Swingo 200 Spazzole Giacenza 8 0,00 € Azioni ricambio" [ref=e2817]:
+                - cell "SWINGOSLM" [ref=e2818]:
+                  - generic [ref=e2822]: SWINGOSLM
+                - cell "Schmidt" [ref=e2823]:
+                  - generic [ref=e2824]: Schmidt
+                - cell "Spazzola Laterale Mista Swingo 200" [ref=e2825]:
+                  - generic [ref=e2826]: Spazzola Laterale Mista
+                  - generic [ref=e2827]: Swingo 200
+                - cell "Spazzole" [ref=e2828]:
+                  - generic [ref=e2829]: Spazzole
+                - cell "Giacenza 8" [ref=e2830]:
+                  - generic "Giacenza 8" [ref=e2832]:
+                    - generic [ref=e2833]: "8"
+                - cell "0,00 €" [ref=e2834]
+                - cell "Azioni ricambio" [ref=e2835]:
+                  - group "Azioni ricambio" [ref=e2836]:
+                    - button "Info" [ref=e2837] [cursor=pointer]:
+                      - img [ref=e2838]
+                    - button "Scarico" [ref=e2840] [cursor=pointer]:
+                      - img [ref=e2841]
+                    - button "Carico" [ref=e2842] [cursor=pointer]:
+                      - img [ref=e2843]
+              - row "SICASMSLM Sicas Spazzola Laterale Mista Millenium Spazzole Giacenza 5 72,50 € Azioni ricambio" [ref=e2845]:
+                - cell "SICASMSLM" [ref=e2846]:
+                  - generic [ref=e2850]: SICASMSLM
+                - cell "Sicas" [ref=e2851]:
+                  - generic [ref=e2852]: Sicas
+                - cell "Spazzola Laterale Mista Millenium" [ref=e2853]:
+                  - generic [ref=e2854]: Spazzola Laterale Mista
+                  - generic [ref=e2855]: Millenium
+                - cell "Spazzole" [ref=e2856]:
+                  - generic [ref=e2857]: Spazzole
+                - cell "Giacenza 5" [ref=e2858]:
+                  - generic "Giacenza 5" [ref=e2860]:
+                    - generic [ref=e2861]: "5"
+                - cell "72,50 €" [ref=e2862]
+                - cell "Azioni ricambio" [ref=e2863]:
+                  - group "Azioni ricambio" [ref=e2864]:
+                    - button "Info" [ref=e2865] [cursor=pointer]:
+                      - img [ref=e2866]
+                    - button "Scarico" [ref=e2868] [cursor=pointer]:
+                      - img [ref=e2869]
+                    - button "Carico" [ref=e2870] [cursor=pointer]:
+                      - img [ref=e2871]
+              - row "850971 Tecnoindustrie Vite TCEI 5x35 8.8 ZB Compatibilità universale Altro Giacenza 4 0,00 € Azioni ricambio" [ref=e2873]:
+                - cell "850971" [ref=e2874]:
+                  - generic [ref=e2878]: "850971"
+                - cell "Tecnoindustrie" [ref=e2879]:
+                  - generic [ref=e2880]: Tecnoindustrie
+                - cell "Vite TCEI 5x35 8.8 ZB Compatibilità universale" [ref=e2881]:
+                  - generic [ref=e2882]: Vite TCEI 5x35 8.8 ZB
+                  - generic [ref=e2883]: Compatibilità universale
+                - cell "Altro" [ref=e2884]:
+                  - generic [ref=e2885]: Altro
+                - cell "Giacenza 4" [ref=e2886]:
+                  - generic "Giacenza 4" [ref=e2888]:
+                    - generic [ref=e2889]: "4"
+                - cell "0,00 €" [ref=e2890]
+                - cell "Azioni ricambio" [ref=e2891]:
+                  - group "Azioni ricambio" [ref=e2892]:
+                    - button "Info" [ref=e2893] [cursor=pointer]:
+                      - img [ref=e2894]
+                    - button "Scarico" [ref=e2896] [cursor=pointer]:
+                      - img [ref=e2897]
+                    - button "Carico" [ref=e2898] [cursor=pointer]:
+                      - img [ref=e2899]
+              - row "BH384 Tecnoindustrie Leva Potenziometro Compatibilità universale Altro Giacenza 2 0,00 € Azioni ricambio" [ref=e2901]:
+                - cell "BH384" [ref=e2902]:
+                  - generic [ref=e2906]: BH384
+                - cell "Tecnoindustrie" [ref=e2907]:
+                  - generic [ref=e2908]: Tecnoindustrie
+                - cell "Leva Potenziometro Compatibilità universale" [ref=e2909]:
+                  - generic [ref=e2910]: Leva Potenziometro
+                  - generic [ref=e2911]: Compatibilità universale
+                - cell "Altro" [ref=e2912]:
+                  - generic [ref=e2913]: Altro
+                - cell "Giacenza 2" [ref=e2914]:
+                  - generic "Giacenza 2" [ref=e2916]:
+                    - generic [ref=e2917]: "2"
+                - cell "0,00 €" [ref=e2918]
+                - cell "Azioni ricambio" [ref=e2919]:
+                  - group "Azioni ricambio" [ref=e2920]:
+                    - button "Info" [ref=e2921] [cursor=pointer]:
+                      - img [ref=e2922]
+                    - button "Scarico" [ref=e2924] [cursor=pointer]:
+                      - img [ref=e2925]
+                    - button "Carico" [ref=e2926] [cursor=pointer]:
+                      - img [ref=e2927]
+              - row "BH387 Tecnoindustrie Leva Motrice Potenziometro Forata Compatibilità universale Altro Giacenza 4 0,00 € Azioni ricambio" [ref=e2929]:
+                - cell "BH387" [ref=e2930]:
+                  - generic [ref=e2934]: BH387
+                - cell "Tecnoindustrie" [ref=e2935]:
+                  - generic [ref=e2936]: Tecnoindustrie
+                - cell "Leva Motrice Potenziometro Forata Compatibilità universale" [ref=e2937]:
+                  - generic [ref=e2938]: Leva Motrice Potenziometro Forata
+                  - generic [ref=e2939]: Compatibilità universale
+                - cell "Altro" [ref=e2940]:
+                  - generic [ref=e2941]: Altro
+                - cell "Giacenza 4" [ref=e2942]:
+                  - generic "Giacenza 4" [ref=e2944]:
+                    - generic [ref=e2945]: "4"
+                - cell "0,00 €" [ref=e2946]
+                - cell "Azioni ricambio" [ref=e2947]:
+                  - group "Azioni ricambio" [ref=e2948]:
+                    - button "Info" [ref=e2949] [cursor=pointer]:
+                      - img [ref=e2950]
+                    - button "Scarico" [ref=e2952] [cursor=pointer]:
+                      - img [ref=e2953]
+                    - button "Carico" [ref=e2954] [cursor=pointer]:
+                      - img [ref=e2955]
+          - generic [ref=e2957]:
+            - paragraph [ref=e2958]: Mostrando 1–100 di 107 risultati
+            - navigation "Paginazione" [ref=e2959]:
+              - button "Prima pagina" [disabled]: ≪
+              - button "Pagina precedente" [disabled]: ‹
+              - button "1" [ref=e2960] [cursor=pointer]
+              - button "2" [ref=e2961] [cursor=pointer]
+              - button "Pagina successiva" [ref=e2962] [cursor=pointer]: ›
+              - button "Ultima pagina" [ref=e2963] [cursor=pointer]: ≫
+```
+
+# Test source
+
+```ts
+  212 |     main.scrollTop = 0;
+  213 |     const before = main.scrollTop;
+  214 |     main.scrollTop = 400;
+  215 |     const scrolled = main.scrollTop > before;
+  216 |     const mainEl = main as HTMLElement;
+  217 |     if (!scrolled) {
+  218 |       mainEl.style.minHeight = "200vh";
+  219 |       mainEl.scrollTop = 400;
+  220 |     }
+  221 | 
+  222 |     const rect = main.getBoundingClientRect();
+  223 |     const x = Math.min(window.innerWidth - 2, rect.right - 2);
+  224 |     const y = rect.top + Math.min(rect.height * 0.5, 200);
+  225 |     const el = document.elementFromPoint(x, y);
+  226 |     const onMain =
+  227 |       el === main ||
+  228 |       (el instanceof Node && main.contains(el)) ||
+  229 |       rect.right - x <= 16;
+  230 | 
+  231 |     return {
+  232 |       ok: onMain,
+  233 |       scrollTop: main.scrollTop,
+  234 |       gutter: getComputedStyle(main).scrollbarGutter,
+  235 |       tag: el instanceof Element ? el.tagName : null,
+  236 |     };
+  237 |   });
+  238 | 
+  239 |   expect(hit.ok, JSON.stringify(hit)).toBe(true);
+  240 |   expect(hit.gutter).toBe("stable");
+  241 | });
+  242 | 
+  243 | test("main scroll column spans full width on wide desktop", async ({ page }) => {
+  244 |   attachConsoleGuards(page);
+  245 |   await page.setViewportSize({ width: 1920, height: 1080 });
+  246 |   await loginViaUi(page, adminCredentials());
+  247 |   await page.goto("/magazzino");
+  248 | 
+  249 |   const layout = await page.evaluate(() => {
+  250 |     const main = document.querySelector("main.gestionale-scroll-y");
+  251 |     if (!main) return { ok: false, reason: "missing-main" };
+  252 |     const rect = main.getBoundingClientRect();
+  253 |     const delta = window.innerWidth - rect.right;
+  254 |     return {
+  255 |       ok: delta <= 2,
+  256 |       delta,
+  257 |       rectRight: rect.right,
+  258 |       innerWidth: window.innerWidth,
+  259 |     };
+  260 |   });
+  261 | 
+  262 |   expect(layout.ok, JSON.stringify(layout)).toBe(true);
+  263 | });
+  264 | 
+  265 | test("mobile log drawer scroll host scrolls content", async ({ page }) => {
+  266 |   attachConsoleGuards(page);
+  267 |   await page.setViewportSize({ width: 390, height: 844 });
+  268 |   await loginViaUi(page, adminCredentials());
+  269 |   await page.goto("/magazzino");
+  270 | 
+  271 |   await page.getByRole("button", { name: "Log modifiche" }).click();
+  272 |   const logDrawer = page.locator('aside[aria-label="Log modifiche magazzino"]');
+  273 |   await expect(logDrawer).toBeVisible();
+  274 | 
+  275 |   const scrollHit = await page.evaluate(() => {
+  276 |     const aside = document.querySelector('aside[aria-label="Log modifiche magazzino"]');
+  277 |     if (!aside) return { ok: false, reason: "missing-aside" };
+  278 |     const host = aside.querySelector("[data-cab-modal-scroll]") as HTMLElement | null;
+  279 |     if (!host) return { ok: false, reason: "missing-scroll-host" };
+  280 | 
+  281 |     const inner = host.querySelector("ul, p, .gestionale-scrollbar") as HTMLElement | null;
+  282 |     if (inner && inner.scrollHeight <= host.clientHeight) {
+  283 |       inner.style.minHeight = `${host.clientHeight + 400}px`;
+  284 |     } else if (host.scrollHeight <= host.clientHeight) {
+  285 |       host.style.minHeight = `${host.clientHeight + 400}px`;
+  286 |     }
+  287 | 
+  288 |     const before = host.scrollTop;
+  289 |     host.scrollTop = 200;
+  290 |     return {
+  291 |       ok: host.scrollTop > before,
+  292 |       scrollTop: host.scrollTop,
+  293 |       clientHeight: host.clientHeight,
+  294 |       scrollHeight: host.scrollHeight,
+  295 |       overflowY: getComputedStyle(host).overflowY,
+  296 |     };
+  297 |   });
+  298 | 
+  299 |   expect(scrollHit.ok, JSON.stringify(scrollHit)).toBe(true);
+  300 | 
+  301 |   await page.getByRole("button", { name: "Chiudi" }).click();
+  302 |   await expect(logDrawer).not.toBeVisible();
+  303 |   await assertGestionalePageScrollUnlocked(page);
+  304 | });
+  305 | 
+  306 | test("log drawer locks body scroll and restores on close", async ({ page }) => {
+  307 |   attachConsoleGuards(page);
+  308 |   await page.setViewportSize({ width: 1280, height: 720 });
+  309 |   await loginViaUi(page, adminCredentials());
+  310 |   await page.goto("/magazzino");
+  311 | 
+> 312 |   await page.getByRole("button", { name: "Log modifiche" }).click();
+      |                                                             ^ TimeoutError: locator.click: Timeout 15000ms exceeded.
+  313 |   const logDrawer = page.locator('aside[aria-label="Log modifiche magazzino"]');
+  314 |   await expect(logDrawer).toBeVisible();
+  315 | 
+  316 |   const locked = await page.evaluate(() => ({
+  317 |     lockAttr: document.body.getAttribute("data-cab-scroll-lock-count"),
+  318 |     bodyOverflow: document.body.style.overflow,
+  319 |   }));
+  320 |   expect(locked.lockAttr || locked.bodyOverflow === "hidden").toBeTruthy();
+  321 | 
+  322 |   await page.getByRole("button", { name: "Chiudi" }).click();
+  323 |   await expect(logDrawer).not.toBeVisible();
+  324 |   await assertGestionalePageScrollUnlocked(page);
+  325 | });
+  326 | 
+```

@@ -1,10 +1,14 @@
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
-import { prezzoNetto, prezzoNettoFornitoreOriginale } from "@/lib/magazzino/calculations";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { partitionRigheRicambi } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo, totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
+import {
+  resolvePreventivoRigaRicambioCostoUnitario,
+} from "@/lib/preventivi/preventivo-ricambio-costo";
 import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
+
+export { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-ricambio-costo";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -147,17 +151,6 @@ function categoriaTotale(ricavo: number, costo: number): PreventivoProfittoCateg
   return { ricavo: round2(ricavo), costo: round2(costo), profitto, margine: margineRiga(profitto, ricavo) };
 }
 
-/** Costo acquisto unitario — primo alternativo, poi listino OE netto. */
-export function costoUnitarioAcquistoRicambio(r: RicambioMagazzino): number {
-  const alt = r.fornitoriAlternativi?.[0];
-  if (alt && Number(alt.prezzo) > 0) {
-    return prezzoNetto(alt.prezzo, alt.sconto ?? 0);
-  }
-  if (r.prezzoFornitoreNonOriginale > 0) {
-    return prezzoNetto(r.prezzoFornitoreNonOriginale, r.scontoFornitoreNonOriginale);
-  }
-  return prezzoNettoFornitoreOriginale(r);
-}
 
 export function oreEffettivePerCostoPreventivo(
   p: Pick<PreventivoRecord, "manodopera">,
@@ -214,10 +207,8 @@ function buildRicambiBreakdown(
     const qty = Number.isFinite(r.quantita) && r.quantita > 0 ? r.quantita : 0;
     if (qty <= 0) continue;
     const id = r.ricambioId?.trim();
-    const costoUnit =
-      id && magazzinoById.has(id)
-        ? costoUnitarioAcquistoRicambio(magazzinoById.get(id)!)
-        : Math.max(0, Number(r.prezzoUnitario) || 0);
+    const mag = id ? magazzinoById.get(id) : undefined;
+    const costoUnit = resolvePreventivoRigaRicambioCostoUnitario(r, mag);
     const costoTotale = round2(qty * costoUnit);
     const ricavo = totaleNettoRigaRicambio(r);
     const profitto = round2(ricavo - costoTotale);
@@ -310,7 +301,10 @@ export function profittoTabellaFromResult(result: PreventivoProfittoResult): {
   return { profitto: result.summary.profitto, marginePercent: result.summary.margine };
 }
 
-/** SSOT — profitto, breakdown, indicatori, confronti e KPI. */
+/** SSOT — profitto, breakdown, indicatori, confronti e KPI.
+ * Margine % = (Ricavi − Costi) / Ricavi × 100; Ricavi = 0 → null.
+ * Ricavi globali (totaleFinale) includono sanificazione/collaudo/smaltimento senza costo allocato.
+ */
 export function computePreventivoProfitto(input: {
   preventivo: Pick<
     PreventivoRecord,
@@ -464,4 +458,25 @@ export function costoRicambiPreventivo(
   magazzinoById: ReadonlyMap<string, RicambioMagazzino>,
 ): number {
   return buildRicambiBreakdown(p.righeRicambi, magazzinoById).totale.costo;
+}
+
+/** KPI footer editor manodopera — stessa logica di computePreventivoProfitto. */
+export function computePreventivoEditorManodoperaKpi(input: {
+  preventivo: Pick<PreventivoRecord, "manodopera">;
+  bundle?: LavorazioneSchedeBundle | null;
+  ricavoManodopera: number;
+}): { costo: number; margine: number; marginePercent: number | null } {
+  const ore = oreEffettivePerCostoPreventivo(input.preventivo, input.bundle);
+  const costoOrario = Math.max(0, Number(input.preventivo.manodopera?.costoOrario) || 0);
+  const costo = round2(ore * costoOrario);
+  const margine = round2(input.ricavoManodopera - costo);
+  const marginePercent =
+    input.ricavoManodopera > 0 ? round2((margine / input.ricavoManodopera) * 100) : null;
+  return { costo, margine, marginePercent };
+}
+
+export function magazzinoMapFromList(items: readonly RicambioMagazzino[]): Map<string, RicambioMagazzino> {
+  const map = new Map<string, RicambioMagazzino>();
+  for (const item of items) map.set(item.id, item);
+  return map;
 }

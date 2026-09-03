@@ -191,7 +191,7 @@ export const INVOICE_PAYMENTS_COLUMNS =
   "id, invoice_id, data, importo, metodo, riferimento, note, created_by, created_at" as const;
 
 export const DDT_DOCUMENTS_COLUMNS =
-  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, current_pdf_artifact_id, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
+  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, current_pdf_artifact_id, created_by, updated_by, annullato_at, stampato_at, consegnato_at, source_version, created_at, updated_at" as const;
 
 export const DDT_DOCUMENTS_INDEX_COLUMNS =
   "id, preventivo_id, status, numero, anno" as const;

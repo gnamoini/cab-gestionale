@@ -54,7 +54,8 @@ export type AppPageRoutePath =
   | "/privacy-policy"
   | "/termini-e-condizioni"
   | "/offline"
-  | "/m/q/errore";
+  | "/m/q/errore"
+  | "/r/errore";
 
 export type AppPageRouteConfig = {
   title: string;
@@ -160,6 +161,7 @@ export const GESTIONALE_ROUTE_TITLES: Record<AppPageRoutePath, AppPageRouteConfi
   ),
   "/offline": routeConfig("Connessione assente", "Contenuto disponibile senza connessione di rete"),
   "/m/q/errore": routeConfig("QR non valido", "Identificativo mezzo non disponibile o accesso non consentito"),
+  "/r/errore": routeConfig("QR ricambio", "Identificativo ricambio non disponibile o accesso non consentito"),
 };
 
 function metadataForRoute(path: AppPageRoutePath): Metadata {
@@ -207,6 +209,7 @@ export const privacyPolicyPageMetadata = metadataForRoute("/privacy-policy");
 export const terminiECondizioniPageMetadata = metadataForRoute("/termini-e-condizioni");
 export const offlinePageMetadata = metadataForRoute("/offline");
 export const mezzoQrErrorePageMetadata = metadataForRoute("/m/q/errore");
+export const inventoryQrErrorePageMetadata = metadataForRoute("/r/errore");
 export const notFoundPageMetadata = buildPageMetadata("Pagina non trovata", {
   description: "La pagina richiesta non esiste o non è più disponibile",
 });

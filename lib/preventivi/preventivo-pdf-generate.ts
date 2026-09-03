@@ -7,6 +7,7 @@ import {
   pdfAdvanceAfterDocumentHeader,
 } from "@/lib/pdf/core/pdf-base-template";
 import { drawPreventivoPdfBody } from "@/lib/pdf/preventivo-pdf-body";
+import { PREVENTIVO_PDF_LAYOUT_STAMP } from "@/lib/pdf/preventivo-pdf-section-labels";
 import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
 import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
 import { buildPreventivoPdfDownloadFileName } from "@/lib/preventivi/preventivo-pdf-filename";
@@ -53,5 +54,4 @@ export function preventivoPdfFileName(p: PreventivoRecord): string {
   return buildPreventivoPdfDownloadFileName(p);
 }
 
-/** Bump per invalidare cache artifact PDF dopo cambi layout. */
-export const PREVENTIVO_PDF_LAYOUT_STAMP = "consuntivo-labels-footer-v6";
+export { PREVENTIVO_PDF_LAYOUT_STAMP } from "@/lib/pdf/preventivo-pdf-section-labels";

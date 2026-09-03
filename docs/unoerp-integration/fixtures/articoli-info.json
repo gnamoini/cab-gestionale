@@ -1,0 +1,7 @@
+{
+  "module": "Magazzino",
+  "file": "articoli",
+  "primary_key": "id_articoli",
+  "note": "Anonymized schema snapshot — discovery 2026-09-03",
+  "fieldset_sample": ["tipo", "alpha_cod", "descrizione", "cod_iva_id", "cod_iva_vendita_id", "unita_misura_id"]
+}

@@ -91,28 +91,23 @@ export function composeMezzoLabel(
 
   const logoW = template.logo.maxWidthMm;
   const logoH = template.logo.maxHeightMm;
-  const contentTop = whiteMargin + pad;
-  const qrGap = 0.3;
-  const qrAreaTop = contentTop + logoH + qrGap;
-  const qrAreaBottom = whiteMargin + innerH - pad;
-  const qrMaxByHeight = qrAreaBottom - qrAreaTop;
+  const innerContentH = innerH - pad * 2;
+
+  const qrMaxByHeight = innerContentH;
   const qrSize = Math.min(template.qr.maxSizeMm, qrMaxByHeight);
 
-
   const qrX = whiteMargin + pad + leftPad;
-  const qrY = qrAreaTop + (qrMaxByHeight - qrSize) / 2;
-  const logoX = qrX + (qrSize - logoW) / 2;
-  const logoY = contentTop;
+  const qrY = whiteMargin + pad + (innerContentH - qrSize) / 2;
 
   const textZoneLeftMm = qrX + qrSize + gutter;
-  const textZoneRightMm = template.widthMm - whiteMargin;
+  const textZoneRightMm = template.widthMm - whiteMargin - pad;
   const textZoneWidthMm = textZoneRightMm - textZoneLeftMm;
+  const logoX = textZoneLeftMm + (textZoneWidthMm - logoW) / 2;
 
   const textStyle = template.targa;
   const textBold = true;
 
-  const texts: MezzoLabelPlacedText[] = [];
-  const scuderiaFontPt = hasScuderia
+  const scuderiaFontFit = hasScuderia
     ? fitFontPt(
         scuderiaRaw,
         textZoneWidthMm,
@@ -122,7 +117,7 @@ export function composeMezzoLabel(
         template.dpi,
       )
     : 0;
-  const targaFontPt = hasTarga
+  const targaFontFit = hasTarga
     ? fitFontPt(
         targaText,
         textZoneWidthMm,
@@ -132,19 +127,33 @@ export function composeMezzoLabel(
         template.dpi,
       )
     : 0;
+  const sharedFontPt =
+    hasScuderia && hasTarga
+      ? Math.min(scuderiaFontFit, targaFontFit)
+      : hasScuderia
+        ? scuderiaFontFit
+        : targaFontFit;
+  const scuderiaFontPt = hasScuderia ? sharedFontPt : 0;
+  const targaFontPt = hasTarga ? sharedFontPt : 0;
 
   const scuderiaLineMm = hasScuderia
     ? fontLineHeightMm(scuderiaFontPt, textStyle.lineHeight)
     : 0;
   const targaLineMm = hasTarga ? fontLineHeightMm(targaFontPt, textStyle.lineHeight) : 0;
-  const textGapMm = hasScuderia && hasTarga ? 0.5 : 0;
-  const blockMm =
+  const textGapMm = hasScuderia && hasTarga ? 0.25 : 0;
+  const hasText = hasScuderia || hasTarga;
+  const textBlockMm =
     hasScuderia && hasTarga
       ? scuderiaLineMm + textGapMm + targaLineMm
       : hasScuderia
         ? scuderiaLineMm
         : targaLineMm;
-  const textStartY = whiteMargin + pad + (innerH - pad * 2 - blockMm) / 2;
+
+  const logoY = whiteMargin + pad;
+  const labelCenterYMm = template.heightMm / 2;
+  const textStartY = hasText ? labelCenterYMm - textBlockMm / 2 : labelCenterYMm;
+
+  const texts: MezzoLabelPlacedText[] = [];
 
   if (hasScuderia) {
     texts.push({

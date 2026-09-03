@@ -52,6 +52,10 @@ withEnv({ NEXT_PUBLIC_SITE_URL: "https://cab-gestionale.vercel.app" }, () => {
 
   const qrRoute = new URL(`/r/${encodeURIComponent(token)}`, origin);
   assert.equal(qrRoute.href, "https://cab-gestionale.vercel.app/r/CAB-8K4J9P2X7M");
+
+  const errorUrl = new URL("/r/errore?reason=inactive", origin);
+  assert.equal(errorUrl.pathname, "/r/errore");
+  assert.equal(errorUrl.searchParams.get("reason"), "inactive");
 });
 
 console.log("inventory-labels/qr/redirect-flow.test.ts OK");

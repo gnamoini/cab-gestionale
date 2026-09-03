@@ -35,6 +35,15 @@ export function isMezzoQrEntryPath(path: string): boolean {
   return segment.length > 0;
 }
 
+/** Entrypoint QR ricambi magazzino — consentito post-login per staff autenticato. */
+export function isInventoryQrEntryPath(path: string): boolean {
+  const pathOnly = path.split("?")[0] ?? path;
+  if (!pathOnly.startsWith("/r/")) return false;
+  if (pathOnly === "/r/errore" || pathOnly.startsWith("/r/errore/")) return false;
+  const segment = pathOnly.slice("/r/".length);
+  return segment.length > 0;
+}
+
 /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
 export function resolveFirstAccessibleNavHref(
   navAccess: RbacNavAccess,
@@ -85,7 +94,7 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
   if (
     requested &&
     !stagingBlocksRedirect(requested) &&
-    input.navAccess.canAccessRoute(requested)
+    (isInventoryQrEntryPath(requested) || input.navAccess.canAccessRoute(requested))
   ) {
     return requested;
   }

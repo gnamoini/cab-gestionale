@@ -117,7 +117,7 @@ export function MezzoQrLabelActions({
     <div className={compact ? "flex flex-col gap-2" : "flex flex-col gap-3 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3"}>
       {!compact ? (
         <p className="text-xs font-medium text-[color:var(--cab-text-muted)]">
-          Etichetta portachiavi 50×22 mm con QR per nuova Scheda di Ingresso.
+          Etichetta portachiavi 36×18 mm con QR per nuova Scheda di Ingresso.
         </p>
       ) : null}
 
@@ -128,7 +128,7 @@ export function MezzoQrLabelActions({
             src={previewUrl}
             alt="Anteprima etichetta QR mezzo"
             className="h-auto w-full max-w-[280px]"
-            style={{ aspectRatio: "50 / 22" }}
+            style={{ aspectRatio: "36 / 18" }}
           />
         </div>
       ) : null}

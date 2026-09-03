@@ -200,6 +200,7 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/core/site-origin.test.ts",
   "lib/inventory-labels/domain/fingerprints.test.ts",
   "lib/inventory-labels/qr/redirect-flow.test.ts",
+  "lib/magazzino/open-ricambio-deeplink-phase.test.ts",
   "lib/inventory-labels/validation.test.ts",
   "lib/inventory-labels/storage/artifact-purge.test.ts",
   "lib/inventory-labels/jobs/label-job-recovery.test.ts",

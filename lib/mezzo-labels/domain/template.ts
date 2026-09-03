@@ -1,6 +1,6 @@
 import { MM_TO_PT } from "@/lib/mezzo-labels/domain/types";
 
-/** Single geometry source of truth for mezzo keychain labels (50×22 mm). */
+/** Single geometry source of truth for mezzo keychain labels (36×18 mm, orizzontale). */
 export type MezzoLabelTemplate = {
   id: string;
   version: string;
@@ -21,20 +21,20 @@ export type MezzoLabelTemplate = {
 };
 
 export const MEZZO_LABEL_TEMPLATE: MezzoLabelTemplate = {
-  id: "mezzo-keychain-50x22",
-  version: "1.1.4",
+  id: "mezzo-keychain-36x18",
+  version: "2.2.2",
   dpi: 300,
-  widthMm: 50,
-  heightMm: 22,
-  safeMarginMm: 2,
-  cutBorderMm: 2,
-  columnGutterMm: 0.8,
-  innerPaddingMm: 0.2,
-  leftColumnPadMm: 0.15,
-  logo: { maxWidthMm: 16, maxHeightMm: 3.2 },
-  qr: { maxSizeMm: 14 },
-  scuderia: { fontPt: 11, minFontPt: 6, lineHeight: 1.15 },
-  targa: { fontPt: 15, minFontPt: 8, lineHeight: 1.1 },
+  widthMm: 36,
+  heightMm: 18,
+  safeMarginMm: 1,
+  cutBorderMm: 1,
+  columnGutterMm: 0.35,
+  innerPaddingMm: 0.15,
+  leftColumnPadMm: 0.1,
+  logo: { maxWidthMm: 12, maxHeightMm: 2.2 },
+  qr: { maxSizeMm: 13.5 },
+  scuderia: { fontPt: 11, minFontPt: 7, lineHeight: 1.08 },
+  targa: { fontPt: 11, minFontPt: 7, lineHeight: 1.08 },
 };
 
 export function mmToPx(mm: number, dpi = MEZZO_LABEL_TEMPLATE.dpi): number {

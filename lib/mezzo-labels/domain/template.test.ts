@@ -6,11 +6,11 @@ import {
 } from "@/lib/mezzo-labels/domain/template";
 import { MM_TO_PT } from "@/lib/mezzo-labels/domain/types";
 
-assert.equal(MEZZO_LABEL_TEMPLATE.widthMm, 50);
-assert.equal(MEZZO_LABEL_TEMPLATE.heightMm, 22);
-assert.equal(MEZZO_LABEL_TEMPLATE.cutBorderMm, 2);
-assert.equal(MEZZO_LABEL_TEMPLATE.qr.maxSizeMm, 14);
-assert.equal(mmToPt(50), 50 * MM_TO_PT);
-assert.equal(mezzoLabelGridTemplate().widthMm, 50);
+assert.equal(MEZZO_LABEL_TEMPLATE.widthMm, 36);
+assert.equal(MEZZO_LABEL_TEMPLATE.heightMm, 18);
+assert.equal(MEZZO_LABEL_TEMPLATE.cutBorderMm, 1);
+assert.equal(MEZZO_LABEL_TEMPLATE.qr.maxSizeMm, 13.5);
+assert.equal(mmToPt(36), 36 * MM_TO_PT);
+assert.equal(mezzoLabelGridTemplate().widthMm, 36);
 
 console.log("mezzo-labels/domain/template.test.ts OK");

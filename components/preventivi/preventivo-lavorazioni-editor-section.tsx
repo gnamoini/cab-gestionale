@@ -39,7 +39,7 @@ import {
   resolveCollaudoDescrizione,
   resolveSanificazioneDescrizione,
 } from "@/lib/preventivi/preventivi-voci-standard";
-import { oreEffettivePerCostoPreventivo, resolveMargineTier } from "@/lib/preventivi/preventivo-profitto";
+import { computePreventivoEditorManodoperaKpi, resolveMargineTier } from "@/lib/preventivi/preventivo-profitto";
 import { margineTierClass } from "@/lib/preventivi/preventivo-analisi-economica";
 import {
   composePreventivoLavorazioniClienteEditorText,
@@ -70,7 +70,7 @@ import {
   totaleSanificazionePreventivo,
 } from "@/lib/preventivi/preventivi-collaudo";
 
-const PREVENTIVO_LAVORAZIONI_COMMIT_MS = 400;
+const PREVENTIVO_LAVORAZIONI_PARENT_COMMIT_MS = 400;
 
 function PreventivoLavorazioniClienteTextarea({
   specifiche,
@@ -84,20 +84,12 @@ function PreventivoLavorazioniClienteTextarea({
   lavorazioniFieldId: string;
 }) {
   const focusedRef = useRef(false);
-  const commitTimerRef = useRef<number | null>(null);
+  const parentCommitTimerRef = useRef<number | null>(null);
   const editorTextRef = useRef("");
   const [editorText, setEditorText] = useState(() =>
     composePreventivoLavorazioniClienteEditorText(specifiche, sanificazioneDescrizione),
   );
   editorTextRef.current = editorText;
-
-  const commitEditorText = useCallback(
-    (raw: string) => {
-      const nextSpecifiche = extractPreventivoLavorazioniClienteSpecifiche(sliceInputValue(raw, TEXT_EXTRA));
-      return composePreventivoLavorazioniClienteEditorText(nextSpecifiche, sanificazioneDescrizione);
-    },
-    [sanificazioneDescrizione],
-  );
 
   const notifyDescrizioneChange = useCallback(
     (raw: string) => {
@@ -107,12 +99,24 @@ function PreventivoLavorazioniClienteTextarea({
     [onDescrizioneChange],
   );
 
-  const flushEditorText = useCallback(
+  const scheduleParentCommit = useCallback(
     (raw: string) => {
-      notifyDescrizioneChange(raw);
-      setEditorText(commitEditorText(raw));
+      if (parentCommitTimerRef.current != null) window.clearTimeout(parentCommitTimerRef.current);
+      parentCommitTimerRef.current = window.setTimeout(() => {
+        parentCommitTimerRef.current = null;
+        notifyDescrizioneChange(raw);
+      }, PREVENTIVO_LAVORAZIONI_PARENT_COMMIT_MS);
     },
-    [commitEditorText, notifyDescrizioneChange],
+    [notifyDescrizioneChange],
+  );
+
+  const normalizeEditorText = useCallback(
+    (raw: string) =>
+      composePreventivoLavorazioniClienteEditorText(
+        extractPreventivoLavorazioniClienteSpecifiche(sliceInputValue(raw, TEXT_EXTRA)),
+        sanificazioneDescrizione,
+      ),
+    [sanificazioneDescrizione],
   );
 
   useEffect(() => {
@@ -122,23 +126,12 @@ function PreventivoLavorazioniClienteTextarea({
 
   useEffect(() => {
     return () => {
-      if (commitTimerRef.current != null) {
-        window.clearTimeout(commitTimerRef.current);
+      if (parentCommitTimerRef.current != null) {
+        window.clearTimeout(parentCommitTimerRef.current);
         notifyDescrizioneChange(editorTextRef.current);
       }
     };
   }, [notifyDescrizioneChange]);
-
-  const scheduleCommit = useCallback(
-    (raw: string) => {
-      if (commitTimerRef.current != null) window.clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = window.setTimeout(() => {
-        commitTimerRef.current = null;
-        flushEditorText(raw);
-      }, PREVENTIVO_LAVORAZIONI_COMMIT_MS);
-    },
-    [flushEditorText],
-  );
 
   return (
     <GestionaleTextarea
@@ -151,16 +144,17 @@ function PreventivoLavorazioniClienteTextarea({
       }}
       onBlur={() => {
         focusedRef.current = false;
-        if (commitTimerRef.current != null) {
-          window.clearTimeout(commitTimerRef.current);
-          commitTimerRef.current = null;
+        if (parentCommitTimerRef.current != null) {
+          window.clearTimeout(parentCommitTimerRef.current);
+          parentCommitTimerRef.current = null;
         }
-        flushEditorText(editorTextRef.current);
+        notifyDescrizioneChange(editorTextRef.current);
+        setEditorText(normalizeEditorText(editorTextRef.current));
       }}
       onChange={(v) => {
         const sliced = sliceInputValue(v, TEXT_EXTRA);
         setEditorText(sliced);
-        scheduleCommit(sliced);
+        scheduleParentCommit(sliced);
       }}
       maxLength={TEXT_EXTRA}
       aria-label="Descrizione lavorazioni per il cliente"
@@ -227,10 +221,6 @@ export function PreventivoLavorazioniEditorSection({
     () => oreSchedaAddettoMapFromLavorazioni(schedaLavorazioni, addettiRecords),
     [schedaLavorazioni, addettiRecords],
   );
-  const orePerCostoManodopera = useMemo(
-    () => oreEffettivePerCostoPreventivo(draft, schedaBundle),
-    [draft, schedaBundle],
-  );
   const collaudoOre = normalizeCollaudoOre(draft.collaudoOre);
   const collaudoPrezzo = draft.collaudoPrezzo ?? 0;
   const collaudoDescrizione = resolveCollaudoDescrizione(draft.collaudoDescrizione);
@@ -240,13 +230,18 @@ export function PreventivoLavorazioniEditorSection({
   const totaleCollaudo = totaleCollaudoPreventivo({ collaudoOre, collaudoPrezzo });
   const totaleSanificazione = totaleSanificazionePreventivo({ sanificazioneOre, sanificazionePrezzo });
   const sezioneTotale = totaleManodopera + totaleSanificazione + totaleCollaudo;
-  const totCostoManodopera =
-    Math.round(orePerCostoManodopera * draft.manodopera.costoOrario * 100) / 100;
-  const totMargineManodopera = Math.round((totaleManodopera - totCostoManodopera) * 100) / 100;
-  const margineManodoperaPct =
-    totaleManodopera > 0
-      ? Math.round(((totaleManodopera - totCostoManodopera) / totaleManodopera) * 1000) / 10
-      : null;
+  const manodoperaKpi = useMemo(
+    () =>
+      computePreventivoEditorManodoperaKpi({
+        preventivo: draft,
+        bundle: schedaBundle,
+        ricavoManodopera: totaleManodopera,
+      }),
+    [draft, schedaBundle, totaleManodopera],
+  );
+  const totCostoManodopera = manodoperaKpi.costo;
+  const totMargineManodopera = manodoperaKpi.margine;
+  const margineManodoperaPct = manodoperaKpi.marginePercent;
   const margineManodoperaTier = resolveMargineTier(margineManodoperaPct);
   const manodoperaNumInputClass = `${dsInput} ${dsInputNoSpinner} w-full text-center tabular-nums`;
 

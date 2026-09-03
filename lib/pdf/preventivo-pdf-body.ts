@@ -31,15 +31,13 @@ import {
   isDescrizioneMaterialiConsumo,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
-import type { PreventivoRecord, PreventivoTipoDocumento } from "@/lib/preventivi/types";
+import {
+  preventivoPdfLavorazioniSectionTitle,
+  preventivoPdfMaterialiSectionTitle,
+} from "@/lib/pdf/preventivo-pdf-section-labels";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 
-export function preventivoPdfLavorazioniSectionTitle(tipo: PreventivoTipoDocumento): string {
-  return tipo === "consuntivo" ? "Lavorazioni da effettuare" : "Lavorazioni effettuate";
-}
-
-export function preventivoPdfMaterialiSectionTitle(tipo: PreventivoTipoDocumento): string {
-  return tipo === "consuntivo" ? "Materiali da usare" : "MATERIALI UTILIZZATI";
-}
+export { preventivoPdfLavorazioniSectionTitle, preventivoPdfMaterialiSectionTitle } from "@/lib/pdf/preventivo-pdf-section-labels";
 
 export type PreventivoPdfEconomics = {
   totaleRicambi: number;
@@ -74,7 +72,10 @@ const LAVORAZIONI_COLUMN_STYLES = {
   0: { cellWidth: "auto" as const },
 };
 
-export function buildLavorazioniEffettuatePdfRows(p: PreventivoRecord): string[][] {
+/** @deprecated Usare `buildLavorazioniClientePdfRows`. */
+export const buildLavorazioniEffettuatePdfRows = buildLavorazioniClientePdfRows;
+
+export function buildLavorazioniClientePdfRows(p: PreventivoRecord): string[][] {
   return parsePreventivoLavorazioniClientePdfLines(
     p.descrizioneLavorazioniCliente,
     p.sanificazioneDescrizione,
@@ -221,7 +222,7 @@ export function drawPreventivoPdfBody(
     });
   }
 
-  const lavBody = buildLavorazioniEffettuatePdfRows(p);
+  const lavBody = buildLavorazioniClientePdfRows(p);
   if (lavBody.length > 0) {
     y = drawGestionaleDataSectionTable(
       doc,

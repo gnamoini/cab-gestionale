@@ -1,18 +1,10 @@
-import { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-profitto";
+import { costoUnitarioAcquistoRicambio, resolvePreventivoRigaRicambioCostoUnitario } from "@/lib/preventivi/preventivo-ricambio-costo";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { PreventivoRigaRicambio } from "@/lib/preventivi/types";
 
 export type PreventivoRicambioMarkupSource = "magazzino" | "calcolato" | null;
 
-export function resolvePreventivoRigaRicambioCostoUnitario(
-  r: PreventivoRigaRicambio,
-  magazzino?: RicambioMagazzino | null,
-): number {
-  const stored = Number(r.costoUnitario);
-  if (Number.isFinite(stored) && stored > 0) return Math.round(stored * 100) / 100;
-  if (magazzino) return costoUnitarioAcquistoRicambio(magazzino);
-  return 0;
-}
+export { resolvePreventivoRigaRicambioCostoUnitario };
 
 /** Markup % — da magazzino/scheda se salvato, altrimenti da prezzo e costo riga. */
 export function resolvePreventivoRigaRicambioMarkup(

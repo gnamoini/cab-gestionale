@@ -40,20 +40,20 @@ assert.doesNotMatch(preventiviSources, /<datalist\b/);
 const editor = read("components/preventivi/preventivi-editor-modal.tsx");
 const filters = read("components/preventivi/preventivi-advanced-filter-panel.tsx");
 const view = read("components/preventivi/preventivi-view.tsx");
+const ricambi = read("components/preventivi/preventivo-ricambi-editor-section.tsx");
 
-assert.match(preventiviSources, /aria-label=\{`Codice OE riga \$\{idx \+ 1\}`\}/);
-assert.match(preventiviSources, /aria-label=\{`Unità di misura riga \$\{rowIndex \+ 1\}`\}/);
+assert.match(ricambi, /aria-label=\{`Costo unitario riga \$\{idx \+ 1\}`\}/);
+assert.match(ricambi, /aria-label=\{`Quantità riga \$\{rowIndex \+ 1\}`\}/);
 assert.match(preventivoEditorSources, /GestionaleNumericField/);
 assert.match(preventivoEditorSources, /GestionaleQuantityField/);
 assert.doesNotMatch(preventivoEditorSources, /type="number"/);
 assert.match(preventiviSources, /preventivo-collaudo-prezzo/);
 assert.match(preventiviSources, /PreventivoEditorTotalBar/);
-assert.match(preventiviSources, /role="region"/);
+assert.match(editor, /GestionaleCollapsibleSection/);
 assert.match(editor, /htmlFor=\{dataCreazioneFieldId\}/);
 assert.match(preventiviSources, /htmlFor=\{noteFieldId\}/);
 assert.match(editor, /GestionaleModalScrollBody/);
 assert.match(editor, /preventivoEditorActionBtn/);
-assert.match(editor, /preventivoEditorFooterBtnNeutral/);
 assert.match(editor, /GestionaleCollapsibleSection title="Dati documento"/);
 assert.match(preventivoEditorSources, /preventivo-editor-ui/);
 
@@ -63,13 +63,12 @@ assert.doesNotMatch(preventivoEditorSources, /kpiLabelClass/);
 assert.doesNotMatch(preventivoEditorSources, /className=\{dsBtnNeutral\}/);
 assert.doesNotMatch(preventivoEditorSources, /`\$\{dsBtnNeutral\}/);
 
-const ricambi = read("components/preventivi/preventivo-ricambi-editor-section.tsx");
-assert.match(ricambi, /preventivoEditorTableInput/);
+assert.match(ricambi, /preventivoEditorTableInputNumber/);
 assert.match(ricambi, /RicambioUnitaMisuraPicker/);
 assert.doesNotMatch(ricambi, /dsSegmentedWrap/);
 
 const lavorazioni = read("components/preventivi/preventivo-lavorazioni-editor-section.tsx");
-assert.match(lavorazioni, /preventivoEditorAddRowBtn/);
+assert.match(lavorazioni, /preventivoEditorManodoperaAddBtn/);
 assert.match(lavorazioni, /Aggiungi addetto/);
 assert.match(lavorazioni, /ORE_PREVENTIVO_ADDETTO_PRESET/);
 assert.doesNotMatch(lavorazioni, /preventivoEditorActionBtn/);
@@ -77,7 +76,7 @@ assert.doesNotMatch(lavorazioni, /preventivoEditorActionBtn/);
 assert.match(filters, /htmlFor="prev-filter-data-da"/);
 assert.match(filters, /id="prev-filter-data-a"/);
 
-assert.match(view, /GestionaleListSearchField/);
+assert.match(view, /GestionaleListSearchController/);
 assert.match(view, /id="preventivi-search"/);
 
 console.log("preventivi-inputs-audit.test.ts OK");

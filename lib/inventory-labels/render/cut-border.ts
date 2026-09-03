@@ -10,7 +10,7 @@ export function cutBorderRectSvg(
   if (!cutBorderMm || cutBorderMm <= 0) return null;
 
   if (mode === "mezzo") {
-    // Linea di taglio sul perimetro 50×22 mm (stroke centrato sul bordo esterno).
+    // Linea di taglio sul perimetro etichetta mezzo (stroke centrato sul bordo esterno).
     const strokeW = Math.max(1, Math.round(mmToPx(0.12, dpi)));
     const inset = strokeW / 2;
     return `<rect x="${inset}" y="${inset}" width="${widthPx - strokeW}" height="${heightPx - strokeW}" fill="none" stroke="#000000" stroke-width="${strokeW}"/>`;

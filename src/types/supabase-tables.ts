@@ -1035,6 +1035,7 @@ export type DdtDocumentRow = {
   annullato_at: string | null;
   stampato_at: string | null;
   consegnato_at: string | null;
+  source_version?: number;
   target_type?: InterventoTargetType | null;
   attrezzatura_id?: string | null;
   attrezzatura_snapshot?: Record<string, unknown>;
