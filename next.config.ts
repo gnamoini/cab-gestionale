@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
     root: projectRoot,
   },
   /** ponytail: native addons — Turbopack non può bundlarli in ESM chunks (PDF thumbnail fallback). */
-  serverExternalPackages: ["sharp", "@napi-rs/canvas"],
+  serverExternalPackages: ["sharp", "@napi-rs/canvas", "libxmljs2"],
   images: {
     qualities: [75, 100],
   },
@@ -67,6 +67,14 @@ const nextConfig: NextConfig = {
       "./node_modules/@img/sharp-linux-x64/**",
       "./node_modules/@napi-rs/canvas/**",
       "./node_modules/@napi-rs/canvas-linux-x64-gnu/**",
+    ],
+    "/api/cron/fatturazione-sdi-processor": [
+      "./node_modules/libxmljs2/**",
+      "./lib/accounting/einvoice/schemas/**",
+    ],
+    "/api/fatturazione/**": [
+      "./node_modules/libxmljs2/**",
+      "./lib/accounting/einvoice/schemas/**",
     ],
   },
   experimental: {

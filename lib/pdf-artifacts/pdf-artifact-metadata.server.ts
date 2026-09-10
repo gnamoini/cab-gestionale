@@ -148,7 +148,7 @@ export type FatturaPdfHashMeta = {
   updatedAt: string;
   totale: number;
   status: string;
-  numero: number;
+  numero: number | null;
   anno: number;
   clienteLabel: string;
   dataEmissione: string;

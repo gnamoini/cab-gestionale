@@ -39,12 +39,11 @@ assert.equal(
 );
 assert.equal(isMagazzinoListQueryReadyForOpenRicambio(q({}), false), false);
 
-// Test A — race iOS: lista in fetching, nessuna azione
+// Lista in fetching — wait
 assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [],
     listQuery: q({ isFetching: true, isLoading: true }),
@@ -52,12 +51,11 @@ assert.deepEqual(
   { kind: "wait" },
 );
 
-// Test A — lista arrivata con ricambio
+// Lista arrivata con ricambio
 assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [RICAMBIO_ID],
     listQuery: q({ data: [{ id: RICAMBIO_ID }], status: "success" }),
@@ -65,43 +63,40 @@ assert.deepEqual(
   { kind: "open_from_list", id: RICAMBIO_ID },
 );
 
-// Test B — lista settled, miss, getById
+// Lista settled, miss — start_get_by_id
 assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [OTHER_ID],
     listQuery: q({ data: [{ id: OTHER_ID }], status: "success" }),
   }),
-  { kind: "fetch_by_id", id: RICAMBIO_ID },
+  { kind: "start_get_by_id", id: RICAMBIO_ID },
 );
 
-// getById già tentato — noop (no loop)
+// getById in corso — wait (non doppio start)
 assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: true,
-    inFlight: false,
+    inFlight: true,
     prodottiIds: [OTHER_ID],
     listQuery: q({ data: [{ id: OTHER_ID }], status: "success" }),
   }),
-  { kind: "noop" },
+  { kind: "wait" },
 );
 
-// Lista fallita senza dati — un solo fetch_by_id
+// Lista fallita senza dati — start_get_by_id
 assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [],
     listQuery: q({ isError: true, status: "error" }),
   }),
-  { kind: "fetch_by_id", id: RICAMBIO_ID },
+  { kind: "start_get_by_id", id: RICAMBIO_ID },
 );
 
 // Stale data con refetch in background — risoluzione immediata da cache
@@ -109,7 +104,6 @@ assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: null,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [RICAMBIO_ID],
     listQuery: q({ data: [{ id: RICAMBIO_ID }], isFetching: true, status: "success" }),
@@ -122,12 +116,23 @@ assert.deepEqual(
   planOpenRicambioDeepLinkStep({
     openId: RICAMBIO_ID,
     consumedOpenId: RICAMBIO_ID,
-    getByIdAttempted: false,
     inFlight: false,
     prodottiIds: [RICAMBIO_ID],
     listQuery: q({ data: [{ id: RICAMBIO_ID }], status: "success" }),
   }),
-  { kind: "noop" },
+  { kind: "idle" },
+);
+
+// Nessun openId
+assert.deepEqual(
+  planOpenRicambioDeepLinkStep({
+    openId: null,
+    consumedOpenId: null,
+    inFlight: false,
+    prodottiIds: [],
+    listQuery: q({ data: [] }),
+  }),
+  { kind: "idle" },
 );
 
 const sampleRow: MagazzinoRicambioRow = {

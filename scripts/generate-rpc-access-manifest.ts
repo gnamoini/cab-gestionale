@@ -71,7 +71,6 @@ const SERVER_ONLY = new Set([
   "expire_pending_document_captures",
   "prune_log_modifiche_retention",
   "sync_mezzo_km_from_reading",
-  "assign_ddt_numero",
   "assign_lavorazione_codice",
   "assign_ordine_fornitore_numero",
   "assign_preventivo_numero_lavorazione",
@@ -106,6 +105,8 @@ const CRON_ONLY = new Set([
   "prune_maintenance_audit_events_retention",
   "prune_mezzo_anagrafica_history_retention",
 ]);
+
+const INTERNAL_NO_GRANT = new Set(["allocate_document_number"]);
 
 const INTERNAL_ONLY_PREFIX = "trg_";
 
@@ -154,6 +155,18 @@ function classify(fn: BaselineFn): ManifestEntry {
       requiresRbac: false,
       notes: "Login email resolve only; body validates input",
       findingRefs: ["SEC-PUBLIC-SAFE"],
+    };
+  }
+
+  if (INTERNAL_NO_GRANT.has(name)) {
+    return {
+      classification: "INTERNAL_ONLY",
+      grants: [],
+      anonAllow: false,
+      requiresAuthUid: false,
+      requiresRbac: false,
+      notes: "FASE 6 internal allocator; no EXECUTE grant",
+      findingRefs: ["SEC-01"],
     };
   }
 

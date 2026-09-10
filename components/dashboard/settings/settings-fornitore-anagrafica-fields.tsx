@@ -72,6 +72,31 @@ export function SettingsFornitoreAnagraficaFields({
           onChange={(e) => onChange({ codiceFiscale: sliceInputValue(e.target.value, TEXT_SHORT) })}
         />
       </label>
+      <label className="block space-y-1">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          PEC
+        </span>
+        <input
+          className={dsInput}
+          type="email"
+          value={anagrafica.pec}
+          disabled={disabled}
+          maxLength={TEXT_SHORT}
+          onChange={(e) => onChange({ pec: sliceInputValue(e.target.value, TEXT_SHORT) })}
+        />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          Codice destinatario
+        </span>
+        <input
+          className={dsInput}
+          value={anagrafica.codiceDestinatario}
+          disabled={disabled}
+          maxLength={7}
+          onChange={(e) => onChange({ codiceDestinatario: e.target.value.toUpperCase().slice(0, 7) })}
+        />
+      </label>
       <label className="block space-y-1 sm:col-span-2">
         <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Email principale

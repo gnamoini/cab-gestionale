@@ -8,6 +8,8 @@ import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sy
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
+import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
+import { formatSupabaseError } from "@/src/utils/supabaseErrorHandler";
 import {
   CardMobile,
   IconActionButton,
@@ -438,7 +440,15 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }, [prodotti, queryClient]);
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
-  const magazzinoInitialLoading = rawMagazzinoListQ.isLoading && rawMagazzinoListQ.data === undefined;
+  const magazzinoInitialLoadingRaw =
+    rawMagazzinoListQ.isLoading && rawMagazzinoListQ.data === undefined;
+  const listLoadingFailsafe = useLoadingFailsafe(magazzinoInitialLoadingRaw, LIST_QUERY_LOADING_FAILSAFE_MS);
+  const magazzinoInitialLoading = magazzinoInitialLoadingRaw && !listLoadingFailsafe;
+  const magazzinoListLoadErr = rawMagazzinoListQ.isError
+    ? formatSupabaseError(rawMagazzinoListQ.error, { module: "magazzino", action: "read" })
+    : listLoadingFailsafe && magazzinoInitialLoadingRaw
+      ? "Il caricamento del magazzino sta impiegando troppo tempo. Verifica la connessione e riprova."
+      : null;
   const [searchFieldFocused, setSearchFieldFocused] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortKeyMagazzino | null>(null);
   const [sortPhase, setSortPhase] = useState<SortPhaseMagazzino>("natural");
@@ -1646,6 +1656,15 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           <p className="mt-4 text-sm text-[color:var(--cab-text-muted)]" role="status">
             Apertura ricambio…
           </p>
+        ) : null}
+
+        {magazzinoListLoadErr ? (
+          <LoadingErrorState
+            title="Impossibile caricare il magazzino"
+            description={magazzinoListLoadErr}
+            onRetry={() => void rawMagazzinoListQ.refetch()}
+            className="mt-4"
+          />
         ) : null}
 
         <SkeletonBoundary loading={magazzinoInitialLoading}>

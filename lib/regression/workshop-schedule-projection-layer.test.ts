@@ -22,5 +22,17 @@ for (const src of files) {
 
 const service = fs.readFileSync(path.join(ROOT, "src/services/workshop-schedule.service.ts"), "utf8");
 assert.match(service, /enrichedView/);
+assert.doesNotMatch(
+  service,
+  /from\("lavorazioni"\)[\s\S]{0,120}\baddetto\b/,
+  "lavorazioni.addetto column removed — resolve addetto via schede if needed",
+);
+
+const fetchServer = fs.readFileSync(path.join(ROOT, "lib/workshop-schedule/workshop-schedule-fetch-server.ts"), "utf8");
+assert.doesNotMatch(
+  fetchServer,
+  /from\("lavorazioni"\)[\s\S]{0,120}\baddetto\b/,
+  "server fetch must not select lavorazioni.addetto",
+);
 
 console.log("workshop-schedule-projection-layer.test.ts OK");

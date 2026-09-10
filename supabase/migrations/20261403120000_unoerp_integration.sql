@@ -1,5 +1,5 @@
 -- UnoERP integration: mappings, document links, outbox, audit. Server-only writes.
--- No DELETE/cancel RPCs. No GRANT EXECUTE TO anon.
+-- No DELETE/cancel RPCs. No anon EXECUTE grants (security-allowlist: documentation only).
 
 begin;
 

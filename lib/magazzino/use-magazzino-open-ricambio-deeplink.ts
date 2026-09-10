@@ -10,7 +10,10 @@ import {
   MAGAZZINO_QR_OPEN_ERROR_MESSAGE,
   planOpenRicambioDeepLinkStep,
 } from "@/lib/magazzino/open-ricambio-deeplink-phase";
-import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
+import {
+  applyOpenRicambioGetByIdResult,
+  createOpenRicambioGetByIdGenerationGate,
+} from "@/lib/magazzino/open-ricambio-get-by-id-lifecycle";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { Q_OPEN_RICAMBIO, Q_OPEN_SOURCE } from "@/lib/navigation/dashboard-log-links";
@@ -68,8 +71,8 @@ export function useMagazzinoOpenRicambioDeepLink(input: UseMagazzinoOpenRicambio
   const [isResolvingOpen, setIsResolvingOpen] = useState(false);
 
   const consumedOpenIdRef = useRef<string | null>(null);
-  const getByIdAttemptedRef = useRef(false);
   const inFlightRef = useRef(false);
+  const getByIdGateRef = useRef(createOpenRicambioGetByIdGenerationGate());
 
   const stripOpenRicambioParams = useCallback(() => {
     deferredRouterReplace(router, pathname, { scroll: false });
@@ -99,7 +102,7 @@ export function useMagazzinoOpenRicambioDeepLink(input: UseMagazzinoOpenRicambio
   const retryQrOpen = useCallback(() => {
     if (!searchParams.get(Q_OPEN_RICAMBIO)?.trim()) return;
     consumedOpenIdRef.current = null;
-    getByIdAttemptedRef.current = false;
+    getByIdGateRef.current.invalidate();
     inFlightRef.current = false;
     setQrOpenError(null);
     setIsResolvingOpen(false);
@@ -109,45 +112,46 @@ export function useMagazzinoOpenRicambioDeepLink(input: UseMagazzinoOpenRicambio
     const step = planOpenRicambioDeepLinkStep({
       openId,
       consumedOpenId: consumedOpenIdRef.current,
-      getByIdAttempted: getByIdAttemptedRef.current,
       inFlight: inFlightRef.current,
       prodottiIds: prodotti.map((p) => p.id),
       listQuery,
       enabled,
     });
 
-    if (step.kind === "noop" || step.kind === "wait") return;
+    if (step.kind === "idle" || step.kind === "wait") return;
 
     if (step.kind === "open_from_list") {
       completeSuccess(step.id, "list_hit");
       return;
     }
 
-    getByIdAttemptedRef.current = true;
+    const gate = getByIdGateRef.current;
+    const attemptGen = gate.beginAttempt();
     inFlightRef.current = true;
     setIsResolvingOpen(true);
 
-    let cancelled = false;
     void (async () => {
       try {
         const res = await magazzinoEntry.getById(step.id);
-        if (cancelled) return;
-        if (!res.success || !res.data) {
-          completeFailure(step.id, listQuery.isError ? "list_error_not_found" : "not_found");
-          return;
-        }
-        const ui = ricambioUiFromMagazzinoRow(res.data, authorName, mezziListe);
-        patchMagazzinoListCache(
+        applyOpenRicambioGetByIdResult({
+          attemptGen,
+          gate,
+          ricambioId: step.id,
+          res,
+          listQueryIsError: listQuery.isError,
           queryClient,
-          (prev) => (prev.some((p) => p.id === ui.id) ? prev : [...prev, ui]),
+          listQueryKey,
           mezziListe,
-          { queryKey: listQueryKey },
-        );
-        completeSuccess(step.id, "getById_hit");
+          authorName,
+          onSuccess: completeSuccess,
+          onFailure: completeFailure,
+        });
       } catch {
-        if (!cancelled) completeFailure(step.id, "getById_error");
+        if (gate.isCurrent(attemptGen)) {
+          completeFailure(step.id, "getById_error");
+        }
       } finally {
-        if (!cancelled) {
+        if (gate.isCurrent(attemptGen)) {
           inFlightRef.current = false;
           setIsResolvingOpen(false);
         }
@@ -155,7 +159,8 @@ export function useMagazzinoOpenRicambioDeepLink(input: UseMagazzinoOpenRicambio
     })();
 
     return () => {
-      cancelled = true;
+      gate.invalidate();
+      inFlightRef.current = false;
     };
   }, [
     openId,

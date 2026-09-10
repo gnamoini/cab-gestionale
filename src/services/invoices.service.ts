@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BILLING_CUSTOMERS_COLUMNS,
+  CLIENTI_ANAGRAFICHE_LIST_COLUMNS,
   INVOICE_LINKS_COLUMNS,
   INVOICE_PAYMENTS_COLUMNS,
   INVOICE_ROWS_COLUMNS,
@@ -13,13 +13,14 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type {
-  BillingCustomerRow,
+  ClienteAnagraficaRow,
   InvoiceLineRow,
   InvoiceLinkRow,
   InvoicePaymentRow,
   InvoiceRow,
 } from "@/src/types/supabase-tables";
 import { invoiceApplyTransition } from "@/lib/fatturazione/invoice-apply-transition";
+import { mapCicloAttivoError } from "@/lib/fatturazione/ciclo-attivo/error-codes";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "invoices";
@@ -37,9 +38,13 @@ async function sb() {
 }
 
 function cleanPayload(input: InvoiceCreateInput): Record<string, unknown> {
+  const origineForCreate =
+    input.origine === "ddt" || input.origine === "lavorazione" || input.origine === "consuntivo"
+      ? "manuale"
+      : input.origine;
   return {
-    origine: input.origine,
-    status: input.status,
+    origine: origineForCreate,
+    status: input.status === "emessa" || input.status === "inviata" ? "bozza" : input.status,
     customer_id: input.customer_id ?? null,
     cliente_label: input.cliente_label.trim(),
     customer_snapshot: input.customer_snapshot ?? {},
@@ -51,7 +56,7 @@ function cleanPayload(input: InvoiceCreateInput): Record<string, unknown> {
       ...r,
       descrizione: r.descrizione.trim(),
       sconto_percent: r.sconto_percent ?? 0,
-      iva_percent: r.iva_percent ?? 22,
+      vat_code_id: r.vat_code_id,
       ricambio_id: r.ricambio_id ?? null,
       lavorazione_id: r.lavorazione_id ?? null,
       preventivo_id: r.preventivo_id ?? null,
@@ -76,12 +81,16 @@ export const invoicesService = {
     }
   },
 
-  async getCustomers(): Promise<ServiceResult<BillingCustomerRow[]>> {
+  async getCustomers(): Promise<ServiceResult<ClienteAnagraficaRow[]>> {
     try {
       const c = await sb();
-      const { data, error } = await c.from("billing_customers").select(BILLING_CUSTOMERS_COLUMNS).order("cliente_label");
-      if (error) return err(error.message);
-      return success((data ?? []) as BillingCustomerRow[]);
+      const { data, error } = await c
+        .from("clienti_anagrafiche")
+        .select(CLIENTI_ANAGRAFICHE_LIST_COLUMNS)
+        .eq("is_active", true)
+        .order("nome_display");
+      if (error) return err(mapCicloAttivoError(error.message));
+      return success((data ?? []) as ClienteAnagraficaRow[]);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -91,7 +100,7 @@ export const invoicesService = {
     try {
       const c = await sb();
       const { data: invoice, error } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       if (!invoice) return err("Fattura non trovata.");
       const [rows, links, payments] = await Promise.all([
         c.from("invoice_rows").select(INVOICE_ROWS_COLUMNS).eq("invoice_id", id),
@@ -120,9 +129,13 @@ export const invoicesService = {
       const { data, error } = await c.rpc("create_invoice_with_rows_and_links", {
         p_payload: cleanPayload(input),
       });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const id = String(data ?? "");
       if (!id) return err("Creazione fattura non riuscita.");
+      if (input.origine === "ddt" || input.origine === "lavorazione" || input.origine === "consuntivo") {
+        const orig = await c.rpc("invoice_set_draft_origine", { p_invoice_id: id, p_origine: input.origine });
+        if (orig.error) return err(orig.error.message);
+      }
       const detail = await invoicesService.getDetail(id);
       if (!detail.success || !detail.data) return detail;
       await writeModificaLog(c, {
@@ -152,7 +165,7 @@ export const invoicesService = {
       let q = c.from("invoices").update(patch).eq("id", id);
       if (expectedUpdatedAt) q = q.eq("updated_at", expectedUpdatedAt);
       const { data, error } = await q.select(INVOICES_COLUMNS).single();
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       await writeModificaLog(c, {
         entita: ENTITA,
         entita_id: id,
@@ -175,7 +188,7 @@ export const invoicesService = {
         p_invoice_id: id,
         p_payload: cleanPayload(input),
       });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const outId = String(data ?? id);
       const detail = await invoicesService.getDetail(outId);
       if (!detail.success || !detail.data) return detail;
@@ -205,7 +218,7 @@ export const invoicesService = {
       const applied = await invoiceApplyTransition(id, transition, undefined, b.version);
       if (!applied.ok) return err(applied.error);
       const { data, error } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).single();
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "UPDATE", payload: auditDiff(before, data) });
       return success(data as InvoiceRow);
     } catch (e) {
@@ -218,7 +231,7 @@ export const invoicesService = {
       const c = await sb();
       const before = await invoicesService.getDetail(input.invoice_id);
       const { data, error } = await c.rpc("register_invoice_payment", { p_payload: input });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const detail = await invoicesService.getDetail(input.invoice_id);
       if (!detail.success || !detail.data) return detail;
       const paymentId = String(data ?? "");
@@ -249,7 +262,7 @@ export const invoicesService = {
       const c = await sb();
       const { data: before } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       const { error } = await c.rpc("cancel_invoice", { p_invoice_id: id, p_reason: reason });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const { data, error: e1 } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       if (e1) return err(e1.message);
       if (!data) return err("Fattura non trovata.");
@@ -272,7 +285,7 @@ export const invoicesService = {
         p_amount: amount ?? null,
         p_reason: reason ?? null,
       });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const ncId = String(data ?? "");
       if (!ncId) return err("Creazione nota di credito non riuscita.");
       await writeModificaLog(c, {
@@ -292,6 +305,32 @@ export const invoicesService = {
     }
   },
 
+  async createDebitNote(invoiceId: string, reason?: string): Promise<ServiceResult<InvoiceDetail>> {
+    try {
+      const c = await sb();
+      const { data, error } = await c.rpc("create_debit_note_from_invoice", {
+        p_invoice_id: invoiceId,
+        p_reason: reason ?? null,
+      });
+      if (error) return err(mapCicloAttivoError(error.message));
+      const ndId = String(data ?? "");
+      if (!ndId) return err("Creazione nota di debito non riuscita.");
+      await writeModificaLog(c, {
+        entita: ENTITA,
+        entita_id: ndId,
+        azione: "CREATE",
+        payload: auditSnapshot({
+          debit_note: true,
+          source_invoice_id: invoiceId,
+          reason: reason ?? null,
+        }),
+      });
+      return invoicesService.getDetail(ndId);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
   async registerCustomerPaymentMulti(input: CustomerPaymentMultiInput): Promise<ServiceResult<string>> {
     try {
       const c = await sb();
@@ -306,7 +345,7 @@ export const invoicesService = {
           allocations: input.allocations,
         },
       });
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       const paymentId = String(data ?? "");
       if (!paymentId) return err("Registrazione pagamento non riuscita.");
       await writeModificaLog(c, {
@@ -366,7 +405,7 @@ export const invoicesService = {
         payload: auditSnapshot(inv),
       });
       const { error } = await c.from("invoices").delete().eq("id", id);
-      if (error) return err(error.message);
+      if (error) return err(mapCicloAttivoError(error.message));
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);

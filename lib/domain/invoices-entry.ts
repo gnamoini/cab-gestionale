@@ -14,6 +14,7 @@ export const invoicesEntry = {
   registerPayment: withPageWriteGuard("fatturazione", invoicesService.registerPayment.bind(invoicesService)),
   cancel: withPageWriteGuard("fatturazione", invoicesService.cancel.bind(invoicesService)),
   createCreditNote: withPageWriteGuard("fatturazione", invoicesService.createCreditNote.bind(invoicesService)),
+  createDebitNote: withPageWriteGuard("fatturazione", invoicesService.createDebitNote.bind(invoicesService)),
   registerCustomerPaymentMulti: withPageWriteGuard(
     "fatturazione",
     invoicesService.registerCustomerPaymentMulti.bind(invoicesService),

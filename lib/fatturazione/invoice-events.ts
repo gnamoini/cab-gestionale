@@ -17,10 +17,21 @@ export function formatInvoiceEventLabel(event: Pick<InvoiceEventRow, "event_type
     payment_registered: "Pagamento registrato",
     payment_allocated: "Allocazione pagamento",
     credit_note_created: "Nota di credito creata",
+    debit_note_created: "Nota di debito creata",
     export: "Export CSV",
     sdi_generated: "XML FatturaPA generato",
     sdi_submitted: "Inviata a SdI",
+    invoice_sdi_rejected: "Scarto SdI — reversal tecnico",
+    invoice_sdi_accepted: "SdI accettata",
+    invoice_sdi_delivered: "SdI consegnata",
+    invoice_sdi_delivery_failed: "Impossibilità di consegna SdI",
+    invoice_sdi_submitted: "Inviata a SdI",
+    invoice_finalized: "Documento finalizzato",
+    invoice_number_assigned: "Numero assegnato",
+    payment_schedule_created: "Piano scadenze creato",
     accounting_entry_created: "Scrittura contabile",
+    accounting_reversed: "Scrittura stornata",
+    open_items_neutralized: "Partite neutralizzate",
   };
   return map[event.event_type] ?? event.event_type.replaceAll("_", " ");
 }

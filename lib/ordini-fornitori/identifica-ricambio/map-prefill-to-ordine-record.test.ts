@@ -19,6 +19,8 @@ const mag: MagazzinoMasterPrefs = {
       telefono: "+39",
       email: "",
       emailAggiuntive: [],
+      pec: "",
+      codiceDestinatario: "",
     },
   },
 };

@@ -642,7 +642,9 @@ export type InvoiceSdiStatus =
   | "da_generare"
   | "generata"
   | "inviata"
+  | "accettata"
   | "consegnata"
+  | "impossibilita_consegna"
   | "scartata"
   | "rifiutata";
 
@@ -650,12 +652,17 @@ export type InvoiceAccountingStatus =
   | "non_rilevante"
   | "da_registrare"
   | "registrata"
+  | "stornata"
   | "da_liquidare"
   | "liquidata"
   | "chiusa"
   | "contestata";
 
-export type InvoiceDocumentType = "fattura" | "nota_credito" | "proforma";
+export type InvoiceDocumentType = "fattura" | "nota_credito" | "nota_debito" | "proforma";
+
+export type InvoiceFiscalValidity = "not_applicable" | "pending" | "validly_issued" | "not_validly_issued";
+
+export type FatturaPaTipoDocumento = "TD01" | "TD04" | "TD05" | "TD24" | "TD25";
 
 export type InvoiceTransition =
   | "create_draft"
@@ -676,7 +683,14 @@ export type InvoiceRowTipo =
   | "costo_extra"
   | "libera";
 
-export type InvoiceLinkSourceType = "preventivo" | "lavorazione" | "mezzo" | "attrezzatura" | "ricambio" | "ddt";
+export type InvoiceLinkSourceType =
+  | "preventivo"
+  | "consuntivo"
+  | "lavorazione"
+  | "mezzo"
+  | "attrezzatura"
+  | "ricambio"
+  | "ddt";
 
 export type InvoicePaymentMetodo = "bonifico" | "contanti" | "assegno" | "pos" | "altro";
 
@@ -697,14 +711,23 @@ export type BillingCustomerRow = {
 
 export type InvoiceRow = {
   id: string;
-  numero: number;
+  company_id: string;
+  numero: number | null;
   anno: number;
+  series: string;
   status: InvoiceStatus;
   document_type: InvoiceDocumentType | null;
   document_status: InvoiceDocumentStatus | null;
   payment_status: InvoicePaymentStatus | null;
   sdi_status: InvoiceSdiStatus | null;
   accounting_status: InvoiceAccountingStatus | null;
+  fiscal_validity: InvoiceFiscalValidity | null;
+  fattura_pa_tipo_documento: FatturaPaTipoDocumento | null;
+  data_effettuazione: string | null;
+  payment_term_id: string | null;
+  invoice_snapshot: Record<string, unknown>;
+  fiscal_transmission_attempt: number;
+  legacy_origin: "NATIVE_CAB" | "LEGACY_IMPORTED";
   origine: string | null;
   customer_id: string | null;
   cliente_label: string;
@@ -719,6 +742,7 @@ export type InvoiceRow = {
   note: string | null;
   admin_notes: string | null;
   meta: Record<string, unknown>;
+  fiscal_context: Record<string, unknown>;
   parent_invoice_id: string | null;
   sent_to_customer_at: string | null;
   approved_at: string | null;
@@ -741,12 +765,27 @@ export type InvoiceLineRow = {
   prezzo_unitario: number;
   sconto_percent: number;
   iva_percent: number;
+  vat_code_id: string | null;
+  vat_configuration_id: string | null;
+  vat_code: string | null;
+  vat_description: string | null;
+  vat_rate: number | null;
+  vat_nature: string | null;
+  vat_operation_type: string | null;
+  vat_direction: string | null;
+  vat_deductibility_rate: number | null;
+  vat_snapshot_version: number | null;
+  vat_snapshot: Record<string, unknown> | null;
+  parent_invoice_row_id: string | null;
   imponibile: number;
   iva: number;
   totale: number;
   ricambio_id: string | null;
   lavorazione_id: string | null;
   preventivo_id: string | null;
+  source_type: InvoiceLinkSourceType | null;
+  source_id: string | null;
+  source_row_id: string | null;
   meta: Record<string, unknown>;
   created_at: string;
 };
@@ -756,6 +795,7 @@ export type InvoiceLinkRow = {
   invoice_id: string;
   source_type: InvoiceLinkSourceType;
   source_id: string;
+  source_row_id: string | null;
   allocated_imponibile: number;
   allocated_iva: number;
   allocated_totale: number;
@@ -843,22 +883,87 @@ export type InvoiceRelationRow = {
   created_at: string;
 };
 
+export type AccountingEntryStatus = "draft" | "posted" | "cancelled" | "reversed";
+
+export type AccountingEntryOrigin = "manual" | "automatic" | "imported" | "reversed";
+
+export type AccountingEntryKind = "normal" | "reversal" | "adjustment";
+
+export type AccountingFiscalYearStatus = "OPEN" | "CLOSED";
+
+export type AccountingPeriodStatus = "OPEN" | "CLOSED" | "LOCKED";
+
+export type AccountingFiscalYearRow = {
+  id: string;
+  company_id: string;
+  year: number;
+  start_date: string;
+  end_date: string;
+  status: AccountingFiscalYearStatus;
+  opened_at: string | null;
+  opened_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AccountingPeriodRow = {
+  id: string;
+  fiscal_year_id: string;
+  company_id: string;
+  period_number: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: AccountingPeriodStatus;
+  opened_at: string | null;
+  opened_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
+  locked_at: string | null;
+  locked_by: string | null;
+  lock_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AccountingEntryRow = {
   id: string;
+  company_id: string;
+  journal_id: string | null;
+  cause_id: string | null;
+  fiscal_year_id: string;
+  period_id: string;
+  entry_number: number | null;
+  fiscal_year: number | null;
   entry_date: string;
+  competence_date: string | null;
+  registration_date: string | null;
   description: string;
   source_type: string | null;
   source_id: string | null;
   invoice_id: string | null;
-  status: "draft" | "posted" | "reversed";
+  status: AccountingEntryStatus;
+  entry_origin: AccountingEntryOrigin;
+  entry_kind: AccountingEntryKind;
+  reverses_entry_id: string | null;
+  reversed_by_entry_id: string | null;
+  corrects_entry_id: string | null;
+  idempotency_key: string | null;
   created_by: string | null;
+  updated_by: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 export type AccountingEntryLineRow = {
   id: string;
   entry_id: string;
+  account_id: string | null;
+  line_number: number | null;
   account_code: string;
+  account_code_snapshot: string | null;
   description: string | null;
   debit: number;
   credit: number;
@@ -969,16 +1074,60 @@ export type AuthLogWithProfileRow = AuthLogRow & {
 /** Anagrafica clienti estesa (`clienti_anagrafiche`). */
 export type ClienteAnagraficaRow = {
   id: string;
+  company_id: string;
   nome_display: string;
   entity_key: string;
   ragione_sociale: string | null;
+  nome_commerciale: string | null;
+  tipo_soggetto: string | null;
   partita_iva: string | null;
+  codice_fiscale: string | null;
+  nazione: string;
+  pec: string | null;
   codice_destinatario: string | null;
   sede_legale_uguale_operativa: boolean;
   in_lista_settings: boolean;
+  fiscal_regime_id: string | null;
+  default_vat_code_id: string | null;
+  split_payment: boolean;
+  natura_iva_default: string | null;
+  default_payment_term_id: string | null;
+  default_payment_method_id: string | null;
+  default_account_id: string | null;
+  default_accounting_journal_id: string | null;
+  default_document_series_id: string | null;
+  is_active: boolean;
+  archived_at: string | null;
   note: string | null;
-  meta: Record<string, unknown>;
+  meta?: Record<string, unknown>;
   updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FornitoreAnagraficaRow = {
+  id: string;
+  company_id: string;
+  nome_display: string;
+  ragione_sociale: string | null;
+  partita_iva: string | null;
+  codice_fiscale: string | null;
+  nazione: string;
+  indirizzo: string | null;
+  pec: string | null;
+  codice_destinatario: string | null;
+  telefono: string | null;
+  email: string | null;
+  fiscal_regime_id: string | null;
+  default_vat_code_id: string | null;
+  default_payment_term_id: string | null;
+  default_payment_method_id: string | null;
+  default_account_id: string | null;
+  default_accounting_journal_id: string | null;
+  default_document_series_id: string | null;
+  is_active: boolean;
+  archived_at: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1035,7 +1184,6 @@ export type DdtDocumentRow = {
   annullato_at: string | null;
   stampato_at: string | null;
   consegnato_at: string | null;
-  source_version?: number;
   target_type?: InterventoTargetType | null;
   attrezzatura_id?: string | null;
   attrezzatura_snapshot?: Record<string, unknown>;

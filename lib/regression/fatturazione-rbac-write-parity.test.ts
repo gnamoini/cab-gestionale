@@ -18,7 +18,6 @@ const USER_FACING_TABLES = [
   "invoice_links",
   "invoice_payments",
   "billing_settings",
-  "invoice_number_sequences",
   "invoice_fatturapa_snapshots",
   "invoice_sdi_submissions",
   "invoice_public_administration_meta",
@@ -77,7 +76,6 @@ const alignmentSql = fs.readFileSync(alignment, "utf8");
 assert.match(alignmentSql, /cap_invoices_delete[\s\S]*rbac_module_can\('fatturazione', 'write'\)/);
 assert.match(alignmentSql, /status in \('bozza', 'da_verificare'\)/);
 assert.match(alignmentSql, /cap_billing_settings[\s\S]*with check \(public\.rbac_module_can\('fatturazione', 'write'\)\)/);
-assert.match(alignmentSql, /cap_invoice_number_sequences_write[\s\S]*'write'/);
 assert.match(
   alignmentSql,
   /cancel_invoice[\s\S]*rbac_module_can\('fatturazione', 'write'\)[\s\S]*invoice_apply_transition/,

@@ -1,6 +1,5 @@
 import type { ClienteAnagrafica } from "@/lib/clienti/clienti-anagrafica-types";
-import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
-import type { BillingCustomerRow } from "@/src/types/supabase-tables";
+import type { ClienteAnagraficaRow } from "@/src/types/supabase-tables";
 
 export type BillingCustomerSnapshot = {
   ragione_sociale?: string;
@@ -20,10 +19,12 @@ export type BillingCustomerSnapshot = {
 
 export function billingSnapshotFromAnagrafica(anag: ClienteAnagrafica): BillingCustomerSnapshot {
   const op = anag.sedi.operativa;
+  const pecContact = anag.contatti.find((c) => c.tipo === "pec");
   return {
     ragione_sociale: anag.ragioneSociale || anag.nomeDisplay,
     partita_iva: anag.partitaIva || undefined,
     codice_sdi: anag.codiceDestinatario || undefined,
+    pec: pecContact?.valore || undefined,
     indirizzo: {
       via: op.via || undefined,
       numero_civico: op.numeroCivico || undefined,
@@ -35,29 +36,22 @@ export function billingSnapshotFromAnagrafica(anag: ClienteAnagrafica): BillingC
   };
 }
 
-export function billingSnapshotFromCustomerRow(row: BillingCustomerRow): BillingCustomerSnapshot {
-  const addr = row.indirizzo && typeof row.indirizzo === "object" ? row.indirizzo : {};
+export function billingSnapshotFromClienteRow(row: ClienteAnagraficaRow): BillingCustomerSnapshot {
   return {
-    ragione_sociale: row.ragione_sociale ?? row.cliente_label,
+    ragione_sociale: row.ragione_sociale ?? row.nome_display,
     partita_iva: row.partita_iva ?? undefined,
     codice_fiscale: row.codice_fiscale ?? undefined,
     pec: row.pec ?? undefined,
-    codice_sdi: row.codice_sdi ?? undefined,
-    indirizzo: addr as BillingCustomerSnapshot["indirizzo"],
+    codice_sdi: row.codice_destinatario ?? undefined,
   };
 }
 
-export function findBillingCustomerByLabel(
-  customers: readonly BillingCustomerRow[],
-  clienteLabel: string,
-): BillingCustomerRow | null {
-  const key = buildClienteEntityKey(clienteLabel);
-  if (key) {
-    const byKey = customers.find((c) => c.entity_key === key);
-    if (byKey) return byKey;
-  }
-  const norm = clienteLabel.trim().toLowerCase();
-  return customers.find((c) => c.cliente_label.trim().toLowerCase() === norm) ?? null;
+/** Resolve cliente by internal id only — no text/label matching. */
+export function findClienteById(
+  customers: readonly ClienteAnagraficaRow[],
+  clienteId: string,
+): ClienteAnagraficaRow | null {
+  return customers.find((c) => c.id === clienteId) ?? null;
 }
 
 export function mergeBillingSnapshot(

@@ -4,6 +4,7 @@ import {
   invoiceMatchesAdvancedFilters,
   type FatturazioneAdvancedFilters,
 } from "@/lib/fatturazione/fatturazione-advanced-filters";
+import { formatInvoiceDocumentNumber } from "@/lib/document-numbering/format-document-number";
 import type { InvoiceLinkRow, InvoiceRow } from "@/src/types/supabase-tables";
 import { buildSearchDocumentFromParts } from "@/lib/search/build-document";
 import { matchSearchString } from "@/lib/search/match";
@@ -24,7 +25,7 @@ export type FatturazioneListRowContext = {
 };
 
 export function invoiceDisplayNumber(row: InvoiceRow): string {
-  return `${row.numero}/${row.anno}`;
+  return formatInvoiceDocumentNumber(row);
 }
 
 export function invoiceRowSearchHaystack(row: InvoiceRow, ctx: FatturazioneListRowContext): string {
@@ -71,9 +72,12 @@ export function sortInvoices(
   return [...rows].sort((a, b) => {
     let cmp = 0;
     switch (key) {
-      case "numero":
-        cmp = a.anno !== b.anno ? a.anno - b.anno : a.numero - b.numero;
+      case "numero": {
+        const aNum = a.numero ?? 0;
+        const bNum = b.numero ?? 0;
+        cmp = a.anno !== b.anno ? a.anno - b.anno : aNum - bNum;
         break;
+      }
       case "data":
         cmp = a.data_emissione.localeCompare(b.data_emissione);
         break;

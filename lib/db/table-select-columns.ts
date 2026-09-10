@@ -160,8 +160,10 @@ export const DOCUMENT_ACCESS_TOKENS_COLUMNS =
 export const BILLING_CUSTOMERS_COLUMNS =
   "id, cliente_label, entity_key, ragione_sociale, partita_iva, codice_fiscale, pec, codice_sdi, indirizzo, note, created_at, updated_at" as const;
 
-export const INVOICES_COLUMNS =
-  "id, numero, anno, status, document_type, document_status, payment_status, sdi_status, accounting_status, origine, customer_id, cliente_label, customer_snapshot, data_emissione, data_scadenza, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, parent_invoice_id, sent_to_customer_at, approved_at, approved_by, closed_at, version, created_by, updated_by, annullata_at, created_at, updated_at" as const;
+export const COMPANY_FISCAL_PROFILE_COLUMNS =
+  "id, company_id, ragione_sociale, partita_iva, codice_fiscale, indirizzo, cap, comune, provincia, nazione, pec, codice_destinatario, regime_fiscale, sales_journal_id, customer_receivable_account_id, sales_revenue_account_id, active, created_at, updated_at" as const;
+
+  "id, company_id, numero, anno, series, status, document_type, document_status, payment_status, sdi_status, accounting_status, fiscal_validity, fattura_pa_tipo_documento, origine, customer_id, cliente_label, customer_snapshot, invoice_snapshot, data_emissione, data_effettuazione, data_scadenza, payment_term_id, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, parent_invoice_id, sent_to_customer_at, approved_at, approved_by, closed_at, version, fiscal_transmission_attempt, legacy_origin, created_by, updated_by, annullata_at, created_at, updated_at" as const;
 
 export const CUSTOMER_OPEN_ITEMS_COLUMNS =
   "id, customer_id, source_type, source_id, invoice_id, document_number, currency, amount_signed, remaining_signed, due_date, status, opened_at, closed_at, created_at, updated_at" as const;
@@ -179,19 +181,32 @@ export const INVOICE_RELATIONS_COLUMNS =
   "id, source_invoice_id, target_invoice_id, relation_type, meta, created_at" as const;
 
 export const ACCOUNTING_ENTRIES_COLUMNS =
-  "id, entry_date, description, source_type, source_id, invoice_id, status, created_by, created_at" as const;
+  "id, company_id, journal_id, cause_id, fiscal_year_id, period_id, entry_number, fiscal_year, entry_date, competence_date, registration_date, description, source_type, source_id, invoice_id, status, entry_origin, entry_kind, reverses_entry_id, reversed_by_entry_id, corrects_entry_id, idempotency_key, created_by, updated_by, created_at, updated_at" as const;
+
+export const ACCOUNTING_FISCAL_YEARS_COLUMNS =
+  "id, company_id, year, start_date, end_date, status, opened_at, opened_by, closed_at, closed_by, created_at, updated_at" as const;
+
+export const ACCOUNTING_PERIODS_COLUMNS =
+  "id, fiscal_year_id, company_id, period_number, name, start_date, end_date, status, opened_at, opened_by, closed_at, closed_by, locked_at, locked_by, lock_reason, created_at, updated_at" as const;
+
+export const ACCOUNTING_ENTRY_LINES_COLUMNS =
+  "id, entry_id, account_id, line_number, account_code, account_code_snapshot, description, debit, credit, created_at" as const;
 
 export const INVOICE_ROWS_COLUMNS =
-  "id, invoice_id, tipo, descrizione, quantita, prezzo_unitario, sconto_percent, iva_percent, imponibile, iva, totale, ricambio_id, lavorazione_id, preventivo_id, meta, created_at" as const;
+  "id, invoice_id, tipo, descrizione, quantita, prezzo_unitario, sconto_percent, iva_percent, vat_code_id, vat_configuration_id, vat_code, vat_description, vat_rate, vat_nature, vat_operation_type, vat_direction, vat_deductibility_rate, vat_account_id, vat_register_id, vat_valid_from, vat_valid_to, vat_normative_reference, vat_snapshot_version, vat_snapshot, parent_invoice_row_id, imponibile, iva, totale, ricambio_id, lavorazione_id, preventivo_id, source_type, source_id, source_row_id, meta, created_at" as const;
 
 export const INVOICE_LINKS_COLUMNS =
-  "id, invoice_id, source_type, source_id, allocated_imponibile, allocated_iva, allocated_totale, meta, created_at" as const;
+  "id, invoice_id, source_type, source_id, source_row_id, allocated_imponibile, allocated_iva, allocated_totale, meta, created_at" as const;
 
 export const INVOICE_PAYMENTS_COLUMNS =
   "id, invoice_id, data, importo, metodo, riferimento, note, created_by, created_at" as const;
 
+/** Lista/dettaglio fatture — allineato a InvoiceRow in supabase-tables.ts */
+export const INVOICES_COLUMNS =
+  "id, company_id, numero, anno, series, status, document_type, document_status, payment_status, sdi_status, accounting_status, fiscal_validity, fattura_pa_tipo_documento, data_effettuazione, payment_term_id, invoice_snapshot, fiscal_transmission_attempt, legacy_origin, origine, customer_id, cliente_label, customer_snapshot, data_emissione, data_scadenza, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, parent_invoice_id, sent_to_customer_at, approved_at, approved_by, closed_at, version, created_by, updated_by, annullata_at, created_at, updated_at, fiscal_context" as const;
+
 export const DDT_DOCUMENTS_COLUMNS =
-  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, current_pdf_artifact_id, created_by, updated_by, annullato_at, stampato_at, consegnato_at, source_version, created_at, updated_at" as const;
+  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, current_pdf_artifact_id, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
 
 export const DDT_DOCUMENTS_INDEX_COLUMNS =
   "id, preventivo_id, status, numero, anno" as const;
@@ -259,7 +274,13 @@ export const DASHBOARD_PROMEMORIA_COLUMNS =
   "id, created_at, updated_at, created_by, event_date, event_time, title, description, deleted_at, notified_on, entity_type, entity_id, series_id, recurrence_frequency, recurrence_interval, recurrence_until" as const;
 
 export const CLIENTI_ANAGRAFICHE_COLUMNS =
-  "id, nome_display, entity_key, ragione_sociale, partita_iva, codice_destinatario, sede_legale_uguale_operativa, in_lista_settings, note, updated_by, created_at, updated_at" as const;
+  "id, company_id, nome_display, entity_key, ragione_sociale, nome_commerciale, tipo_soggetto, partita_iva, codice_fiscale, nazione, pec, codice_destinatario, sede_legale_uguale_operativa, in_lista_settings, fiscal_regime_id, default_vat_code_id, split_payment, natura_iva_default, default_payment_term_id, default_payment_method_id, default_account_id, default_accounting_journal_id, default_document_series_id, is_active, archived_at, note, updated_by, created_at, updated_at" as const;
+
+export const CLIENTI_ANAGRAFICHE_LIST_COLUMNS =
+  "id, nome_display, ragione_sociale, partita_iva, codice_fiscale, pec, codice_destinatario, is_active" as const;
+
+export const FORNITORI_ANAGRAFICHE_COLUMNS =
+  "id, company_id, nome_display, ragione_sociale, partita_iva, codice_fiscale, nazione, pec, codice_destinatario, telefono, email, fiscal_regime_id, default_vat_code_id, default_payment_term_id, default_payment_method_id, default_account_id, default_accounting_journal_id, default_document_series_id, is_active, archived_at, note, created_at, updated_at" as const;
 
 /** Include meta (codice_fiscale import) — solo fetch server PDF/fatturazione. */
 export const CLIENTI_ANAGRAFICHE_COLUMNS_WITH_META =

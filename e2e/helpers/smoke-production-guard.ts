@@ -1,5 +1,5 @@
 import { evaluateSmokeMutationGate } from "@/lib/smoke/smoke-target-policy";
-import type { Page, TestType } from "@playwright/test";
+import { test as playwrightTest } from "@playwright/test";
 import { attachConsoleGuards } from "./console";
 
 const hasSmokeCreds = Boolean(
@@ -16,7 +16,7 @@ export function smokeMutationSkipReason(): string | null {
 }
 
 /** beforeEach condiviso per spec smoke che creano/modificano dati. */
-export function registerMutatingSmokeGuards(test: TestType<object, { page: Page }>): void {
+export function registerMutatingSmokeGuards(test: typeof playwrightTest): void {
   test.beforeEach(({ page }) => {
     const block = smokeMutationSkipReason();
     test.skip(Boolean(block), block ?? "smoke guard");

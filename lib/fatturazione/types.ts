@@ -1,5 +1,5 @@
 import type {
-  BillingCustomerRow,
+  ClienteAnagraficaRow,
   InvoiceLineRow,
   InvoiceLinkRow,
   InvoicePaymentMetodo,
@@ -10,7 +10,13 @@ import type {
   PreventivoBillingStatusRow,
 } from "@/src/types/supabase-tables";
 
-export type FatturazioneOrigine = "manuale" | "preventivo" | "multi_preventivo" | "ddt";
+export type FatturazioneOrigine =
+  | "manuale"
+  | "preventivo"
+  | "multi_preventivo"
+  | "ddt"
+  | "lavorazione"
+  | "consuntivo";
 
 export type InvoiceDraftRowInput = {
   tipo: InvoiceRowTipo;
@@ -18,7 +24,7 @@ export type InvoiceDraftRowInput = {
   quantita: number;
   prezzo_unitario: number;
   sconto_percent?: number;
-  iva_percent?: number;
+  vat_code_id: string;
   ricambio_id?: string | null;
   lavorazione_id?: string | null;
   preventivo_id?: string | null;
@@ -84,7 +90,7 @@ export type InvoiceListPayload = {
   rows: InvoiceLineRow[];
   links: InvoiceLinkRow[];
   payments: InvoicePaymentRow[];
-  customers: BillingCustomerRow[];
+  customers: ClienteAnagraficaRow[];
   preventiviBilling: PreventivoBillingStatusRow[];
 };
 

@@ -2,6 +2,121 @@
 -- SSOT: docs/security/rpc-access-manifest.json
 -- Re-run generator after manifest changes; security-migration-gate enforces sync.
 
+-- accounting_cancel_entry(p_entry_id uuid, p_reason text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_cancel_entry(p_entry_id uuid, p_reason text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_cancel_entry(p_entry_id uuid, p_reason text) to authenticated;
+grant execute on function public.accounting_cancel_entry(p_entry_id uuid, p_reason text) to service_role;
+
+-- accounting_close_accounting_period(p_period_id uuid, p_reason text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_close_accounting_period(p_period_id uuid, p_reason text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_close_accounting_period(p_period_id uuid, p_reason text) to authenticated;
+grant execute on function public.accounting_close_accounting_period(p_period_id uuid, p_reason text) to service_role;
+
+-- accounting_close_fiscal_year(p_fiscal_year_id uuid) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_close_fiscal_year(p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_close_fiscal_year(p_fiscal_year_id uuid) to authenticated;
+grant execute on function public.accounting_close_fiscal_year(p_fiscal_year_id uuid) to service_role;
+
+-- accounting_create_adjustment_entry(p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_create_adjustment_entry(p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_create_adjustment_entry(p_payload jsonb) to authenticated;
+grant execute on function public.accounting_create_adjustment_entry(p_payload jsonb) to service_role;
+
+-- accounting_create_entry(p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_create_entry(p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_create_entry(p_payload jsonb) to authenticated;
+grant execute on function public.accounting_create_entry(p_payload jsonb) to service_role;
+
+-- accounting_get_entry(p_entry_id uuid) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_get_entry(p_entry_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_get_entry(p_entry_id uuid) to authenticated;
+grant execute on function public.accounting_get_entry(p_entry_id uuid) to service_role;
+
+-- accounting_list_entries(p_filters jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_list_entries(p_filters jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_list_entries(p_filters jsonb) to authenticated;
+grant execute on function public.accounting_list_entries(p_filters jsonb) to service_role;
+
+-- accounting_list_fiscal_periods() [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_list_fiscal_periods() from public, anon, authenticated, service_role;
+grant execute on function public.accounting_list_fiscal_periods() to authenticated;
+grant execute on function public.accounting_list_fiscal_periods() to service_role;
+
+-- accounting_lock_accounting_period(p_period_id uuid, p_reason text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_lock_accounting_period(p_period_id uuid, p_reason text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_lock_accounting_period(p_period_id uuid, p_reason text) to authenticated;
+grant execute on function public.accounting_lock_accounting_period(p_period_id uuid, p_reason text) to service_role;
+
+-- accounting_open_fiscal_year(p_year integer, p_start_date date, p_end_date date) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_open_fiscal_year(p_year integer, p_start_date date, p_end_date date) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_open_fiscal_year(p_year integer, p_start_date date, p_end_date date) to authenticated;
+grant execute on function public.accounting_open_fiscal_year(p_year integer, p_start_date date, p_end_date date) to service_role;
+
+-- accounting_post_entry(p_entry_id uuid, p_idempotency_key text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_post_entry(p_entry_id uuid, p_idempotency_key text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_post_entry(p_entry_id uuid, p_idempotency_key text) to authenticated;
+grant execute on function public.accounting_post_entry(p_entry_id uuid, p_idempotency_key text) to service_role;
+
+-- accounting_rbac_can(p_action text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_rbac_can(p_action text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_rbac_can(p_action text) to authenticated;
+grant execute on function public.accounting_rbac_can(p_action text) to service_role;
+
+-- accounting_reopen_accounting_period(p_period_id uuid, p_reason text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_reopen_accounting_period(p_period_id uuid, p_reason text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_reopen_accounting_period(p_period_id uuid, p_reason text) to authenticated;
+grant execute on function public.accounting_reopen_accounting_period(p_period_id uuid, p_reason text) to service_role;
+
+-- accounting_resolve_period(p_company_id uuid, p_accounting_date date) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_resolve_period(p_company_id uuid, p_accounting_date date) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_resolve_period(p_company_id uuid, p_accounting_date date) to authenticated;
+grant execute on function public.accounting_resolve_period(p_company_id uuid, p_accounting_date date) to service_role;
+
+-- accounting_reverse_entry(p_entry_id uuid, p_reversal_date date, p_reason text, p_idempotency_key text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_reverse_entry(p_entry_id uuid, p_reversal_date date, p_reason text, p_idempotency_key text) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_reverse_entry(p_entry_id uuid, p_reversal_date date, p_reason text, p_idempotency_key text) to authenticated;
+grant execute on function public.accounting_reverse_entry(p_entry_id uuid, p_reversal_date date, p_reason text, p_idempotency_key text) to service_role;
+
+-- accounting_update_entry(p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.accounting_update_entry(p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.accounting_update_entry(p_payload jsonb) to authenticated;
+grant execute on function public.accounting_update_entry(p_payload jsonb) to service_role;
+
+-- admin_archive_cliente(p_id uuid) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_archive_cliente(p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.admin_archive_cliente(p_id uuid) to authenticated;
+grant execute on function public.admin_archive_cliente(p_id uuid) to service_role;
+
+-- admin_archive_fornitore(p_id uuid) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_archive_fornitore(p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.admin_archive_fornitore(p_id uuid) to authenticated;
+grant execute on function public.admin_archive_fornitore(p_id uuid) to service_role;
+
+-- admin_create_cliente(p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_create_cliente(p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.admin_create_cliente(p_payload jsonb) to authenticated;
+grant execute on function public.admin_create_cliente(p_payload jsonb) to service_role;
+
+-- admin_create_fornitore(p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_create_fornitore(p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.admin_create_fornitore(p_payload jsonb) to authenticated;
+grant execute on function public.admin_create_fornitore(p_payload jsonb) to service_role;
+
+-- admin_list_master_data_conflicts(p_status text) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_list_master_data_conflicts(p_status text) from public, anon, authenticated, service_role;
+grant execute on function public.admin_list_master_data_conflicts(p_status text) to authenticated;
+grant execute on function public.admin_list_master_data_conflicts(p_status text) to service_role;
+
+-- admin_update_cliente(p_id uuid, p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_update_cliente(p_id uuid, p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.admin_update_cliente(p_id uuid, p_payload jsonb) to authenticated;
+grant execute on function public.admin_update_cliente(p_id uuid, p_payload jsonb) to service_role;
+
+-- admin_update_fornitore(p_id uuid, p_payload jsonb) [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.admin_update_fornitore(p_id uuid, p_payload jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.admin_update_fornitore(p_id uuid, p_payload jsonb) to authenticated;
+grant execute on function public.admin_update_fornitore(p_id uuid, p_payload jsonb) to service_role;
+
 -- ai_provider_key_record_failure(p_key_id uuid, p_error_code text, p_cooldown_seconds integer) [SERVER_ONLY]
 revoke all on function public.ai_provider_key_record_failure(p_key_id uuid, p_error_code text, p_cooldown_seconds integer) from public, anon, authenticated, service_role;
 grant execute on function public.ai_provider_key_record_failure(p_key_id uuid, p_error_code text, p_cooldown_seconds integer) to service_role;
@@ -9,11 +124,6 @@ grant execute on function public.ai_provider_key_record_failure(p_key_id uuid, p
 -- ai_provider_key_record_success(p_key_id uuid, p_latency_ms integer) [SERVER_ONLY]
 revoke all on function public.ai_provider_key_record_success(p_key_id uuid, p_latency_ms integer) from public, anon, authenticated, service_role;
 grant execute on function public.ai_provider_key_record_success(p_key_id uuid, p_latency_ms integer) to service_role;
-
--- allocate_invoice_number(p_document_type text, p_series text, p_year integer) [AUTHENTICATED_CLIENT_CALLABLE]
-revoke all on function public.allocate_invoice_number(p_document_type text, p_series text, p_year integer) from public, anon, authenticated, service_role;
-grant execute on function public.allocate_invoice_number(p_document_type text, p_series text, p_year integer) to authenticated;
-grant execute on function public.allocate_invoice_number(p_document_type text, p_series text, p_year integer) to service_role;
 
 -- annulla_ordine_fornitore(p_id uuid) [AUTHENTICATED_CLIENT_CALLABLE]
 revoke all on function public.annulla_ordine_fornitore(p_id uuid) from public, anon, authenticated, service_role;
@@ -50,10 +160,6 @@ revoke all on function public.asset_lifecycle_v1_db_enabled() from public, anon,
 grant execute on function public.asset_lifecycle_v1_db_enabled() to authenticated;
 grant execute on function public.asset_lifecycle_v1_db_enabled() to service_role;
 
--- assign_ddt_numero(p_anno integer, p_serie text) [SERVER_ONLY]
-revoke all on function public.assign_ddt_numero(p_anno integer, p_serie text) from public, anon, authenticated, service_role;
-grant execute on function public.assign_ddt_numero(p_anno integer, p_serie text) to service_role;
-
 -- assign_lavorazione_codice(p_created_at timestamp with time zone) [SERVER_ONLY]
 revoke all on function public.assign_lavorazione_codice(p_created_at timestamp with time zone) from public, anon, authenticated, service_role;
 grant execute on function public.assign_lavorazione_codice(p_created_at timestamp with time zone) to service_role;
@@ -79,6 +185,10 @@ grant execute on function public.audit_entity_retention_limit(p_entita text) to 
 revoke all on function public.bulk_upsert_app_settings(p_items jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.bulk_upsert_app_settings(p_items jsonb) to authenticated;
 grant execute on function public.bulk_upsert_app_settings(p_items jsonb) to service_role;
+
+-- cab_claim_communication_draft_send(p_draft_id uuid) [SERVER_ONLY]
+revoke all on function public.cab_claim_communication_draft_send(p_draft_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.cab_claim_communication_draft_send(p_draft_id uuid) to service_role;
 
 -- cab_claim_communication_outbox_batch(p_limit integer) [SERVER_ONLY]
 revoke all on function public.cab_claim_communication_outbox_batch(p_limit integer) from public, anon, authenticated, service_role;
@@ -156,6 +266,14 @@ grant execute on function public.cab_fanout_client_portal_lavorazione_notificati
 revoke all on function public.cab_fanout_enqueue_raw_after_notification() from public, anon, authenticated, service_role;
 grant execute on function public.cab_fanout_enqueue_raw_after_notification() to service_role;
 
+-- cab_get_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid) [SERVER_ONLY]
+revoke all on function public.cab_get_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.cab_get_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid) to service_role;
+
+-- cab_get_communication_draft_by_id(p_draft_id uuid) [SERVER_ONLY]
+revoke all on function public.cab_get_communication_draft_by_id(p_draft_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.cab_get_communication_draft_by_id(p_draft_id uuid) to service_role;
+
 -- cab_invoke_communication_outbox_worker() [CRON_ONLY]
 revoke all on function public.cab_invoke_communication_outbox_worker() from public, anon, authenticated, service_role;
 grant execute on function public.cab_invoke_communication_outbox_worker() to service_role;
@@ -228,6 +346,10 @@ grant execute on function public.cab_patch_workshop_schedule_times(p_id uuid, p_
 revoke all on function public.cab_publish_notification(p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text, p_idempotency_key text, p_translation_key text, p_translation_params jsonb, p_snapshot jsonb, p_actions jsonb, p_payload_version text, p_expires_at timestamp with time zone, p_source_domain_event text, p_actor_id uuid, p_priority text) from public, anon, authenticated, service_role;
 grant execute on function public.cab_publish_notification(p_type text, p_title text, p_body text, p_href text, p_entity_type text, p_entity_id uuid, p_dedup_key text, p_idempotency_key text, p_translation_key text, p_translation_params jsonb, p_snapshot jsonb, p_actions jsonb, p_payload_version text, p_expires_at timestamp with time zone, p_source_domain_event text, p_actor_id uuid, p_priority text) to authenticated;
 
+-- cab_release_communication_draft(p_draft_id uuid) [SERVER_ONLY]
+revoke all on function public.cab_release_communication_draft(p_draft_id uuid) from public, anon, authenticated, service_role;
+grant execute on function public.cab_release_communication_draft(p_draft_id uuid) to service_role;
+
 -- cab_release_communication_outbox(p_outbox_id uuid, p_error text) [SERVER_ONLY]
 revoke all on function public.cab_release_communication_outbox(p_outbox_id uuid, p_error text) from public, anon, authenticated, service_role;
 grant execute on function public.cab_release_communication_outbox(p_outbox_id uuid, p_error text) to service_role;
@@ -247,6 +369,10 @@ grant execute on function public.cab_sync_lavorazione_actual_labor_hours_safety_
 -- cab_touch_push_presence(p_endpoint text, p_presence_status text) [AUTHENTICATED_CLIENT_CALLABLE]
 revoke all on function public.cab_touch_push_presence(p_endpoint text, p_presence_status text) from public, anon, authenticated, service_role;
 grant execute on function public.cab_touch_push_presence(p_endpoint text, p_presence_status text) to authenticated;
+
+-- cab_upsert_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid, p_sender_email text, p_sender_display_name text, p_to_emails jsonb, p_cc_emails jsonb, p_bcc_emails jsonb, p_subject text, p_body_text text, p_attachment_refs jsonb) [SERVER_ONLY]
+revoke all on function public.cab_upsert_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid, p_sender_email text, p_sender_display_name text, p_to_emails jsonb, p_cc_emails jsonb, p_bcc_emails jsonb, p_subject text, p_body_text text, p_attachment_refs jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.cab_upsert_communication_draft(p_use_case text, p_entity_type text, p_entity_id uuid, p_author_id uuid, p_sender_email text, p_sender_display_name text, p_to_emails jsonb, p_cc_emails jsonb, p_bcc_emails jsonb, p_subject text, p_body_text text, p_attachment_refs jsonb) to service_role;
 
 -- cab_upsert_push_subscription(p_endpoint text, p_p256dh text, p_auth text, p_user_agent text) [AUTHENTICATED_CLIENT_CALLABLE]
 revoke all on function public.cab_upsert_push_subscription(p_endpoint text, p_p256dh text, p_auth text, p_user_agent text) from public, anon, authenticated, service_role;
@@ -518,6 +644,10 @@ grant execute on function public.mark_preventivo_viewed_by_client(p_preventivo_i
 -- notification_cliente_inbox_eligible() [AUTHENTICATED_CLIENT_CALLABLE]
 revoke all on function public.notification_cliente_inbox_eligible() from public, anon, authenticated, service_role;
 grant execute on function public.notification_cliente_inbox_eligible() to authenticated;
+
+-- notification_inbox_eligible() [AUTHENTICATED_CLIENT_CALLABLE]
+revoke all on function public.notification_inbox_eligible() from public, anon, authenticated, service_role;
+grant execute on function public.notification_inbox_eligible() to authenticated;
 
 -- notification_staff_inbox_eligible() [AUTHENTICATED_CLIENT_CALLABLE]
 revoke all on function public.notification_staff_inbox_eligible() from public, anon, authenticated, service_role;
@@ -823,10 +953,8 @@ revoke all on function public.replace_ddt_for_preventivo(p_payload jsonb) from p
 grant execute on function public.replace_ddt_for_preventivo(p_payload jsonb) to authenticated;
 grant execute on function public.replace_ddt_for_preventivo(p_payload jsonb) to service_role;
 
--- resolve_auth_email_for_login(p_identifier text) [PUBLIC_SAFE]
+-- resolve_auth_email_for_login(p_identifier text) [SERVER_ONLY]
 revoke all on function public.resolve_auth_email_for_login(p_identifier text) from public, anon, authenticated, service_role;
--- security-allowlist: PUBLIC_SAFE manifest entry
-grant execute on function public.resolve_auth_email_for_login(p_identifier text) to anon;
 grant execute on function public.resolve_auth_email_for_login(p_identifier text) to service_role;
 
 -- security_set_user_role(p_user_id uuid, p_role_key text) [SERVER_ONLY]
@@ -933,10 +1061,6 @@ grant execute on function public.trg_lavorazioni_outbox_updated() to service_rol
 revoke all on function public.trg_lavorazioni_refresh_search_document() from public, anon, authenticated, service_role;
 grant execute on function public.trg_lavorazioni_refresh_search_document() to service_role;
 
--- trg_magazzino_outbox_stock_crossing() [INTERNAL_ONLY]
-revoke all on function public.trg_magazzino_outbox_stock_crossing() from public, anon, authenticated, service_role;
-grant execute on function public.trg_magazzino_outbox_stock_crossing() to service_role;
-
 -- trg_magazzino_refresh_search_document() [INTERNAL_ONLY]
 revoke all on function public.trg_magazzino_refresh_search_document() from public, anon, authenticated, service_role;
 grant execute on function public.trg_magazzino_refresh_search_document() to service_role;
@@ -948,6 +1072,10 @@ grant execute on function public.trg_magazzino_ricambi_outbox_created() to servi
 -- trg_magazzino_ricambi_outbox_deleted() [INTERNAL_ONLY]
 revoke all on function public.trg_magazzino_ricambi_outbox_deleted() from public, anon, authenticated, service_role;
 grant execute on function public.trg_magazzino_ricambi_outbox_deleted() to service_role;
+
+-- trg_magazzino_stock_alert_episode() [INTERNAL_ONLY]
+revoke all on function public.trg_magazzino_stock_alert_episode() from public, anon, authenticated, service_role;
+grant execute on function public.trg_magazzino_stock_alert_episode() to service_role;
 
 -- trg_mezzi_enqueue_lavorazioni_search_rebuild() [INTERNAL_ONLY]
 revoke all on function public.trg_mezzi_enqueue_lavorazioni_search_rebuild() from public, anon, authenticated, service_role;

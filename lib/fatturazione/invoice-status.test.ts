@@ -1,17 +1,26 @@
 import assert from "node:assert/strict";
-import { invoiceDocumentStatus, invoicePaymentStatus, invoiceSdiStatus } from "./invoice-status";
+import { invoiceCountsAsValidlyIssued, invoiceDocumentStatus, invoiceFiscalValidity, invoicePaymentStatus, invoiceSdiStatus } from "./invoice-status";
 import type { InvoiceRow } from "@/src/types/supabase-tables";
 
 const base: InvoiceRow = {
   id: "1",
+  company_id: "00000000-0000-4000-8000-000000000001",
   numero: 1,
   anno: 2026,
+  series: "DEFAULT",
   status: "emessa",
   document_type: "fattura",
   document_status: "emessa",
   payment_status: "non_pagata",
   sdi_status: "da_generare",
   accounting_status: "non_rilevante",
+  fiscal_validity: null,
+  fattura_pa_tipo_documento: "TD01",
+  data_effettuazione: null,
+  payment_term_id: null,
+  invoice_snapshot: {},
+  fiscal_transmission_attempt: 0,
+  legacy_origin: "NATIVE_CAB",
   origine: "manuale",
   customer_id: null,
   cliente_label: "Cliente",
@@ -26,6 +35,7 @@ const base: InvoiceRow = {
   note: null,
   admin_notes: null,
   meta: {},
+  fiscal_context: {},
   parent_invoice_id: null,
   sent_to_customer_at: null,
   approved_at: null,
@@ -42,5 +52,8 @@ const base: InvoiceRow = {
 assert.equal(invoiceDocumentStatus(base), "emessa");
 assert.equal(invoicePaymentStatus({ ...base, payment_status: null, status: "pagata" }), "pagata");
 assert.equal(invoiceSdiStatus({ ...base, sdi_status: null }), "non_applicabile");
+assert.equal(invoiceFiscalValidity({ ...base, fiscal_validity: "not_validly_issued" }), "not_validly_issued");
+assert.equal(invoiceCountsAsValidlyIssued({ ...base, fiscal_validity: "pending" }), false);
+assert.equal(invoiceCountsAsValidlyIssued(base), true);
 
 console.log("invoice-status.test.ts OK");

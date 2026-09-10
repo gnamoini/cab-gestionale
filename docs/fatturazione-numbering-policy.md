@@ -1,17 +1,12 @@
-# Politica numerazione fatture
+# Politica numerazione fatture (legacy)
 
-## Concorrenza
+**Sostituita da FASE 6.** SSOT attuale:
 
-`allocate_invoice_number()` usa `SELECT … FOR UPDATE` su `invoice_number_sequences`.
+- [`CAB_Numbering_Architecture.md`](./CAB_Numbering_Architecture.md)
+- [`CAB_Numbering_Specification.md`](./CAB_Numbering_Specification.md)
 
-## Buchi di numerazione
+## Riepilogo
 
-I **buchi sono accettabili**: se una transazione alloca un numero e poi fa ROLLBACK, il numero non viene riutilizzato.
-
-Esempio:
-
-- Thread A alloca `42` → errore → ROLLBACK
-- Thread B ottiene `43`
-- Il `42` resta un buco permanente
-
-Non si riutilizzano numeri saltati.
+- Motore centralizzato: `document_number_sequences` + `allocate_document_number()` (interno, non client).
+- Fattura bozza: `numero IS NULL`; emissione via `invoice_apply_transition('emit')`.
+- Buchi di numerazione accettabili su rollback transazione (nessun riciclo).

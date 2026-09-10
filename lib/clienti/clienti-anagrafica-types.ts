@@ -39,10 +39,14 @@ export type ClienteAnagrafica = {
   entityKey: string;
   ragioneSociale: string;
   partitaIva: string;
+  codiceFiscale: string;
+  pec: string;
+  nazione: string;
   codiceDestinatario: string;
   sedeLegaleUgualeOperativa: boolean;
   inListaSettings: boolean;
   note: string;
+  notePagamenti: string;
   sedi: {
     operativa: ClienteSedeFields;
     legale: ClienteSedeFields;
@@ -89,7 +93,11 @@ export function emptyClienteAnagrafica(nomeDisplay: string, entityKey: string): 
     entityKey,
     ragioneSociale: "",
     partitaIva: "",
+    codiceFiscale: "",
+    pec: "",
+    nazione: "IT",
     codiceDestinatario: "",
+    notePagamenti: "",
     sedeLegaleUgualeOperativa: false,
     inListaSettings: true,
     note: "",

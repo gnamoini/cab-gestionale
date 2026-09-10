@@ -34,20 +34,6 @@
         "SEC-07"
       ]
     },
-    "allocate_invoice_number(p_document_type text, p_series text, p_year integer)": {
-      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
-      "grants": [
-        "authenticated",
-        "service_role"
-      ],
-      "anonAllow": false,
-      "requiresAuthUid": true,
-      "requiresRbac": true,
-      "notes": "Default staff callable; anon revoked",
-      "findingRefs": [
-        "SEC-01"
-      ]
-    },
     "annulla_ordine_fornitore(p_id uuid)": {
       "classification": "AUTHENTICATED_CLIENT_CALLABLE",
       "grants": [
@@ -155,21 +141,6 @@
       "notes": "Default staff callable; anon revoked",
       "findingRefs": [
         "SEC-01"
-      ]
-    },
-    "assign_ddt_numero(p_anno integer, p_serie text)": {
-      "classification": "SERVER_ONLY",
-      "grants": [
-        "service_role"
-      ],
-      "anonAllow": false,
-      "requiresAuthUid": false,
-      "requiresRbac": false,
-      "findingRefs": [
-        "SEC-02",
-        "SEC-03",
-        "SEC-06",
-        "SEC-07"
       ]
     },
     "assign_lavorazione_codice(p_created_at timestamp with time zone)": {
@@ -1530,21 +1501,6 @@
       "notes": "Staff fatturazione/report read",
       "findingRefs": [
         "SEC-04"
-      ]
-    },
-    "invoice_write_status_axes(p_invoice_id uuid, p_document_status text, p_payment_status text, p_sdi_status text, p_correlation_id uuid, p_causation_id uuid, p_emit_event boolean, p_actor_id uuid, p_transition text)": {
-      "classification": "SERVER_ONLY",
-      "grants": [
-        "service_role"
-      ],
-      "anonAllow": false,
-      "requiresAuthUid": false,
-      "requiresRbac": false,
-      "findingRefs": [
-        "SEC-02",
-        "SEC-03",
-        "SEC-06",
-        "SEC-07"
       ]
     },
     "is_ddt_visible_to_client(p_ddt_id uuid)": {
@@ -3113,6 +3069,822 @@
         "SEC-03",
         "SEC-06",
         "SEC-07"
+      ]
+    },
+    "billing_eligibility(p_source_type text, p_source_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8 billing eligibility SSOT",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "claim_invoice_sdi_jobs(p_limit integer, p_worker text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 8 SDI job claim — service_role only",
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03"
+      ]
+    },
+    "create_credit_note_from_invoice_unchecked(p_invoice_id uuid, p_amount numeric, p_reason text, p_rows jsonb)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 8 NC impl; no authenticated GRANT",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_debit_note_from_invoice(p_invoice_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8 nota debito TD05",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "handle_sdi_outcome(p_invoice_id uuid, p_outcome text, p_provider_reference text, p_reason text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8/9 legacy dispatcher — delegates to apply_sdi_event",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "apply_sdi_event(p_payload jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 9 sole writer sdi_status + fiscal_validity",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "enqueue_invoice_submission(p_invoice_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 9 transmission + job enqueue",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "store_invoice_xml_document(p_payload jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 9 XML blob persistence",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_correction_from_rejected(p_invoice_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 9 correction same fiscal identity",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "list_pending_reconciliation_transmissions(p_limit integer)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 9 reconciliation cron",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_record_state_history(p_invoice_id uuid, p_event_code text, p_from_axes jsonb, p_to_axes jsonb, p_reference_type text, p_reference_id uuid, p_metadata jsonb)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 9 immutable state history",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "handle_sdi_rejected(p_invoice_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8 P0 technical reversal on SDI reject",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_set_draft_origine(p_invoice_id uuid, p_origine text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8 set draft origine after create",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_source_allocated_total(p_source_type text, p_source_id uuid, p_exclude_invoice_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "FASE 8 allocation remaining",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_write_status_axes(p_invoice_id uuid, p_document_status text, p_payment_status text, p_sdi_status text, p_correlation_id uuid, p_causation_id uuid, p_emit_event boolean, p_actor_id uuid, p_transition text, p_fiscal_validity text, p_accounting_status text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 8 axes writer + fiscal_validity",
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03"
+      ]
+    },
+    "accounting_rbac_can(p_action text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120200_accounting_period_rbac_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_create_entry(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_update_entry(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_get_entry(p_entry_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270110120100_accounting_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_list_entries(p_filters jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270110120100_accounting_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_post_entry(p_entry_id uuid, p_idempotency_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120400_fase7_accounting_vat_bridge.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_cancel_entry(p_entry_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270110120100_accounting_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_reverse_entry(p_entry_id uuid, p_reason text, p_idempotency_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270110120100_accounting_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "rbac_is_valid_erp_module(p_module text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270110120600_accounting_rbac_security.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_rls_company_match()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_assert_period_open_for_posting(p_company_id uuid, p_accounting_date date)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_reverse_entry(p_entry_id uuid, p_reversal_date date, p_reason text, p_idempotency_key text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_create_adjustment_entry(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_open_fiscal_year(p_year integer, p_start_date date, p_end_date date)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_close_fiscal_year(p_fiscal_year_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_close_accounting_period(p_period_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_lock_accounting_period(p_period_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_reopen_accounting_period(p_period_id uuid, p_reason text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "accounting_list_fiscal_periods()": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270111120100_accounting_period_rpc_fase4.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_master_data_rbac_can(p_action text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_create_cliente(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_update_cliente(p_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_archive_cliente(p_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_create_fornitore(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_update_fornitore(p_id uuid, p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_archive_fornitore(p_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "admin_list_master_data_conflicts(p_status text)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270112120600_admin_master_data_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "allocate_document_number(p_document_type text, p_fiscal_year integer, p_series text, p_company_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "FASE 6 internal allocator",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "ddt_guard_number_immutable()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_resolve_configuration(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_list_codes_for_context(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_validate_document(p_invoice_id uuid, p_context jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_validate_invoice_for_einvoice(p_invoice_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_admin_create_code(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_admin_create_configuration_version(p_payload jsonb)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120100_fase7_vat_engine_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_seed_company_defaults(p_company_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120200_fase7_vat_engine_seed.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_consolidate_invoice_rows(p_invoice_id uuid)": {
+      "classification": "AUTHENTICATED_CLIENT_CALLABLE",
+      "grants": [
+        "authenticated",
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": true,
+      "requiresRbac": true,
+      "notes": "auto 20270211120300_fase7_invoice_vat_integration.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "create_credit_note_from_invoice(p_invoice_id uuid, p_amount numeric, p_reason text, p_rows jsonb)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "auto 20270212120100_fase8_fatturazione_ciclo_attivo_rpc.sql",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "vat_sync_movements_from_invoice(p_entry_id uuid)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "auto 20270211120400_fase7_accounting_vat_bridge.sql",
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03"
+      ]
+    },
+    "assert_invoice_source_allocations(p_invoice_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_build_emission_snapshot(p_invoice_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_create_payment_schedule(p_invoice_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_post_accounting_on_emit(p_invoice_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_enqueue_sdi_job(p_invoice_id uuid)": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "trg_invoice_assert_source_allocations()": {
+      "classification": "INTERNAL_ONLY",
+      "grants": [],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "internal helper; no client EXECUTE",
+      "findingRefs": [
+        "SEC-01"
+      ]
+    },
+    "invoice_write_status_axes(p_invoice_id uuid, p_document_status text, p_payment_status text, p_sdi_status text, p_correlation_id uuid, p_causation_id uuid, p_emit_event boolean, p_actor_id uuid, p_transition text)": {
+      "classification": "SERVER_ONLY",
+      "grants": [
+        "service_role"
+      ],
+      "anonAllow": false,
+      "requiresAuthUid": false,
+      "requiresRbac": false,
+      "notes": "dropped 9-arg; kept for baseline coverage until catalog refresh",
+      "findingRefs": [
+        "SEC-02",
+        "SEC-03"
       ]
     }
   }

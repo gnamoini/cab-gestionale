@@ -71,21 +71,6 @@
       "hasAuthCheck": false
     },
     {
-      "name": "allocate_invoice_number",
-      "args": "p_document_type text, p_series text, p_year integer",
-      "owner": "postgres",
-      "securityDefiner": true,
-      "config": [
-        "search_path=public"
-      ],
-      "grants": {
-        "anon": true,
-        "authenticated": true,
-        "serviceRole": true
-      },
-      "hasAuthCheck": true
-    },
-    {
       "name": "annulla_ordine_fornitore",
       "args": "p_id uuid",
       "owner": "postgres",
@@ -201,21 +186,6 @@
       "grants": {
         "anon": false,
         "authenticated": true,
-        "serviceRole": true
-      },
-      "hasAuthCheck": false
-    },
-    {
-      "name": "assign_ddt_numero",
-      "args": "p_anno integer, p_serie text",
-      "owner": "postgres",
-      "securityDefiner": true,
-      "config": [
-        "search_path=public"
-      ],
-      "grants": {
-        "anon": false,
-        "authenticated": false,
         "serviceRole": true
       },
       "hasAuthCheck": false
@@ -3357,21 +3327,6 @@
     },
     {
       "name": "trg_lavorazioni_refresh_search_document",
-      "args": "",
-      "owner": "postgres",
-      "securityDefiner": true,
-      "config": [
-        "search_path=public"
-      ],
-      "grants": {
-        "anon": true,
-        "authenticated": true,
-        "serviceRole": true
-      },
-      "hasAuthCheck": false
-    },
-    {
-      "name": "trg_magazzino_outbox_stock_crossing",
       "args": "",
       "owner": "postgres",
       "securityDefiner": true,

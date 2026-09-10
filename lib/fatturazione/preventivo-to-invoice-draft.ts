@@ -21,6 +21,7 @@ function mapSezioneToTipo(sezione: string): InvoiceDraftRowInput["tipo"] {
 export function preventivoToInvoiceDraftRows(
   preventivo: PreventivoRecord,
   preventivoId: string,
+  defaultVatCodeId = "",
 ): InvoiceDraftRowInput[] {
   const output = buildPreventivoOutputRighe(preventivo);
   const rows: InvoiceDraftRowInput[] = [];
@@ -36,7 +37,7 @@ export function preventivoToInvoiceDraftRows(
         quantita: qty || 1,
         prezzo_unitario: prezzo,
         sconto_percent: r.scontoPercent ?? 0,
-        iva_percent: 22,
+        vat_code_id: defaultVatCodeId,
         ricambio_id: r.ricambioId,
         preventivo_id: preventivoId,
         lavorazione_id: preventivo.lavorazioneId ?? null,
@@ -54,7 +55,7 @@ export function preventivoToInvoiceDraftRows(
       quantita: qty || 1,
       prezzo_unitario: prezzo || tot,
       sconto_percent: 0,
-      iva_percent: 22,
+      vat_code_id: defaultVatCodeId,
       preventivo_id: preventivoId,
       lavorazione_id: preventivo.lavorazioneId ?? null,
       meta: { sezione: line.sezione },

@@ -80,7 +80,7 @@ assert.match(runSubmitSrc, /captureFormSnapshot/);
 // Modali pilota
 const schedaEdit = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 assert.match(schedaEdit, /useFormEngine/);
-assert.match(schedaEdit, /runSubmit/);
+assert.match(schedaEdit, /useSchedaIngressoSavePipeline/);
 
 const ricambioNew = read("components/gestionale/magazzino/ricambio-new-modal.tsx");
 assert.match(ricambioNew, /useFormEngine/);

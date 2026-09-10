@@ -14,11 +14,18 @@ import { openPdfArtifactFromUserClick } from "@/lib/pdf/request-pdf-artifact";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { InvoiceDetail } from "@/lib/fatturazione/types";
-import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
+import {
+  invoiceCountsAsValidlyIssued,
+  invoiceFiscalValidity,
+  invoiceSdiStatus,
+  INVOICE_FISCAL_VALIDITY_LABELS,
+  INVOICE_SDI_STATUS_LABELS,
+} from "@/lib/fatturazione/invoice-status";
 import { invoiceIsDeletable, invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { InvoiceTimeline } from "@/components/fatturazione/invoice-timeline";
+import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 
 export function FatturazioneDetailDrawer({
   detail,
@@ -82,6 +89,43 @@ export function FatturazioneDetailDrawer({
       setBusy(false);
     }
   }, [busy, canWrite, confirm, inv, onChanged, toast]);
+
+  const createDebitNote = useCallback(async () => {
+    if (!inv || busy || !canWrite) return;
+    const ok = await confirm({
+      title: "Nota di debito",
+      message: "Creare una nota di debito collegata a questa fattura?",
+      confirmLabel: "Crea ND",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await invoicesEntry.createDebitNote(inv.id);
+      if (!res.success) throw new Error(res.error ?? "Creazione ND non riuscita.");
+      toast.successOnce("fatt-nd", "Nota di debito creata.");
+      onChanged();
+    } catch (e) {
+      toast.errorOnce("fatt-nd", e);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, canWrite, confirm, inv, onChanged, toast]);
+
+  const correctRejected = useCallback(async () => {
+    if (!inv || busy || !canWrite) return;
+    setBusy(true);
+    try {
+      const { getBrowserSupabase } = await import("@/src/lib/supabase/browser-client");
+      const { error } = await getBrowserSupabase().rpc("create_correction_from_rejected", { p_invoice_id: inv.id });
+      if (error) throw new Error(error.message);
+      toast.successOnce("fatt-correct", "Correzione preparata. Rigenera XML e reinvia con stesso numero.");
+      onChanged();
+    } catch (e) {
+      toast.errorOnce("fatt-correct", e);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, canWrite, inv, onChanged, toast]);
 
   const cancel = useCallback(async () => {
     if (!inv || busy || !canWrite) return;
@@ -147,9 +191,19 @@ export function FatturazioneDetailDrawer({
     inv.residuo > 0 &&
     inv.status !== "bozza" &&
     inv.status !== "da_verificare" &&
-    inv.status !== "annullata";
+    inv.status !== "annullata" &&
+    invoiceCountsAsValidlyIssued(inv);
   const isDraft = inv.status === "bozza" || inv.status === "da_verificare";
   const canDeleteDraft = canWrite && invoiceIsDeletable(inv.status);
+  const fiscalValidity = invoiceFiscalValidity(inv);
+  const canCreditNote =
+    canWrite &&
+    inv.document_type !== "nota_credito" &&
+    inv.document_type !== "nota_debito" &&
+    !isDraft &&
+    inv.status !== "annullata" &&
+    fiscalValidity === "validly_issued";
+  const isRejected = invoiceSdiStatus(inv) === "scartata" && fiscalValidity === "not_validly_issued";
 
   const body = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -184,6 +238,22 @@ export function FatturazioneDetailDrawer({
         <div>
           <dt className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Residuo</dt>
           <dd className="font-semibold">{formatInvoiceMoney(inv.residuo)}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Validità fiscale</dt>
+          <dd>{INVOICE_FISCAL_VALIDITY_LABELS[fiscalValidity]}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">SdI</dt>
+          <dd>{INVOICE_SDI_STATUS_LABELS[invoiceSdiStatus(inv)]}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">TD</dt>
+          <dd>{inv.fattura_pa_tipo_documento ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Origine</dt>
+          <dd className="break-all">{inv.origine ?? "manuale"}</dd>
         </div>
       </dl>
       {inv.note ? (
@@ -249,12 +319,19 @@ export function FatturazioneDetailDrawer({
         >
           Stampa PDF
         </button>
-        {canWrite &&
-        inv.document_type !== "nota_credito" &&
-        !isDraft &&
-        inv.status !== "annullata" ? (
+        {canCreditNote ? (
           <LoadingButton type="button" variant="secondary" loading={busy} onClick={() => void createCreditNote()}>
             Nota di credito
+          </LoadingButton>
+        ) : null}
+        {canCreditNote ? (
+          <LoadingButton type="button" variant="secondary" loading={busy} onClick={() => void createDebitNote()}>
+            Nota di debito
+          </LoadingButton>
+        ) : null}
+        {isRejected && canWrite ? (
+          <LoadingButton type="button" variant="primary" loading={busy} onClick={() => void correctRejected()}>
+            Correggi fattura
           </LoadingButton>
         ) : null}
         {canWrite && inv.status !== "annullata" && inv.status !== "pagata" ? (

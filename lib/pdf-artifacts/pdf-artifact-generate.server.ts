@@ -122,7 +122,7 @@ function ddtPdfFileNameFromMeta(meta: {
   anno: number;
 }): string {
   const safe = meta.clienteLabel.replace(/[^\w\-]+/g, "_").slice(0, 40);
-  const display = ddtDisplayNumber({ numero: meta.numero, anno: meta.anno });
+  const display = ddtDisplayNumber({ numero: meta.numero, anno: meta.anno, serie: "DEFAULT" });
   return `DDT_${display.replace("/", "-")}_${safe}.pdf`;
 }
 

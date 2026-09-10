@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import {
   buildPublishedSnapshot,
   hashDraftBundle,
@@ -131,7 +132,7 @@ export async function loadTkbDraftStore(supabase: SupabaseClient): Promise<Draft
 }
 
 export async function saveTkbDraftStore(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   bundle: TkbDraftBundle,
   opts: { stale?: boolean; pendingEvents?: unknown[]; buildMode?: string } = {},
 ): Promise<void> {
@@ -147,13 +148,15 @@ export async function saveTkbDraftStore(
     build_mode: opts.buildMode ?? bundle.buildReport?.buildMode ?? "full",
     last_full_build_at: bundle.buildReport?.buildMode === "full" ? new Date().toISOString() : undefined,
   };
-  const { error } = await supabase.from("tkb_draft_store").upsert(row);
+  // ponytail: write via service role — RLS draft write è riservato agli admin security;
+  // sync automatico post-mutazione non passa da quel capability.
+  const { error } = await createSupabaseServerServiceClient().from("tkb_draft_store").upsert(row);
   if (error) throw new Error(`save draft: ${error.message}`);
 }
 
 export async function markTkbDraftStaleDb(supabase: SupabaseClient, pendingEvents: unknown[]): Promise<void> {
   const existing = await loadTkbDraftStore(supabase);
-  const { error } = await supabase.from("tkb_draft_store").upsert({
+  const { error } = await createSupabaseServerServiceClient().from("tkb_draft_store").upsert({
     id: 1,
     draft_json: existing?.draft_json ?? {},
     draft_hash: existing?.draft_hash ?? "",

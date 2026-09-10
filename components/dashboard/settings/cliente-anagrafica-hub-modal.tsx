@@ -10,7 +10,9 @@ import {
 import { ClienteComunicazioniPanel } from "@/components/dashboard/settings/cliente-comunicazioni-panel";
 import { ClienteAnagraficaPanoramica } from "@/components/dashboard/settings/cliente-anagrafica-panoramica";
 import { ClienteContattiEditor } from "@/components/dashboard/settings/cliente-contatti-editor";
+import { ClientePagamentiContabilitaFields } from "@/components/dashboard/settings/cliente-pagamenti-contabilita-fields";
 import { ClienteDatiFiscaliFields, ClienteSediFields } from "@/components/dashboard/settings/cliente-sedi-fields";
+import { mapFiscalConflictError } from "@/lib/fiscal/conflict";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import type { ClienteAnagrafica } from "@/lib/clienti/clienti-anagrafica-types";
@@ -19,11 +21,12 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useClienteAnagrafica, useClienteAnagraficaSave } from "@/src/hooks/gestionale/use-cliente-anagrafica";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
-type TabId = "panoramica" | "fiscali" | "sedi" | "contatti" | "comunicazioni";
+type TabId = "panoramica" | "fiscali" | "amministrativo" | "sedi" | "contatti" | "comunicazioni";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "panoramica", label: "Panoramica" },
   { id: "fiscali", label: "Dati fiscali" },
+  { id: "amministrativo", label: "Pagamenti / Contabilità" },
   { id: "sedi", label: "Sedi" },
   { id: "contatti", label: "Contatti" },
   { id: "comunicazioni", label: "Comunicazioni" },
@@ -67,7 +70,8 @@ export function ClienteAnagraficaHubModal({
       setDraft(saved);
       gestToast.successOnce("cliente-anagrafica-save", "Anagrafica cliente salvata.");
     } catch (e) {
-      gestToast.errorOnce("cliente-anagrafica-save", e);
+      const mapped = mapFiscalConflictError(e);
+      gestToast.errorOnce("cliente-anagrafica-save", mapped ?? e);
     }
   }, [draft, gestToast, saveMutation]);
 
@@ -127,6 +131,8 @@ export function ClienteAnagraficaHubModal({
                 <ClienteAnagraficaPanoramica model={draft} />
               ) : tab === "fiscali" ? (
                 <ClienteDatiFiscaliFields model={draft} onChange={setDraft} />
+              ) : tab === "amministrativo" ? (
+                <ClientePagamentiContabilitaFields model={draft} onChange={setDraft} />
               ) : tab === "sedi" ? (
                 <ClienteSediFields model={draft} onChange={setDraft} />
               ) : tab === "contatti" ? (

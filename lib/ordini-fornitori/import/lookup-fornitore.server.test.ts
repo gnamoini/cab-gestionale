@@ -17,6 +17,8 @@ const mag: MagazzinoMasterPrefs = {
       telefono: "",
       email: "",
       emailAggiuntive: [],
+      pec: "",
+      codiceDestinatario: "",
     },
     "bosch parts": {
       ragioneSociale: "Bosch Parts Italia",
@@ -26,6 +28,8 @@ const mag: MagazzinoMasterPrefs = {
       telefono: "",
       email: "",
       emailAggiuntive: [],
+      pec: "",
+      codiceDestinatario: "",
     },
   },
 };
@@ -36,8 +40,8 @@ assert.equal(byPiva.label, "ACME Ricambi");
 assert.equal(byPiva.matchMethod, "piva");
 
 const byExact = lookupFornitoreByPivaCfName({ ragioneSociale: "Bosch Parts" }, mag);
-assert.equal(byExact.matched, true);
-assert.equal(byExact.matchMethod, "exact");
+assert.equal(byExact.matched, false);
+assert.equal(byExact.matchMethod, "exact_suggest");
 
 const unknown = lookupFornitoreByPivaCfName({ ragioneSociale: "Nuovo Fornitore SPA" }, mag);
 assert.equal(unknown.matched, false);

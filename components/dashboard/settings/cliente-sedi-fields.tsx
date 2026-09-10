@@ -130,6 +130,24 @@ export function ClienteDatiFiscaliFields({
             onChange={(e) => onChange({ ...model, partitaIva: e.target.value.replace(/\D/g, "").slice(0, 11) })}
           />
         </FormField>
+        <FormField label="Codice fiscale">
+          <input
+            className={dsInput}
+            value={model.codiceFiscale}
+            disabled={readOnly}
+            maxLength={16}
+            onChange={(e) => onChange({ ...model, codiceFiscale: e.target.value.toUpperCase().slice(0, 16) })}
+          />
+        </FormField>
+        <FormField label="Nazione">
+          <input
+            className={dsInput}
+            value={model.nazione}
+            disabled={readOnly}
+            maxLength={2}
+            onChange={(e) => onChange({ ...model, nazione: e.target.value.toUpperCase().slice(0, 2) })}
+          />
+        </FormField>
         <FormField label="Codice destinatario (SDI)">
           <input
             className={dsInput}

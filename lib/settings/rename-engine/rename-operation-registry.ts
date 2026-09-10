@@ -43,11 +43,11 @@ export const RENAME_OPERATIONS: Record<string, RenameOperation> = {
     filter: { columnEq: {} },
     policy: "live",
   },
-  "cliente.billing.label": {
-    id: "cliente.billing.label",
+  "cliente.anagrafica.nome_display": {
+    id: "cliente.anagrafica.nome_display",
     action: "replace_column",
-    table: "billing_customers",
-    column: "cliente_label",
+    table: "clienti_anagrafiche",
+    column: "nome_display",
     filter: { columnEq: {} },
     policy: "live",
   },

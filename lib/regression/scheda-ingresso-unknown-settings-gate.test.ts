@@ -15,7 +15,7 @@ const UNKNOWN_ITEM = {
   fieldKey: "cliente" as const,
   label: "Cliente",
   value: "Nuovo",
-  listKey: "lavorazioni:clienti" as const,
+  listKey: "mezzi:clienti" as const,
 };
 
 async function assertSettlesWithin(
@@ -31,7 +31,7 @@ async function assertSettlesWithin(
     new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms)),
   ]);
   assert.notEqual(outcome, "timeout", `${label}: promise still pending after ${ms}ms`);
-  return outcome;
+  return outcome as "resolved" | "rejected";
 }
 
 async function main(): Promise<void> {

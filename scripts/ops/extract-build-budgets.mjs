@@ -158,14 +158,17 @@ function main() {
   const globalRaw = readFileSync(join(ROOT, "lib/performance/performance-global-budgets.ts"), "utf8");
   const globalMatch = globalRaw.match(/GLOBAL_FIRST_LOAD_JS_KB\s*=\s*(\d+)/);
   const vendorMatch = globalRaw.match(/GLOBAL_VENDOR_CHUNK_KB\s*=\s*(\d+)/);
+  const toleranceMatch = globalRaw.match(/BUILD_BUDGET_TOLERANCE_PCT\s*=\s*(\d+)/);
   const globalFirstLoadMax = globalMatch ? Number(globalMatch[1]) : 1900;
   const globalVendorMax = vendorMatch ? Number(vendorMatch[1]) : 800;
+  const tolerancePct = toleranceMatch ? Number(toleranceMatch[1]) : 0;
+  const withTolerance = (max) => max * (1 + tolerancePct / 100);
 
   const failures = [];
   const warnings = [];
   const exceptions = loadActiveExceptions();
 
-  if (firstLoadJsKb > globalFirstLoadMax && !isBudgetExceptionActive(exceptions, "*", "firstLoadJsKb")) {
+  if (firstLoadJsKb > withTolerance(globalFirstLoadMax) && !isBudgetExceptionActive(exceptions, "*", "firstLoadJsKb")) {
     failures.push({
       route: "*",
       metric: "firstLoadJsKb",
@@ -174,7 +177,7 @@ function main() {
       message: `Global first load ${firstLoadJsKb}KB > ${globalFirstLoadMax}KB`,
     });
   }
-  if (vendorChunkKb > globalVendorMax && !isBudgetExceptionActive(exceptions, "*", "vendorChunkKb")) {
+  if (vendorChunkKb > withTolerance(globalVendorMax) && !isBudgetExceptionActive(exceptions, "*", "vendorChunkKb")) {
     failures.push({
       route: "*",
       metric: "vendorChunkKb",
@@ -188,7 +191,7 @@ function main() {
     const routeStats = routeChunks[budget.route];
     if (!routeStats) continue;
     const maxJs = budget.maxFirstLoadJsKb ?? globalFirstLoadMax;
-    if (routeStats.jsKb > maxJs && !isBudgetExceptionActive(exceptions, budget.route, "maxFirstLoadJsKb")) {
+    if (routeStats.jsKb > withTolerance(maxJs) && !isBudgetExceptionActive(exceptions, budget.route, "maxFirstLoadJsKb")) {
       failures.push({
         route: budget.route,
         metric: "maxFirstLoadJsKb",

@@ -15,6 +15,8 @@ const requiredEvents = [
   "payment_registered",
   "payment_allocated",
   "credit_note_created",
+  "invoice_sdi_rejected",
+  "accounting_reversed",
 ] as const;
 
 for (const ev of requiredEvents) {

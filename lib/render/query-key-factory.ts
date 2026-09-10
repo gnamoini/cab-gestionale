@@ -50,7 +50,11 @@ export function fatturazioneOpenItemsQueryKey() {
 }
 
 export function fatturazionePaymentsQueryKey() {
-  return [...QK.fatturazione, "customer-payments"] as const;
+  return [...QK.fatturazione, "payments"] as const;
+}
+
+export function fatturazioneDaFatturareQueryKey() {
+  return [...QK.fatturazione, "da-fatturare"] as const;
 }
 
 export function ddtListQueryKey() {

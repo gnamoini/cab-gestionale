@@ -12,7 +12,7 @@ const REQUIRED_TESTS = [
   "lib/regression/fatturazione-explain-plans.test.ts",
   "lib/regression/fatturazione-module-isolation.test.ts",
   "lib/regression/fatturazione-rbac-write-parity.test.ts",
-  "lib/fatturazione/allocate-invoice-number.concurrency.test.ts",
+  "lib/document-numbering/document-numbering.concurrency.test.ts",
 ] as const;
 
 const REQUIRED_DOCS = [

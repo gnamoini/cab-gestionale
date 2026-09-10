@@ -11,7 +11,15 @@ export type ImportQuality = {
   level: ImportQualityLevel;
 };
 
-export type FornitoreMatchMethod = "piva" | "cf" | "exact" | "normalized" | "fuzzy" | "none";
+export type FornitoreMatchMethod =
+  | "piva"
+  | "cf"
+  | "exact"
+  | "normalized"
+  | "fuzzy"
+  | "exact_suggest"
+  | "fuzzy_suggest"
+  | "none";
 
 export type FornitoreMatchResult = {
   matched: boolean;

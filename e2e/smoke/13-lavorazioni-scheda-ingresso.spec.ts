@@ -27,6 +27,7 @@ import {
   waitForGlobalOptionsReady,
 } from "../helpers/lavorazioni-scheda";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
+import { attachConsoleGuards } from "../helpers/console";
 import { registerMutatingSmokeGuards } from "../helpers/smoke-production-guard";
 
 test.describe.configure({ mode: "serial", timeout: 900_000 });

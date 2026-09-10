@@ -33,7 +33,6 @@ const internalFunctions = [
   "trg_compliance_record_recalc_rule()",
   "assert_ddt_preventivo_row_allocations(uuid)",
   "assert_invoice_preventivo_allocations(uuid)",
-  "assign_ddt_numero(integer, text)",
   "assign_lavorazione_codice(timestamp with time zone)",
   "assign_ordine_fornitore_numero(date)",
   "assign_preventivo_numero_lavorazione(uuid)",

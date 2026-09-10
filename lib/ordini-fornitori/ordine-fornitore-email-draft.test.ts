@@ -51,6 +51,8 @@ assert.equal(
           telefono: "",
           email: "mag@forn.it",
           emailAggiuntive: [],
+          pec: "",
+          codiceDestinatario: "",
         },
       },
     },

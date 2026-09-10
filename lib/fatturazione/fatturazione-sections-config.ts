@@ -1,6 +1,7 @@
 import { FATTURAZIONE_HUB_PHASE } from "./fatturazione-hub-phase";
 
 export type FatturazioneSectionId =
+  | "da_fatturare"
   | "fatture"
   | "scadenziario"
   | "pagamenti"
@@ -19,6 +20,7 @@ export type FatturazioneSectionConfig = {
 };
 
 export const FATTURAZIONE_SECTIONS: readonly FatturazioneSectionConfig[] = [
+  { id: "da_fatturare", label: "Da fatturare", availableFromPhase: 1, order: 0 },
   { id: "fatture", label: "Fatture", availableFromPhase: 1, order: 1 },
   { id: "scadenziario", label: "Scadenziario", availableFromPhase: 1, order: 2 },
   { id: "pagamenti", label: "Pagamenti", availableFromPhase: 1, order: 3 },

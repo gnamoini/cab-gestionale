@@ -105,6 +105,7 @@ export async function resolveMezzoRelationFromDb(
   return { status: "not_found", identUsed: { targa: input.targa, matricola: input.matricola } };
 }
 
+/** FASE 5: auto-associa solo con identificativo fiscale univoco. Nome/label = suggest manuale. */
 export async function lookupClienteByNameOrPiva(
   sb: SupabaseClient,
   input: { nome?: string; partitaIva?: string },
@@ -112,28 +113,21 @@ export async function lookupClienteByNameOrPiva(
   if (input.partitaIva?.trim()) {
     const piva = input.partitaIva.replace(/\D/g, "");
     if (piva.length === 11) {
-      const { data } = await sb
+      const { data: rows } = await sb
         .from("clienti_anagrafiche")
         .select("id, nome_display")
-        .eq("partita_iva", piva)
-        .maybeSingle();
-      if (data) return { ok: true, id: data.id, canonical: data.nome_display };
+        .eq("partita_iva_normalized", piva);
+      if (rows?.length === 1) {
+        return { ok: true, id: rows[0]!.id, canonical: rows[0]!.nome_display };
+      }
+      if (rows && rows.length > 1) {
+        return { ok: false, message: "Più anagrafiche con la stessa P.IVA — revisione manuale richiesta." };
+      }
     }
   }
   const nome = input.nome?.trim();
   if (!nome) return { ok: false, message: "Cliente non specificato." };
-  const { data: rows } = await sb.from("clienti_anagrafiche").select("id, nome_display").ilike("nome_display", nome);
-  const hit = (rows ?? []).find((r) => norm(r.nome_display) === norm(nome));
-  if (hit) return { ok: true, id: hit.id, canonical: hit.nome_display };
-  const { data: settingsRow } = await sb.from("app_settings").select("payload").eq("module", "mezzi").eq("key", "liste").maybeSingle();
-  const payload = (settingsRow?.payload && typeof settingsRow.payload === "object" ? settingsRow.payload : {}) as Record<
-    string,
-    unknown
-  >;
-  const clienti = Array.isArray(payload.clienti) ? (payload.clienti as string[]) : [];
-  const settingsHit = clienti.find((c) => norm(c) === norm(nome));
-  if (settingsHit) return { ok: true, canonical: settingsHit };
-  return { ok: false, message: `Cliente «${nome}» non trovato.` };
+  return { ok: false, message: `Cliente «${nome}» — selezione manuale richiesta (nessun match fiscale univoco).` };
 }
 
 export async function ensureSettingsListValue(

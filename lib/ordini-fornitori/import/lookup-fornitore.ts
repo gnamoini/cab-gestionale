@@ -102,53 +102,25 @@ export function lookupFornitoreByPivaCfName(
     }
   }
 
+  // FASE 5: nome/fuzzy — solo proposta, mai match automatico definitivo
   if (nome) {
     const exactLabel = findExactEntityInPool(nome, labels, { standardizeLegalSuffix: true });
     if (exactLabel) {
       return {
-        matched: true,
+        matched: false,
         label: exactLabel,
-        matchMethod: "exact",
-        confidence: Math.max(aiConfidence, 0.85),
+        matchMethod: "exact_suggest",
+        confidence: Math.max(aiConfidence, 0.5),
       };
     }
-
-    for (const entry of index) {
-      const rs = entry.anag.ragioneSociale.trim();
-      if (rs && findExactEntityInPool(nome, [rs], { standardizeLegalSuffix: true })) {
-        return {
-          matched: true,
-          label: entry.label,
-          matchMethod: "exact",
-          confidence: Math.max(aiConfidence, 0.85),
-        };
-      }
-    }
-
-    const normNome = normalizeEntityString(nome, { standardizeLegalSuffix: true });
-    for (const entry of index) {
-      const keys = [
-        normalizeEntityString(entry.label, { standardizeLegalSuffix: true }),
-        normalizeEntityString(entry.anag.ragioneSociale, { standardizeLegalSuffix: true }),
-      ].filter(Boolean);
-      if (keys.some((k) => k === normNome)) {
-        return {
-          matched: true,
-          label: entry.label,
-          matchMethod: "normalized",
-          confidence: Math.max(aiConfidence, 0.82),
-        };
-      }
-    }
-
     const fuzzy = findSimilarSettingsDuplicate(labels, nome);
     if (fuzzy) {
       return {
-        matched: true,
+        matched: false,
         label: fuzzy,
-        matchMethod: "fuzzy",
+        matchMethod: "fuzzy_suggest",
         matchScore: 0.75,
-        confidence: Math.max(aiConfidence, 0.7),
+        confidence: Math.max(aiConfidence, 0.4),
       };
     }
   }

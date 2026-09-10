@@ -26,6 +26,9 @@ function parseFnKey(key: string): { name: string; args: string } {
   return { name, args };
 }
 
+/** REVOKE/GRANT emitted in the feature migration that creates the function (avoids ordering issues). */
+const DEFERRED_GRANTS = new Set(["allocate_document_number"]);
+
 function main(): void {
   const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, "utf8")) as {
     entries: Record<string, ManifestEntry>;
@@ -42,6 +45,7 @@ function main(): void {
   for (const key of keys) {
     const entry = manifest.entries[key]!;
     const { name, args } = parseFnKey(key);
+    if (DEFERRED_GRANTS.has(name)) continue;
     const argsSql = args; // identity args as in pg_get_function_identity_arguments
 
     lines.push(`-- ${key} [${entry.classification}]`);

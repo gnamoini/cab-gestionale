@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CommunicationPolicyDefinition } from "@/lib/communications/policy/communication-policy-catalog";
 import { parseOrdineFornitoreFornitoreSnapshot } from "@/lib/ordini-fornitori/fornitore-snapshot";
-import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
 import { readOfficinaDestinatarioOrdiniFromRows } from "@/lib/officina/officina-destinatario-ordini";
 import { formatOfficinaSede, readOfficinaSedeOperativaFromRows } from "@/lib/officina/officina-sede";
 import { isValidEmail } from "@/lib/validation/email";
@@ -23,35 +22,15 @@ function pickClienteEmail(contatti: Array<{ tipo: string; valore: string }>): st
   return "";
 }
 
-async function resolveClienteByLabel(
+async function resolveClienteById(
   client: SupabaseClient,
-  clienteLabel: string,
+  clienteId: string,
 ): Promise<ResolvedRecipient | null> {
-  const label = clienteLabel.trim();
-  if (!label) return null;
-
-  type ClienteRow = { id: string; nome_display: string; ragione_sociale: string | null };
-  const entityKey = buildClienteEntityKey(label);
-  let row: ClienteRow | null = null;
-
-  if (entityKey) {
-    const { data } = await client
-      .from("clienti_anagrafiche")
-      .select("id, nome_display, ragione_sociale")
-      .eq("entity_key", entityKey)
-      .maybeSingle();
-    if (data) row = data as ClienteRow;
-  }
-
-  if (!row) {
-    const { data } = await client
-      .from("clienti_anagrafiche")
-      .select("id, nome_display, ragione_sociale")
-      .eq("nome_display", label)
-      .maybeSingle();
-    if (data) row = data as ClienteRow;
-  }
-
+  const { data: row } = await client
+    .from("clienti_anagrafiche")
+    .select("id, nome_display, ragione_sociale, pec")
+    .eq("id", clienteId)
+    .maybeSingle();
   if (!row) return null;
 
   const { data: contatti } = await client
@@ -60,11 +39,13 @@ async function resolveClienteByLabel(
     .eq("cliente_id", row.id)
     .order("ordine");
 
-  const email = pickClienteEmail((contatti ?? []) as Array<{ tipo: string; valore: string }>);
+  const contattiList = (contatti ?? []) as Array<{ tipo: string; valore: string }>;
+  const pecCol = typeof row.pec === "string" ? row.pec : "";
+  const email = pickClienteEmail(contattiList) || (isValidEmail(pecCol) ? pecCol.trim() : "");
   const name =
     (typeof row.ragione_sociale === "string" && row.ragione_sociale.trim()) ||
     (typeof row.nome_display === "string" && row.nome_display.trim()) ||
-    label;
+    "";
 
   return { email, name, clienteId: row.id as string };
 }
@@ -118,7 +99,8 @@ export async function resolveRecipientForPolicy(
   if (policy.recipientType !== "customer") return null;
 
   let clienteLabel = "";
-  const clienteId: string | null = null;
+  let clienteId: string | null =
+    typeof payload.cliente_id === "string" && payload.cliente_id.trim() ? payload.cliente_id.trim() : null;
 
   if (entityType === "lavorazioni") {
     const { data: lav } = await client
@@ -127,28 +109,45 @@ export async function resolveRecipientForPolicy(
       .eq("id", entityId)
       .maybeSingle();
     if (lav?.mezzo_id) {
-      const { data: mezzo } = await client.from("mezzi").select("cliente").eq("id", lav.mezzo_id).maybeSingle();
+      const { data: mezzo } = await client
+        .from("mezzi")
+        .select("cliente, cliente_id")
+        .eq("id", lav.mezzo_id)
+        .maybeSingle();
+      if (mezzo?.cliente_id) clienteId = String(mezzo.cliente_id);
       clienteLabel = String(mezzo?.cliente ?? "");
     }
   } else if (entityType === "preventivi") {
-    const { data: pv } = await client.from("preventivi").select("cliente").eq("id", entityId).maybeSingle();
+    const { data: pv } = await client
+      .from("preventivi")
+      .select("cliente, cliente_id")
+      .eq("id", entityId)
+      .maybeSingle();
+    if (pv?.cliente_id) clienteId = String(pv.cliente_id);
     clienteLabel = String(pv?.cliente ?? "");
   } else if (entityType === "vehicle_maintenance_configs") {
     const configId = entityId;
     const { data: cfg } = await client.from("vehicle_maintenance_configs").select("mezzo_id").eq("id", configId).maybeSingle();
     if (cfg?.mezzo_id) {
-      const { data: mezzo } = await client.from("mezzi").select("cliente").eq("id", cfg.mezzo_id).maybeSingle();
+      const { data: mezzo } = await client
+        .from("mezzi")
+        .select("cliente, cliente_id")
+        .eq("id", cfg.mezzo_id)
+        .maybeSingle();
+      if (mezzo?.cliente_id) clienteId = String(mezzo.cliente_id);
       clienteLabel = String(mezzo?.cliente ?? "");
     }
   } else if (typeof payload.cliente_label === "string") {
     clienteLabel = payload.cliente_label;
   }
 
-  if (!clienteLabel.trim()) return null;
-  const resolved = await resolveClienteByLabel(client, clienteLabel);
-  if (resolved) return resolved;
+  if (clienteId) {
+    const resolved = await resolveClienteById(client, clienteId);
+    if (resolved) return resolved;
+  }
 
-  return { email: "", name: clienteLabel, clienteId };
+  if (!clienteLabel.trim()) return null;
+  return { email: "", name: clienteLabel, clienteId: null };
 }
 
 export function buildOfficinaTemplateVars(settingsRows: AppSettingRow[]): Record<string, string> {

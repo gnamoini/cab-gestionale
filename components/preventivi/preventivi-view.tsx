@@ -66,9 +66,7 @@ import type { DdtStatus } from "@/lib/ddt/types";
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
 import { PreventivoStatusCell } from "@/components/preventivi/preventivo-status-cell";
 import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
-import { UnoerpSyncBadge } from "@/components/integrations/unoerp-sync-badge";
 import { PreventivoTipoDocumentoBadge } from "@/components/preventivi/preventivo-tipo-documento-badge";
-import { useUnoerpLinkStatuses } from "@/lib/integrations/unoerp/use-unoerp-link-statuses";
 import {
   prevTableColAzioniClass,
   prevTableColClienteClass,
@@ -473,8 +471,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
     usePreventiviRecordsQuery(true, { search: searchApplied });
   const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(true);
-  const unoerpIds = useMemo(() => rows.map((r) => r.id), [rows]);
-  const unoerpById = useUnoerpLinkStatuses("preventivo", unoerpIds);
   const preventiviReadyMarked = useRef(false);
   useEffect(() => {
     void loadPreventiviLearningMerged().then((merged) => savePreventiviLearning(merged));
@@ -897,11 +893,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
             <span className="inline-flex flex-wrap items-center gap-1">
               <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="table" />
               <PreventivoCategoriaBadgeFromRecord record={p} variant="table" />
-              <UnoerpSyncBadge
-                status={unoerpById.get(p.id)?.sync_status}
-                unoerpRecordId={unoerpById.get(p.id)?.unoerp_record_id}
-                lastSyncedAt={unoerpById.get(p.id)?.last_synced_at}
-              />
             </span>
           </td>
           <td className={`whitespace-nowrap ${gestionaleListTableTd} ${prevTableBodyTextClass} tabular-nums`}>
@@ -984,7 +975,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
       openEliminaConfirm,
       pagedRows,
       preventiviBillingById,
-      unoerpById,
       profittoByPreventivoId,
       profittoLoading,
     ],
@@ -1430,11 +1420,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                         <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="inline" />
                         <PreventivoCategoriaBadgeFromRecord record={p} variant="inline" />
                         <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
-                        <UnoerpSyncBadge
-                          status={unoerpById.get(p.id)?.sync_status}
-                          unoerpRecordId={unoerpById.get(p.id)?.unoerp_record_id}
-                          lastSyncedAt={unoerpById.get(p.id)?.last_synced_at}
-                        />
                       </div>
                       <p className="mt-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
                         {p.cliente || "—"}

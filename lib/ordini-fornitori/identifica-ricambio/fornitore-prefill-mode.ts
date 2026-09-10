@@ -2,7 +2,12 @@ import type { FornitoreMatchMethod } from "@/lib/ordini-fornitori/import/ordine-
 import type { FornitorePrefillMode } from "@/lib/ordini-fornitori/identifica-ricambio/types";
 
 const IDENTIFIED_METHODS: ReadonlySet<FornitoreMatchMethod> = new Set(["piva", "cf", "exact"]);
-const SUGGESTED_METHODS: ReadonlySet<FornitoreMatchMethod> = new Set(["normalized", "fuzzy"]);
+const SUGGESTED_METHODS: ReadonlySet<FornitoreMatchMethod> = new Set([
+  "normalized",
+  "fuzzy",
+  "exact_suggest",
+  "fuzzy_suggest",
+]);
 
 export function fornitoreModeFromMatch(
   matched: boolean,

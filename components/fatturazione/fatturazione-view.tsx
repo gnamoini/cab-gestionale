@@ -29,11 +29,7 @@ import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import {
-  ddtListQueryKey,
-  fatturazioneOpenItemsQueryKey,
-  fatturazionePaymentsQueryKey,
-} from "@/lib/render/query-key-factory";
+import { ddtListQueryKey, fatturazioneDaFatturareQueryKey, fatturazioneOpenItemsQueryKey, fatturazionePaymentsQueryKey } from "@/lib/render/query-key-factory";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
@@ -48,6 +44,7 @@ import { useListSurface } from "@/lib/ui/use-list-surface";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
+import { err, success } from "@/src/services/service-result";
 
 const FatturazioneWizardModal = dynamic(
   () => import("@/components/fatturazione/fatturazione-wizard-modal").then((m) => m.FatturazioneWizardModal),
@@ -111,6 +108,12 @@ const FatturazioneLogDrawer = dynamic(
   { ssr: false },
 );
 
+const FatturazioneDaFatturareSection = dynamic(
+  () =>
+    import("@/components/fatturazione/fatturazione-da-fatturare-section").then((m) => m.FatturazioneDaFatturareSection),
+  { ssr: false },
+);
+
 function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
   usePageActionMenu(items, { group: "fatturazione-base", deps: [items] });
   return null;
@@ -140,6 +143,8 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardOrigine, setWizardOrigine] = useState<FatturazioneOrigine>("manuale");
+  const [wizardPreventivoIds, setWizardPreventivoIds] = useState<string[] | undefined>();
+  const [wizardDdtId, setWizardDdtId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<InvoiceDetail | null>(null);
@@ -151,6 +156,17 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
     ...gestOpts,
     enabled: needDdtList,
   });
+  const daFatturareQuery = useServiceQuery(
+    fatturazioneDaFatturareQueryKey(),
+    async () => {
+      const { getBrowserSupabase } = await import("@/src/lib/supabase/browser-client");
+      const c = getBrowserSupabase();
+      const { data, error } = await c.from("v_ciclo_attivo_da_fatturare").select("*").limit(200);
+      if (error) return err(error.message);
+      return success(data ?? []);
+    },
+    { ...gestOpts, enabled: activeTab === "da_fatturare" },
+  );
   const logQuery = useLogListQuery({ entita: "invoices", limit: 100 }, { enabled: logOpen });
 
   const eligibleDdtDocuments = useMemo(
@@ -229,6 +245,25 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
 
   const section = (() => {
     switch (activeTab) {
+      case "da_fatturare":
+        return (
+          <FatturazioneDaFatturareSection
+            rows={(daFatturareQuery.data ?? []) as import("@/components/fatturazione/fatturazione-da-fatturare-section").CicloAttivoDaFatturareRow[]}
+            isLoading={daFatturareQuery.isLoading}
+            canWrite={perms.canWrite}
+            onGenerate={(origine, sourceId) => {
+              setWizardOrigine(origine);
+              if (origine === "ddt") {
+                setWizardDdtId(sourceId);
+                setWizardPreventivoIds(undefined);
+              } else {
+                setWizardDdtId(null);
+                setWizardPreventivoIds([sourceId]);
+              }
+              setWizardOpen(true);
+            }}
+          />
+        );
       case "scadenziario":
         return <FatturazioneScadenziarioSection onOpenInvoice={(id) => void openDetail(id)} />;
       case "pagamenti":
@@ -262,10 +297,20 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
             onOpenDetail={(id) => void openDetail(id)}
             onNewManuale={() => {
               setWizardOrigine("manuale");
+              setWizardPreventivoIds(undefined);
+              setWizardDdtId(null);
               setWizardOpen(true);
             }}
             onNewPreventivo={() => {
               setWizardOrigine("preventivo");
+              setWizardPreventivoIds(undefined);
+              setWizardDdtId(null);
+              setWizardOpen(true);
+            }}
+            onNewDdt={() => {
+              setWizardOrigine("ddt");
+              setWizardPreventivoIds(undefined);
+              setWizardDdtId(null);
               setWizardOpen(true);
             }}
             externalFilters={fattureFilterBoost ?? undefined}
@@ -340,6 +385,8 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
               onRequestClose={() => {
                 setWizardOpen(false);
                 setEditDraft(null);
+                setWizardPreventivoIds(undefined);
+                setWizardDdtId(null);
               }}
               onSaved={() => void refetch()}
               preventiviRecords={preventiviQuery.records}
@@ -347,6 +394,8 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
               billingCustomers={customers}
               eligibleDdtDocuments={eligibleDdtDocuments}
               initialOrigine={wizardOrigine}
+              initialPreventivoIds={wizardPreventivoIds}
+              initialDdtId={wizardDdtId}
               editDetail={editDraft}
             />
           ) : null}

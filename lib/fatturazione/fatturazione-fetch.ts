@@ -1,5 +1,5 @@
 import {
-  BILLING_CUSTOMERS_COLUMNS,
+  CLIENTI_ANAGRAFICHE_LIST_COLUMNS,
   INVOICE_LINKS_COLUMNS,
   INVOICE_PAYMENTS_COLUMNS,
   INVOICE_ROWS_COLUMNS,
@@ -10,7 +10,7 @@ import type { InvoiceListPayload } from "@/lib/fatturazione/types";
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type {
-  BillingCustomerRow,
+  ClienteAnagraficaRow,
   InvoiceLineRow,
   InvoiceLinkRow,
   InvoicePaymentRow,
@@ -41,7 +41,7 @@ export async function fetchInvoiceListPayload(
     ids.length
       ? sb.from("invoice_payments").select(INVOICE_PAYMENTS_COLUMNS).in("invoice_id", ids).order("data", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    sb.from("billing_customers").select(BILLING_CUSTOMERS_COLUMNS).order("cliente_label", { ascending: true }),
+    sb.from("clienti_anagrafiche").select(CLIENTI_ANAGRAFICHE_LIST_COLUMNS).eq("is_active", true).order("nome_display", { ascending: true }),
     sb.from("preventivi_billing_status").select(PREVENTIVI_BILLING_STATUS_COLUMNS),
   ]);
 
@@ -56,7 +56,7 @@ export async function fetchInvoiceListPayload(
     rows: (rowsRes.data ?? []) as InvoiceLineRow[],
     links: (linksRes.data ?? []) as InvoiceLinkRow[],
     payments: (paymentsRes.data ?? []) as InvoicePaymentRow[],
-    customers: (customersRes.data ?? []) as BillingCustomerRow[],
+    customers: (customersRes.data ?? []) as ClienteAnagraficaRow[],
     preventiviBilling: (billingRes.data ?? []) as PreventivoBillingStatusRow[],
   });
 }

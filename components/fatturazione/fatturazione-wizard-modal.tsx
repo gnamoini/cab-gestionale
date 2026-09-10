@@ -11,7 +11,8 @@ import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea"
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import {
   billingSnapshotFromAnagrafica,
-  findBillingCustomerByLabel,
+  billingSnapshotFromClienteRow,
+  findClienteById,
   mergeBillingSnapshot,
   type BillingCustomerSnapshot,
 } from "@/lib/fatturazione/billing-customer-bridge";
@@ -20,17 +21,18 @@ import {
   preventivoBillingResiduo,
   preventivoToInvoiceDraftRows,
 } from "@/lib/fatturazione/preventivo-to-invoice-draft";
-import { calculateInvoiceTotals, assertNoPreventivoOverbilling } from "@/lib/fatturazione/invoice-calculations";
-import { formatInvoiceMoney } from "@/components/fatturazione/fattura-status-badge";
+import { calculateInvoiceTotals, assertNoPreventivoOverbilling, formatInvoiceMoney } from "@/lib/fatturazione/invoice-calculations";
+import { fetchVatCodesForContext, formatVatCodeLabel, pickDefaultVatCodeId } from "@/lib/fatturazione/vat-codes-client";
+import { isPreventivoAccettato } from "@/lib/fatturazione/ciclo-attivo/preventivo-accettato";
+import type { VatCodeListItem } from "@/lib/vat/types";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import { ddtToInvoiceDraft } from "@/lib/fatturazione/ddt-to-invoice-draft";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import type { FatturazioneOrigine, InvoiceCreateInput, InvoiceDetail, InvoiceDraftRowInput } from "@/lib/fatturazione/types";
-import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
 import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
-import type { BillingCustomerRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
+import type { ClienteAnagraficaRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { clientiAnagraficaEntry } from "@/lib/domain/clienti-anagrafica-entry";
 import { invoicesEntry } from "@/lib/domain/invoices-entry";
@@ -55,8 +57,8 @@ const ROW_TIPI = [
   { value: "libera", label: "Riga libera" },
 ];
 
-function emptyRow(): InvoiceDraftRowInput {
-  return { tipo: "libera", descrizione: "", quantita: 1, prezzo_unitario: 0, sconto_percent: 0, iva_percent: 22 };
+function emptyRow(vatCodeId = ""): InvoiceDraftRowInput {
+  return { tipo: "libera", descrizione: "", quantita: 1, prezzo_unitario: 0, sconto_percent: 0, vat_code_id: vatCodeId };
 }
 
 export function FatturazioneWizardModal({
@@ -68,16 +70,18 @@ export function FatturazioneWizardModal({
   eligibleDdtDocuments = [],
   initialOrigine,
   initialPreventivoIds,
+  initialDdtId,
   editDetail,
 }: {
   onRequestClose: () => void;
   onSaved: () => void;
   preventiviRecords: readonly PreventivoRecord[];
   preventiviBilling: readonly PreventivoBillingStatusRow[];
-  billingCustomers: readonly BillingCustomerRow[];
+  billingCustomers: readonly ClienteAnagraficaRow[];
   eligibleDdtDocuments?: readonly DdtDocumentRow[];
   initialOrigine?: FatturazioneOrigine;
   initialPreventivoIds?: string[];
+  initialDdtId?: string | null;
   editDetail?: InvoiceDetail | null;
 }) {
   const isMobile = useMaxMdDown();
@@ -87,15 +91,17 @@ export function FatturazioneWizardModal({
   const [busy, setBusy] = useState(false);
   const [origine, setOrigine] = useState<FatturazioneOrigine>(initialOrigine ?? "manuale");
   const [selectedPreventivoIds, setSelectedPreventivoIds] = useState<string[]>(initialPreventivoIds ?? []);
-  const [selectedDdtId, setSelectedDdtId] = useState<string | null>(null);
+  const [selectedDdtId, setSelectedDdtId] = useState<string | null>(initialDdtId ?? null);
   const [clienteLabel, setClienteLabel] = useState("");
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<BillingCustomerSnapshot>({});
   const [rows, setRows] = useState<InvoiceDraftRowInput[]>([emptyRow()]);
+  const [vatCodes, setVatCodes] = useState<VatCodeListItem[]>([]);
   const [dataEmissione, setDataEmissione] = useState(new Date().toISOString().slice(0, 10));
   const [dataScadenza, setDataScadenza] = useState("");
   const [note, setNote] = useState("");
-  const [statusOut, setStatusOut] = useState<"bozza" | "da_verificare" | "emessa">("bozza");
+  const statusOut: "bozza" | "da_verificare" =
+    editDetail?.invoice.status === "da_verificare" ? "da_verificare" : "bozza";
 
    
   useEffect(() => {
@@ -114,7 +120,7 @@ export function FatturazioneWizardModal({
             quantita: r.quantita,
             prezzo_unitario: r.prezzo_unitario,
             sconto_percent: r.sconto_percent,
-            iva_percent: r.iva_percent,
+            vat_code_id: r.vat_code_id ?? pickDefaultVatCodeId(vatCodes),
             ricambio_id: r.ricambio_id,
             lavorazione_id: r.lavorazione_id,
             preventivo_id: r.preventivo_id,
@@ -125,7 +131,6 @@ export function FatturazioneWizardModal({
     setDataEmissione(inv.data_emissione ?? new Date().toISOString().slice(0, 10));
     setDataScadenza(inv.data_scadenza ?? "");
     setNote(inv.note ?? "");
-    setStatusOut(inv.status === "da_verificare" || inv.status === "emessa" ? inv.status : "bozza");
     setSelectedPreventivoIds(
       editDetail.links.filter((l) => l.source_type === "preventivo").map((l) => l.source_id),
     );
@@ -140,44 +145,71 @@ export function FatturazioneWizardModal({
   const eligiblePreventivi = useMemo(
     () =>
       preventiviRecords.filter((p) => {
+        const isConsuntivo = p.tipoDocumento === "consuntivo";
+        if (origine === "consuntivo") return isConsuntivo;
+        if (origine === "preventivo" || origine === "multi_preventivo") {
+          if (isConsuntivo) return false;
+          if (!isPreventivoAccettato(p)) return false;
+        }
         const b = billingByPrev.get(p.id);
         const residuo = preventivoBillingResiduo(b, p.totaleFinale ?? 0);
         return residuo > 0;
       }),
-    [preventiviRecords, billingByPrev],
+    [origine, preventiviRecords, billingByPrev],
   );
 
-  const totals = useMemo(() => calculateInvoiceTotals(rows), [rows]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchVatCodesForContext({ operation_date: dataEmissione, direction: "sales" })
+      .then((codes) => {
+        if (cancelled) return;
+        setVatCodes(codes);
+        const defaultId = pickDefaultVatCodeId(codes);
+        if (!defaultId) return;
+        setRows((prev) =>
+          prev.map((r) => (r.vat_code_id ? r : { ...r, vat_code_id: defaultId })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setVatCodes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dataEmissione]);
 
-  const hydrateCliente = useCallback(async (label: string) => {
+  const totals = useMemo(() => {
+    if (!vatCodes.length) return { imponibile: 0, iva: 0, totale: 0 };
+    try {
+      return calculateInvoiceTotals(rows.filter((r) => r.vat_code_id), vatCodes);
+    } catch {
+      return { imponibile: 0, iva: 0, totale: 0 };
+    }
+  }, [rows, vatCodes]);
+
+  const hydrateCliente = useCallback(async (label: string, selectedClienteId?: string | null) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    const existing = findBillingCustomerByLabel(billingCustomers, trimmed);
-    if (existing) {
-      setCustomerId(existing.id);
-      setSnapshot({
-        ragione_sociale: existing.ragione_sociale ?? trimmed,
-        partita_iva: existing.partita_iva ?? undefined,
-        codice_fiscale: existing.codice_fiscale ?? undefined,
-        pec: existing.pec ?? undefined,
-        codice_sdi: existing.codice_sdi ?? undefined,
-        indirizzo: (existing.indirizzo as BillingCustomerSnapshot["indirizzo"]) ?? {},
-      });
+    if (selectedClienteId) {
+      const byId = findClienteById(billingCustomers, selectedClienteId);
+      if (byId) {
+        setCustomerId(byId.id);
+        setSnapshot(billingSnapshotFromClienteRow(byId));
+        return;
+      }
+    }
+    const anagRes = await clientiAnagraficaEntry.getByNomeDisplay(trimmed);
+    if (anagRes.success && anagRes.data?.id) {
+      setCustomerId(anagRes.data.id);
+      setSnapshot(billingSnapshotFromAnagrafica(anagRes.data));
       return;
     }
-    const key = buildClienteEntityKey(trimmed);
-    if (!key) return;
-    const anagRes = await clientiAnagraficaEntry.getByNomeDisplay(trimmed);
-    if (anagRes.success && anagRes.data) {
-      setSnapshot(billingSnapshotFromAnagrafica(anagRes.data));
-    } else {
-      setSnapshot({ ragione_sociale: trimmed });
-    }
+    setSnapshot({ ragione_sociale: trimmed });
     setCustomerId(null);
   }, [billingCustomers]);
 
   const importFromPreventivi = useCallback(() => {
-    const ids = origine === "preventivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
+    const ids = origine === "preventivo" || origine === "consuntivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
     if (!ids.length) return;
     const draftRows: InvoiceDraftRowInput[] = [];
     let label = "";
@@ -185,39 +217,45 @@ export function FatturazioneWizardModal({
       const prev = preventiviRecords.find((p) => p.id === id);
       if (!prev) continue;
       if (!label) label = prev.cliente.trim();
-      draftRows.push(...preventivoToInvoiceDraftRows(prev, id));
+      draftRows.push(...preventivoToInvoiceDraftRows(prev, id, pickDefaultVatCodeId(vatCodes)));
     }
     if (label) {
       setClienteLabel(label);
       void hydrateCliente(label);
     }
     if (draftRows.length) setRows(draftRows);
-  }, [hydrateCliente, origine, preventiviRecords, selectedPreventivoIds]);
+  }, [hydrateCliente, origine, preventiviRecords, selectedPreventivoIds, vatCodes]);
 
   const importFromDdt = useCallback(async () => {
     if (!selectedDdtId) return;
     const detail = await ddtEntry.getDetail(selectedDdtId);
     if (!detail.success || !detail.data) return;
-    const draft = ddtToInvoiceDraft(detail.data);
+    const ddtDetail = detail.data;
+    const prev = preventiviRecords.find((p) => p.id === ddtDetail.document.preventivo_id);
+    const draft = ddtToInvoiceDraft(ddtDetail, pickDefaultVatCodeId(vatCodes), prev);
     setClienteLabel(draft.cliente_label);
     void hydrateCliente(draft.cliente_label);
     setRows(draft.rows);
     setDataEmissione(draft.data_emissione);
     setNote(draft.note ?? "");
-  }, [hydrateCliente, selectedDdtId]);
+  }, [hydrateCliente, preventiviRecords, selectedDdtId, vatCodes]);
 
   const buildLinks = useCallback(() => {
     if (origine === "ddt" && selectedDdtId) {
       return [{ source_type: "ddt" as const, source_id: selectedDdtId, allocated_totale: totals.totale, allocated_imponibile: totals.imponibile, allocated_iva: totals.iva }];
     }
-    const ids = origine === "preventivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
+    const ids = origine === "preventivo" || origine === "consuntivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
     if (!ids.length) return [];
     const perPrev = totals.totale / ids.length;
-    return ids.map((id) => buildPreventivoInvoiceLink(id, perPrev, totals.imponibile / ids.length, totals.iva / ids.length));
+    return ids.map((id) =>
+      origine === "consuntivo"
+        ? { source_type: "consuntivo" as const, source_id: id, allocated_totale: perPrev, allocated_imponibile: totals.imponibile / ids.length, allocated_iva: totals.iva / ids.length }
+        : buildPreventivoInvoiceLink(id, perPrev, totals.imponibile / ids.length, totals.iva / ids.length),
+    );
   }, [origine, selectedDdtId, selectedPreventivoIds, totals]);
 
   const validatePreventivi = useCallback(() => {
-    const ids = origine === "preventivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
+    const ids = origine === "preventivo" || origine === "consuntivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
     for (const id of ids) {
       const prev = preventiviRecords.find((p) => p.id === id);
       const b = billingByPrev.get(id);
@@ -233,7 +271,7 @@ export function FatturazioneWizardModal({
     return null;
   }, [billingByPrev, origine, preventiviRecords, selectedPreventivoIds, totals.totale]);
 
-  const submit = async () => {
+  const submit = async (emitAfter = false) => {
     if (busy) return;
     if (!clienteLabel.trim()) {
       toast.validation("Seleziona un cliente.");
@@ -243,7 +281,11 @@ export function FatturazioneWizardModal({
       toast.validation("Aggiungi almeno una riga con descrizione.");
       return;
     }
-    const prevErr = origine === "preventivo" || origine === "multi_preventivo" ? validatePreventivi() : null;
+    if (rows.some((r) => r.descrizione.trim() && !r.vat_code_id)) {
+      toast.validation("Seleziona un codice IVA per ogni riga.");
+      return;
+    }
+    const prevErr = origine === "preventivo" || origine === "multi_preventivo" || origine === "consuntivo" ? validatePreventivi() : null;
     if (origine === "ddt" && !selectedDdtId) {
       toast.validation("Seleziona un DDT.");
       return;
@@ -255,7 +297,7 @@ export function FatturazioneWizardModal({
     setBusy(true);
     try {
       const payload: InvoiceCreateInput = {
-        origine: origine === "ddt" ? "manuale" : origine,
+        origine,
         status: statusOut,
         customer_id: customerId,
         cliente_label: clienteLabel.trim(),
@@ -270,7 +312,11 @@ export function FatturazioneWizardModal({
         ? await invoicesEntry.updateDraftWithRows(editingId, payload)
         : await invoicesEntry.create(payload);
       if (!res.success) throw new Error(res.error ?? "Salvataggio non riuscito.");
-      toast.successOnce("fatt-create", editingId ? "Bozza aggiornata." : "Fattura creata.");
+      if (emitAfter && res.data?.invoice.id) {
+        const issued = await invoicesEntry.issue(res.data.invoice.id, "emessa");
+        if (!issued.success) throw new Error(issued.error ?? "Emissione non riuscita.");
+      }
+      toast.successOnce("fatt-create", editingId ? "Bozza aggiornata." : emitAfter ? "Fattura emessa." : "Bozza creata.");
       onSaved();
       onRequestClose();
     } catch (e) {
@@ -303,7 +349,8 @@ export function FatturazioneWizardModal({
             {(
               [
                 ["manuale", "Manuale"],
-                ["preventivo", "Da preventivo"],
+                ["preventivo", "Da preventivo accettato"],
+                ["consuntivo", "Da consuntivo"],
                 ["multi_preventivo", "Da più preventivi"],
                 ["ddt", "Da DDT"],
               ] as const
@@ -342,10 +389,10 @@ export function FatturazioneWizardModal({
                   <li key={p.id}>
                     <label className="flex items-start gap-2 text-sm">
                       <input
-                        type={origine === "preventivo" ? "radio" : "checkbox"}
+                        type={origine === "preventivo" || origine === "consuntivo" ? "radio" : "checkbox"}
                         checked={checked}
                         onChange={() => {
-                          if (origine === "preventivo") setSelectedPreventivoIds([p.id]);
+                          if (origine === "preventivo" || origine === "consuntivo") setSelectedPreventivoIds([p.id]);
                           else
                             setSelectedPreventivoIds((prev) =>
                               checked ? prev.filter((x) => x !== p.id) : [...prev, p.id],
@@ -419,7 +466,7 @@ export function FatturazioneWizardModal({
         <FormSection
           title="Righe documento"
           action={
-            <button type="button" className={dsBtnNeutralForm} onClick={() => setRows((r) => [...r, emptyRow()])}>
+            <button type="button" className={dsBtnNeutralForm} onClick={() => setRows((r) => [...r, emptyRow(pickDefaultVatCodeId(vatCodes))])}>
               Aggiungi riga
             </button>
           }
@@ -465,6 +512,16 @@ export function FatturazioneWizardModal({
                           rs.map((r, j) => (j === i ? { ...r, quantita: Number(e.target.value) || 0 } : r)),
                         )
                       }
+                    />
+                  </FormField>
+                  <FormField label="Codice IVA">
+                    <GlobalSelect
+                      value={row.vat_code_id}
+                      onChange={(v) =>
+                        setRows((rs) => rs.map((r, j) => (j === i ? { ...r, vat_code_id: v } : r)))
+                      }
+                      items={vatCodes.map((c) => ({ value: c.vat_code_id, label: formatVatCodeLabel(c) }))}
+                      selectOnly
                     />
                   </FormField>
                   <FormField label="Prezzo unitario">
@@ -513,23 +570,14 @@ export function FatturazioneWizardModal({
           <FormField label="Scadenza">
             <input className={dsInput} type="date" value={dataScadenza} onChange={(e) => setDataScadenza(e.target.value)} />
           </FormField>
-          <FormField label="Stato iniziale">
-            <GlobalSelect
-              value={statusOut}
-              onChange={(v) => setStatusOut(v as typeof statusOut)}
-              items={[
-                { value: "bozza", label: "Bozza" },
-                { value: "da_verificare", label: "Da verificare" },
-                { value: "emessa", label: "Emessa" },
-              ]}
-              selectOnly
-            />
-          </FormField>
           <FormField label="Note">
             <GestionaleTextarea rows={3} value={note} onChange={setNote} />
           </FormField>
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             Cliente: <strong>{clienteLabel}</strong> — Totale: <strong>{formatInvoiceMoney(totals.totale)}</strong>
+          </p>
+          <p className="text-xs text-[color:var(--cab-text-muted)]">
+            La bozza è modificabile. Emetti assegna numero, snapshot fiscale e scrittura contabile (profilo cedente obbligatorio).
           </p>
         </FormSection>
       ) : null}
@@ -552,9 +600,16 @@ export function FatturazioneWizardModal({
                 Avanti
               </LoadingButton>
             ) : (
-              <LoadingButton type="button" variant="primary" loading={busy} onClick={() => void submit()}>
-                {editingId ? "Salva bozza" : "Crea fattura"}
-              </LoadingButton>
+              <>
+                <LoadingButton type="button" variant="secondary" loading={busy} onClick={() => void submit(false)}>
+                  {editingId ? "Salva bozza" : "Crea bozza"}
+                </LoadingButton>
+                {editingId ? null : (
+                  <LoadingButton type="button" variant="primary" loading={busy} onClick={() => void submit(true)}>
+                    Emetti
+                  </LoadingButton>
+                )}
+              </>
             )}
           </div>
         </div>

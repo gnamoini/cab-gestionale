@@ -74,6 +74,7 @@ export type FatturazioneFattureSectionProps = {
   onOpenDetail: (id: string) => void;
   onNewManuale: () => void;
   onNewPreventivo: () => void;
+  onNewDdt?: () => void;
   externalFilters?: Partial<typeof FATTURAZIONE_PAGE_FILTERS_EMPTY>;
 };
 
@@ -86,6 +87,7 @@ export function FatturazioneFattureSection({
   onOpenDetail,
   onNewManuale,
   onNewPreventivo,
+  onNewDdt,
   externalFilters,
 }: FatturazioneFattureSectionProps) {
   const userId = useAuthUserId();
@@ -167,6 +169,11 @@ export function FatturazioneFattureSection({
                 <button type="button" className={dsPageToolbarBtn} onClick={onNewPreventivo}>
                   Da preventivo
                 </button>
+                {onNewDdt ? (
+                  <button type="button" className={dsPageToolbarBtn} onClick={onNewDdt}>
+                    Da DDT
+                  </button>
+                ) : null}
               </div>
             ) : null
           }

@@ -1,3 +1,4 @@
+import { mapCicloAttivoError } from "@/lib/fatturazione/ciclo-attivo/error-codes";
 import type { InvoiceTransition } from "@/src/types/supabase-tables";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 
@@ -16,7 +17,11 @@ export async function invoiceApplyTransition(
   });
   if (error) {
     const conflict = error.message.includes("invoice_version_conflict");
-    return { ok: false, error: conflict ? "Fattura modificata da un altro utente. Ricarica e riprova." : error.message, conflict };
+    return {
+      ok: false,
+      error: conflict ? "Fattura modificata da un altro utente. Ricarica e riprova." : mapCicloAttivoError(error.message),
+      conflict,
+    };
   }
   return { ok: true };
 }

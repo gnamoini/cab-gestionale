@@ -18,6 +18,7 @@ const hookSrc = fs.readFileSync(
 );
 const dispatchSrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-dispatch.ts"), "utf8");
 const policySrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-policy.ts"), "utf8");
+const dirtyMarkGateSrc = fs.readFileSync(path.join(ROOT, "lib/sync/operational-dirty-mark-gate.ts"), "utf8");
 const dirtyFlushSrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-dirty-flush.ts"), "utf8");
 const invalidateRelatedSrc = fs.readFileSync(
   path.join(ROOT, "src/lib/react-query/invalidate-related.ts"),
@@ -41,9 +42,9 @@ assert.match(hookSrc, /dispatchTimesheetEmployeesChanged/);
 
 assert.match(dispatchSrc, /resolveSyncEffects/);
 assert.match(dispatchSrc, /markGestionaleDirty/);
-assert.match(dispatchSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(dispatchSrc, /markRecentLocalGestionaleFromEntityIdByTable/);
 assert.match(dispatchSrc, /acknowledgeOperationalTableVersions/);
+assert.match(dirtyMarkGateSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(dirtyFlushSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(invalidateRelatedSrc, /cabSyncEventForEntity\("scheda_lavorazione"/);
 assert.match(policySrc, /isOperationalSessionWarmingUp/);

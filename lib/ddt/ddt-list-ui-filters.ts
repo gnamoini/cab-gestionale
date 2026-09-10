@@ -1,3 +1,4 @@
+import { formatDdtDocumentNumber } from "@/lib/document-numbering/format-document-number";
 import type { DdtStatus } from "@/lib/ddt/types";
 import type { DdtDocumentRow, DdtLineRow } from "@/src/types/supabase-tables";
 
@@ -21,9 +22,8 @@ export const DDT_PAGE_FILTERS_EMPTY: DdtPageFilters = {
   delivery: "",
 };
 
-export function ddtDisplayNumber(doc: Pick<DdtDocumentRow, "numero" | "anno">): string {
-  if (doc.numero == null) return "Bozza";
-  return `${doc.numero}/${doc.anno}`;
+export function ddtDisplayNumber(doc: Pick<DdtDocumentRow, "numero" | "anno" | "serie">): string {
+  return formatDdtDocumentNumber(doc);
 }
 
 export function ddtPageFiltersActive(f: DdtPageFilters): boolean {

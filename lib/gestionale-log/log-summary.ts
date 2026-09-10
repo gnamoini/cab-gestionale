@@ -295,8 +295,8 @@ export function entityKindLabel(entita: string): string {
       return "DDT";
     case "invoice_payments":
       return "PAGAMENTO FATTURA";
-    case "billing_customers":
-      return "CLIENTE FATTURAZIONE";
+    case "clienti_anagrafica":
+      return "CLIENTE ANAGRAFICA";
     case "ordini_fornitori":
       return "ORDINE FORNITORE";
     default:

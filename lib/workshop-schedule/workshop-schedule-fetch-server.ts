@@ -46,7 +46,7 @@ async function fetchWorkOrderProjectionsServer(
   if (unique.length === 0) return map;
   const { data, error } = await sb
     .from("lavorazioni")
-    .select(`id, codice, stato, addetto, ${lavorazioniMezziEmbedSelect("targa, marca, modello, cliente")}`)
+    .select(`id, codice, stato, ${lavorazioniMezziEmbedSelect("targa, marca, modello, cliente")}`)
     .in("id", unique)
     .is("deleted_at", null);
   if (error || !data) return map;
@@ -54,7 +54,6 @@ async function fetchWorkOrderProjectionsServer(
     id: string;
     codice?: string | null;
     stato?: string | null;
-    addetto?: string | null;
     mezzi?: { targa?: string | null; marca?: string | null; modello?: string | null; cliente?: string | null } | null;
   }>) {
     map.set(row.id, {
@@ -65,7 +64,7 @@ async function fetchWorkOrderProjectionsServer(
       mezzo: row.mezzi
         ? { targa: row.mezzi.targa, marca: row.mezzi.marca, modello: row.mezzi.modello }
         : null,
-      addetto: row.addetto ?? null,
+      addetto: null,
     });
   }
   return map;

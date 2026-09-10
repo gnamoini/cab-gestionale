@@ -12,6 +12,8 @@ export type FornitoreAnagraficaSettings = {
   indirizzo: string;
   partitaIva: string;
   codiceFiscale: string;
+  pec: string;
+  codiceDestinatario: string;
   telefono: string;
   email: string;
   emailAggiuntive: string[];
@@ -23,6 +25,8 @@ export function emptyFornitoreAnagraficaSettings(): FornitoreAnagraficaSettings 
     indirizzo: "",
     partitaIva: "",
     codiceFiscale: "",
+    pec: "",
+    codiceDestinatario: "",
     telefono: "",
     email: "",
     emailAggiuntive: [],
@@ -56,6 +60,8 @@ export function parseFornitoreAnagraficaSettings(raw: unknown): FornitoreAnagraf
     indirizzo: strField(o.indirizzo),
     partitaIva: strField(o.partitaIva ?? o.partita_iva),
     codiceFiscale: strField(o.codiceFiscale ?? o.codice_fiscale),
+    pec: strField(o.pec),
+    codiceDestinatario: strField(o.codiceDestinatario ?? o.codice_destinatario),
     telefono: strField(o.telefono),
     email: isValidEmail(email) ? email : "",
     emailAggiuntive: parseFornitoreEmailAggiuntive(o.emailAggiuntive ?? o.email_aggiuntive),

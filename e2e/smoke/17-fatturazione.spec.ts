@@ -8,7 +8,7 @@ test("admin reaches fatturazione page", async ({ page }) => {
   await page.goto("/fatturazione");
   await expect(page.getByRole("heading", { name: "Fatturazione" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("navigation", { name: "Sezioni fatturazione" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Fatture" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Da fatturare" })).toBeVisible();
 });
 
 test("fatturazione tab scadenziario and deep link fattOpen", async ({ page }) => {

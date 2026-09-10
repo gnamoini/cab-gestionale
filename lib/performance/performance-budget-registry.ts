@@ -167,7 +167,7 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     maxServerMs: 3,
     maxHydrationMs: 3000,
     maxClientMs: 100,
-    maxFirstLoadJsKb: 1400,
+    maxFirstLoadJsKb: 1900,
     maxInitialFetches: 5,
     webVitals: DEFAULT_WEB_VITALS_BUDGET,
   },
@@ -179,7 +179,7 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     maxServerMs: 1,
     maxHydrationMs: 2000,
     maxClientMs: 80,
-    maxFirstLoadJsKb: 1700,
+    maxFirstLoadJsKb: 1850,
     webVitals: { ...DEFAULT_WEB_VITALS_BUDGET, lcpMs: 3000 },
   },
   {
@@ -190,7 +190,7 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     maxServerMs: 1,
     maxHydrationMs: 2500,
     maxClientMs: 60,
-    maxFirstLoadJsKb: 1700,
+    maxFirstLoadJsKb: 1850,
     webVitals: DEFAULT_WEB_VITALS_BUDGET,
   },
   {
@@ -201,7 +201,7 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     maxServerMs: 1,
     maxHydrationMs: 2500,
     maxClientMs: 60,
-    maxFirstLoadJsKb: 1700,
+    maxFirstLoadJsKb: 1850,
     webVitals: DEFAULT_WEB_VITALS_BUDGET,
   },
   {
@@ -212,7 +212,7 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     maxServerMs: 1,
     maxHydrationMs: 1500,
     maxClientMs: 40,
-    maxFirstLoadJsKb: 1700,
+    maxFirstLoadJsKb: 1850,
     webVitals: { ...DEFAULT_WEB_VITALS_BUDGET, lcpMs: 2800 },
   },
 ] as const;

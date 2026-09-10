@@ -18,6 +18,8 @@ const mag: MagazzinoMasterPrefs = {
       telefono: "+39 02 0000000",
       email: "",
       emailAggiuntive: [],
+      pec: "",
+      codiceDestinatario: "",
     },
   },
 };

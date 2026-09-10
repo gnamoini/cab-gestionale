@@ -298,7 +298,7 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       const c = await sb();
       const prof = await countUpdate(c, "profiles", { cliente_ref: to }, { cliente_ref: from });
       out.push({ kind, from, to, updated: prof });
-      out.push(await propagateSimpleColumn(kind, from, to, "billing_customers", "cliente_label"));
+      out.push(await propagateSimpleColumn(kind, from, to, "clienti_anagrafiche", "nome_display"));
       out.push({ kind, from, to, updated: await propagateDdtClienteBozza(from, to) });
       const { clientiAnagraficaService } = await import("@/src/services/clienti-anagrafica.service");
       const anagRes = await clientiAnagraficaService.renameNomeDisplay(from, to);
