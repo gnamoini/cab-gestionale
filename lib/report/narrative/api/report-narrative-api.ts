@@ -2,7 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/build-report-ai-context-for-period";
+import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/api/build-report-ai-context-for-period";
 import { assertValidReportPayload } from "@/lib/report/contracts/validate-envelope";
 import type { ReportPayload } from "@/lib/report/contracts/report-payload";
 import { resolveReportV2NarrativeEnabled } from "@/lib/feature-flags/report-v2-flag";

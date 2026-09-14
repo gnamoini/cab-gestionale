@@ -1,0 +1,52 @@
+{
+  "contractVersion": "1",
+  "metrics": [
+    {
+      "metricId": "cross_efficiency",
+      "sourceDatasets": [
+        "lavorazioni",
+        "ore"
+      ],
+      "displayKey": "report.cross.efficiency",
+      "trust": "AMBER",
+      "warnings": null
+    },
+    {
+      "metricId": "cross_parts_job",
+      "sourceDatasets": [
+        "magazzino",
+        "lavorazioni"
+      ],
+      "displayKey": "report.cross.parts_job",
+      "trust": "GREEN",
+      "warnings": null
+    },
+    {
+      "metricId": "cross_cost_job",
+      "sourceDatasets": [
+        "lavorazioni",
+        "magazzino",
+        "ore"
+      ],
+      "displayKey": "report.cross.cost_job",
+      "trust": "GREEN",
+      "warnings": null
+    },
+    {
+      "metricId": "cross_value_hour",
+      "sourceDatasets": [
+        "economico",
+        "ore"
+      ],
+      "displayKey": "report.cross.value_hour",
+      "trust": "GREEN",
+      "warnings": null
+    }
+  ],
+  "metadata": {
+    "contractVersion": "2.0",
+    "trustStatus": "AMBER",
+    "sourceFreshness": "LIVE",
+    "generatedAt": "<dynamic>"
+  }
+}

@@ -8,7 +8,7 @@ const apiSrc = fs.readFileSync(
 );
 
 const builderSrc = fs.readFileSync(
-  path.join(process.cwd(), "lib/report/ai-context/build-report-ai-context-for-period.ts"),
+  path.join(process.cwd(), "lib/report/ai-context/api/build-report-ai-context-for-period.ts"),
   "utf8",
 );
 

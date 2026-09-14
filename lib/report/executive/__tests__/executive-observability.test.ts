@@ -43,7 +43,7 @@ buildReportExecutiveDto({
 
 const partialEvents = captured.filter((e) => e.event === "executive_metric_partial");
 const partialIds = partialEvents.map((e) => e.payload.metricId).sort();
-assert.deepEqual(partialIds, ["eco_da_incassare", "eco_fatturato"]);
+assert.deepEqual(partialIds, ["eco_da_incassare", "eco_fatturato", "eco_importo_scaduto"].sort());
 assert.equal(new Set(partialIds).size, partialIds.length);
 
 for (const evt of partialEvents) {

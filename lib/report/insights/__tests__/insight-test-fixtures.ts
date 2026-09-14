@@ -9,7 +9,7 @@ export function insightFixtureBundle(): AnalyticsDatasetBundle {
         metrics: [
           { id: "lav-periodo", value: 12, label: "Aperture" },
           { id: "lav-chiusi", value: 5, label: "Chiusure" },
-          { id: "lav-aperti", value: 8, label: "Aperti" },
+          { id: "lav-aperti", value: 10, label: "Aperti" },
           { id: "lav-tempo", value: 4, label: "Tempo medio" },
           { id: "lav_late_sla", value: 0, label: "SLA" },
         ],

@@ -5,7 +5,7 @@ import {
   AI_CONTEXT_CONTRACT_VERSION,
   type ReportAIContextPayloadData,
 } from "@/lib/report/ai-context/types";
-import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/build-report-ai-context-for-period";
+import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/api/build-report-ai-context-for-period";
 import { parseRequestedPeriod } from "@/lib/report/datasets/api/report-dataset-api";
 import { assertValidReportPayload } from "@/lib/report/contracts/validate-envelope";
 import { resolveReportV2AiContextEnabled } from "@/lib/feature-flags/report-v2-flag";

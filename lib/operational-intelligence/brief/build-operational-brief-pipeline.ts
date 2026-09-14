@@ -1,6 +1,6 @@
 import "server-only";
 
-import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/build-report-ai-context-for-period";
+import { buildReportAIContextForPeriod } from "@/lib/report/ai-context/api/build-report-ai-context-for-period";
 import { loadOperationalDiaryForPeriod } from "@/lib/operational-intelligence/diary/load-operational-diary.server";
 import { classifyDiaryEntry } from "@/lib/operational-intelligence/diary/classify-diary-entry";
 import { buildFactEngine } from "@/lib/operational-intelligence/facts/build-fact-engine";

@@ -1,0 +1,53 @@
+{
+  "contractVersion": "1",
+  "insights": [
+    {
+      "ruleKey": "LAV_LOAD_EXCEEDS_CLOSURES",
+      "ruleVersion": 1,
+      "severity": "warning",
+      "metricIds": [
+        "lav-chiusi",
+        "lav-periodo"
+      ]
+    },
+    {
+      "ruleKey": "MAG_LOW_STOCK",
+      "ruleVersion": 1,
+      "severity": "warning",
+      "metricIds": [
+        "scorta"
+      ]
+    },
+    {
+      "ruleKey": "LAV_OPEN_BACKLOG",
+      "ruleVersion": 2,
+      "severity": "warning",
+      "metricIds": [
+        "lav-aperti"
+      ]
+    },
+    {
+      "ruleKey": "ORE_PER_JOB",
+      "ruleVersion": 1,
+      "severity": "info",
+      "metricIds": [
+        "lav-chiusi",
+        "ore_total"
+      ]
+    },
+    {
+      "ruleKey": "ORE_MAINTENANCE_COST",
+      "ruleVersion": 1,
+      "severity": "info",
+      "metricIds": [
+        "cost-tot"
+      ]
+    }
+  ],
+  "metadata": {
+    "contractVersion": "2.0",
+    "trustStatus": "GREEN",
+    "sourceFreshness": "LIVE",
+    "generatedAt": "<dynamic>"
+  }
+}

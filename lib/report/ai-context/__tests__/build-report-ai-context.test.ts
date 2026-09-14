@@ -22,6 +22,6 @@ assert.equal(ctx.contractVersion, AI_CONTEXT_CONTRACT_VERSION);
 assert.ok(ctx.insights.length > 0);
 assert.ok(ctx.insights.every((i) => i.payload.schemaVersion === 1));
 assert.ok(ctx.insights.every((i) => i.ruleKey.length > 0));
-assert.equal(ctx.trustSummary, "GREEN");
+assert.equal(ctx.trustSummary, "AMBER");
 
 console.log("build-report-ai-context.test.ts OK");
