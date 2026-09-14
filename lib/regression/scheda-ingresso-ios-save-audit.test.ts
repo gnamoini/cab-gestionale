@@ -265,7 +265,9 @@ assert.ok(guardIdx >= 0 && flushIdx > guardIdx, "prepareFormSubmitAsync: guard p
 
 const editModal = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 assert.match(editModal, /useFormEngine/);
-assert.match(editModal, /runSubmit/);
+assert.match(editModal, /prepareFormSubmitAsync/);
+assert.match(editModal, /useSchedaIngressoSavePipeline/);
+assert.match(editModal, /runIngressoSave/);
 
 const createHook = read("src/hooks/use-lavorazione-create-submit.ts");
 assert.match(createHook, /useFormEngineSections/);

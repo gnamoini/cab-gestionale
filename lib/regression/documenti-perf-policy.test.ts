@@ -17,9 +17,10 @@ const listHooks = read("src/hooks/gestionale/use-entity-list-queries.ts");
 const view = read("components/gestionale/documenti/documenti-view.tsx");
 const derived = read("lib/documenti/use-documenti-list-derived.ts");
 
-assert.match(page, /prefetchCriticalPage\(qc, "documenti"\)/);
-assert.match(page, /DocumentiDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "documenti"\)/);
+assert.match(page, /DocumentiViewLazy/);
+assert.match(page, /GestionaleHydrationBoundary/);
+assert.doesNotMatch(page, /DocumentiDeferredHydration/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "documenti"\)/);
 

@@ -300,6 +300,9 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       out.push({ kind, from, to, updated: prof });
       out.push(await propagateSimpleColumn(kind, from, to, "clienti_anagrafiche", "nome_display"));
       out.push({ kind, from, to, updated: await propagateDdtClienteBozza(from, to) });
+      out.push(
+        await propagateSimpleColumn(kind, from, to, "invoices", "cliente_label", "cliente.billing.label"),
+      );
       const { clientiAnagraficaService } = await import("@/src/services/clienti-anagrafica.service");
       const anagRes = await clientiAnagraficaService.renameNomeDisplay(from, to);
       if (anagRes.success) {

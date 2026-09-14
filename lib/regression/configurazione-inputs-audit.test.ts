@@ -44,7 +44,7 @@ const configSources = [
 ].join("\n");
 
 assert.doesNotMatch(configSources, /type="date"/);
-assert.doesNotMatch(configSources, /<select\b/);
+assert.doesNotMatch(configSources, /<select[\s>]/);
 assert.doesNotMatch(configSources, /<datalist\b/);
 
 assert.match(settingsUnifiedList, /addAriaLabel/);

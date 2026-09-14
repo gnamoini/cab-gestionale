@@ -1,7 +1,34 @@
 import "server-only";
 
+import { recordAuditEvent } from "@/lib/audit/record";
+import { resolveWriteActorIdFromClient } from "@/lib/audit/resolve-actor";
+import { rbacLogEntitaModule } from "@/lib/audit/resolve-module";
 import { mapFiscalConflictError } from "@/lib/fiscal/conflict";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
+
+const CLIENTI_ENTITA = "clienti_anagrafica";
+
+async function auditClienteMasterData(
+  client: SupabaseClient,
+  entityId: string,
+  action: "CREATE" | "UPDATE" | "DELETE",
+  after?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const autoreId = await resolveWriteActorIdFromClient(client);
+    await recordAuditEvent(client, {
+      entityType: CLIENTI_ENTITA,
+      entityId,
+      action,
+      autoreId,
+      module: rbacLogEntitaModule(CLIENTI_ENTITA),
+      after,
+    });
+  } catch {
+    // ponytail: audit failure must not roll back RPC master-data write
+  }
+}
 
 export type ClienteAdminPayload = {
   nome_display: string;
@@ -37,17 +64,21 @@ export async function adminCreateCliente(payload: ClienteAdminPayload): Promise<
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb.rpc("admin_create_cliente", { p_payload: payload });
   if (error) wrapRpcError(error);
-  return data as string;
+  const id = data as string;
+  await auditClienteMasterData(sb, id, "CREATE", { nome_display: payload.nome_display });
+  return id;
 }
 
 export async function adminUpdateCliente(id: string, payload: Partial<ClienteAdminPayload>): Promise<void> {
   const sb = await createSupabaseServerUserClient();
   const { error } = await sb.rpc("admin_update_cliente", { p_id: id, p_payload: payload });
   if (error) wrapRpcError(error);
+  await auditClienteMasterData(sb, id, "UPDATE", payload as Record<string, unknown>);
 }
 
 export async function adminArchiveCliente(id: string): Promise<void> {
   const sb = await createSupabaseServerUserClient();
   const { error } = await sb.rpc("admin_archive_cliente", { p_id: id });
   if (error) wrapRpcError(error);
+  await auditClienteMasterData(sb, id, "DELETE");
 }

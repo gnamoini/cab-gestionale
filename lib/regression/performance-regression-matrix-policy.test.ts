@@ -48,7 +48,8 @@ assert.match(lavIndex, /buildLavorazioniHaystackIndex/);
 assert.match(lavIndex, /matchSearchStringWithPrepared/);
 
 const detailPage = read("app/(gestionale)/lavorazioni-clienti/[id]/page.tsx");
-assert.match(detailPage, /ClientPortalDetailDeferredHydration/);
+assert.match(detailPage, /ClientLavorazioneDetailViewLazy/);
+assert.match(detailPage, /fetchClientPortalDetailDTOServer/);
 
 const registry = read("lib/performance/performance-budget-registry.ts");
 assert.match(registry, /\/lavorazioni-clienti/);

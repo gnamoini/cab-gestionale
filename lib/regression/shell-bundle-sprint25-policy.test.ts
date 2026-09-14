@@ -33,9 +33,10 @@ assert.doesNotMatch(gateSrc, /from ["']@\/lib\/observability\/boot-investigation
 assert.match(gateSrc, /NEXT_PUBLIC_BOOT_INVESTIGATION/);
 assert.match(gateSrc, /NEXT_PUBLIC_PERF_DIAGNOSTICS/);
 
-// App providers — Lite sync, diagnostics dynamic, DevUx dynamic
+// App providers — observability sync shell, diagnostics pack, DevUx dynamic
 const providers = fs.readFileSync(path.join(ROOT, "components/app-providers-gestionale.tsx"), "utf8");
-assert.match(providers, /ObservabilityProviderLite/);
+assert.match(providers, /ObservabilityProvider/);
+assert.doesNotMatch(providers, /ObservabilityProviderLite/);
 assert.match(providers, /ObservabilityDiagnosticsPack/);
 assert.doesNotMatch(providers, /from ["']@\/components\/observability\/boot-investigation-mount["']/);
 assert.doesNotMatch(providers, /from ["']@\/components\/observability\/runtime-health-bridge["']/);

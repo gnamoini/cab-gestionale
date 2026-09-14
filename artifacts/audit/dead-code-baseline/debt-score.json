@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-19T06:27:32.764Z",
-  "files": 4058,
-  "deprecatedExports": 311,
-  "legacyFlags": 8,
+  "generatedAt": "2026-09-14T13:35:37.269Z",
+  "files": 6103,
+  "deprecatedExports": 409,
+  "legacyFlags": 9,
   "fallbackPaths": 5,
-  "orphanNodes": 1238,
-  "score": 5973
+  "orphanNodes": 1775,
+  "score": 8756
 }

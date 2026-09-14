@@ -34,7 +34,8 @@ const lavMutations = read("src/hooks/gestionale/use-lavorazione-mutations.ts");
 assert.match(lavMutations, /invalidateAfterLavorazioneMutations/);
 
 const mezzoMutations = read("src/hooks/gestionale/use-mezzo-mutations.ts");
-assert.match(mezzoMutations, /invalidateAfterMezzoMutations/);
+assert.match(mezzoMutations, /settleMezzoMutationCache/);
+assert.match(mezzoMutations, /traceMutationLifecycle/);
 
 const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
 assert.match(documentiView, /invalidateEntity/);

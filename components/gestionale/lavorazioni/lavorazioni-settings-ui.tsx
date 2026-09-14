@@ -977,16 +977,23 @@ function AddettoSettingsRow({
           </button>
         </>
       )}
-      <div className="flex min-h-11 items-center px-1 text-sm">
-        <select
-          className={`${SETTINGS_LIST_INPUT_EDIT} w-full min-w-0`}
-          value={record.employeeType}
-          aria-label={`Tipo ${itemLabel}`}
-          onChange={(e) => onUpdate(record.id, { employeeType: e.target.value as EmployeeType })}
-        >
-          <option value="ADDETTO">Addetto</option>
-          <option value="ALTRO">Altro dipendente</option>
-        </select>
+      <div className="flex min-h-11 items-center gap-1 px-1 text-sm">
+        {(["ADDETTO", "ALTRO"] as const).map((tipo) => (
+          <button
+            key={tipo}
+            type="button"
+            className={`min-h-9 flex-1 rounded-md px-1.5 text-xs font-medium ${
+              record.employeeType === tipo
+                ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,transparent)] text-[color:var(--cab-text)]"
+                : "bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]"
+            }`}
+            aria-label={`Tipo ${itemLabel}: ${tipo === "ADDETTO" ? "Addetto" : "Altro dipendente"}`}
+            aria-pressed={record.employeeType === tipo}
+            onClick={() => onUpdate(record.id, { employeeType: tipo })}
+          >
+            {tipo === "ADDETTO" ? "Addetto" : "Altro"}
+          </button>
+        ))}
       </div>
       <div className="flex min-h-11 items-center px-1 text-sm">
         <button

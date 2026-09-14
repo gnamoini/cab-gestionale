@@ -1,5 +1,5 @@
 /**
- * Regression: portale senza scope → realtime lavorazioni dropato in resolveSyncEffects.
+ * Regression: senza scope attivo → fallback live invalidate (pilot_heavy).
  * Con scope domain "portale" → dirty (no invalidate live).
  */
 import assert from "node:assert/strict";
@@ -35,8 +35,8 @@ try {
     cabEvents: [{ type: "entity_updated", entity: "lavorazioni", id: "lav-portal-1", table: "lavorazioni" }],
     flag: "pilot_heavy",
   });
-  assert.equal(dropped.invalidateTables.length, 0, "no scope: realtime lavorazioni must not invalidate");
-  assert.equal(dropped.dirtyEntries.length, 0, "no scope: realtime lavorazioni must not mark dirty");
+  assert.deepEqual(dropped.invalidateTables, ["lavorazioni"], "no scope: pilot_heavy live fallback");
+  assert.equal(dropped.dirtyEntries.length, 0);
 
   const unregister = registerGestionaleSyncScope({
     scopeId: "client-portal-lavorazioni-list",

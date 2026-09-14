@@ -51,3 +51,6 @@ export function valueToChartY(v: number, extent: AxisExtent, innerTop: number, i
   const t = (v - extent.min) / span;
   return innerTop + innerHeight - t * innerHeight;
 }
+
+/** SVG viewBox for multi-series KPI line chart (SSOT — no magic `const H` in primitives). */
+export const REPORT_MULTI_SERIES_LINE_CHART_VIEWBOX = { width: 720, height: 280 } as const;

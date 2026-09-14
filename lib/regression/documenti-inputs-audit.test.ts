@@ -24,7 +24,7 @@ function readDirRecursive(dir: string): string[] {
 const documentiSources = readDirRecursive(path.join(ROOT, "components/gestionale/documenti")).join("\n");
 
 assert.doesNotMatch(documentiSources, /type="date"/);
-assert.doesNotMatch(documentiSources, /<select\b/);
+assert.doesNotMatch(documentiSources, /<select[\s>]/);
 assert.doesNotMatch(documentiSources, /<datalist\b/);
 
 const filters = read("components/gestionale/documenti/documenti-advanced-filter-panel.tsx");
@@ -49,7 +49,7 @@ assert.doesNotMatch(modals, /size="wide"/);
 assert.match(dropzone, /id="doc-upload-file"/);
 assert.match(dropzone, /htmlFor="doc-upload-file"/);
 
-assert.match(view, /GestionaleSearchField/);
+assert.match(view, /GestionaleListSearchController/);
 assert.match(view, /aria-label="Cerca documenti"/);
 assert.match(view, /clickToPick=\{false\}/);
 

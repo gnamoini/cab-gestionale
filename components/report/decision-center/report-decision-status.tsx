@@ -1,6 +1,8 @@
 "use client";
 
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import type { DecisionStatus } from "@/lib/report/decision-center/types";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 
 const LABELS: Record<DecisionStatus, string> = {
   new: "Nuova",
@@ -36,19 +38,22 @@ export function ReportDecisionStatus({
     return <span className="text-xs text-[color:var(--cab-text-muted)]">{LABELS[status]}</span>;
   }
 
+  const items = [
+    { value: status, label: LABELS[status] },
+    ...options.map((o) => ({ value: o, label: `→ ${LABELS[o]}` })),
+  ];
+
   return (
-    <select
-      className="h-9 rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1 text-xs text-[color:var(--cab-text)] shadow-sm"
-      value={status}
-      onChange={(e) => onChange(e.target.value as DecisionStatus)}
+    <GlobalSelect
+      id={`report-decision-status-${status}`}
+      variant="filter"
+      selectOnly
+      strictFromList
       aria-label="Stato decisione"
-    >
-      <option value={status}>{LABELS[status]}</option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          → {LABELS[o]}
-        </option>
-      ))}
-    </select>
+      inputClassName={`${globalInputFieldFilter} h-9 text-xs`}
+      items={items}
+      value={status}
+      onChange={(v) => onChange(v as DecisionStatus)}
+    />
   );
 }

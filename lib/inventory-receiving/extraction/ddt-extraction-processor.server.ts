@@ -114,6 +114,7 @@ export async function processDdtReceivingAnalyze(importFileId: string, userId: s
     }
 
     const extraction = ai.extraction;
+    const settings = await resolveCabAppSettingsResolvedServer();
     const supplierLabel =
       extraction.supplier?.ragioneSociale?.trim() ||
       lookupFornitoreByPivaCfName(
@@ -121,7 +122,7 @@ export async function processDdtReceivingAnalyze(importFileId: string, userId: s
           partitaIva: extraction.supplier?.partitaIva,
           ragioneSociale: extraction.supplier?.ragioneSociale,
         },
-        (await resolveCabAppSettingsResolvedServer()).magazzinoMaster,
+        settings.magazzinoMaster,
       ).label ||
       null;
 
@@ -144,7 +145,11 @@ export async function processDdtReceivingAnalyze(importFileId: string, userId: s
     const documentAiConfidence = computeDocumentAiConfidence(extraction);
 
     const { data: magRows } = await sb.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS);
-    const catalog = mapMagazzinoRowsToUI((magRows ?? []) as MagazzinoRicambioRow[], "Receiving");
+    const catalog = mapMagazzinoRowsToUI(
+      (magRows ?? []) as MagazzinoRicambioRow[],
+      "Receiving",
+      settings.mezziListe,
+    );
 
     const lineInputs = extraction.items.map((item) => {
       const qty = mapItemQuantities(item);
@@ -332,8 +337,13 @@ export async function fetchInventoryReceivingDocument(documentId: string, opts?:
   let candidatesByLineId: Record<string, MatchCandidate[]> | undefined;
 
   if (opts?.includeCandidates && lineRows.length > 0) {
+    const settings = await resolveCabAppSettingsResolvedServer();
     const { data: magRows } = await sb.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS);
-    const catalog = mapMagazzinoRowsToUI((magRows ?? []) as MagazzinoRicambioRow[], "Receiving");
+    const catalog = mapMagazzinoRowsToUI(
+      (magRows ?? []) as MagazzinoRicambioRow[],
+      "Receiving",
+      settings.mezziListe,
+    );
     const matches = matchInventoryLines(
       catalog,
       lineRows.map((l) => ({

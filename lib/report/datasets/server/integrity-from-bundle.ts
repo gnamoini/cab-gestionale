@@ -6,7 +6,7 @@ import { ReportDataIntegrityLayer } from "@/lib/report/report-data-integrity-lay
 import type { ReportIntegrityResult } from "@/lib/report/report-data-integrity-layer";
 
 export function buildIntegrityFromReportDto(dto: ReportDataDTO): ReportIntegrityResult {
-  const magazzino = mapMagazzinoRowsToUI(dto.magazzino, "Sistema");
+  const magazzino = mapMagazzinoRowsToUI(dto.magazzino, "Sistema", dto.settings.resolved.mezziListe);
   const lavorazioniArchivioRaw = dto.lavorazioni.filter((row) => row.archived === true);
   return ReportDataIntegrityLayer.buildValidatedDataset({
     lavorazioniRaw: dto.lavorazioni,

@@ -24,7 +24,7 @@ function readDirRecursive(dir: string): string[] {
 const mezziSources = readDirRecursive(path.join(ROOT, "components/gestionale/mezzi")).join("\n");
 
 assert.doesNotMatch(mezziSources, /type="date"/);
-assert.doesNotMatch(mezziSources, /<select\b/);
+assert.doesNotMatch(mezziSources, /<select[\s>]/);
 assert.doesNotMatch(mezziSources, /<datalist\b/);
 
 const filters = read("components/gestionale/mezzi/mezzi-filters.tsx");
@@ -41,7 +41,8 @@ assert.match(filters, /min-h-11/);
 
 assert.match(formFields, /htmlFor="mezzo-form-matricola"/);
 assert.match(formFields, /id="mezzo-form-cliente"/);
-assert.match(formFields, /inputMode="numeric"/);
+assert.match(formFields, /GestionaleNumberInput/);
+assert.match(formFields, /inputMode="decimal"/);
 assert.match(newModal, /GestionaleModalScrollBody/);
 assert.match(newModal, /MezzoFormFields/);
 

@@ -25,7 +25,7 @@ const timeline = read("components/lavorazioni-clienti/client-lavorazione-timelin
 assert.match(timeline, /useLavorazioneProfileNamesQuery/);
 assert.match(timeline, /omitUnresolvedAutore:\s*true/);
 assert.match(timeline, /addettoFirma/);
-assert.match(timeline, /RichiedenteFirmaDisplay[\s\S]{0,120}addetto officina/);
+assert.match(timeline, /RichiedenteFirmaDisplay[\s\S]*label="addetto officina"/);
 
 const ultimaModifica = read("lib/lavorazioni/lavorazione-ultima-modifica.ts");
 assert.match(ultimaModifica, /sanitizeClientPortalAutore/);

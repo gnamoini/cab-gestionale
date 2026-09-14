@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -209,23 +211,22 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
             />
           </label>
 
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1" htmlFor="mag-manual-label-preset">
             <span className={dsLabel}>Formato etichetta</span>
-            <select
-              className={`${dsInput} min-h-10`}
+            <GlobalSelect
+              id="mag-manual-label-preset"
+              variant="filter"
+              selectOnly
+              strictFromList
+              inputClassName={`${globalInputFieldFilter} ${dsInput} min-h-10`}
+              items={MANUAL_LABEL_PRESET_IDS.map((id) => ({ value: id, label: labelPresetOptionLabel(id) }))}
               value={preset}
-              onChange={(e) => {
-                setPreset(e.target.value);
+              onChange={(v) => {
+                setPreset(v);
                 revokePreview();
               }}
               disabled={busy}
-            >
-              {MANUAL_LABEL_PRESET_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {labelPresetOptionLabel(id)}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="flex flex-col gap-1">

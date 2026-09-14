@@ -13,6 +13,7 @@ const CORE_FILES = [
   "lib/data-import/core/export-runner.server.ts",
   "lib/data-import/core/import-api-router.server.ts",
   "lib/data-import/registry.ts",
+  "lib/data-import/registry/import-export-registry.ts",
 ];
 
 for (const rel of CORE_FILES) {
@@ -37,9 +38,12 @@ for (const rel of PLUGIN_FILES) {
   assert.match(src, /defaultStrategy/, `${rel}: defaultStrategy`);
 }
 
-const registrySrc = fs.readFileSync(path.join(ROOT, "lib/data-import/registry.ts"), "utf8");
-const directRegisters = (registrySrc.match(/register\(/g) ?? []).length;
-assert.match(registrySrc, /for \(const p of SETTINGS_LIST_PLUGINS\) register\(p\)/);
+const registrySrc = fs.readFileSync(
+  path.join(ROOT, "lib/data-import/registry/import-export-registry.ts"),
+  "utf8",
+);
+const directRegisters = (registrySrc.match(/register(Legacy)?\(/g) ?? []).length;
+assert.match(registrySrc, /for \(const p of SETTINGS_LIST_PLUGINS\) registerLegacy\(p\)/);
 assert.ok(directRegisters >= 13, `Expected >= 13 direct register() calls, got ${directRegisters}`);
 
 const settingsListSrc = fs.readFileSync(

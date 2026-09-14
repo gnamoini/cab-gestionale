@@ -4,6 +4,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { useCallback, useEffect, useState } from "react";
 import { VatCodesAdminSection } from "@/components/dashboard/settings/vat-codes-admin-section";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { downloadAccountingCsv } from "@/lib/fatturazione/accounting-export";
 import { ACCOUNTING_ENTRIES_COLUMNS } from "@/lib/db/table-select-columns";
 import { dsPageToolbarBtn, dsTypoSectionTitle, dsTypoSmall } from "@/lib/ui/design-system";
@@ -38,6 +39,8 @@ export function FatturazioneContabilitaSection() {
   const [reverseTarget, setReverseTarget] = useState<AccountingEntryRow | null>(null);
   const [reverseDate, setReverseDate] = useState("");
   const [reverseReason, setReverseReason] = useState("");
+  const [lockTarget, setLockTarget] = useState<AccountingPeriodRow | null>(null);
+  const [lockReason, setLockReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   const reload = useCallback(async () => {
@@ -170,13 +173,8 @@ export function FatturazioneContabilitaSection() {
                               className="text-xs underline"
                               disabled={actionLoading}
                               onClick={() => {
-                                const reason = window.prompt("Motivo blocco periodo:");
-                                if (reason) {
-                                  void runPeriodAction("accounting_lock_accounting_period", {
-                                    p_period_id: p.id,
-                                    p_reason: reason,
-                                  });
-                                }
+                                setLockTarget(p);
+                                setLockReason("");
                               }}
                             >
                               Blocca
@@ -268,6 +266,44 @@ export function FatturazioneContabilitaSection() {
       </ShellCard>
 
       <GestionaleConfirmDialog
+        open={lockTarget != null}
+        title="Blocca periodo contabile"
+        message={
+          lockTarget
+            ? `Bloccare il periodo «${lockTarget.name}»? Le scritture non potranno essere modificate finché il periodo resta bloccato.`
+            : ""
+        }
+        confirmLabel={actionLoading ? "Elaborazione…" : "Conferma blocco"}
+        cancelLabel="Annulla"
+        pending={actionLoading}
+        confirmDisabled={actionLoading || !lockReason.trim()}
+        onConfirm={() => {
+          if (!lockTarget || !lockReason.trim()) return;
+          void runPeriodAction("accounting_lock_accounting_period", {
+            p_period_id: lockTarget.id,
+            p_reason: lockReason.trim(),
+          }).then(() => {
+            setLockTarget(null);
+            setLockReason("");
+          });
+        }}
+        onCancel={() => {
+          setLockTarget(null);
+          setLockReason("");
+        }}
+      >
+        <label className="mt-3 block text-sm">
+          Motivo blocco (obbligatorio)
+          <GestionaleTextarea
+            className="mt-1"
+            rows={2}
+            value={lockReason}
+            onChange={setLockReason}
+          />
+        </label>
+      </GestionaleConfirmDialog>
+
+      <GestionaleConfirmDialog
         open={reverseTarget != null}
         title="Storna scrittura"
         message={
@@ -298,11 +334,11 @@ export function FatturazioneContabilitaSection() {
           </label>
           <label className="block text-sm">
             Motivazione
-            <textarea
-              className="mt-1 w-full rounded border border-border px-2 py-1"
+            <GestionaleTextarea
+              className="mt-1"
               rows={2}
               value={reverseReason}
-              onChange={(ev) => setReverseReason(ev.target.value)}
+              onChange={setReverseReason}
             />
           </label>
         </div>

@@ -18,9 +18,10 @@ const hook = read("src/hooks/use-dipendenti-timesheet.ts");
 const view = read("components/gestionale/dipendenti/dipendenti-view.tsx");
 const derived = read("lib/dipendenti/use-dipendenti-timesheet-derived.ts");
 
-assert.match(page, /prefetchCriticalPage\(qc, "dipendenti"\)/);
-assert.match(page, /DipendentiDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "dipendenti"\)/);
+assert.match(page, /DipendentiViewLazy/);
+assert.match(page, /GestionaleHydrationBoundary/);
+assert.doesNotMatch(page, /DipendentiDeferredHydration/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "dipendenti"\)/);
 

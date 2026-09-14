@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { endOfLocalDay, startOfLocalDay, ymdFromDate } from "@/lib/report/date-ranges";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 
 function addDaysLocal(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0, 0);
@@ -71,21 +73,24 @@ export function ReportHistoricalTrendContent() {
         Periodo toolbar: {toolbarLabel} · Storico: {period.start} → {period.end}
       </p>
       <div className="mb-3 flex items-end gap-3 flex-nowrap sm:flex-wrap">
-        <label className="flex min-w-0 flex-col gap-1 text-xs text-[color:var(--cab-text-muted)]">
+        <label className="flex min-w-0 flex-col gap-1 text-xs text-[color:var(--cab-text-muted)]" htmlFor="historical-trend-metric">
           Metrica
-          <select
-            className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1.5 text-sm"
-            value={activeMetric}
-            onChange={(e) => setMetricId(e.target.value)}
-            aria-label="Metrica trend storico"
-            data-testid="historical-trend-metric-select"
-          >
-            {selectorOptions.map((id) => (
-              <option key={id} value={id}>
-                {getReportBusinessLabel(id).title}
-              </option>
-            ))}
-          </select>
+          <div data-testid="historical-trend-metric-select">
+            <GlobalSelect
+              id="historical-trend-metric"
+              variant="filter"
+              selectOnly
+              strictFromList
+              aria-label="Metrica trend storico"
+              inputClassName={`${globalInputFieldFilter} text-sm`}
+              items={selectorOptions.map((id) => ({
+                value: id,
+                label: getReportBusinessLabel(id).title,
+              }))}
+              value={activeMetric}
+              onChange={setMetricId}
+            />
+          </div>
         </label>
         <button
           type="button"

@@ -9,6 +9,7 @@ import {
   type ReportValueFormatter,
 } from "@/lib/report/metrics/report-value-formatter";
 import {
+  REPORT_MULTI_SERIES_LINE_CHART_VIEWBOX,
   resolveSeriesAxisExtents,
   seriesAxisSide,
   valueToChartY,
@@ -49,8 +50,8 @@ function ReportMultiSeriesLineChartInner({
   series: MultiSeriesLineChartSeries[];
   displayMode: KpiChartDisplayMode;
 }) {
-  const W = 720;
-  const H = 280;
+  const W = REPORT_MULTI_SERIES_LINE_CHART_VIEWBOX.width;
+  const H = REPORT_MULTI_SERIES_LINE_CHART_VIEWBOX.height;
   const padL = 48;
   const padR = displayMode === "dual-axis" ? 48 : 16;
   const padT = 24;

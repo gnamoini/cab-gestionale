@@ -46,7 +46,8 @@ assert.match(kanbanReexport, /kanban\/kanban-virtual-column-scroll/);
 assert.match(tooltip, /TOOLTIP_POSITION_RAF_BATCH/);
 assert.match(tooltip, /batchedAutoUpdate/);
 
-assert.match(drawer, /closing \? null : children/);
+assert.match(drawer, /if \(!mounted\) return null/);
+assert.match(drawer, /setClosing\(true\)/);
 assert.match(modalGate, /GestionaleModalGate/);
 assert.match(collapsible, /unmountOnCollapse/);
 assert.match(cropLazy, /dynamic\s*\(/);

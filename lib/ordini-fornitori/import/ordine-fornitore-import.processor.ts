@@ -97,7 +97,11 @@ export async function processOrdineFornitoreImport(
     const { data: magRows, error: magErr } = await sb.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS);
     if (magErr) throw new OrdineFornitoreImportAnalyzeError("ANALYZE_FAILED", magErr.message);
 
-    const magazzinoItems = mapMagazzinoRowsToUI((magRows ?? []) as MagazzinoRicambioRow[], "Import");
+    const magazzinoItems = mapMagazzinoRowsToUI(
+      (magRows ?? []) as MagazzinoRicambioRow[],
+      "Import",
+      settings.mezziListe,
+    );
 
     const partitaIva = fieldValue(ai.extraction.fornitore?.partitaIva);
     const numero = fieldValue(ai.extraction.documento?.numeroPreventivo);

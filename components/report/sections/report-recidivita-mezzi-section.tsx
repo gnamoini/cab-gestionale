@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { ReportBarChart, ReportDataTable, ReportSection } from "@/components/report/design-system";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
 import { auditDataQuality } from "@/lib/report/recidivita/data-quality-audit";
 import {
@@ -220,19 +222,22 @@ function RecidivitaFilters({
           onChange={(e) => onChange({ ...filters, modelloQ: e.target.value })}
         />
       </label>
-      <label className="block text-xs">
+      <label className="block text-xs" htmlFor="report-recidivita-window">
         <span className="text-[color:var(--cab-text-muted)]">Finestra recidività</span>
-        <select
-          className="mt-1 w-full rounded border border-[color:var(--cab-border)] bg-[color:var(--cab-card)] px-2 py-1.5 text-sm"
-          value={filters.windowDays}
-          onChange={(e) =>
-            onChange({ ...filters, windowDays: Number(e.target.value) as RecidivitaWindowDays })
-          }
-        >
-          <option value={30}>30 giorni</option>
-          <option value={90}>90 giorni</option>
-          <option value={365}>12 mesi</option>
-        </select>
+        <GlobalSelect
+          id="report-recidivita-window"
+          variant="filter"
+          selectOnly
+          strictFromList
+          inputClassName={`${globalInputFieldFilter} mt-1 w-full text-sm`}
+          items={[
+            { value: "30", label: "30 giorni" },
+            { value: "90", label: "90 giorni" },
+            { value: "365", label: "12 mesi" },
+          ]}
+          value={String(filters.windowDays)}
+          onChange={(v) => onChange({ ...filters, windowDays: Number(v) as RecidivitaWindowDays })}
+        />
       </label>
     </div>
   );

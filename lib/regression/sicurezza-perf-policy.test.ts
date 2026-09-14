@@ -23,9 +23,10 @@ const budget = read("lib/performance/performance-budget-registry.ts");
 const layout = read("app/(gestionale)/sicurezza/layout.tsx");
 const registry = read("lib/render/query-ownership-registry.ts");
 
-assert.match(page, /prefetchCriticalPage\(qc, "sicurezza"\)/);
-assert.match(page, /SicurezzaDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "sicurezza"\)/);
+assert.match(page, /SecurityDashboardViewLazy/);
+assert.match(page, /GestionaleHydrationBoundary/);
+assert.doesNotMatch(page, /SicurezzaDeferredHydration/);
 assert.doesNotMatch(page, /prefetchSicurezzaPage\(\)/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "sicurezza"\)/);
@@ -39,10 +40,9 @@ assert.match(usersFetch, /fetchSecurityUsersPermissionsServer/);
 assert.match(usersFetch, /cache\(/);
 
 const prefetchCritical =
-  prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchDeferredPage")[0] ?? "";
-const secCriticalBlock = prefetchCritical.match(/case "sicurezza":([\s\S]*?)case "/)?.[1] ?? "";
-assert.doesNotMatch(secCriticalBlock, /getAppSettingsPayloadServer/);
-assert.match(prefetchCritical, /case "sicurezza":\s*return;/);
+  prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchGestionaleLayoutSettings")[0] ?? "";
+assert.match(prefetchCritical, /case "sicurezza":/);
+assert.doesNotMatch(prefetchCritical, /getAppSettingsPayloadServer/);
 
 const prefetchDeferred = prefetch.split("export async function prefetchDeferredPage")[1] ?? "";
 const secDeferredBlock = prefetchDeferred.split('case "sicurezza":')[1]?.split('case "')[0] ?? "";

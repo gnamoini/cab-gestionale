@@ -24,7 +24,7 @@ const REQUIRED_ENTITA = [
   "ordini_fornitori",
 ] as const;
 
-const SSOT_MIGRATION = "20261026120400_audit_clienti_rbac_log_entita.sql";
+const SSOT_MIGRATION = "20261031120000_ordini_fornitori_module.sql";
 
 function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");

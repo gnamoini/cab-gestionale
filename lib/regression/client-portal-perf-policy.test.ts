@@ -19,8 +19,8 @@ const view = read("components/lavorazioni-clienti/client-lavorazioni-view.tsx");
 const prefetch = read("src/lib/react-query/prefetch-gestionale-page.ts");
 const portalBff = read("lib/bff/client-portal-page-fetch-server.ts");
 
-assert.match(page, /ClientPortalDeferredHydration/);
-assert.match(page, /prefetchCriticalPage\(qc, "lavorazioni_clienti"\)/);
+assert.match(page, /ClientLavorazioniViewLazy/);
+assert.match(page, /prefetchGestionalePage\(qc, "lavorazioni_clienti"\)/);
 
 assert.match(detailPage, /ClientLavorazioneDetailViewLazy/);
 assert.match(lazy, /ClientLavorazioneDetailViewLazy = dynamic/);
@@ -28,7 +28,7 @@ assert.match(lazy, /ClientLavorazioneDetailViewLazy = dynamic/);
 const prefetchDeferred = prefetch.split("export async function prefetchDeferredPage")[1] ?? "";
 const portalBlock = prefetchDeferred.split('case "lavorazioni_clienti":')[1]?.split("case ")[0] ?? "";
 assert.match(portalBlock, /archivioCountKey/);
-assert.match(prefetch, /getLavorazioniArchivioCountServer/);
+assert.match(prefetch, /fetchClientPortalPageDTOServer/);
 assert.match(portalBlock, /clientPortal\.lavorazioni\.inCorso/);
 assert.match(portalBff, /resolveLavorazioniStatiForServer/);
 assert.match(portalBff, /sanitizeStati/);

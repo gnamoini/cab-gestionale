@@ -1,8 +1,10 @@
 "use client";
 
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { LavorazioniReportFilters } from "@/lib/report/lavorazioni-work-orders";
 import { dsInput } from "@/lib/ui/design-system";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 
 const PRIORITA_OPTIONS: { value: PrioritaLav | ""; label: string }[] = [
   { value: "", label: "Tutte le priorità" },
@@ -23,7 +25,7 @@ export function ReportLavorazioniFilters({
 }) {
   return (
     <div className="flex min-w-0 items-end gap-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 flex-nowrap sm:flex-wrap">
-      <label className="min-w-[10rem] flex-1">
+      <label className="min-w-0 min-w-[10rem] flex-1">
         <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Cliente
         </span>
@@ -35,38 +37,35 @@ export function ReportLavorazioniFilters({
           onChange={(e) => onChange({ ...filters, clienteQ: e.target.value })}
         />
       </label>
-      <label className="min-w-[9rem]">
+      <label className="min-w-[9rem]" htmlFor="report-lav-filter-priorita">
         <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Priorità
         </span>
-        <select
-          className={`${dsInput} w-full text-sm`}
+        <GlobalSelect
+          id="report-lav-filter-priorita"
+          variant="filter"
+          selectOnly
+          strictFromList
+          inputClassName={`${globalInputFieldFilter} ${dsInput} w-full text-sm`}
+          items={PRIORITA_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={filters.priorita}
-          onChange={(e) => onChange({ ...filters, priorita: e.target.value as PrioritaLav | "" })}
-        >
-          {PRIORITA_OPTIONS.map((o) => (
-            <option key={o.value || "all"} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onChange({ ...filters, priorita: v as PrioritaLav | "" })}
+        />
       </label>
-      <label className="min-w-[9rem]">
+      <label className="min-w-[9rem]" htmlFor="report-lav-filter-stato">
         <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Stato
         </span>
-        <select
-          className={`${dsInput} w-full text-sm`}
+        <GlobalSelect
+          id="report-lav-filter-stato"
+          variant="filter"
+          selectOnly
+          strictFromList
+          inputClassName={`${globalInputFieldFilter} ${dsInput} w-full text-sm`}
+          items={[{ value: "", label: "Tutti gli stati" }, ...statoOptions.map((s) => ({ value: s.id, label: s.label }))]}
           value={filters.statoId}
-          onChange={(e) => onChange({ ...filters, statoId: e.target.value })}
-        >
-          <option value="">Tutti gli stati</option>
-          {statoOptions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onChange({ ...filters, statoId: v })}
+        />
       </label>
     </div>
   );

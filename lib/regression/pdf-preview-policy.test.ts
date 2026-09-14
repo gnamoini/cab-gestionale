@@ -31,7 +31,8 @@ assert.match(openPreview, /submitPdfPreviewInNewTab/);
 
 const handler = read("lib/pdf/pdf-preview-handler.ts");
 assert.match(handler, /PDF_MAGIC/);
-assert.match(handler, /can_read_operational/);
+assert.match(handler, /canReadPage/);
+assert.match(handler, /verifyServerModuleCan/);
 
 const previewRouteDeprecation = read("app/api/pdf/preview/route.ts");
 assert.match(previewRouteDeprecation, /deprecated:\s*true/);

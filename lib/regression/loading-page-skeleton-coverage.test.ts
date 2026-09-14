@@ -14,6 +14,7 @@ const ROUTE_LOADING: Record<string, string> = {
   mezzi: "app/(gestionale)/mezzi/loading.tsx",
   documenti: "app/(gestionale)/documenti/loading.tsx",
   preventivi: "app/(gestionale)/preventivi/loading.tsx",
+  ordini_fornitori: "app/(gestionale)/ordini-fornitori/loading.tsx",
   dashboard: "app/(gestionale)/dashboard/loading.tsx",
   lavorazioni: "app/(gestionale)/lavorazioni/loading.tsx",
   report: "app/(gestionale)/report/loading.tsx",

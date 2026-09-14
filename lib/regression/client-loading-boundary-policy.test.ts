@@ -18,6 +18,13 @@ const ALLOWED_USE_CLIENT = new Set([
   "loading-upload-progress.tsx",
   "skeleton-boundary.tsx",
   "use-delayed-loading-message.ts",
+  "app-boot-screen.tsx",
+]);
+
+/** Route structural skeletons + boot screen: importano page-structure (solo markup skeleton). */
+const LOADING_BOUNDARY_EXEMPT = new Set([
+  "components/design-system/loading/app-boot-screen.tsx",
+  "components/design-system/loading/structural-route-skeleton.tsx",
 ]);
 
 const FORBIDDEN_IMPORT_PATTERNS = [
@@ -48,6 +55,7 @@ function main(): void {
   const violations: string[] = [];
 
   for (const rel of files) {
+    if (LOADING_BOUNDARY_EXEMPT.has(rel)) continue;
     const base = path.basename(rel);
     const text = read(rel);
 

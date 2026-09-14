@@ -24,7 +24,7 @@ const INVENTORY: MigrationExpect[] = [
     rel: "components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx",
     category: "A",
     migrated: true,
-    patterns: [/useFormEngine/, /runSubmit/],
+    patterns: [/useFormEngine/, /useSchedaIngressoSavePipeline/, /prepareFormSubmitAsync/],
   },
   {
     rel: "components/gestionale/lavorazioni/lavorazione-create-modal.tsx",

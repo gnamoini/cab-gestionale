@@ -9,6 +9,7 @@ import {
   primarySourceDocumentId,
   resolvePartPrice,
 } from "@/lib/ai/spare-parts/part-candidate-display";
+import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import { fetchMagazzinoListAuthorizedServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
@@ -185,10 +186,13 @@ export async function resolveIdentificaOrderPrefill(
 
   const part = candidateRowToPart(candRow as CandidateRow, (evidenceRows ?? []) as EvidenceRow[]);
 
-  const magRes = await fetchMagazzinoListAuthorizedServer(undefined, "list");
+  const [magRes, settings] = await Promise.all([
+    fetchMagazzinoListAuthorizedServer(undefined, "list"),
+    resolveCabAppSettingsResolvedServer(),
+  ]);
   const magazzinoItems: RicambioMagazzino[] =
     magRes.success && magRes.data
-      ? mapMagazzinoRowsToUI(magRes.data as MagazzinoRicambioRow[])
+      ? mapMagazzinoRowsToUI(magRes.data as MagazzinoRicambioRow[], "Sistema", settings.mezziListe)
       : [];
 
   const built = buildSparePartOrderPrefill({

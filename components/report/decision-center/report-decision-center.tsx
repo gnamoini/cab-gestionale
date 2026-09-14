@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { ReportAnalysisSectionShell } from "@/components/report/bi-center/report-analysis-section-shell";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { ReportDecisionCard } from "@/components/report/decision-center/report-decision-card";
 import {
   patchDecisionStatus,
@@ -27,8 +29,7 @@ const CATEGORY_FILTERS: Array<{ value: DecisionCategory | "all"; label: string }
   { value: "resource", label: "Risorse" },
 ];
 
-const selectClass =
-  "h-10 min-w-[10rem] rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 text-sm text-[color:var(--cab-text)] shadow-sm";
+const filterSelectClass = `${globalInputFieldFilter} h-10 min-w-[10rem] text-sm`;
 
 export function ReportDecisionCenter() {
   const ref = useRef<HTMLDivElement>(null);
@@ -76,30 +77,28 @@ export function ReportDecisionCenter() {
         defaultCollapsed
       >
         <div className="mb-4 flex items-center gap-2 flex-nowrap sm:flex-wrap">
-          <select
-            className={selectClass}
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as DecisionPriority | "all")}
+          <GlobalSelect
+            id="report-decision-priority-filter"
+            variant="filter"
+            selectOnly
+            strictFromList
             aria-label="Filtro priorità"
-          >
-            {PRIORITY_FILTERS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-          <select
-            className={selectClass}
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as DecisionCategory | "all")}
+            inputClassName={filterSelectClass}
+            items={PRIORITY_FILTERS.map((p) => ({ value: p.value, label: p.label }))}
+            value={priorityFilter}
+            onChange={(v) => setPriorityFilter(v as DecisionPriority | "all")}
+          />
+          <GlobalSelect
+            id="report-decision-category-filter"
+            variant="filter"
+            selectOnly
+            strictFromList
             aria-label="Filtro area"
-          >
-            {CATEGORY_FILTERS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+            inputClassName={filterSelectClass}
+            items={CATEGORY_FILTERS.map((c) => ({ value: c.value, label: c.label }))}
+            value={categoryFilter}
+            onChange={(v) => setCategoryFilter(v as DecisionCategory | "all")}
+          />
           {!isLoading && visible ? (
             <span className="text-xs text-[color:var(--cab-text-muted)]">
               {filtered.length === 1 ? "1 decisione" : `${filtered.length} decisioni`}

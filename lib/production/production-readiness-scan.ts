@@ -54,6 +54,7 @@ const LEGACY_MEZZI_WRITE_ALLOWLIST = new Set([
 const LEGACY_READ_ADAPTER_IMPORT_ALLOWLIST = new Set([
   "lib/mezzi/mezzi-db-ui-adapter.ts",
   "lib/mezzi/mezzi-attrezzature-batch.ts",
+  "lib/mezzi/persist-mezzo-form.ts",
   "lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts",
   "lib/domain/intervento-context/build-intervento-context.ts",
   "lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server.ts",

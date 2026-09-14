@@ -6,7 +6,7 @@ const ROOT = process.cwd();
 const files = [
   "app/api/document-capture/upload-policy/route.ts",
   "app/api/document-capture/[id]/finalize/route.ts",
-  "app/api/document-capture/[id]/analyze/route.ts",
+  "app/api/document-capture/[id]/process/route.ts",
   "app/api/document-capture/[id]/dry-run/route.ts",
   "app/api/document-capture/[id]/apply/route.ts",
   "app/api/document-capture/[id]/resume/route.ts",
@@ -22,6 +22,13 @@ for (const rel of files) {
     /mutateCaptureWithEvent|document_capture_|traceDocumentCaptureOperation|requireDocumentCaptureAuth/,
   );
 }
+
+const analyzeRoute = fs.readFileSync(
+  path.join(ROOT, "app/api/document-capture/[id]/analyze/route.ts"),
+  "utf8",
+);
+assert.match(analyzeRoute, /DEPRECATED_ENDPOINT/);
+assert.match(analyzeRoute, /\/process/);
 
 const fieldsRoute = fs.readFileSync(
   path.join(ROOT, "app/api/document-capture/[id]/fields/route.ts"),

@@ -30,7 +30,7 @@ export const AUDIT_COVERAGE_SERVICE_FILES: Record<AuditCoverageModule, string> =
   invoices: "src/services/invoices.service.ts",
   ddt_documents: "src/services/ddt.service.ts",
   ordini_fornitori: "src/services/ordini-fornitori.service.ts",
-  clienti_anagrafica: "src/services/clienti-anagrafica.service.ts",
+  clienti_anagrafica: "lib/admin-master-data/cliente-admin.server.ts",
   attrezzature: "src/services/attrezzature.service.ts",
   dipendenti: "src/services/dipendenti-timesheet.service.ts",
 };

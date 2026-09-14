@@ -1,5 +1,6 @@
 "use client";
 
+import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 
 const KIND_OPTIONS: Array<{ value: NonNullable<DocumentoGestionale["aiDocumentKind"]>; label: string }> = [
@@ -41,21 +42,18 @@ export function DocumentSparePartsFields({
       </label>
       {enabled ? (
         <>
-          <label className="block text-xs text-[color:var(--cab-text-muted)]">
-            Tipo documento AI
-            <select
-              className="mt-1 w-full rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1.5 text-sm"
+          <div className="space-y-1">
+            <span className="block text-xs text-[color:var(--cab-text-muted)]">Tipo documento AI</span>
+            <GlobalFixedListPillSelect
               value={documentKind ?? "spare_parts_catalog"}
-              onChange={(e) => onDocumentKindChange(e.target.value as DocumentoGestionale["aiDocumentKind"])}
+              onChange={(v) => onDocumentKindChange(v as DocumentoGestionale["aiDocumentKind"])}
+              options={KIND_OPTIONS}
+              ariaLabel="Tipo documento AI"
               disabled={disabled}
-            >
-              {KIND_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              layout="dropdown"
+              size="compact"
+            />
+          </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="checkbox"

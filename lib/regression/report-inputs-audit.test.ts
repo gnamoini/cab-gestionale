@@ -24,13 +24,15 @@ function readDirRecursive(dir: string): string[] {
 const reportSources = readDirRecursive(path.join(ROOT, "components/report")).join("\n");
 
 assert.doesNotMatch(reportSources, /type="date"/);
-assert.doesNotMatch(reportSources, /<select\b/);
+assert.doesNotMatch(reportSources, /<select[\s>]/);
 assert.doesNotMatch(reportSources, /<datalist\b/);
 
 const controls = read("components/report/report-controls.tsx");
 const temporal = read("components/report/report-lavorazioni-temporal-section.tsx");
 const lavorazioni = read("components/report/report-lavorazioni-section.tsx");
+const lavorazioniImportModal = read("components/report/report-lavorazioni-import-result-modal.tsx");
 const magazzino = read("components/report/report-magazzino-section.tsx");
+const magazzinoManualModal = read("components/report/report-magazzino-manual-history-modal.tsx");
 const ricambi = read("components/report/report-ricambi-consumo-section.tsx");
 
 assert.match(controls, /aria-pressed=\{preset === id\}/);
@@ -51,13 +53,13 @@ assert.match(ricambi, /aria-pressed=\{vista === id\}/);
 assert.match(ricambi, /htmlFor="report-ricambi-mese"/);
 assert.match(ricambi, /htmlFor="report-ricambi-anno"/);
 
-assert.match(lavorazioni, /GestionaleModalScrollBody/);
+assert.match(lavorazioniImportModal, /GestionaleModalScrollBody/);
 assert.match(lavorazioni, /type="file"/);
 assert.match(lavorazioni, /Importa dati da file Excel/);
 assert.match(lavorazioni, /importReportManualEntriesFromFile/);
 
-assert.match(magazzino, /GestionaleModalScrollBody/);
-assert.match(magazzino, /htmlFor="report-mag-manual-mese"/);
-assert.match(magazzino, /inputMode="decimal"/);
+assert.match(magazzinoManualModal, /GestionaleModalScrollBody/);
+assert.match(magazzinoManualModal, /htmlFor="report-mag-manual-mese"/);
+assert.match(magazzinoManualModal, /inputMode="decimal"/);
 
 console.log("report-inputs-audit.test.ts OK");

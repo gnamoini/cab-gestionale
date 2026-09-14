@@ -89,8 +89,8 @@ for (const f of coreFiles) {
   assert.ok(fs.existsSync(path.join(ROOT, f)), `missing ${f}`);
 }
 
-const appShell = read("components/gestionale/app-shell.tsx");
-assert.match(appShell, /DevAuditMounts/);
+const appShellMain = read("components/gestionale/app-shell-main.tsx");
+assert.match(appShellMain, /DevAuditMounts/);
 assert.match(read("components/gestionale/dev-audit-mounts.tsx"), /VisualLayoutLinterMount/);
 
 const mount = read("components/gestionale/visual-layout-linter-mount.tsx");

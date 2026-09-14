@@ -28,6 +28,7 @@ import { normalizeSchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
 import type { PersistSchedeResult } from "@/lib/schede/schede-sync-adapter";
 import { buildCaptureSchedeBundle, inferCaptureSchedaTipo, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import type { CaptureApprovedCreates } from "@/lib/document-capture/capture-approved-creates";
+import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { fetchMagazzinoListAuthorizedServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -41,9 +42,12 @@ import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
 export async function fetchCaptureMagazzinoCatalog(): Promise<RicambioMagazzino[]> {
-  const res = await fetchMagazzinoListAuthorizedServer(undefined, "list");
+  const [res, settings] = await Promise.all([
+    fetchMagazzinoListAuthorizedServer(undefined, "list"),
+    resolveCabAppSettingsResolvedServer(),
+  ]);
   if (!res.success || !res.data) return [];
-  return mapMagazzinoRowsToUI(res.data, "Sistema");
+  return mapMagazzinoRowsToUI(res.data, "Sistema", settings.mezziListe);
 }
 
 export async function fetchCaptureMezziCatalog(): Promise<MezzoGestito[]> {

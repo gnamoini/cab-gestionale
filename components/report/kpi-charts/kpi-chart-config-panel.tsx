@@ -2,6 +2,7 @@
 
 import { getPlottableMetrics } from "@/lib/report/kpi-series/capability-matrix";
 import type { KpiChartDraftConfig } from "@/components/report/kpi-charts/use-kpi-chart-series";
+import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/report/report-buttons";
 import { REPORT_PRESET_LABELS } from "@/lib/report/report-period-presets";
 import type { ReportPeriodPreset } from "@/lib/report/date-ranges";
@@ -84,23 +85,21 @@ export function KpiChartConfigPanel({
           ))}
         </div>
         {draft.preset === "custom" ? (
-          <div className="mt-2 flex items-center gap-2 flex-nowrap sm:flex-wrap">
-            <label className="text-sm text-[color:var(--cab-text-muted)]">
+          <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <label htmlFor="kpi-chart-custom-from" className="flex min-w-0 flex-col gap-1 text-sm text-[color:var(--cab-text-muted)]">
               Da
-              <input
-                type="date"
-                value={draft.customFrom}
-                onChange={(e) => onChange({ ...draft, customFrom: e.target.value })}
-                className="ml-2 rounded border border-[color:var(--cab-border)] bg-transparent px-2 py-1 text-sm"
+              <GlobalDatePickerYmd
+                id="kpi-chart-custom-from"
+                valueYmd={draft.customFrom}
+                onChangeYmd={(ymd) => onChange({ ...draft, customFrom: ymd })}
               />
             </label>
-            <label className="text-sm text-[color:var(--cab-text-muted)]">
+            <label htmlFor="kpi-chart-custom-to" className="flex min-w-0 flex-col gap-1 text-sm text-[color:var(--cab-text-muted)]">
               A
-              <input
-                type="date"
-                value={draft.customTo}
-                onChange={(e) => onChange({ ...draft, customTo: e.target.value })}
-                className="ml-2 rounded border border-[color:var(--cab-border)] bg-transparent px-2 py-1 text-sm"
+              <GlobalDatePickerYmd
+                id="kpi-chart-custom-to"
+                valueYmd={draft.customTo}
+                onChangeYmd={(ymd) => onChange({ ...draft, customTo: ymd })}
               />
             </label>
           </div>

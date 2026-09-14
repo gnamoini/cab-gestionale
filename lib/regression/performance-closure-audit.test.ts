@@ -63,8 +63,9 @@ const lav = read("lib/regression/lavorazioni-perf-policy.test.ts");
 assert.match(lav, /LavorazioneConcludiConfirmDialogLazy/);
 
 const reportView = read("components/report/report-area-data-shell.tsx");
-assert.match(reportView, /enableMezzi:\s*false/);
-assert.match(reportView, /enableMovimenti:\s*false/);
+assert.match(reportView, /enableMezzi:\s*true/);
+assert.match(reportView, /enableMovimenti:\s*true/);
+assert.match(reportView, /enableManual:\s*true/);
 
 const eslint = read("eslint.config.mjs");
 assert.match(eslint, /cab-perf\/no-select-star/);

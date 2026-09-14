@@ -67,6 +67,14 @@ export const RENAME_OPERATIONS: Record<string, RenameOperation> = {
     filter: { statusNotIn: ["bozza"] },
     policy: "protected",
   },
+  "cliente.billing.label": {
+    id: "cliente.billing.label",
+    action: "replace_column",
+    table: "invoices",
+    column: "cliente_label",
+    filter: { columnEq: {} },
+    policy: "protected",
+  },
   "cliente.alias.old_label": {
     id: "cliente.alias.old_label",
     action: "insert_alias",

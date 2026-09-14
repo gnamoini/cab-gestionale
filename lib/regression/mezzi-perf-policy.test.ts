@@ -17,9 +17,12 @@ const listHooks = read("src/hooks/gestionale/use-entity-list-queries.ts");
 const view = read("components/gestionale/mezzi/mezzi-view.tsx");
 const derived = read("lib/mezzi/use-mezzi-list-derived.ts");
 
-assert.match(page, /prefetchGestionalePage\(qc, "mezzi"\)/);
+assert.match(page, /prefetchCriticalPage\(qc, "mezzi"\)/);
+assert.match(page, /MezziDeferredHydration/);
+assert.match(page, /Suspense/);
 assert.match(page, /MezziViewLazy/);
 assert.match(page, /GestionaleHydrationBoundary/);
+assert.doesNotMatch(page, /prefetchGestionalePage\(qc, "mezzi"\)/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "mezzi"\)/);
 

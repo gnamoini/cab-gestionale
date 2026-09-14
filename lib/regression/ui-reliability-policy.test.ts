@@ -27,7 +27,7 @@ const globalsShellCss = read("app/globals-gestionale-shell.css");
 const globalTable = read("lib/ui/global-table.ts");
 const designSystem = read("lib/ui/design-system.ts");
 const modalBody = read("lib/ui/modal-max-width-class.ts");
-const pageLayout = read("components/design-system/page-layout.tsx");
+const pageContent = read("components/design-system/layout/page-content.tsx");
 
 // --- Global CSS utilities (split contract) ---
 assert.match(globalsShellCss, /html:has\(\.cab-app-shell\)/);
@@ -75,9 +75,9 @@ assert.match(designSystem, /dsLavorazioniModalDialog[\s\S]*min-w-0 max-w-full ov
 assert.match(modalBody, /gestionaleModalBodyFlexClass[\s\S]*min-w-0[\s\S]*flex-col/);
 
 // --- Page layout deterministic (CSS tokens, no window sync) ---
-assert.match(pageLayout, /layoutPageRoot/);
-assert.match(pageLayout, /dsStackPage/);
-assert.doesNotMatch(pageLayout, /useLayoutEffect|window\.innerWidth|matchMedia/);
+assert.match(pageContent, /layoutPageRoot/);
+assert.match(pageContent, /dsStackPage/);
+assert.doesNotMatch(pageContent, /useLayoutEffect|window\.innerWidth|matchMedia/);
 
 // --- SSR/hydration: app-shell layout tokens CSS-only (no width sync in render) ---
 const appShell = read("components/gestionale/app-shell.tsx");
@@ -91,7 +91,7 @@ assert.match(appShellMain, /dsGestionaleContentRail/);
 assert.match(appShellMain, /dsGestionaleContentMax/);
 assert.match(appShellMain, /gestionaleShellContentGutterClass/);
 assert.doesNotMatch(appShellMain, /cab-gestionale-scroll-gutter-mirror/);
-assert.match(appShellMain, /gestionale-scroll-y gestionale-scrollbar w-full/);
+assert.match(appShellMain, /gestionale-scroll-y gestionale-scrollbar relative w-full/);
 assert.match(
   appShellMain,
   /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*contentGutter/,

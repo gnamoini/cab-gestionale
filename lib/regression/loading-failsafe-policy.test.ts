@@ -28,13 +28,14 @@ assert.match(sectionGate, /LoadingErrorState/);
 
 assert.match(rbacGuard, /RBAC_LOADING_FAILSAFE_MS = 8_000/);
 
-assert.match(fatturazionePage, /Suspense fallback=\{null\}/);
+assert.match(fatturazionePage, /FatturazionePageStructure mode="skeleton"/);
 assert.doesNotMatch(fatturazionePage, /LoadingSuspenseFallback/);
 
-assert.match(shellSync, /useState<GestionaleShellLayoutState>\(SSR_SAFE_SHELL_LAYOUT_STATE\)/);
-assert.match(shellSync, /SSR_SAFE_SHELL_LAYOUT_STATE/);
-assert.match(shellSync, /useLayoutEffect\(\(\) => \{\s*sync\(\)/);
+assert.match(shellSync, /useState<GestionaleShellTierState>\(SSR_SAFE_SHELL_TIER_STATE\)/);
+assert.match(shellSync, /SSR_SAFE_SHELL_TIER_STATE/);
+assert.match(shellSync, /useLayoutEffect\(\(\) => \{[\s\S]*sync\(\)/);
 assert.doesNotMatch(shellSync, /readInitialShellLayoutState/);
+assert.match(shellSync, /GESTIONALE_SHELL_CONTENT_WIDTH_VAR/);
 
 const shellLayout = read("lib/ui/gestionale-shell-layout.ts");
 assert.match(shellLayout, /CSS_VAR_WRITE_THRESHOLD_PX/);

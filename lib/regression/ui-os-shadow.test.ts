@@ -38,8 +38,8 @@ assert.match(engine, /UI_OS_OPT_IN_PAGES/);
 assert.match(engine, /"\/report": "os"/);
 assert.match(engine, /buildShadowReport/);
 
-const appShell = fs.readFileSync(path.join(ROOT, "components/gestionale/app-shell.tsx"), "utf8");
-assert.match(appShell, /DevAuditMounts/);
+const appShellMain = fs.readFileSync(path.join(ROOT, "components/gestionale/app-shell-main.tsx"), "utf8");
+assert.match(appShellMain, /DevAuditMounts/);
 assert.match(
   fs.readFileSync(path.join(ROOT, "components/gestionale/dev-audit-mounts.tsx"), "utf8"),
   /UiOsShadowMount/,

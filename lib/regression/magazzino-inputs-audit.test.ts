@@ -25,7 +25,7 @@ const magazzinoDir = path.join(ROOT, "components/gestionale/magazzino");
 const magazzinoSources = readDirRecursive(magazzinoDir).join("\n");
 
 assert.doesNotMatch(magazzinoSources, /type="date"/);
-assert.doesNotMatch(magazzinoSources, /<select\b/);
+assert.doesNotMatch(magazzinoSources, /<select[\s>]/);
 assert.doesNotMatch(magazzinoSources, /<datalist\b/);
 
 const formFields = read("components/gestionale/magazzino/ricambio-form-fields.tsx");
@@ -62,7 +62,7 @@ assert.match(ricambioModal, /ricambio-new-form/);
 assert.match(ricambioModal, /form=\{RICAMBIO_NEW_FORM_ID\}/);
 assert.match(ricambioModal, /formMode="create"/);
 assert.match(ricambioModal, /RicambioCollapsibleSection/);
-assert.match(view, /GestionaleListSearchField/);
+assert.match(view, /GestionaleListSearchController/);
 assert.match(view, /id="magazzino-search"/);
 
 assert.doesNotMatch(view, /scheduleCompatBackgroundAudit/);
