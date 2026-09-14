@@ -15,6 +15,7 @@
 # Ephemeral bench/e2e outputs (SSOT snapshots in test-results/*.json stay tracked)
 test-results/.last-run.json
 test-results/build-budget-diff.json
+test-results/build-budget-snapshot.json
 test-results/dashboard-deferred-prefetch-*.json
 test-results/skeleton-benchmark-dashboard-*.json
 test-results/route-console-audit.json

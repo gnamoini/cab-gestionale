@@ -6,6 +6,7 @@ const ROOT = process.cwd();
 function resolveCacheVersion(): string {
   const supplied =
     process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+    process.env.GITHUB_SHA?.trim() ||
     process.env.PWA_BUILD_VERSION?.trim() ||
     process.env.GIT_COMMIT_SHA?.trim();
   const productionBuild =
@@ -15,7 +16,7 @@ function resolveCacheVersion(): string {
 
   if (productionBuild && !supplied) {
     throw new Error(
-      "pwa:build-sw — production builds require VERCEL_GIT_COMMIT_SHA, GIT_COMMIT_SHA, or PWA_BUILD_VERSION",
+      "pwa:build-sw — production builds require VERCEL_GIT_COMMIT_SHA, GITHUB_SHA, GIT_COMMIT_SHA, or PWA_BUILD_VERSION",
     );
   }
 
