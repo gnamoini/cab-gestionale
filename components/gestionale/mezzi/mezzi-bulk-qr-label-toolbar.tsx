@@ -5,24 +5,11 @@ import { LoadingButton } from "@/components/design-system";
 import { HubIconClose } from "@/components/design-system/hub-table-action-icons";
 import { dsPageToolbar, dsSystemBannerActions } from "@/lib/ui/design-system";
 import {
-  isDeferredPopupBlocked,
-  openDeferredPopup,
-  tryOpenViaTemporaryAnchor,
-} from "@/lib/browser/popup-guard";
-import { normalizePdfDownloadFileName, openFetchedPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+  printMezzoLabelsBulkPdf,
+  type PrintMezzoLabelsBulkPhase,
+} from "@/lib/mezzo-labels/client/print-mezzo-labels-bulk-pdf";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import type { MezziQrSelection } from "@/lib/mezzi/client/mezzi-qr-selection";
-
-type BulkPhase = "idle" | "generating" | "opening";
-
-/** ponytail: GET sync open ceiling — URL ~2k; oltre usa POST + deferred. */
-const BULK_SYNC_GET_MAX_IDS = 50;
-
-function buildMezzoBulkPdfUrl(mezzoIds: string[]): string {
-  const params = new URLSearchParams({ format: "pdf" });
-  for (const id of mezzoIds) params.append("id", id);
-  return `/api/mezzo-labels/bulk?${params.toString()}`;
-}
 
 export function MezziBulkQrLabelToolbar({
   selection,
@@ -32,7 +19,7 @@ export function MezziBulkQrLabelToolbar({
   onClearSelection: () => void;
 }) {
   const gestToast = useGestionaleToast();
-  const [phase, setPhase] = useState<BulkPhase>("idle");
+  const [phase, setPhase] = useState<PrintMezzoLabelsBulkPhase>("idle");
   const { count, hasSelection } = selection;
   const busy = phase !== "idle";
 
@@ -40,57 +27,19 @@ export function MezziBulkQrLabelToolbar({
     if (!hasSelection) return;
     const mezzoIds = [...selection.selectedIds];
 
-    if (mezzoIds.length <= BULK_SYNC_GET_MAX_IDS) {
-      try {
-        // ponytail: un solo tab — API inline via anchor (come etichetta singola)
-        tryOpenViaTemporaryAnchor(buildMezzoBulkPdfUrl(mezzoIds));
-        return;
-      } catch {
-        gestToast.error("Impossibile aprire il PDF etichette.");
-        return;
-      }
-    }
-
-    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichette mezzi" });
-    if (isDeferredPopupBlocked(deferredResult)) return;
-    const deferred = deferredResult;
-
-    setPhase("generating");
     try {
-      const res = await fetch("/api/mezzo-labels/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mezzoIds, format: "pdf" }),
+      const result = await printMezzoLabelsBulkPdf({
+        mezzoIds,
+        onPhaseChange: setPhase,
       });
-      if (!res.ok) {
-        deferred.close();
-        const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error ?? "Generazione bulk fallita");
-      }
-      const contentType = res.headers.get("Content-Type") ?? "";
-      if (!contentType.includes("application/pdf")) {
-        throw new Error("Risposta non valida: atteso PDF etichette.");
-      }
-      setPhase("opening");
-      const blob = await res.blob();
-      const opened = openFetchedPdfBlobInNewTab(
-        blob,
-        normalizePdfDownloadFileName(`etichette-mezzi-${mezzoIds.length}.pdf`),
-        {
-          context: "etichette",
-          label: "PDF etichette mezzi",
-          deferredHandle: deferred,
-        },
-      );
-      if (!opened) {
-        deferred.close();
-        gestToast.error("Impossibile aprire il PDF etichette.");
+      if (!result.ok) {
+        if (result.reason === "open_failed") {
+          gestToast.error("Impossibile aprire il PDF etichette.");
+        }
+        return;
       }
     } catch (e) {
-      deferred.close();
       gestToast.error(e instanceof Error ? e.message : "Stampa etichette non riuscita.");
-    } finally {
-      setPhase("idle");
     }
   }, [gestToast, hasSelection, selection.selectedIds]);
 

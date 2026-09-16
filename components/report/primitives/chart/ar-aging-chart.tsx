@@ -1,6 +1,6 @@
 "use client";
 
-import { ReportTemporalMonthlyBars } from "@/components/report/report-charts";
+import { ReportBklitTemporalMonthlyBars } from "@/components/report/bklit/report-bklit-charts";
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { ArAgingPoint } from "@/lib/report/economic-credit-analytics";
 
@@ -27,7 +27,7 @@ export function ReportArAgingChart({
 
   return (
     <ReportVisualization title={title}>
-      <ReportTemporalMonthlyBars rows={rows} />
+      <ReportBklitTemporalMonthlyBars rows={rows} ariaLabel={title} />
       <p className="mt-2 text-[10px] text-[color:var(--cab-text-muted)]">
         Totale crediti:{" "}
         {total.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })}

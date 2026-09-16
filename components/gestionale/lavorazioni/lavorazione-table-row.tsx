@@ -27,6 +27,8 @@ import {
   lavTableTdPillWrap,
   lavTableColStatoAddettoInset,
   LavorazioneOrePermanenzaCell,
+  LavorazioneLabelSelectionTableCell,
+  type LavorazioneLabelSelectionRowProps,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
@@ -130,7 +132,7 @@ export type LavorazioneAttivaTableRowProps = {
   onConcludiAction: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
   onOpenSchede: (row: LavorazioneListRow) => void;
-};
+} & LavorazioneLabelSelectionRowProps;
 
 function LavorazioneAttivaTableRowInner({
   row,
@@ -157,6 +159,8 @@ function LavorazioneAttivaTableRowInner({
   onConcludiAction,
   onOpenInfo,
   onOpenSchede,
+  labelSelectionMode,
+  labelSelection,
 }: LavorazioneAttivaTableRowProps) {
   void _tablePillOptions;
   void _addettoColors;
@@ -176,6 +180,11 @@ function LavorazioneAttivaTableRowInner({
         : {})}
       className={gestionaleListTableRowClass}
     >
+      <LavorazioneLabelSelectionTableCell
+        row={row}
+        labelSelectionMode={labelSelectionMode}
+        labelSelection={labelSelection}
+      />
       <td className={lavTableTd}>
         <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
       </td>
@@ -299,7 +308,7 @@ export type LavorazioneArchivioTableRowProps = {
   onOpenSchede: (row: LavorazioneListRow) => void;
   onEditCompletamento?: (row: LavorazioneListRow) => void;
   completamentoEditDisabled?: boolean;
-};
+} & LavorazioneLabelSelectionRowProps;
 
 function LavorazioneArchivioTableRowInner({
   row,
@@ -319,6 +328,8 @@ function LavorazioneArchivioTableRowInner({
   onOpenSchede,
   onEditCompletamento,
   completamentoEditDisabled = false,
+  labelSelectionMode,
+  labelSelection,
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
@@ -334,6 +345,11 @@ function LavorazioneArchivioTableRowInner({
         : {})}
       className={gestionaleListTableRowClass}
     >
+      <LavorazioneLabelSelectionTableCell
+        row={row}
+        labelSelectionMode={labelSelectionMode}
+        labelSelection={labelSelection}
+      />
       <td className={lavTableTd}>
         <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
       </td>
@@ -436,5 +452,7 @@ export const LavorazioneArchivioTableRow = memo(
     prev.onOpenSchede === next.onOpenSchede &&
     prev.onEditCompletamento === next.onEditCompletamento &&
     prev.completamentoEditDisabled === next.completamentoEditDisabled &&
+    prev.labelSelectionMode === next.labelSelectionMode &&
+    prev.labelSelection === next.labelSelection &&
     lavorazioneSchedeBundleRevision(prev.bundle) === lavorazioneSchedeBundleRevision(next.bundle),
 );

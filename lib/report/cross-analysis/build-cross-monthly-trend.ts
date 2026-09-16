@@ -155,7 +155,7 @@ export function crossMetricSparkline(
 /** ponytail: indexed base-100 per confronto trend multi-metrica. */
 export function crossTrendIndexedSeries(
   points: readonly CrossMonthlyPoint[],
-): { label: string; efficiency: number; partsPerJob: number; costPerJob: number; valuePerHour: number }[] {
+): { monthKey: string; label: string; efficiency: number; partsPerJob: number; costPerJob: number; valuePerHour: number }[] {
   const base = points.find(
     (p) =>
       p.efficiency != null ||
@@ -167,6 +167,7 @@ export function crossTrendIndexedSeries(
     v != null && b != null && b > 0 ? Math.round((v / b) * 100) : 0;
 
   return points.map((p) => ({
+    monthKey: p.monthKey,
     label: p.label,
     efficiency: idx(p.efficiency, base?.efficiency ?? null),
     partsPerJob: idx(p.partsPerJob, base?.partsPerJob ?? null),

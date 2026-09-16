@@ -55,6 +55,14 @@ const BLANK_PDF_TYPES = [
   { id: "scheda-ricambi-blank", label: "Scheda ricambi" },
 ] as const;
 
+function IconQrLabels({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h4v4H4zM16 7h4v4h-4zM4 13h4v4H4zM13 13h3v3h-3zM16 16h4v1h-4zM13 16v4h3v-1h-1v-1h-1v-1h-1z" />
+    </svg>
+  );
+}
+
 function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -69,10 +77,14 @@ export function useLavorazioniPageMenuItems({
   printBusy = false,
   onOpenLog,
   onPrint,
+  onEnterLabelSelection,
+  canEnterLabelSelection = false,
 }: {
   printBusy?: boolean;
   onOpenLog: () => void;
   onPrint: () => void;
+  onEnterLabelSelection?: () => void;
+  canEnterLabelSelection?: boolean;
 }): PageActionItem[] {
   return useMemo((): PageActionItem[] => [
     {
@@ -101,8 +113,16 @@ export function useLavorazioniPageMenuItems({
       loading: printBusy,
       disabled: printBusy,
     },
+    {
+      id: "label-selection",
+      label: "Seleziona lavorazioni per etichette",
+      description: "Stampa etichette QR dei mezzi collegati",
+      icon: <IconQrLabels />,
+      onSelect: () => onEnterLabelSelection?.(),
+      hidden: !canEnterLabelSelection || !onEnterLabelSelection,
+    },
     pageActionLogItem(onOpenLog, "Log attività"),
-  ], [onOpenLog, onPrint, printBusy]);
+  ], [canEnterLabelSelection, onEnterLabelSelection, onOpenLog, onPrint, printBusy]);
 }
 
 export type LavorazioniPageHeaderToolbarProps = {

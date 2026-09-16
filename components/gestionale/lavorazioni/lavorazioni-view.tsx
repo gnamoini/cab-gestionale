@@ -327,6 +327,9 @@ import {
   LavorazioniPageHeaderToolbar,
   useLavorazioniPageMenuItems,
 } from "@/components/gestionale/lavorazioni/lavorazioni-page-toolbar";
+import { LavorazioniBulkQrLabelToolbar } from "@/components/gestionale/lavorazioni/lavorazioni-bulk-qr-label-toolbar";
+import { useLavorazioniLabelSelection } from "@/lib/lavorazioni/client/lavorazioni-label-selection";
+import { buildLavorazioneRowByIdMap } from "@/lib/lavorazioni/lavorazioni-label-mezzo-ids";
 const dataCompletamentoIso = lavorazioneDataCompletamentoIso;
 
 function canDeleteLavorazioneAttiva(row: LavorazioneListRow, canDelete: boolean): boolean {
@@ -583,6 +586,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const gestionaleQueryOpts = useGestionaleQueryOpts();
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const lavPerm = permModules.lavorazioni;
+  const canReadWorkOrders = lavPerm.canRead;
   const { markAllRead: markAdminNotifRead } = useAdminNotificationStore();
   const canEditWorkOrders = lavPerm.canWrite;
   const canDeleteRecords = lavPerm.canWrite;
@@ -744,6 +748,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   }, []);
   type LavorazioniListViewMode = "table" | "kanban";
   const [listViewMode, setListViewMode] = useState<LavorazioniListViewMode>("table");
+  const [isLabelSelectionMode, setIsLabelSelectionMode] = useState(false);
+  const labelSelection = useLavorazioniLabelSelection();
   useUIAutonomyFixEngine("/lavorazioni");
   const [schedeRow, setSchedeRow] = useState<{
     row: LavorazioneListRow;
@@ -1072,6 +1078,11 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     }
     return dedupeLavorazioneListRowsById(filtered);
   }, [chiuseRowsRaw]);
+
+  const lavorazioneRowById = useMemo(
+    () => buildLavorazioneRowByIdMap([...attiveRows, ...chiuseRows]),
+    [attiveRows, chiuseRows],
+  );
 
   const needsFullSchedeFetch = useMemo(
     () =>
@@ -2194,6 +2205,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           onConcludiAction={onConcludiAction}
           onOpenInfo={onOpenAttivaInfo}
           onOpenSchede={onOpenAttivaSchede}
+          labelSelectionMode={isLabelSelectionMode}
+          labelSelection={labelSelection}
         />
       );
     },
@@ -2221,6 +2234,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       onOpenAttivaSchede,
       prioColor,
       schedeStore,
+      isLabelSelectionMode,
+      labelSelection,
     ],
   );
 
@@ -2250,6 +2265,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           onOpenSchede={onOpenArchivioSchede}
           onEditCompletamento={openCompletamentoEdit}
           completamentoEditDisabled={updateCompletamentoLav.isPending}
+          labelSelectionMode={isLabelSelectionMode}
+          labelSelection={labelSelection}
         />
       );
     },
@@ -2267,6 +2284,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       onOpenArchivioSchede,
       openCompletamentoEdit,
       updateCompletamentoLav.isPending,
+      isLabelSelectionMode,
+      labelSelection,
     ],
   );
 
@@ -2286,10 +2305,27 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     setPrintBusy(false);
   }, [printBusy]);
 
+  const exitLabelSelectionMode = useCallback(() => {
+    setIsLabelSelectionMode(false);
+    labelSelection.clear();
+  }, [labelSelection]);
+
+  const onEnterLabelSelection = useCallback(() => {
+    if (listViewMode === "kanban") {
+      setListViewMode("table");
+      gestToast.info("Passa alla vista tabella per selezionare le lavorazioni.");
+    }
+    setIsLabelSelectionMode(true);
+  }, [gestToast, listViewMode]);
+
+  const lavorazioniTableColSpan = isLabelSelectionMode ? 13 : 12;
+
   const lavorazioniPageMenuItems = useLavorazioniPageMenuItems({
     printBusy,
     onOpenLog: () => setLavLogOpen(true),
     onPrint: onPrintLavorazioniInCorso,
+    onEnterLabelSelection,
+    canEnterLabelSelection: canReadWorkOrders,
   });
 
   return (
@@ -2387,6 +2423,14 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           onListViewModeChange={setListViewMode}
         />
 
+        {isLabelSelectionMode ? (
+          <LavorazioniBulkQrLabelToolbar
+            selection={labelSelection}
+            rowById={lavorazioneRowById}
+            onExitSelection={exitLabelSelectionMode}
+          />
+        ) : null}
+
         <SkeletonBoundary loading={initialListLoading}>
         <LavorazioniListBodySection mode="content">
         <ShellCard
@@ -2434,6 +2478,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
+                {isLabelSelectionMode ? <col className="w-10" /> : null}
                 <col className={lavTableColIngressoClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
@@ -2450,6 +2495,14 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
             }
             headRow={
               <>
+                  {isLabelSelectionMode ? (
+                    <th
+                      className="w-10 px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]"
+                      scope="col"
+                    >
+                      Sel.
+                    </th>
+                  ) : null}
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
@@ -2549,7 +2602,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
                 ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessuna lavorazione in corso."
             }
-            colSpan={12}
+            colSpan={lavorazioniTableColSpan}
             virtualRows={{
               rowCount: pagedAttive.length,
               renderRow: renderAttiveDesktopRow,
@@ -2602,6 +2655,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
                   onConcludi={onConcludiAction}
                   onOpenInfo={onOpenAttivaInfo}
                   onOpenSchede={onOpenAttivaSchede}
+                  labelSelectionMode={isLabelSelectionMode}
+                  labelSelection={labelSelection}
                 />
               );
             })}
@@ -2645,6 +2700,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
+                {isLabelSelectionMode ? <col className="w-10" /> : null}
                 <col className={lavTableColIngressoClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
@@ -2661,6 +2717,14 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
             }
             headRow={
               <>
+                  {isLabelSelectionMode ? (
+                    <th
+                      className="w-10 px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]"
+                      scope="col"
+                    >
+                      Sel.
+                    </th>
+                  ) : null}
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
@@ -2764,7 +2828,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
                 ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessun record in archivio."
             }
-            colSpan={12}
+            colSpan={lavorazioniTableColSpan}
             virtualRows={archivioVirtualRows}
           >
             {null}
@@ -2796,6 +2860,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
                 onOpenSchede={onOpenArchivioSchede}
                 onEditCompletamento={openCompletamentoEdit}
                 completamentoEditDisabled={updateCompletamentoLav.isPending}
+                labelSelectionMode={isLabelSelectionMode}
+                labelSelection={labelSelection}
               />
             ))}
           </LavorazioniMobileListShell>

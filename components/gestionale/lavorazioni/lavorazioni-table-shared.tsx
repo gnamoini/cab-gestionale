@@ -40,6 +40,8 @@ import {
   gestionaleListTableThAzioni,
 } from "@/lib/ui/gestionale-list-table";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioniLabelSelection } from "@/lib/lavorazioni/client/lavorazioni-label-selection";
+import { dsCheckboxInput } from "@/lib/ui/design-system";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import { interventionTypeShortBadge, lavorazioneRowToTagliandoFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
@@ -132,6 +134,75 @@ export const lavTableColNoteClass = gestionaleListColNoteClass;
 /** 3 azioni icona (36px) + gap — più stretto del token liste generiche (11.5rem). */
 export const lavTableColAzioniClass = "gestionale-lavorazioni-col-azioni";
 export const lavTableThAzioni = gestionaleListTableThAzioni;
+
+export function lavorazioneLabelSelectionAriaLabel(row: LavorazioneListRow): string {
+  const codice = row.codice?.trim();
+  return codice ? `Seleziona lavorazione ${codice}` : `Seleziona lavorazione`;
+}
+
+export function lavorazioneRowHasLabelMezzo(row: LavorazioneListRow): boolean {
+  return Boolean(row.mezzo_id?.trim());
+}
+
+export type LavorazioneLabelSelectionRowProps = {
+  labelSelectionMode?: boolean;
+  labelSelection?: Pick<LavorazioniLabelSelection, "isSelected" | "toggle">;
+};
+
+export function LavorazioneLabelSelectionTableCell({
+  row,
+  labelSelectionMode,
+  labelSelection,
+}: {
+  row: LavorazioneListRow;
+  labelSelectionMode?: boolean;
+  labelSelection?: Pick<LavorazioniLabelSelection, "isSelected" | "toggle">;
+}) {
+  if (!labelSelectionMode || !labelSelection) return null;
+  const canSelect = lavorazioneRowHasLabelMezzo(row);
+  return (
+    <td className={`${lavTableTdCenter} w-10 py-2`}>
+      <input
+        type="checkbox"
+        className={dsCheckboxInput}
+        checked={labelSelection.isSelected(row.id)}
+        disabled={!canSelect}
+        onChange={() => {
+          if (canSelect) labelSelection.toggle(row.id);
+        }}
+        aria-label={lavorazioneLabelSelectionAriaLabel(row)}
+      />
+    </td>
+  );
+}
+
+export function LavorazioneLabelSelectionMobileControl({
+  row,
+  labelSelectionMode,
+  labelSelection,
+}: {
+  row: LavorazioneListRow;
+  labelSelectionMode?: boolean;
+  labelSelection?: Pick<LavorazioniLabelSelection, "isSelected" | "toggle">;
+}) {
+  if (!labelSelectionMode || !labelSelection) return null;
+  const canSelect = lavorazioneRowHasLabelMezzo(row);
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <input
+        type="checkbox"
+        className={dsCheckboxInput}
+        checked={labelSelection.isSelected(row.id)}
+        disabled={!canSelect}
+        onChange={() => {
+          if (canSelect) labelSelection.toggle(row.id);
+        }}
+        aria-label={lavorazioneLabelSelectionAriaLabel(row)}
+      />
+      <span className="text-xs text-zinc-600 dark:text-zinc-400">Etichetta mezzo</span>
+    </div>
+  );
+}
 export const lavTableTdAzioni = gestionaleListTableTdAzioni;
 
 /** @deprecated Alias di `lavTableTdAzioni`. */

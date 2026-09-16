@@ -1,6 +1,6 @@
 "use client";
 
-import { ReportTemporalMonthlyBars } from "@/components/report/report-charts";
+import { ReportBklitTemporalMonthlyBars } from "@/components/report/bklit/report-bklit-charts";
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 
 export function ReportAgingBacklogChart({
@@ -21,9 +21,7 @@ export function ReportAgingBacklogChart({
 
   return (
     <ReportVisualization title={title}>
-      <ReportTemporalMonthlyBars
-        rows={points.map((p) => ({ label: p.label, count: p.value }))}
-      />
+      <ReportBklitTemporalMonthlyBars rows={points.map((p) => ({ label: p.label, count: p.value }))} />
     </ReportVisualization>
   );
 }

@@ -14,7 +14,7 @@ export type MezzoLabelTemplate = {
   innerPaddingMm: number;
   /** Margine sinistro minimo nella colonna QR (QR il più a sinistra possibile). */
   leftColumnPadMm: number;
-  logo: { maxWidthMm: number; maxHeightMm: number };
+  logo: { maxWidthMm: number; maxHeightMm: number; /** Spostamento verso il basso rispetto al bordo superiore interno (mm). */ topOffsetMm: number };
   qr: { maxSizeMm: number };
   scuderia: { fontPt: number; minFontPt: number; lineHeight: number };
   targa: { fontPt: number; minFontPt: number; lineHeight: number };
@@ -22,7 +22,7 @@ export type MezzoLabelTemplate = {
 
 export const MEZZO_LABEL_TEMPLATE: MezzoLabelTemplate = {
   id: "mezzo-keychain-36x18",
-  version: "2.2.2",
+  version: "2.2.3",
   dpi: 300,
   widthMm: 36,
   heightMm: 18,
@@ -31,10 +31,10 @@ export const MEZZO_LABEL_TEMPLATE: MezzoLabelTemplate = {
   columnGutterMm: 0.35,
   innerPaddingMm: 0.15,
   leftColumnPadMm: 0.1,
-  logo: { maxWidthMm: 12, maxHeightMm: 2.2 },
+  logo: { maxWidthMm: 12, maxHeightMm: 2.2, topOffsetMm: 0.45 },
   qr: { maxSizeMm: 13.5 },
-  scuderia: { fontPt: 11, minFontPt: 7, lineHeight: 1.08 },
-  targa: { fontPt: 11, minFontPt: 7, lineHeight: 1.08 },
+  scuderia: { fontPt: 10, minFontPt: 7, lineHeight: 1.08 },
+  targa: { fontPt: 10, minFontPt: 7, lineHeight: 1.08 },
 };
 
 export function mmToPx(mm: number, dpi = MEZZO_LABEL_TEMPLATE.dpi): number {

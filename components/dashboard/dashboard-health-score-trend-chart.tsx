@@ -1,23 +1,20 @@
 "use client";
 
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import type { OperationalHealthTone } from "@/lib/dashboard/operational-health-score";
 import { HealthScoreRingLoading } from "@/components/dashboard/health-score-ring-loading";
 import {
-  dsTooltipContent,
-  dsTooltipPortalHidden,
-  dsTooltipPortalVisible,
   dsTypoBody,
   dsTypoCaption,
-  dsZTooltip,
 } from "@/lib/ui/design-system";
-import {
-  CAB_TOOLTIP_PORTAL_ATTR,
-  getTooltipPortalContainer,
-  TOOLTIP_VIEWPORT_PAD,
-  tooltipPortalInlineStyle,
-} from "@/lib/ui/tooltip-portal";
+import { chartCssVars, useChartHover, useChartStable, useYScale } from "@/src/components/charts/chart-context";
+import { AreaChart } from "@/src/components/charts/area-chart";
+import { Area } from "@/src/components/charts/area";
+import { Grid } from "@/src/components/charts/grid";
+import { ChartTooltip } from "@/src/components/charts/tooltip/chart-tooltip";
+import { ChartCrosshairLayer } from "@/src/components/charts/tooltip/chart-crosshair-layer";
+import { XAxis } from "@/src/components/charts/x-axis";
+import { YAxis } from "@/src/components/charts/y-axis";
 
 export type HealthScoreWeeklyTrendPoint = {
   weekLabel: string;
@@ -36,23 +33,9 @@ const TONE_COLOR: Record<OperationalHealthTone, string> = {
   neutral: "var(--cab-text-muted)",
 };
 
-const CHART_VIEW_WIDTH = 400;
-const CHART_VIEW_HEIGHT = 200;
-/** Embedded: viewBox più largo/alto → assi più lunghi senza distorcere il grafico. */
-const CHART_VIEW_WIDTH_EMBEDDED = 520;
-const CHART_VIEW_HEIGHT_EMBEDDED = 300;
-const CHART_HEIGHT_DEFAULT = CHART_VIEW_HEIGHT;
-const PAD_LEFT = 32;
-const PAD_RIGHT = 12;
-const PAD_TOP = 16;
-const PAD_BOTTOM = 28;
-
-const CHART_PADS = {
-  left: PAD_LEFT,
-  right: PAD_RIGHT,
-  top: PAD_TOP,
-  bottom: PAD_BOTTOM,
-} as const;
+const CHART_MARGIN = { top: 16, right: 12, bottom: 28, left: 36 } as const;
+/** Bklit y-domain uses max×1.1 — 100/1.1 pins the scale at 0…100 like the legacy SVG. */
+const HEALTH_SCORE_Y_DOMAIN_MAX = 100 / 1.1;
 
 function formatWeekLabel(weekStart: string): string {
   const d = new Date(weekStart);
@@ -60,125 +43,90 @@ function formatWeekLabel(weekStart: string): string {
   return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 }
 
-function formatMonthLabel(weekStart: string): string {
-  const d = new Date(weekStart);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("it-IT", { month: "short" });
-}
-
 function formatPointTooltip(weekEnd: string, score: number): string {
   return `${formatWeekLabel(weekEnd)} · ${score}/100`;
 }
 
-function toneGlowFilter(color: string, strength = 0.55): string {
-  return `drop-shadow(0 0 4px color-mix(in srgb, ${color} ${Math.round(strength * 100)}%, transparent))`;
+function healthScoreTrendChartRows(points: HealthScoreWeeklyTrendPoint[]) {
+  return points
+    .map((p, pointIndex) => ({ ...p, pointIndex }))
+    .filter((p): p is HealthScoreWeeklyTrendPoint & { pointIndex: number; score: number } => p.score != null)
+    .map((p) => ({
+      date: `${p.weekEnd.slice(0, 10)}T12:00:00.000Z`,
+      score: p.score,
+      tone: p.tone,
+      weekEnd: p.weekEnd,
+      pointIndex: p.pointIndex,
+      ariaLabel: `Settimana fino a ${formatWeekLabel(p.weekEnd)}: ${p.score} ${p.label}`,
+    }));
 }
 
-const CHART_POINT_TOOLTIP_GAP = 12;
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(Math.max(n, min), max);
-}
-
-function chartPointToScreen(svg: SVGSVGElement, x: number, y: number): { x: number; y: number } | null {
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  const pt = new DOMPoint(x, y).matrixTransform(ctm);
-  return { x: pt.x, y: pt.y };
-}
-
-/** Tooltip sempre sopra il puntino (verso l'alto sullo schermo). */
-function HealthScoreChartPointTooltip({
-  open,
-  svgRef,
-  anchorX,
-  anchorY,
-  dotRadius,
-  content,
-  anchorKey,
+function HealthScoreTrendHoverBridge({
+  onHoverIndex,
 }: {
-  open: boolean;
-  svgRef: React.RefObject<SVGSVGElement | null>;
-  anchorX: number;
-  anchorY: number;
-  dotRadius: number;
-  content: string;
-  anchorKey: number | null;
+  onHoverIndex: (index: number | null) => void;
 }) {
-  const tipRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const { tooltipData } = useChartHover();
+  useEffect(() => {
+    const raw = tooltipData?.point?.pointIndex;
+    onHoverIndex(typeof raw === "number" ? raw : null);
+  }, [tooltipData, onHoverIndex]);
+  return null;
+}
 
-  useLayoutEffect(() => {
-    const tip = tipRef.current;
-    const svg = svgRef.current;
-    if (!open || !content.trim() || !svg || !tip) {
-      setCoords(null);
-      return;
-    }
+function toneMarkerColor(tone: unknown): string {
+  if (typeof tone === "string" && tone in TONE_COLOR) {
+    return TONE_COLOR[tone as OperationalHealthTone];
+  }
+  return TONE_COLOR.good;
+}
 
-    const center = chartPointToScreen(svg, anchorX, anchorY);
-    const topEdge = chartPointToScreen(svg, anchorX, anchorY - dotRadius);
-    if (!center || !topEdge) {
-      setCoords(null);
-      return;
-    }
+/** Per-point markers colored by operational tone (Bklit Line markers are single-color). */
+function HealthScoreToneMarkers({ dataKey }: { dataKey: string }) {
+  const { data, xScale, xAccessor, isLoaded } = useChartStable();
+  const { tooltipData } = useChartHover();
+  const yScale = useYScale();
+  const activeIndex = tooltipData?.index ?? null;
 
-    const placeTooltip = () => {
-      const tipW = tip.offsetWidth;
-      const tipH = tip.offsetHeight;
-      if (tipW === 0 && tipH === 0) return false;
+  if (!isLoaded) return null;
 
-      const anchorBottom = topEdge.y - CHART_POINT_TOOLTIP_GAP;
-      const top = clamp(
-        anchorBottom - tipH,
-        TOOLTIP_VIEWPORT_PAD,
-        Math.max(TOOLTIP_VIEWPORT_PAD, window.innerHeight - TOOLTIP_VIEWPORT_PAD - tipH),
-      );
-      const left = clamp(
-        center.x - tipW / 2,
-        TOOLTIP_VIEWPORT_PAD,
-        Math.max(TOOLTIP_VIEWPORT_PAD, window.innerWidth - TOOLTIP_VIEWPORT_PAD - tipW),
-      );
+  return (
+    <g className="pointer-events-none">
+      {data.map((row, i) => {
+        const score = row[dataKey];
+        if (typeof score !== "number") return null;
+        const cx = xScale(xAccessor(row)) ?? 0;
+        const cy = yScale(score) ?? 0;
+        const color = toneMarkerColor(row.tone);
+        const isLatest = i === data.length - 1;
+        const active = activeIndex === i;
+        const baseR = isLatest ? 3.25 : 2.75;
+        const r = active ? baseR + 1 : baseR;
+        const pointIndex = row.pointIndex;
+        const key = typeof pointIndex === "number" ? pointIndex : i;
 
-      setCoords({ top, left });
-      return true;
-    };
-
-    if (!placeTooltip()) {
-      const raf = requestAnimationFrame(() => {
-        placeTooltip();
-      });
-      return () => cancelAnimationFrame(raf);
-    }
-  }, [open, content, anchorKey, anchorX, anchorY, dotRadius, svgRef]);
-
-  if (!open || !content.trim() || typeof document === "undefined") return null;
-
-  const placed = coords != null;
-
-  return createPortal(
-    <div
-      ref={tipRef}
-      role="tooltip"
-      {...{ [CAB_TOOLTIP_PORTAL_ATTR]: "" }}
-      className={`${dsTooltipContent} ${dsZTooltip} ${placed ? dsTooltipPortalVisible : dsTooltipPortalHidden}`}
-      style={{
-        ...tooltipPortalInlineStyle("top"),
-        top: coords?.top ?? -9999,
-        left: coords?.left ?? -9999,
-        visibility: placed ? "visible" : "hidden",
-      }}
-    >
-      {content}
-    </div>,
-    getTooltipPortalContainer(),
+        return (
+          <g key={key}>
+            {active ? <circle cx={cx} cy={cy} r={r + 2.5} fill={color} opacity={0.12} /> : null}
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r}
+              stroke={color}
+              strokeWidth={active ? 1.5 : 1.25}
+              fill={`color-mix(in srgb, ${color} 88%, var(--cab-card))`}
+            />
+          </g>
+        );
+      })}
+    </g>
   );
 }
 
 function HealthScoreTrendChartSvg({
   points,
   onHoverIndex,
-  hoverIndex,
+  hoverIndex: _hoverIndex,
   embedded = false,
 }: {
   points: HealthScoreWeeklyTrendPoint[];
@@ -186,243 +134,64 @@ function HealthScoreTrendChartSvg({
   onHoverIndex: (index: number | null) => void;
   embedded?: boolean;
 }) {
-  const uid = useId().replace(/:/g, "");
-  const areaGradId = `hs-trend-area-${uid}`;
-  const lineGradId = `hs-trend-line-${uid}`;
-  const viewHeight = embedded ? CHART_VIEW_HEIGHT_EMBEDDED : CHART_VIEW_HEIGHT;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [embeddedViewWidth, setEmbeddedViewWidth] = useState(CHART_VIEW_WIDTH_EMBEDDED);
-  const viewWidth = embedded ? embeddedViewWidth : CHART_VIEW_WIDTH;
+  const chartData = useMemo(() => healthScoreTrendChartRows(points), [points]);
+  const latest = chartData[chartData.length - 1];
+  const latestColor = latest ? TONE_COLOR[latest.tone] : TONE_COLOR.good;
 
-  useLayoutEffect(() => {
-    if (!embedded) return;
-    const el = containerRef.current;
-    if (!el) return;
-
-    const syncViewWidth = () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
-      const next = Math.round((width / height) * viewHeight);
-      setEmbeddedViewWidth((prev) => (prev === next ? prev : Math.max(CHART_VIEW_WIDTH, next)));
-    };
-
-    syncViewWidth();
-    const ro = new ResizeObserver(syncViewWidth);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [embedded, viewHeight]);
-
-  const plotPoints = useMemo(
-    () =>
-      points
-        .map((p, index) => ({ ...p, index }))
-        .filter((p): p is HealthScoreWeeklyTrendPoint & { index: number; score: number } => p.score != null),
-    [points],
-  );
-
-  const pads = CHART_PADS;
-  const plotW = viewWidth - pads.left - pads.right;
-  const plotH = viewHeight - pads.top - pads.bottom;
-
-  const weekEndTimes = plotPoints.map((p) => new Date(p.weekEnd).getTime()).filter((t) => !Number.isNaN(t));
-  const minWeekEndMs = weekEndTimes.length ? Math.min(...weekEndTimes) : 0;
-  const maxWeekEndMs = weekEndTimes.length ? Math.max(...weekEndTimes) : 1;
-  const weekEndSpan = maxWeekEndMs - minWeekEndMs;
-
-  const coords = plotPoints.map((p) => {
-    const weekEndMs = new Date(p.weekEnd).getTime();
-    const ratio =
-      weekEndSpan <= 0 || Number.isNaN(weekEndMs)
-        ? 0.5
-        : (weekEndMs - minWeekEndMs) / weekEndSpan;
-    const x = pads.left + ratio * plotW;
-    const y = pads.top + plotH - (p.score / 100) * plotH;
-    return { ...p, x, y };
-  });
-
-  const linePath = coords.map((p) => `${p.x},${p.y}`).join(" ");
-  const areaPath =
-    coords.length > 0
-      ? `M ${coords[0]!.x} ${pads.top + plotH} L ${coords.map((p) => `${p.x} ${p.y}`).join(" L ")} L ${coords[coords.length - 1]!.x} ${pads.top + plotH} Z`
-      : "";
-
-  const latestTone = coords[coords.length - 1]?.tone ?? "good";
-  const latestColor = TONE_COLOR[latestTone];
-
-  const monthLabels = useMemo(() => {
-    const labels: { x: number; label: string; key: string }[] = [];
-    let lastMonth = "";
-    for (const p of coords) {
-      const month = formatMonthLabel(p.weekStart);
-      if (month && month !== lastMonth) {
-        labels.push({ x: p.x, label: month, key: `${p.weekLabel}-${month}` });
-        lastMonth = month;
-      }
-    }
-    return labels;
-  }, [coords]);
-
-  const yTicks = [0, 50, 100];
-  const hitR = 10;
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const hoveredCoord = hoverIndex != null ? coords.find((c) => c.index === hoverIndex) : null;
-  const hoveredDotRadius =
-    hoveredCoord != null
-      ? (coords.findIndex((c) => c.index === hoverIndex) === coords.length - 1 ? 3.25 : 2.75) + 2.5
-      : 0;
-  const tooltipContent =
-    hoveredCoord != null ? formatPointTooltip(hoveredCoord.weekEnd, hoveredCoord.score) : "";
-
-  const monthLabelY = viewHeight - 6;
+  if (chartData.length === 0) return null;
 
   return (
     <div
-      ref={containerRef}
       className={
         embedded
           ? "flex min-h-40 w-full flex-col justify-center xl:min-h-0 xl:flex-1 xl:basis-0"
-          : "relative min-w-0"
+          : "relative min-h-[12.5rem] min-w-0"
       }
+      role="img"
+      aria-label="Andamento settimanale dello stato operativo negli ultimi 6 mesi"
+      onPointerLeave={() => onHoverIndex(null)}
     >
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-        width="100%"
-        height={embedded ? "100%" : CHART_HEIGHT_DEFAULT}
-        preserveAspectRatio="xMidYMid meet"
-        className="block max-h-full w-full overflow-visible"
-        role="img"
-        aria-label="Andamento settimanale dello stato operativo negli ultimi 6 mesi"
-        onPointerLeave={() => onHoverIndex(null)}
+      <AreaChart
+        className="block max-h-full min-h-[10rem] w-full"
+        data={chartData}
+        margin={CHART_MARGIN}
+        xDataKey="date"
+        yScaleDomainMax={HEALTH_SCORE_Y_DOMAIN_MAX}
+        yDomainTween={false}
+        animationDuration={900}
+        aspectRatio="520 / 300"
+        style={embedded ? { height: "100%", aspectRatio: "unset", minHeight: "10rem" } : undefined}
       >
-        <defs>
-          <linearGradient id={areaGradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={latestColor} stopOpacity={0.14} />
-            <stop offset="85%" stopColor={latestColor} stopOpacity={0.03} />
-            <stop offset="100%" stopColor={latestColor} stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id={lineGradId} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={TONE_COLOR[coords[0]?.tone ?? "neutral"]} stopOpacity={0.45} />
-            <stop offset="100%" stopColor={latestColor} stopOpacity={0.9} />
-          </linearGradient>
-        </defs>
-
-        <rect
-          x={pads.left}
-          y={pads.top}
-          width={plotW}
-          height={plotH}
-          rx={8}
-          fill="transparent"
-          className="stroke-[color:color-mix(in_srgb,var(--cab-border)_55%,transparent)]"
-          strokeWidth={1}
+        <Grid horizontal rowTickValues={[0, 50, 100]} strokeDasharray="2 5" stroke={chartCssVars.grid} />
+        <Area
+          dataKey="score"
+          fill={latestColor}
+          fillOpacity={0.16}
+          stroke={latestColor}
+          strokeWidth={1.75}
         />
-
-        {yTicks.map((tick) => {
-          const y = pads.top + plotH - (tick / 100) * plotH;
-          return (
-            <g key={tick}>
-              <line
-                x1={pads.left}
-                y1={y}
-                x2={viewWidth - pads.right}
-                y2={y}
-                className="stroke-[color:color-mix(in_srgb,var(--cab-border)_50%,transparent)]"
-                strokeWidth={1}
-                strokeDasharray={tick === 100 ? undefined : "2 5"}
-              />
-              <text
-                x={pads.left - 8}
-                y={y + 3}
-                textAnchor="end"
-                className="fill-[color:var(--cab-text-muted)] text-[9px] font-medium tabular-nums"
-              >
-                {tick}
-              </text>
-            </g>
-          );
-        })}
-
-        {areaPath ? <path d={areaPath} fill={`url(#${areaGradId})`} /> : null}
-
-        {coords.length > 1 ? (
-          <polyline
-            points={linePath}
-            fill="none"
-            stroke={`url(#${lineGradId})`}
-            strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ filter: toneGlowFilter(latestColor, 0.35) }}
-          />
-        ) : null}
-
-        {monthLabels.map((m) => (
-          <text
-            key={m.key}
-            x={m.x}
-            y={monthLabelY}
-            textAnchor="middle"
-            className="fill-[color:var(--cab-text-muted)] text-[9px] font-medium capitalize"
-          >
-            {m.label}
-          </text>
-        ))}
-
-        {coords.map((p, i) => {
-          const active = hoverIndex === p.index;
-          const isLatest = i === coords.length - 1;
-          const color = TONE_COLOR[p.tone];
-          const baseR = isLatest ? 3.25 : 2.75;
-          const r = active ? baseR + 1 : baseR;
-
-          return (
-            <g key={`${p.weekLabel}-${p.index}`} className="pointer-events-none">
-              {active ? (
-                <circle cx={p.x} cy={p.y} r={r + 2.5} fill={color} opacity={0.12} />
-              ) : null}
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={r}
-                stroke={color}
-                strokeWidth={active ? 1.5 : 1.25}
-                style={{
-                  fill: `color-mix(in srgb, ${color} 88%, var(--cab-card))`,
-                  filter: active ? toneGlowFilter(color, 0.55) : undefined,
-                }}
-              />
-            </g>
-          );
-        })}
-
-        {coords.map((p) => (
-          <circle
-            key={`hit-${p.weekLabel}-${p.index}`}
-            cx={p.x}
-            cy={p.y}
-            r={hitR}
-            fill="transparent"
-            className="cursor-pointer touch-manipulation outline-none"
-            role="button"
-            tabIndex={0}
-            aria-label={`Settimana fino a ${formatWeekLabel(p.weekEnd)}: ${p.score} ${p.label}`}
-            onPointerEnter={() => onHoverIndex(p.index)}
-            onFocus={() => onHoverIndex(p.index)}
-            onBlur={() => onHoverIndex(null)}
-          />
-        ))}
-      </svg>
-
-      <HealthScoreChartPointTooltip
-        open={hoverIndex != null}
-        svgRef={svgRef}
-        anchorX={hoveredCoord?.x ?? 0}
-        anchorY={hoveredCoord?.y ?? 0}
-        dotRadius={hoveredDotRadius}
-        content={tooltipContent}
-        anchorKey={hoverIndex}
-      />
+        <HealthScoreToneMarkers dataKey="score" />
+        <ChartCrosshairLayer
+          fadeEdges="none"
+          spanXAxisMargin={false}
+          color={(point) => toneMarkerColor(point.tone)}
+        />
+        <XAxis />
+        <YAxis numTicks={3} formatValue={(v) => String(Math.round(v))} />
+        <ChartTooltip
+          showCrosshair={false}
+          showDatePill={false}
+          showDots={false}
+          indicatorFadeEdges="none"
+          indicatorColor={(point) => toneMarkerColor(point.tone)}
+          content={({ point }) => (
+            <div className="rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
+              {formatPointTooltip(String(point.weekEnd ?? ""), Number(point.score))}
+            </div>
+          )}
+        />
+        <HealthScoreTrendHoverBridge onHoverIndex={onHoverIndex} />
+      </AreaChart>
     </div>
   );
 }
@@ -435,7 +204,6 @@ export function HealthScoreWeeklyTrendChart({
 }: {
   points: HealthScoreWeeklyTrendPoint[] | null | undefined;
   isLoading: boolean;
-  /** Dentro `HealthScoreCard` — niente bordo/sfondo esterno duplicato. */
   embedded?: boolean;
   hideTitle?: boolean;
 }) {

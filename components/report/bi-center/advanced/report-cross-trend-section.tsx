@@ -70,7 +70,7 @@ export function ReportCrossComparativeTrendChart() {
       color,
       unit: "ratio" as const,
       points: indexed.map((p) => ({
-        date: p.label,
+        date: p.monthKey,
         displayValue: p[key] as number,
         realValue: p[key] as number,
       })),

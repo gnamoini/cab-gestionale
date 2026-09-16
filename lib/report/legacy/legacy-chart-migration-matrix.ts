@@ -171,7 +171,8 @@ export const LEGACY_CHART_MIGRATION_MATRIX: readonly LegacyChartEntry[] = [
     ssotBuilder: "lavorazioni-year-matrix.ts",
     status: "MIGRATED",
     deferReason: "Manual Excel overrides and seasonal matrix",
-    futureTarget: "KEEP_LEGACY operational embed",
+    futureTarget: "bklit-ui forecast chart; tabella anni×mesi invariata",
+    notes: "Renderer Bklit su yearlyForecastLineModel; dati manualByMonth invariati.",
   },
   {
     id: "lav-excel-import",

@@ -51,7 +51,11 @@ assert.ok(Math.abs(logoCenterX(withScuderia)) < 0.05, "logo centered in right zo
 const labelCenterY = MEZZO_LABEL_TEMPLATE.heightMm / 2;
 const qrCenterY = withScuderia.qr.yMm + withScuderia.qr.sizeMm / 2;
 assert.ok(Math.abs(qrCenterY - labelCenterY) < 0.05, "QR vertically centered on label");
-assert.equal(withScuderia.logo.yMm, MEZZO_LABEL_TEMPLATE.cutBorderMm + MEZZO_LABEL_TEMPLATE.innerPaddingMm, "logo pinned to top");
+assert.equal(
+  withScuderia.logo.yMm,
+  MEZZO_LABEL_TEMPLATE.cutBorderMm + MEZZO_LABEL_TEMPLATE.innerPaddingMm + MEZZO_LABEL_TEMPLATE.logo.topOffsetMm,
+  "logo below inner top with offset",
+);
 const textBlockBottom =
   withScuderia.texts[withScuderia.texts.length - 1]!.yMm +
   fontLineHeightMm(

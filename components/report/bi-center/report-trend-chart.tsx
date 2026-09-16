@@ -4,10 +4,9 @@ import type { ReportMetricSeries, ReportAnalyticsGranularity } from "@/lib/repor
 import type { ReportValueFormatter } from "@/lib/report/metrics/report-value-formatter";
 import { formatReportMetricValue, unitToReportFormatter } from "@/lib/report/metrics/report-value-formatter";
 import { getRegistryEntry } from "@/lib/report/metrics/report-metric-registry";
+import { ReportBklitTrend } from "@/components/report/bklit/report-bklit-charts";
 
-const CHART_PRIMARY = "var(--cab-primary)";
-
-type TrendPoint = { label: string; value: number };
+type TrendPoint = { label: string; value: number; date: string };
 
 function formatTrendBucketLabel(ymd: string, granularity: ReportAnalyticsGranularity): string {
   const d = new Date(`${ymd.slice(0, 10)}T12:00:00`);
@@ -23,184 +22,6 @@ function sparseTrendHint(granularity: ReportAnalyticsGranularity, pointCount: nu
   const grain =
     granularity === "day" ? "giornaliera" : granularity === "week" ? "settimanale" : "mensile";
   return `Un solo punto ${grain} nel periodo — allarga il periodo o cambia granularità.`;
-}
-
-function TrendBarsChart({
-  points,
-  formatValue,
-}: {
-  points: TrendPoint[];
-  formatValue: (value: number) => string;
-}) {
-  const W = 720;
-  const H = 248;
-  const padL = 44;
-  const padR = 20;
-  const padT = 32;
-  const padB = 44;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
-  const n = Math.max(points.length, 1);
-  const maxY = Math.max(1, ...points.map((p) => p.value));
-  const bw = innerW / n;
-  const barW = Math.min(36, bw * 0.5);
-  const base = padT + innerH;
-
-  const gridSteps = [0, 0.5, 1];
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-60 w-full max-w-full" role="img" aria-label="Trend nel periodo">
-      {gridSteps.map((step) => {
-        const y = padT + innerH * (1 - step);
-        return (
-          <line
-            key={step}
-            x1={padL}
-            y1={y}
-            x2={W - padR}
-            y2={y}
-            stroke="currentColor"
-            className="text-[color:var(--cab-border)]"
-            strokeDasharray={step === 0 ? undefined : "4 4"}
-            opacity={step === 0 ? 1 : 0.55}
-          />
-        );
-      })}
-      {points.map((p, i) => {
-        const cx = padL + bw * i + bw / 2;
-        const h = (p.value / maxY) * innerH;
-        const y = base - h;
-        const formatted = formatValue(p.value);
-        return (
-          <g key={`${p.label}-${i}`}>
-            <rect
-              x={cx - barW / 2}
-              y={y}
-              width={barW}
-              height={Math.max(h, 2)}
-              fill={CHART_PRIMARY}
-              rx={4}
-              opacity={0.9}
-            >
-              <title>{`${p.label}: ${formatted}`}</title>
-            </rect>
-            <text
-              x={cx}
-              y={Math.max(padT + 10, y - 6)}
-              textAnchor="middle"
-              className="fill-[color:var(--cab-text)] font-semibold"
-              style={{ fontSize: 11 }}
-            >
-              {formatted}
-            </text>
-            <text
-              x={cx}
-              y={H - 12}
-              textAnchor="middle"
-              className="fill-[color:var(--cab-text-muted)]"
-              style={{ fontSize: 10 }}
-            >
-              {p.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function TrendLineChart({
-  points,
-  formatValue,
-}: {
-  points: TrendPoint[];
-  formatValue: (value: number) => string;
-}) {
-  const W = 720;
-  const H = 248;
-  const padL = 48;
-  const padR = 20;
-  const padT = 32;
-  const padB = 44;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
-  const n = Math.max(points.length, 1);
-  const maxY = Math.max(1, ...points.map((p) => p.value));
-  const base = padT + innerH;
-
-  const coords = points.map((p, i) => {
-    const x = padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
-    const y = padT + innerH - (p.value / maxY) * innerH;
-    return { ...p, x, y };
-  });
-
-  const pathD = coords
-    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`)
-    .join(" ");
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-60 w-full max-w-full" role="img" aria-label="Trend nel periodo">
-      <line x1={padL} y1={base} x2={W - padR} y2={base} stroke="currentColor" className="text-[color:var(--cab-border)]" />
-      <line
-        x1={padL}
-        y1={padT + innerH / 2}
-        x2={W - padR}
-        y2={padT + innerH / 2}
-        stroke="currentColor"
-        className="text-[color:var(--cab-border)]"
-        strokeDasharray="4 4"
-        opacity={0.55}
-      />
-      {pathD ? (
-        <path
-          d={pathD}
-          fill="none"
-          stroke={CHART_PRIMARY}
-          strokeWidth={2.5}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      ) : null}
-      {coords.map((p, i) => {
-        const formatted = formatValue(p.value);
-        const last = i === coords.length - 1;
-        return (
-          <g key={`${p.label}-${i}`}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={last ? 5 : 4}
-              fill={last ? CHART_PRIMARY : "var(--cab-card)"}
-              stroke={CHART_PRIMARY}
-              strokeWidth={2}
-            >
-              <title>{`${p.label}: ${formatted}`}</title>
-            </circle>
-            {last ? (
-              <text
-                x={p.x}
-                y={Math.max(padT + 10, p.y - 10)}
-                textAnchor="middle"
-                className="fill-[color:var(--cab-text)] font-semibold"
-                style={{ fontSize: 11 }}
-              >
-                {formatted}
-              </text>
-            ) : null}
-            <text
-              x={p.x}
-              y={H - 12}
-              textAnchor="middle"
-              className="fill-[color:var(--cab-text-muted)]"
-              style={{ fontSize: 10 }}
-            >
-              {p.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
 }
 
 export function ReportTrendChart({
@@ -234,11 +55,12 @@ export function ReportTrendChart({
     return <div className={shellClass}>{emptyLabel}</div>;
   }
 
-  const points = series.points
+  const points: TrendPoint[] = series.points
     .filter((p) => p.value != null)
     .map((p) => ({
       label: formatTrendBucketLabel(p.periodStart, granularity),
       value: p.value as number,
+      date: `${p.periodStart.slice(0, 10)}T12:00:00.000Z`,
     }));
 
   if (points.length === 0) {
@@ -246,11 +68,6 @@ export function ReportTrendChart({
   }
 
   const hint = sparseTrendHint(granularity, points.length);
-  const chart = useBars ? (
-    <TrendBarsChart points={points} formatValue={formatValue} />
-  ) : (
-    <TrendLineChart points={points} formatValue={formatValue} />
-  );
 
   return (
     <div className="space-y-2">
@@ -269,7 +86,7 @@ export function ReportTrendChart({
             : "rounded-lg border border-[color:var(--cab-border)] p-2"
         }
       >
-        {chart}
+        <ReportBklitTrend points={points} useBars={useBars} formatValue={formatValue} />
       </div>
     </div>
   );

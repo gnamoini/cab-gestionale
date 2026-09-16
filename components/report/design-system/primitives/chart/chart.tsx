@@ -1,6 +1,10 @@
 "use client";
 
-import { MagazzinoCapitalLineChart, ReportTemporalMonthlyBars, ReportYearlyForecastLineChart } from "@/components/report/report-charts";
+import {
+  ReportBklitBarPoints,
+  ReportBklitCapitalLine,
+  ReportBklitYearlyForecast,
+} from "@/components/report/bklit/report-bklit-charts";
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { ReportValueFormatter } from "@/lib/report/metrics/report-value-formatter";
 import type { YearForecastLinePoint } from "@/lib/report/lavorazioni-year-matrix";
@@ -30,14 +34,16 @@ export function ReportLineChart({
   return (
     <ReportVisualization title={title} embedded={embedded}>
       {variant === "forecast" && forecast ? (
-        <ReportYearlyForecastLineChart
+        <ReportBklitYearlyForecast
           solid={forecast.solid}
           dashed={forecast.dashed}
           forecastYear={forecast.forecastYear}
           forecastYearEnd={forecast.forecastYearEnd}
         />
       ) : (
-        <MagazzinoCapitalLineChart rows={rows.map((r) => ({ label: r.label, capitaleFinale: r.capitaleFinale ?? r.value ?? 0 }))} />
+        <ReportBklitCapitalLine
+          rows={rows.map((r) => ({ label: r.label, capitaleFinale: r.capitaleFinale ?? r.value ?? 0 }))}
+        />
       )}
     </ReportVisualization>
   );
@@ -54,9 +60,7 @@ export function ReportBarChart({
 }) {
   return (
     <ReportVisualization title={title} embedded={embedded}>
-      <ReportTemporalMonthlyBars
-        rows={points.map((p) => ({ label: p.label, count: p.value, muted: p.muted }))}
-      />
+      <ReportBklitBarPoints points={points} />
     </ReportVisualization>
   );
 }

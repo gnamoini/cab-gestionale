@@ -1,6 +1,6 @@
 "use client";
 
-import { ReportTemporalMonthlyBars } from "@/components/report/report-charts";
+import { ReportBklitFunnel } from "@/components/report/bklit/report-bklit-charts";
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { PreventiviFunnelRow } from "@/lib/report/economic-analytics-extended";
 
@@ -20,7 +20,7 @@ export function ReportPreventiviFunnelChart({
   }
   return (
     <ReportVisualization title={title}>
-      <ReportTemporalMonthlyBars rows={rows.map((r) => ({ label: r.label, count: r.count }))} />
+      <ReportBklitFunnel stages={rows.map((r) => ({ label: r.label, value: r.count }))} />
       <p className="mt-2 text-[10px] text-[color:var(--cab-text-muted)]">
         Valore totale:{" "}
         {rows.reduce((s, r) => s + r.value, 0).toLocaleString("it-IT", {

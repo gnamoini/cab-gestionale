@@ -5,7 +5,9 @@ import { REPORT_CHART_COLOR_ALLOWLIST } from "@/lib/report/ui/chart-color-allowl
 
 const CHART_DIRS = [
   path.join(process.cwd(), "components", "report", "primitives", "chart"),
+  path.join(process.cwd(), "components", "report", "bklit"),
   path.join(process.cwd(), "components", "report", "report-charts.tsx"),
+  path.join(process.cwd(), "components", "report", "design-system", "primitives", "chart", "multi-series-line-chart.tsx"),
 ];
 
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
@@ -40,9 +42,7 @@ for (const target of CHART_DIRS) {
 
 // ponytail: policy is strict; existing legacy charts may still have colors until adapter migration completes.
 // Gate passes when zero violations OR only files listed in grandfather set below.
-const GRANDFATHER = new Set([
-  "components/report/primitives/chart/guasti-tipo-donut-chart.tsx",
-]);
+const GRANDFATHER = new Set<string>();
 
 const blocking = allViolations.filter((v) => {
   const rel = v.split(":")[0] ?? "";

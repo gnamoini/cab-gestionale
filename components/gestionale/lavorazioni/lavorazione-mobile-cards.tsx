@@ -26,6 +26,8 @@ import {
   lavTableActionBtnPrimary,
   dsTableActionBadge,
   dsTableActionBtnWithBadge,
+  LavorazioneLabelSelectionMobileControl,
+  type LavorazioneLabelSelectionRowProps,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { resolveLavorazioneNote, LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
@@ -109,7 +111,7 @@ export type LavorazioneAttivaMobileCardProps = {
   onConcludi: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
   onOpenSchede: (row: LavorazioneListRow) => void;
-};
+} & LavorazioneLabelSelectionRowProps;
 
 function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProps) {
   const {
@@ -137,6 +139,8 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
     onConcludi,
     onOpenInfo,
     onOpenSchede,
+    labelSelectionMode,
+    labelSelection,
   } = props;
 
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
@@ -148,6 +152,11 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
 
   return (
     <LavorazioneMobileCardShell>
+      <LavorazioneLabelSelectionMobileControl
+        row={row}
+        labelSelectionMode={labelSelectionMode}
+        labelSelection={labelSelection}
+      />
       <LavorazioneMobileCardHeader
         oggetto={macchina}
         cliente={lavorazioneClienteLabel(row, schedeStore)}
@@ -261,7 +270,7 @@ export type LavorazioneArchivioMobileCardProps = {
   onOpenSchede: (row: LavorazioneListRow) => void;
   onEditCompletamento?: (row: LavorazioneListRow) => void;
   completamentoEditDisabled?: boolean;
-};
+} & LavorazioneLabelSelectionRowProps;
 
 function LavorazioneArchivioMobileCardInner({
   row,
@@ -279,6 +288,8 @@ function LavorazioneArchivioMobileCardInner({
   onOpenSchede,
   onEditCompletamento,
   completamentoEditDisabled = false,
+  labelSelectionMode,
+  labelSelection,
 }: LavorazioneArchivioMobileCardProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
@@ -289,6 +300,11 @@ function LavorazioneArchivioMobileCardInner({
 
   return (
     <LavorazioneMobileCardShell>
+      <LavorazioneLabelSelectionMobileControl
+        row={row}
+        labelSelectionMode={labelSelectionMode}
+        labelSelection={labelSelection}
+      />
       <LavorazioneMobileCardHeader
         oggetto={macchina}
         cliente={lavorazioneClienteLabel(row, schedeStore)}

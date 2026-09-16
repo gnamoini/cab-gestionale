@@ -1,6 +1,6 @@
 "use client";
 
-import { ReportTemporalMonthlyBars } from "@/components/report/report-charts";
+import { ReportBklitFunnel } from "@/components/report/bklit/report-bklit-charts";
 import { ReportVisualization } from "@/components/report/design-system/layout/visualization";
 import type { WipFunnelRow } from "@/lib/report/lavorazioni-work-orders";
 
@@ -20,7 +20,7 @@ export function ReportLavorazioniFunnelChart({
   }
   return (
     <ReportVisualization title={title}>
-      <ReportTemporalMonthlyBars rows={rows.map((r) => ({ label: r.label, count: r.count }))} />
+      <ReportBklitFunnel stages={rows.map((r) => ({ label: r.label, value: r.count }))} />
     </ReportVisualization>
   );
 }

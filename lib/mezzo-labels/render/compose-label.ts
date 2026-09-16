@@ -149,7 +149,7 @@ export function composeMezzoLabel(
         ? scuderiaLineMm
         : targaLineMm;
 
-  const logoY = whiteMargin + pad;
+  const logoY = whiteMargin + pad + template.logo.topOffsetMm;
   const labelCenterYMm = template.heightMm / 2;
   const textStartY = hasText ? labelCenterYMm - textBlockMm / 2 : labelCenterYMm;
 
